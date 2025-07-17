@@ -67,19 +67,34 @@ export function AddPlayersModal({
     setChecking(prev => ({ ...prev, [index]: true }));
 
     try {
-      // Check if email exists in database
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('id, email, name')
-        .eq('email', email)
-        .limit(1);
+      // Get the session to authenticate with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
+      }
 
-      if (error) throw error;
+      // Use Edge Function to search for users (bypasses RLS restrictions)
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          email: email
+        }),
+      });
 
+      if (!response.ok) {
+        throw new Error('Failed to search for user');
+      }
+
+      const result = await response.json();
       const newEmails = [...playerEmails];
       
-      if (users && users.length > 0) {
-        const user = users[0];
+      if (result.found && result.user) {
+        const user = result.user;
         
         // Check if user is already on the team
         if (currentRoster.includes(user.id)) {
@@ -125,6 +140,7 @@ export function AddPlayersModal({
         .from('teams')
         .select(`
           name,
+          captain_id,
           leagues:league_id(name),
           users:captain_id(name)
         `)
@@ -140,15 +156,24 @@ export function AddPlayersModal({
         captainName: teamData.users?.name || 'Team Captain'
       };
 
-      // Get the Supabase URL from environment variables
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${supabaseUrl}/functions/v1/send-invite`, {
+      // Get the session to authenticate with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
+      }
+
+      const response = await fetch('https://api.ofsl.ca/functions/v1/send-invite', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(inviteData)
+        body: JSON.stringify({
+          ...inviteData,
+          teamId: teamId,
+          captainId: teamData.captain_id
+        })
       });
 
       if (!response.ok) {
