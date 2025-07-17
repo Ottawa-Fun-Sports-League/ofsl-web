@@ -139,7 +139,7 @@ export function TeammateManagementModal({
       }
 
       // Use Edge Function to search for users (bypasses RLS restrictions)
-      const response = await fetch('https://api.ofsl.ca/functions/v1/search-users', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ export function TeammateManagementModal({
         throw new Error('No authentication session found');
       }
 
-      const response = await fetch('https://api.ofsl.ca/functions/v1/send-invite', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -241,7 +241,7 @@ export function TeammateManagementModal({
       }
 
       // Call the Edge Function
-      const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-teammates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -328,7 +328,7 @@ export function TeammateManagementModal({
       }
 
       // Call the Edge Function
-      const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-teammates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
