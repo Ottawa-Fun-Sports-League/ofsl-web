@@ -11,6 +11,8 @@ interface User {
   name: string;
   email: string;
   phone: string;
+  isPending?: boolean;
+  inviteId?: number;
 }
 
 interface TeammateManagementModalProps {
@@ -60,25 +62,59 @@ export function TeammateManagementModal({
   }, [currentRoster]);
 
   const loadTeammates = async () => {
-    if (currentRoster.length === 0) {
-      setTeammates([]);
-      return;
-    }
-    
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, phone')
-        .in('id', currentRoster);
+      const teammatesList: User[] = [];
+      
+      // Load registered users from roster
+      if (currentRoster.length > 0) {
+        const { data: registeredUsers, error: usersError } = await supabase
+          .from('users')
+          .select('id, name, email, phone')
+          .in('id', currentRoster);
 
-      if (error) {
-        console.error('Database error loading teammates:', error);
-        showToast('Failed to load teammates', 'error');
-        return;
+        if (usersError) {
+          console.error('Database error loading teammates:', usersError);
+          showToast('Failed to load teammates', 'error');
+          return;
+        }
+        
+        // Add registered users to the list
+        if (registeredUsers) {
+          teammatesList.push(...registeredUsers.map(user => ({ ...user, isPending: false })));
+        }
+      }
+
+      // Load pending invites for this team
+      const { data: pendingInvites, error: invitesError } = await supabase
+        .from('team_invites')
+        .select('id, email, team_name, league_name')
+        .eq('team_id', teamId)
+        .eq('status', 'pending');
+
+      if (invitesError) {
+        console.error('Database error loading pending invites:', invitesError);
+        // Don't show error for invites, just continue without them
+      } else if (pendingInvites) {
+        // Add pending invites to the list (only if they're not already registered)
+        const registeredEmails = teammatesList.map(user => user.email.toLowerCase());
+        const uniquePendingInvites = pendingInvites.filter(
+          invite => !registeredEmails.includes(invite.email.toLowerCase())
+        );
+        
+        teammatesList.push(
+          ...uniquePendingInvites.map(invite => ({
+            id: `pending-${invite.id}`, // Unique ID for pending users
+            name: `Pending: ${invite.email}`,
+            email: invite.email,
+            phone: '',
+            isPending: true,
+            inviteId: invite.id
+          }))
+        );
       }
       
-      setTeammates(data || []);
+      setTeammates(teammatesList);
     } catch (error) {
       console.error('Error loading teammates:', error);
       showToast('Failed to load teammates', 'error');
@@ -95,23 +131,38 @@ export function TeammateManagementModal({
       setUserNotFound(false);
       setSearchResult(null);
       
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, phone')
-        .eq('email', searchEmail.toLowerCase())
-        .single();
+      // Get the session to authenticate with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
+      }
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // User not found - show invite option
-          setUserNotFound(true);
-          setSearchResult(null);
-        } else {
-          throw error;
-        }
-      } else {
-        setSearchResult(data);
+      // Use Edge Function to search for users (bypasses RLS restrictions)
+      const response = await fetch('https://api.ofsl.ca/functions/v1/search-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          email: searchEmail.toLowerCase()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search for user');
+      }
+
+      const result = await response.json();
+
+      if (result.found && result.user) {
+        setSearchResult(result.user);
         setUserNotFound(false);
+      } else {
+        // User not found - show invite option
+        setUserNotFound(true);
+        setSearchResult(null);
       }
     } catch (error) {
       console.error('Error searching user:', error);
@@ -146,7 +197,9 @@ export function TeammateManagementModal({
           email: searchEmail.toLowerCase(),
           teamName: teamName,
           leagueName: leagueName || 'OFSL League',
-          captainName: userProfile.name
+          captainName: userProfile.name,
+          teamId: teamId,
+          captainId: captainId
         }),
       });
 
@@ -234,6 +287,36 @@ export function TeammateManagementModal({
       return;
     }
 
+    // Check if this is a pending invite
+    const teammate = teammates.find(t => t.id === userId);
+    if (teammate?.isPending && teammate.inviteId) {
+      try {
+        setRemovingTeammate(userId);
+        
+        // Remove pending invite from database
+        const { error } = await supabase
+          .from('team_invites')
+          .delete()
+          .eq('id', teammate.inviteId);
+
+        if (error) {
+          throw new Error('Failed to remove pending invite');
+        }
+        
+        showToast('Pending invite removed successfully', 'success');
+        
+        // Reload teammates list
+        await loadTeammates();
+      } catch (error) {
+        console.error('Error removing pending invite:', error);
+        showToast(error.message || 'Failed to remove pending invite', 'error');
+      } finally {
+        setRemovingTeammate(null);
+      }
+      return;
+    }
+
+    // Handle registered user removal
     try {
       setRemovingTeammate(userId);
       
@@ -412,27 +495,38 @@ export function TeammateManagementModal({
               <p className="text-gray-500 text-center py-8">No teammates added yet</p>
             ) : (
               <div className="space-y-3">
-                {/* Sort teammates to ensure captain is always first */}
+                {/* Sort teammates to ensure captain is always first, then pending invites last */}
                 {teammates
                   .sort((a, b) => {
                     // Captain always comes first
                     if (a.id === captainId) return -1;
                     if (b.id === captainId) return 1;
+                    // Pending invites come last
+                    if (a.isPending && !b.isPending) return 1;
+                    if (!a.isPending && b.isPending) return -1;
                     // Otherwise sort alphabetically by name
                     return a.name.localeCompare(b.name);
                   })
                   .map((teammate) => {
                   const isCaptain = teammate.id === captainId;
+                  const isPending = teammate.isPending;
                   return (
-                    <div key={teammate.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={teammate.id} className={`flex items-center justify-between p-3 border rounded-lg ${isPending ? 'bg-orange-50 border-orange-200' : ''}`}>
                       <div className="flex items-center gap-3">
-                        <User className="h-5 w-5 text-gray-500" />
+                        <User className={`h-5 w-5 ${isPending ? 'text-orange-500' : 'text-gray-500'}`} />
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-[#6F6F6F]">{teammate.name}</p>
+                            <p className={`font-medium ${isPending ? 'text-orange-800' : 'text-[#6F6F6F]'}`}>
+                              {isPending ? teammate.email : teammate.name}
+                            </p>
                             {isCaptain && (
                               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
                                 Captain
+                              </span>
+                            )}
+                            {isPending && (
+                              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">
+                                Pending Invite
                               </span>
                             )}
                           </div>
@@ -441,10 +535,15 @@ export function TeammateManagementModal({
                               <Mail className="h-3 w-3" />
                               {teammate.email}
                             </div>
-                            {teammate.phone && (
+                            {!isPending && teammate.phone && (
                               <div className="flex items-center gap-1">
                                 <Phone className="h-3 w-3" />
                                 {teammate.phone}
+                              </div>
+                            )}
+                            {isPending && (
+                              <div className="text-orange-600 text-xs">
+                                Invite sent - waiting for signup
                               </div>
                             )}
                           </div>
@@ -455,17 +554,17 @@ export function TeammateManagementModal({
                           onClick={() => removeTeammate(teammate.id)}
                           size="sm"
                           disabled={removingTeammate === teammate.id}
-                          className="bg-red-600 hover:bg-red-700 text-white"
+                          className={`text-white ${isPending ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-600 hover:bg-red-700'}`}
                         >
                           {removingTeammate === teammate.id ? (
                             <>
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                              Removing...
+                              {isPending ? 'Canceling...' : 'Removing...'}
                             </>
                           ) : (
                             <>
                               <Trash2 className="h-4 w-4 mr-1" />
-                              Remove
+                              {isPending ? 'Cancel Invite' : 'Remove'}
                             </>
                           )}
                         </Button>
