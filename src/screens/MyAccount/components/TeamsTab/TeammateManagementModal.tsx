@@ -19,7 +19,8 @@ interface TeammateManagementModalProps {
   teamId: number;
   teamName: string;
   currentRoster: string[];
-  onRosterUpdate: (newRoster: string[]) => void;
+  captainId: string;
+  onRosterUpdate: (newRoster: string[]) => Promise<void>;
   leagueName?: string;
 }
 
@@ -29,6 +30,7 @@ export function TeammateManagementModal({
   teamId,
   teamName,
   currentRoster,
+  captainId,
   onRosterUpdate,
   leagueName
 }: TeammateManagementModalProps) {
@@ -39,6 +41,8 @@ export function TeammateManagementModal({
   const [searchResult, setSearchResult] = useState<User | null>(null);
   const [userNotFound, setUserNotFound] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [addingTeammate, setAddingTeammate] = useState(false);
+  const [removingTeammate, setRemovingTeammate] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userProfile } = useAuth();
 
@@ -48,8 +52,18 @@ export function TeammateManagementModal({
     }
   }, [isOpen, currentRoster]);
 
+  // Force reload teammates when currentRoster changes (after Edge Function updates)
+  useEffect(() => {
+    if (isOpen && currentRoster.length > 0) {
+      loadTeammates();
+    }
+  }, [currentRoster]);
+
   const loadTeammates = async () => {
-    if (currentRoster.length === 0) return;
+    if (currentRoster.length === 0) {
+      setTeammates([]);
+      return;
+    }
     
     try {
       setLoading(true);
@@ -58,7 +72,12 @@ export function TeammateManagementModal({
         .select('id, name, email, phone')
         .in('id', currentRoster);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error loading teammates:', error);
+        showToast('Failed to load teammates', 'error');
+        return;
+      }
+      
       setTeammates(data || []);
     } catch (error) {
       console.error('Error loading teammates:', error);
@@ -159,41 +178,103 @@ export function TeammateManagementModal({
     }
 
     try {
-      const newRoster = [...currentRoster, userId];
-      const { error } = await supabase
-        .from('teams')
-        .update({ roster: newRoster })
-        .eq('id', teamId);
-
-      if (error) throw error;
+      setAddingTeammate(true);
       
-      onRosterUpdate(newRoster);
+      // Get the session to authenticate with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
+      }
+
+      // Call the Edge Function
+      const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'add',
+          teamId: teamId,
+          userId: userId,
+          captainId: captainId
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add teammate');
+      }
+      
+      // Update the parent component state and wait for refetch
+      await onRosterUpdate(result.newRoster);
+      
+      // Clear the search state
       setSearchEmail('');
       setSearchResult(null);
+      setUserNotFound(false);
+      
       showToast('Teammate added successfully', 'success');
-      await loadTeammates();
+      
+      // Note: teammates list will reload automatically via useEffect when currentRoster changes
     } catch (error) {
       console.error('Error adding teammate:', error);
-      showToast('Failed to add teammate', 'error');
+      showToast(error.message || 'Failed to add teammate. Please try again.', 'error');
+    } finally {
+      setAddingTeammate(false);
     }
   };
 
   const removeTeammate = async (userId: string) => {
-    try {
-      const newRoster = currentRoster.filter(id => id !== userId);
-      const { error } = await supabase
-        .from('teams')
-        .update({ roster: newRoster })
-        .eq('id', teamId);
+    // Prevent captain from removing themselves
+    if (userId === captainId) {
+      showToast('Cannot remove the team captain', 'error');
+      return;
+    }
 
-      if (error) throw error;
+    try {
+      setRemovingTeammate(userId);
       
-      onRosterUpdate(newRoster);
+      // Get the session to authenticate with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
+      }
+
+      // Call the Edge Function
+      const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'remove',
+          teamId: teamId,
+          userId: userId,
+          captainId: captainId
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to remove teammate');
+      }
+      
+      // Update the parent component state and wait for refetch
+      await onRosterUpdate(result.newRoster);
       showToast('Teammate removed successfully', 'success');
-      await loadTeammates();
+      
+      // Note: teammates list will reload automatically via useEffect when currentRoster changes
     } catch (error) {
       console.error('Error removing teammate:', error);
-      showToast('Failed to remove teammate', 'error');
+      showToast(error.message || 'Failed to remove teammate. Please try again.', 'error');
+    } finally {
+      setRemovingTeammate(null);
     }
   };
 
@@ -249,10 +330,20 @@ export function TeammateManagementModal({
                   <Button
                     onClick={() => addTeammate(searchResult.id)}
                     size="sm"
+                    disabled={addingTeammate}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    <UserPlus className="h-4 w-4 mr-1" />
-                    Add
+                    {addingTeammate ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Add
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -321,36 +412,71 @@ export function TeammateManagementModal({
               <p className="text-gray-500 text-center py-8">No teammates added yet</p>
             ) : (
               <div className="space-y-3">
-                {teammates.map((teammate) => (
-                  <div key={teammate.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <User className="h-5 w-5 text-gray-500" />
-                      <div>
-                        <p className="font-medium text-[#6F6F6F]">{teammate.name}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {teammate.email}
+                {/* Sort teammates to ensure captain is always first */}
+                {teammates
+                  .sort((a, b) => {
+                    // Captain always comes first
+                    if (a.id === captainId) return -1;
+                    if (b.id === captainId) return 1;
+                    // Otherwise sort alphabetically by name
+                    return a.name.localeCompare(b.name);
+                  })
+                  .map((teammate) => {
+                  const isCaptain = teammate.id === captainId;
+                  return (
+                    <div key={teammate.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <User className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-[#6F6F6F]">{teammate.name}</p>
+                            {isCaptain && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
+                                Captain
+                              </span>
+                            )}
                           </div>
-                          {teammate.phone && (
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
                             <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {teammate.phone}
+                              <Mail className="h-3 w-3" />
+                              {teammate.email}
                             </div>
-                          )}
+                            {teammate.phone && (
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {teammate.phone}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      {!isCaptain ? (
+                        <Button
+                          onClick={() => removeTeammate(teammate.id)}
+                          size="sm"
+                          disabled={removingTeammate === teammate.id}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          {removingTeammate === teammate.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                              Removing...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Remove
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <div className="text-sm text-gray-500 italic">
+                          Team Captain
+                        </div>
+                      )}
                     </div>
-                    <Button
-                      onClick={() => removeTeammate(teammate.id)}
-                      size="sm"
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Remove
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

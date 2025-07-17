@@ -52,7 +52,7 @@ export function useTeamsData(userId?: string) {
   };
 
   const fetchTeams = async () => {
-    if (!userId) return;
+    if (!userId) return [];
 
     try {
       const { data, error } = await supabase
@@ -61,12 +61,16 @@ export function useTeamsData(userId?: string) {
           *,
           league:leagues(name, location)
         `)
-        .contains('roster', [userId]);
+        .contains('roster', [userId])
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setTeams(data || []);
+      const teamsData = data || [];
+      setTeams(teamsData);
+      return teamsData;
     } catch (error) {
       console.error('Error fetching teams:', error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -81,12 +85,23 @@ export function useTeamsData(userId?: string) {
     fetchLeaguePayments();
   };
 
+  const updateTeamRoster = (teamId: number, newRoster: string[]) => {
+    setTeams(prevTeams => 
+      prevTeams.map(team => 
+        team.id === teamId 
+          ? { ...team, roster: newRoster }
+          : team
+      )
+    );
+  };
+
   return {
     leaguePayments,
     teams,
     loading,
     setLeaguePayments,
     refetchLeaguePayments,
-    refetchTeams: fetchTeams
+    refetchTeams: fetchTeams,
+    updateTeamRoster
   };
 }
