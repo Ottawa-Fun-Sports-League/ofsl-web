@@ -64,57 +64,38 @@ export function TeammateManagementModal({
   const loadTeammates = async () => {
     try {
       setLoading(true);
-      const teammatesList: User[] = [];
       
-      // Load registered users from roster
-      if (currentRoster.length > 0) {
-        const { data: registeredUsers, error: usersError } = await supabase
-          .from('users')
-          .select('id, name, email, phone')
-          .in('id', currentRoster);
-
-        if (usersError) {
-          console.error('Database error loading teammates:', usersError);
-          showToast('Failed to load teammates', 'error');
-          return;
-        }
-        
-        // Add registered users to the list
-        if (registeredUsers) {
-          teammatesList.push(...registeredUsers.map(user => ({ ...user, isPending: false })));
-        }
+      // Get the session to authenticate with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
       }
 
-      // Load pending invites for this team
-      const { data: pendingInvites, error: invitesError } = await supabase
-        .from('team_invites')
-        .select('id, email, team_name, league_name')
-        .eq('team_id', teamId)
-        .eq('status', 'pending');
+      // Use Edge Function to load teammates (bypasses RLS restrictions)
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-team-members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          teamId: teamId,
+          currentRoster: currentRoster
+        }),
+      });
 
-      if (invitesError) {
-        console.error('Database error loading pending invites:', invitesError);
-        // Don't show error for invites, just continue without them
-      } else if (pendingInvites) {
-        // Add pending invites to the list (only if they're not already registered)
-        const registeredEmails = teammatesList.map(user => user.email.toLowerCase());
-        const uniquePendingInvites = pendingInvites.filter(
-          invite => !registeredEmails.includes(invite.email.toLowerCase())
-        );
-        
-        teammatesList.push(
-          ...uniquePendingInvites.map(invite => ({
-            id: `pending-${invite.id}`, // Unique ID for pending users
-            name: `Pending: ${invite.email}`,
-            email: invite.email,
-            phone: '',
-            isPending: true,
-            inviteId: invite.id
-          }))
-        );
+      if (!response.ok) {
+        throw new Error('Failed to load teammates');
       }
-      
-      setTeammates(teammatesList);
+
+      const result = await response.json();
+
+      if (result.success) {
+        setTeammates(result.teammates);
+      } else {
+        throw new Error(result.error || 'Failed to load teammates');
+      }
     } catch (error) {
       console.error('Error loading teammates:', error);
       showToast('Failed to load teammates', 'error');
