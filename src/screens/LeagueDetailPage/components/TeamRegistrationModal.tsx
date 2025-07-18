@@ -37,7 +37,7 @@ export function TeamRegistrationModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skillsLoading, setSkillsLoading] = useState(true);
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -145,18 +145,22 @@ export function TeamRegistrationModal({
 
       // Send registration confirmation email
       try {
-        const response = await supabase.functions.invoke('send-registration-confirmation', {
-          body: {
-            email: userProfile.email,
-            userName: userProfile.name || 'Team Captain',
-            teamName: teamName.trim(),
-            leagueName: leagueName
-          }
-        });
+        if (user?.email) {
+          const response = await supabase.functions.invoke('send-registration-confirmation', {
+            body: {
+              email: user.email,
+              userName: userProfile.name || 'Team Captain',
+              teamName: teamName.trim(),
+              leagueName: leagueName
+            }
+          });
 
-        if (response.error) {
-          console.error('Failed to send confirmation email:', response.error);
-          // Don't throw error - email failure shouldn't block registration
+          if (response.error) {
+            console.error('Failed to send confirmation email:', response.error);
+            // Don't throw error - email failure shouldn't block registration
+          }
+        } else {
+          console.error('No email found for user');
         }
       } catch (emailError) {
         console.error('Error sending confirmation email:', emailError);
