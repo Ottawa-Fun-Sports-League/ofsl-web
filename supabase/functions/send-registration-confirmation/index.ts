@@ -90,89 +90,163 @@ serve(async (req: Request) => {
     // Create the registration confirmation email content
     const emailContent = {
       to: [email],
-      subject: `🏐 Registration Confirmation: ${teamName} in ${leagueName}`,
+      subject: `Registration Confirmation: ${teamName} in ${leagueName}`,
       html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #B20000 0%, #8B0000 100%); padding: 30px 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Ottawa Fun Sports League</h1>
-            <p style="color: #ffcccc; margin: 8px 0 0 0; font-size: 14px;">Ottawa's Premier Adult Sports Community</p>
-          </div>
-          
-          <!-- Main Content -->
-          <div style="padding: 40px 30px; background: #ffffff;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: #f8f9fa; border-radius: 50px; width: 80px; height: 80px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 32px; line-height: 1; display: block;">✅</span>
-              </div>
-              <h2 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">Registration Received!</h2>
-            </div>
-            
-            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 25px 0;">
-              <p style="color: #2c3e50; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
-                Hello ${userName},
-              </p>
-              <p style="color: #2c3e50; font-size: 16px; line-height: 1.6; margin: 0;">
-                Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> 
-                for <strong style="color: #B20000;">${leagueName}</strong>!
-              </p>
-            </div>
-            
-            <div style="background: #fff5f5; border: 1px solid #ffe0e0; border-radius: 12px; padding: 25px; margin: 30px 0;">
-              <h3 style="color: #B20000; font-size: 18px; margin: 0 0 15px 0; display: flex; align-items: center;">
-                <span style="font-size: 24px; margin-right: 8px;">⚠️</span> Important: Secure Your Spot
-              </h3>
-              <p style="color: #2c3e50; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
-                In order to secure your spot, please provide a <strong>non-refundable deposit of $200</strong> by e-transfer within <strong>48 hours</strong> to the following email address:
-              </p>
-              <div style="background: #ffffff; border: 2px solid #B20000; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-                <p style="color: #B20000; font-size: 18px; font-weight: 600; margin: 0;">
-                  ofslpayments@gmail.com
-                </p>
-                <p style="color: #5a6c7d; font-size: 14px; margin: 10px 0 0 0;">
-                  Please indicate your team name <strong>"${teamName}"</strong> on the e-transfer
-                </p>
-              </div>
-              <p style="color: #7f8c8d; font-size: 14px; line-height: 1.5; margin: 15px 0 0 0; font-style: italic;">
-                Note: After the allotted time, we will unfortunately be unable to hold your spot.
-              </p>
-            </div>
-            
-            <div style="margin: 30px 0;">
-              <h3 style="color: #2c3e50; font-size: 18px; margin-bottom: 15px;">Next Steps:</h3>
-              <ol style="color: #5a6c7d; font-size: 16px; line-height: 1.8; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Send your $200 deposit via e-transfer to <strong>ofslpayments@gmail.com</strong></li>
-                <li style="margin-bottom: 8px;">Include your team name "<strong>${teamName}</strong>" in the e-transfer message</li>
-                <li style="margin-bottom: 8px;">You'll receive a confirmation once we process your payment</li>
-                <li>Get ready for an amazing season!</li>
-              </ol>
-            </div>
-            
-            <div style="text-align: center; margin: 40px 0;">
-              <p style="color: #7f8c8d; font-size: 14px; line-height: 1.5;">
-                If you have any questions or concerns, please feel free to contact us at<br>
-                <a href="mailto:info@ofsl.ca" style="color: #B20000; text-decoration: none; font-weight: 600;">info@ofsl.ca</a>
-              </p>
-            </div>
-            
-            <div style="background: #e8f4f8; border-radius: 12px; padding: 20px; margin: 30px 0; text-align: center;">
-              <p style="color: #2c3e50; font-size: 16px; line-height: 1.5; margin: 0;">
-                Thank you,<br>
-                <strong>OFSL Team</strong>
-              </p>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #2c3e50; padding: 25px 20px; text-align: center;">
-            <p style="color: #bdc3c7; font-size: 12px; margin: 0 0 5px 0;">
-              © ${new Date().getFullYear()} Ottawa Fun Sports League. All rights reserved.
-            </p>
-            <p style="color: #95a5a6; font-size: 11px; margin: 0;">
-              This email was sent because you registered a team for ${leagueName}.
-            </p>
-          </div>
-        </div>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
+          <tr>
+            <td align="center" style="padding: 20px 0;">
+              <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff;">
+                <!-- Header -->
+                <tr>
+                  <td align="center" style="background-color: #B20000; padding: 30px 20px;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">Ottawa Fun Sports League</h1>
+                    <p style="color: #ffcccc; margin: 8px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">Ottawa's Premier Adult Sports Community</p>
+                  </td>
+                </tr>
+                
+                <!-- Main Content -->
+                <tr>
+                  <td style="padding: 40px 30px; background-color: #ffffff;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <!-- Title Section -->
+                      <tr>
+                        <td align="center" style="padding-bottom: 30px;">
+                          <p style="font-size: 48px; margin: 0 0 20px 0;">✅</p>
+                          <h2 style="color: #2c3e50; margin: 0; font-size: 24px; font-weight: bold; font-family: Arial, sans-serif;">Registration Received!</h2>
+                        </td>
+                      </tr>
+                      
+                      <!-- Greeting -->
+                      <tr>
+                        <td style="padding-bottom: 25px;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f8f9fa;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
+                                  Hello ${userName},
+                                </p>
+                                <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                  Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> 
+                                  for <strong style="color: #B20000;">${leagueName}</strong>!
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- Important Notice -->
+                      <tr>
+                        <td style="padding-bottom: 30px;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fff5f5; border: 1px solid #ffe0e0;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="font-family: Arial, sans-serif;">
+                                      <h3 style="color: #B20000; font-size: 18px; margin: 0 0 15px 0;">
+                                        ⚠️ Important: Secure Your Spot
+                                      </h3>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
+                                        In order to secure your spot, please provide a <strong>non-refundable deposit of $200</strong> by e-transfer within <strong>48 hours</strong> to the following email address:
+                                      </p>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                      <table cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border: 2px solid #B20000;">
+                                        <tr>
+                                          <td style="padding: 20px 40px;">
+                                            <p style="color: #B20000; font-size: 18px; font-weight: bold; margin: 0; font-family: Arial, sans-serif;">
+                                              ofslpayments@gmail.com
+                                            </p>
+                                            <p style="color: #5a6c7d; font-size: 14px; margin: 10px 0 0 0; font-family: Arial, sans-serif;">
+                                              Please indicate your team name <strong>"${teamName}"</strong> on the e-transfer
+                                            </p>
+                                          </td>
+                                        </tr>
+                                      </table>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td>
+                                      <p style="color: #7f8c8d; font-size: 14px; line-height: 21px; margin: 15px 0 0 0; font-style: italic; font-family: Arial, sans-serif;">
+                                        Note: After the allotted time, we will unfortunately be unable to hold your spot.
+                                      </p>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- Next Steps -->
+                      <tr>
+                        <td style="padding-bottom: 30px;">
+                          <h3 style="color: #2c3e50; font-size: 18px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">Next Steps:</h3>
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                              <td style="color: #5a6c7d; font-size: 16px; line-height: 28px; font-family: Arial, sans-serif; padding-left: 20px;">
+                                1. Send your $200 deposit via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
+                                2. Include your team name "<strong>${teamName}</strong>" in the e-transfer message<br>
+                                3. You'll receive a confirmation once we process your payment<br>
+                                4. Get ready for an amazing season!
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- Contact -->
+                      <tr>
+                        <td align="center" style="padding-bottom: 30px;">
+                          <p style="color: #7f8c8d; font-size: 14px; line-height: 21px; font-family: Arial, sans-serif;">
+                            If you have any questions or concerns, please feel free to contact us at<br>
+                            <a href="mailto:info@ofsl.ca" style="color: #B20000; text-decoration: none; font-weight: bold;">info@ofsl.ca</a>
+                          </p>
+                        </td>
+                      </tr>
+                      
+                      <!-- Thank You -->
+                      <tr>
+                        <td align="center">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #e8f4f8;">
+                            <tr>
+                              <td style="padding: 20px;" align="center">
+                                <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                  Thank you,<br>
+                                  <strong>OFSL Team</strong>
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td align="center" style="background-color: #2c3e50; padding: 25px 20px;">
+                    <p style="color: #bdc3c7; font-size: 12px; margin: 0 0 5px 0; font-family: Arial, sans-serif;">
+                      © ${new Date().getFullYear()} Ottawa Fun Sports League. All rights reserved.
+                    </p>
+                    <p style="color: #95a5a6; font-size: 11px; margin: 0; font-family: Arial, sans-serif;">
+                      This email was sent because you registered a team for ${leagueName}.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       `,
     };
 
