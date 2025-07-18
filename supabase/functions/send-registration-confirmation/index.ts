@@ -7,13 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-interface InviteRequest {
+interface RegistrationRequest {
   email: string;
+  userName: string;
   teamName: string;
   leagueName: string;
-  captainName: string;
-  teamId?: number;
-  captainId?: string;
 }
 
 serve(async (req: Request) => {
@@ -35,14 +33,12 @@ serve(async (req: Request) => {
 
     const {
       email,
+      userName,
       teamName,
       leagueName,
-      captainName,
-      teamId,
-      captainId,
-    }: InviteRequest = await req.json();
+    }: RegistrationRequest = await req.json();
 
-    if (!email || !teamName || !leagueName || !captainName) {
+    if (!email || !userName || !teamName || !leagueName) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         {
@@ -91,73 +87,10 @@ serve(async (req: Request) => {
       );
     }
 
-    // Store the invite in the database if teamId and captainId are provided
-    if (teamId && captainId) {
-      // Verify the user is the captain of the team they're trying to invite to
-      const { data: teamData, error: teamError } = await supabase
-        .from("teams")
-        .select("captain_id")
-        .eq("id", teamId)
-        .single();
-
-      if (teamError || !teamData) {
-        return new Response(JSON.stringify({ error: "Team not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Check if the authenticated user is the captain of this team
-      if (teamData.captain_id !== user.id) {
-        return new Response(
-          JSON.stringify({ error: "Only team captains can send invites" }),
-          {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-      try {
-        // Check if invite already exists for this email and team
-        const { data: existingInvite } = await supabase
-          .from("team_invites")
-          .select("id")
-          .eq("team_id", teamId)
-          .eq("email", email.toLowerCase())
-          .eq("status", "pending")
-          .single();
-
-        if (!existingInvite) {
-          // Create new invite record
-          const { error: inviteError } = await supabase
-            .from("team_invites")
-            .insert({
-              team_id: teamId,
-              email: email.toLowerCase(),
-              status: "pending",
-              invited_by: captainId,
-              team_name: teamName,
-              league_name: leagueName,
-            });
-
-          if (inviteError) {
-            console.error("Error storing invite:", inviteError);
-            // Continue with email sending even if database storage fails
-          }
-        }
-      } catch (error) {
-        console.error("Error checking/storing invite:", error);
-        // Continue with email sending even if database operation fails
-      }
-    }
-
-    // Create the invite email content
-    const siteUrl = Deno.env.get("SITE_URL") || "https://ofsl.ca";
-    const inviteUrl = `${siteUrl}/#/signup?invite=true`;
-
+    // Create the registration confirmation email content
     const emailContent = {
       to: [email],
-      subject: `🏐 Team Invitation: Join ${teamName} in ${leagueName}!`,
+      subject: `🏐 Registration Confirmation: ${teamName} in ${leagueName}`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
           <!-- Header -->
@@ -170,48 +103,62 @@ serve(async (req: Request) => {
           <div style="padding: 40px 30px; background: #ffffff;">
             <div style="text-align: center; margin-bottom: 30px;">
               <div style="background: #f8f9fa; border-radius: 50px; width: 80px; height: 80px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 32px; line-height: 1; display: block;">🏐</span>
+                <span style="font-size: 32px; line-height: 1; display: block;">✅</span>
               </div>
-              <h2 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">You're Invited to Join a Team!</h2>
+              <h2 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">Registration Received!</h2>
             </div>
             
-            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 25px 0; border-left: 4px solid #B20000;">
+            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 25px 0;">
+              <p style="color: #2c3e50; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
+                Hello ${userName},
+              </p>
               <p style="color: #2c3e50; font-size: 16px; line-height: 1.6; margin: 0;">
-                <strong>${captainName}</strong> has invited you to join their team <strong style="color: #B20000;">${teamName}</strong> 
-                in the <strong style="color: #B20000;">${leagueName}</strong> league.
+                Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> 
+                for <strong style="color: #B20000;">${leagueName}</strong>!
+              </p>
+            </div>
+            
+            <div style="background: #fff5f5; border: 1px solid #ffe0e0; border-radius: 12px; padding: 25px; margin: 30px 0;">
+              <h3 style="color: #B20000; font-size: 18px; margin: 0 0 15px 0; display: flex; align-items: center;">
+                <span style="font-size: 24px; margin-right: 8px;">⚠️</span> Important: Secure Your Spot
+              </h3>
+              <p style="color: #2c3e50; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
+                In order to secure your spot, please provide a <strong>non-refundable deposit of $200</strong> by e-transfer within <strong>48 hours</strong> to the following email address:
+              </p>
+              <div style="background: #ffffff; border: 2px solid #B20000; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <p style="color: #B20000; font-size: 18px; font-weight: 600; margin: 0;">
+                  ofslpayments@gmail.com
+                </p>
+                <p style="color: #5a6c7d; font-size: 14px; margin: 10px 0 0 0;">
+                  Please indicate your team name <strong>"${teamName}"</strong> on the e-transfer
+                </p>
+              </div>
+              <p style="color: #7f8c8d; font-size: 14px; line-height: 1.5; margin: 15px 0 0 0; font-style: italic;">
+                Note: After the allotted time, we will unfortunately be unable to hold your spot.
               </p>
             </div>
             
             <div style="margin: 30px 0;">
-              <h3 style="color: #2c3e50; font-size: 18px; margin-bottom: 15px;">What's Next?</h3>
-              <ul style="color: #5a6c7d; font-size: 16px; line-height: 1.6; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Click the button below to create your OFSL account</li>
-                <li style="margin-bottom: 8px;">Complete your player profile with your skill level and preferences</li>
-                <li style="margin-bottom: 8px;">You'll automatically be added to ${teamName} once registered</li>
-                <li>Start playing with your new team!</li>
-              </ul>
+              <h3 style="color: #2c3e50; font-size: 18px; margin-bottom: 15px;">Next Steps:</h3>
+              <ol style="color: #5a6c7d; font-size: 16px; line-height: 1.8; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Send your $200 deposit via e-transfer to <strong>ofslpayments@gmail.com</strong></li>
+                <li style="margin-bottom: 8px;">Include your team name "<strong>${teamName}</strong>" in the e-transfer message</li>
+                <li style="margin-bottom: 8px;">You'll receive a confirmation once we process your payment</li>
+                <li>Get ready for an amazing season!</li>
+              </ol>
             </div>
             
             <div style="text-align: center; margin: 40px 0;">
-              <a href="${inviteUrl}" 
-                 style="background: linear-gradient(135deg, #B20000 0%, #8B0000 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(178, 0, 0, 0.3); transition: all 0.3s ease;">
-                🚀 Create Account & Join Team
-              </a>
-            </div>
-            
-            <div style="background: #e8f4f8; border-radius: 12px; padding: 20px; margin: 30px 0;">
-              <h4 style="color: #2c3e50; font-size: 16px; margin: 0 0 12px 0;">About OFSL</h4>
-              <p style="color: #5a6c7d; font-size: 14px; line-height: 1.5; margin: 0;">
-                We're Ottawa's premier adult sports league, offering volleyball, badminton, and more. 
-                Our leagues provide structured environments that encourage sportsmanship, physical activity, and healthy competition.
-                Join thousands of players who have made lasting friendships through OFSL!
+              <p style="color: #7f8c8d; font-size: 14px; line-height: 1.5;">
+                If you have any questions or concerns, please feel free to contact us at<br>
+                <a href="mailto:info@ofsl.ca" style="color: #B20000; text-decoration: none; font-weight: 600;">info@ofsl.ca</a>
               </p>
             </div>
             
-            <div style="text-align: center; margin-top: 30px;">
-              <p style="color: #7f8c8d; font-size: 14px; line-height: 1.5;">
-                Questions? Contact us at 
-                <a href="mailto:info@ofsl.ca" style="color: #B20000; text-decoration: none; font-weight: 600;">info@ofsl.ca</a>
+            <div style="background: #e8f4f8; border-radius: 12px; padding: 20px; margin: 30px 0; text-align: center;">
+              <p style="color: #2c3e50; font-size: 16px; line-height: 1.5; margin: 0;">
+                Thank you,<br>
+                <strong>OFSL Team</strong>
               </p>
             </div>
           </div>
@@ -222,7 +169,7 @@ serve(async (req: Request) => {
               © ${new Date().getFullYear()} Ottawa Fun Sports League. All rights reserved.
             </p>
             <p style="color: #95a5a6; font-size: 11px; margin: 0;">
-              This invitation was sent by ${captainName} on behalf of ${teamName}.
+              This email was sent because you registered a team for ${leagueName}.
             </p>
           </div>
         </div>
@@ -258,7 +205,7 @@ serve(async (req: Request) => {
       const errorText = await emailResponse.text();
       console.error("Resend API error:", errorText);
       return new Response(
-        JSON.stringify({ error: "Failed to send invite email" }),
+        JSON.stringify({ error: "Failed to send registration confirmation email" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -272,7 +219,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Invite email sent successfully",
+        message: "Registration confirmation email sent successfully",
         emailId: emailResult.id,
       }),
       {
@@ -281,11 +228,10 @@ serve(async (req: Request) => {
       },
     );
   } catch (error) {
-    console.error("Error in send-invite function:", error);
+    console.error("Error in send-registration-confirmation function:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
-
