@@ -50,16 +50,25 @@ export function TeammateManagementModal({
 
   useEffect(() => {
     if (isOpen) {
-      loadTeammates();
+      // Clear existing state to ensure fresh data
+      setTeammates([]);
+      setSearchResult(null);
+      setSearchEmail('');
+      setUserNotFound(false);
+      // Add a small delay to ensure the modal is fully rendered before fetching
+      const timeoutId = setTimeout(() => {
+        loadTeammates();
+      }, 100);
+      return () => clearTimeout(timeoutId);
     }
-  }, [isOpen, currentRoster]);
+  }, [isOpen, teamId]); // Use teamId instead of currentRoster to avoid stale data
 
   // Force reload teammates when currentRoster changes (after Edge Function updates)
   useEffect(() => {
-    if (isOpen && currentRoster.length > 0) {
+    if (isOpen) {
       loadTeammates();
     }
-  }, [currentRoster]);
+  }, [teamId]); // Only reload if teamId changes while modal is open
 
   const loadTeammates = async () => {
     try {
@@ -92,6 +101,7 @@ export function TeammateManagementModal({
       const result = await response.json();
 
       if (result.success) {
+        console.log('Loaded teammates:', result.teammates);
         setTeammates(result.teammates);
       } else {
         throw new Error(result.error || 'Failed to load teammates');
@@ -345,25 +355,26 @@ export function TeammateManagementModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-[#6F6F6F]">
-            Manage Teammates - {teamName}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-auto">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b">
+          <h2 className="text-lg sm:text-xl font-semibold text-[#6F6F6F] pr-4">
+            <span className="hidden sm:inline">Manage Teammates - {teamName}</span>
+            <span className="sm:hidden">Teammates</span>
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Add Teammate Section */}
           <div className="border rounded-lg p-4">
-            <h3 className="text-lg font-medium text-[#6F6F6F] mb-4">Add Teammate</h3>
-            <div className="flex gap-2">
+            <h3 className="text-base sm:text-lg font-medium text-[#6F6F6F] mb-4">Add Teammate</h3>
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 type="email"
                 placeholder="Enter teammate's email address"
@@ -375,7 +386,7 @@ export function TeammateManagementModal({
               <Button
                 onClick={searchUser}
                 disabled={searching || !searchEmail.trim()}
-                className="bg-[#B20000] hover:bg-[#8A0000] text-white"
+                className="bg-[#B20000] hover:bg-[#8A0000] text-white w-full sm:w-auto"
               >
                 {searching ? 'Searching...' : 'Search'}
               </Button>
@@ -383,19 +394,19 @@ export function TeammateManagementModal({
 
             {searchResult && (
               <div className="mt-4 p-3 border rounded-lg bg-gray-50">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-gray-500" />
+                    <User className="h-5 w-5 text-gray-500 flex-shrink-0" />
                     <div>
                       <p className="font-medium text-[#6F6F6F]">{searchResult.name}</p>
-                      <p className="text-sm text-gray-500">{searchResult.email}</p>
+                      <p className="text-sm text-gray-500 break-all">{searchResult.email}</p>
                     </div>
                   </div>
                   <Button
                     onClick={() => addTeammate(searchResult.id)}
                     size="sm"
                     disabled={addingTeammate}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                   >
                     {addingTeammate ? (
                       <>
@@ -422,15 +433,15 @@ export function TeammateManagementModal({
                   <div className="flex-1">
                     <h4 className="font-medium text-orange-800 mb-1">User Not Found</h4>
                     <p className="text-sm text-orange-700 mb-3">
-                      No user found with email <strong>{searchEmail}</strong>. 
+                      No user found with email <strong className="break-all">{searchEmail}</strong>. 
                       Would you like to send them an invitation to join OFSL and your team?
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button
                         onClick={sendInvite}
                         disabled={sendingInvite}
                         size="sm"
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                        className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
                       >
                         {sendingInvite ? (
                           <>
@@ -451,6 +462,7 @@ export function TeammateManagementModal({
                         }}
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
                       >
                         Cancel
                       </Button>
@@ -492,34 +504,36 @@ export function TeammateManagementModal({
                   const isCaptain = teammate.id === captainId;
                   const isPending = teammate.isPending;
                   return (
-                    <div key={teammate.id} className={`flex items-center justify-between p-3 border rounded-lg ${isPending ? 'bg-orange-50 border-orange-200' : ''}`}>
+                    <div key={teammate.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-3 ${isPending ? 'bg-orange-50 border-orange-200' : ''}`}>
                       <div className="flex items-center gap-3">
-                        <User className={`h-5 w-5 ${isPending ? 'text-orange-500' : 'text-gray-500'}`} />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className={`font-medium ${isPending ? 'text-orange-800' : 'text-[#6F6F6F]'}`}>
+                        <User className={`h-5 w-5 flex-shrink-0 ${isPending ? 'text-orange-500' : 'text-gray-500'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <p className={`font-medium truncate ${isPending ? 'text-orange-800' : 'text-[#6F6F6F]'}`}>
                               {isPending ? teammate.email : teammate.name}
                             </p>
-                            {isCaptain && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
-                                Captain
-                              </span>
-                            )}
-                            {isPending && (
-                              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">
-                                Pending Invite
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {isCaptain && (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                                  Captain
+                                </span>
+                              )}
+                              {isPending && (
+                                <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                                  Pending Invite
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-500 mt-1">
                             <div className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {teammate.email}
+                              <Mail className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{teammate.email}</span>
                             </div>
                             {!isPending && teammate.phone && (
                               <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {teammate.phone}
+                                <Phone className="h-3 w-3 flex-shrink-0" />
+                                <span>{teammate.phone}</span>
                               </div>
                             )}
                             {isPending && (
@@ -535,7 +549,7 @@ export function TeammateManagementModal({
                           onClick={() => removeTeammate(teammate.id)}
                           size="sm"
                           disabled={removingTeammate === teammate.id}
-                          className={`text-white ${isPending ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-600 hover:bg-red-700'}`}
+                          className={`text-white w-full sm:w-auto ${isPending ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-600 hover:bg-red-700'}`}
                         >
                           {removingTeammate === teammate.id ? (
                             <>
@@ -545,12 +559,13 @@ export function TeammateManagementModal({
                           ) : (
                             <>
                               <Trash2 className="h-4 w-4 mr-1" />
-                              {isPending ? 'Cancel Invite' : 'Remove'}
+                              <span className="hidden sm:inline">{isPending ? 'Cancel Invite' : 'Remove'}</span>
+                              <span className="sm:hidden">{isPending ? 'Cancel' : 'Remove'}</span>
                             </>
                           )}
                         </Button>
                       ) : (
-                        <div className="text-sm text-gray-500 italic">
+                        <div className="text-sm text-gray-500 italic text-center sm:text-left">
                           Team Captain
                         </div>
                       )}
@@ -562,10 +577,11 @@ export function TeammateManagementModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+        <div className="flex justify-end gap-3 p-4 sm:p-6 border-t bg-gray-50">
           <Button
             onClick={onClose}
             variant="outline"
+            className="w-full sm:w-auto"
           >
             Close
           </Button>

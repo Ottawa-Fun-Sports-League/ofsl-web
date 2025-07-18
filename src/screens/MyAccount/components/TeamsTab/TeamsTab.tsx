@@ -81,6 +81,7 @@ export function TeamsTab() {
       
       {selectedTeam && (
         <TeammateManagementModal
+          key={`team-${selectedTeam.id}-${Date.now()}`}
           isOpen={!!selectedTeam}
           onClose={() => setSelectedTeam(null)}
           teamId={selectedTeam.id}
