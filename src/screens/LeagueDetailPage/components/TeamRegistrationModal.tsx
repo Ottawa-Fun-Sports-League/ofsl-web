@@ -143,6 +143,26 @@ export function TeamRegistrationModal({
 
       if (userError) throw userError;
 
+      // Send registration confirmation email
+      try {
+        const response = await supabase.functions.invoke('send-registration-confirmation', {
+          body: {
+            email: userProfile.email,
+            userName: userProfile.name || 'Team Captain',
+            teamName: teamName.trim(),
+            leagueName: leagueName
+          }
+        });
+
+        if (response.error) {
+          console.error('Failed to send confirmation email:', response.error);
+          // Don't throw error - email failure shouldn't block registration
+        }
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+        // Continue with registration flow even if email fails
+      }
+
       // Payment record will be automatically created by database trigger
       if (leagueData?.cost && leagueData.cost > 0) {
         // Show success modal instead of toast

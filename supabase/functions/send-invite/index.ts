@@ -157,75 +157,126 @@ serve(async (req: Request) => {
 
     const emailContent = {
       to: [email],
-      subject: `🏐 Team Invitation: Join ${teamName} in ${leagueName}!`,
+      subject: `Team Invitation: Join ${teamName} in ${leagueName}!`,
       html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #B20000 0%, #8B0000 100%); padding: 30px 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Ottawa Fun Sports League</h1>
-            <p style="color: #ffcccc; margin: 8px 0 0 0; font-size: 14px;">Ottawa's Premier Adult Sports Community</p>
-          </div>
-          
-          <!-- Main Content -->
-          <div style="padding: 40px 30px; background: #ffffff;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <div style="background: #f8f9fa; border-radius: 50px; width: 80px; height: 80px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 32px; line-height: 1; display: block;">🏐</span>
-              </div>
-              <h2 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">You're Invited to Join a Team!</h2>
-            </div>
-            
-            <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 25px 0; border-left: 4px solid #B20000;">
-              <p style="color: #2c3e50; font-size: 16px; line-height: 1.6; margin: 0;">
-                <strong>${captainName}</strong> has invited you to join their team <strong style="color: #B20000;">${teamName}</strong> 
-                in the <strong style="color: #B20000;">${leagueName}</strong> league.
-              </p>
-            </div>
-            
-            <div style="margin: 30px 0;">
-              <h3 style="color: #2c3e50; font-size: 18px; margin-bottom: 15px;">What's Next?</h3>
-              <ul style="color: #5a6c7d; font-size: 16px; line-height: 1.6; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Click the button below to create your OFSL account</li>
-                <li style="margin-bottom: 8px;">Complete your player profile with your skill level and preferences</li>
-                <li style="margin-bottom: 8px;">You'll automatically be added to ${teamName} once registered</li>
-                <li>Start playing with your new team!</li>
-              </ul>
-            </div>
-            
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${inviteUrl}" 
-                 style="background: linear-gradient(135deg, #B20000 0%, #8B0000 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(178, 0, 0, 0.3); transition: all 0.3s ease;">
-                🚀 Create Account & Join Team
-              </a>
-            </div>
-            
-            <div style="background: #e8f4f8; border-radius: 12px; padding: 20px; margin: 30px 0;">
-              <h4 style="color: #2c3e50; font-size: 16px; margin: 0 0 12px 0;">About OFSL</h4>
-              <p style="color: #5a6c7d; font-size: 14px; line-height: 1.5; margin: 0;">
-                We're Ottawa's premier adult sports league, offering volleyball, badminton, and more. 
-                Our leagues provide structured environments that encourage sportsmanship, physical activity, and healthy competition.
-                Join thousands of players who have made lasting friendships through OFSL!
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px;">
-              <p style="color: #7f8c8d; font-size: 14px; line-height: 1.5;">
-                Questions? Contact us at 
-                <a href="mailto:info@ofsl.ca" style="color: #B20000; text-decoration: none; font-weight: 600;">info@ofsl.ca</a>
-              </p>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #2c3e50; padding: 25px 20px; text-align: center;">
-            <p style="color: #bdc3c7; font-size: 12px; margin: 0 0 5px 0;">
-              © ${new Date().getFullYear()} Ottawa Fun Sports League. All rights reserved.
-            </p>
-            <p style="color: #95a5a6; font-size: 11px; margin: 0;">
-              This invitation was sent by ${captainName} on behalf of ${teamName}.
-            </p>
-          </div>
-        </div>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
+          <tr>
+            <td align="center" style="padding: 20px 0;">
+              <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff;">
+                <!-- Header -->
+                <tr>
+                  <td align="center" style="background-color: #B20000; padding: 30px 20px;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">Ottawa Fun Sports League</h1>
+                    <p style="color: #ffcccc; margin: 8px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">Ottawa's Premier Adult Sports Community</p>
+                  </td>
+                </tr>
+                
+                <!-- Main Content -->
+                <tr>
+                  <td style="padding: 40px 30px; background-color: #ffffff;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <!-- Title Section -->
+                      <tr>
+                        <td align="center" style="padding-bottom: 30px;">
+                          <p style="font-size: 48px; margin: 0 0 20px 0;">🏐</p>
+                          <h2 style="color: #2c3e50; margin: 0; font-size: 24px; font-weight: bold; font-family: Arial, sans-serif;">You're Invited to Join a Team!</h2>
+                        </td>
+                      </tr>
+                      
+                      <!-- Invitation Details -->
+                      <tr>
+                        <td style="padding-bottom: 25px;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f8f9fa; border-left: 4px solid #B20000;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                  <strong>${captainName}</strong> has invited you to join their team <strong style="color: #B20000;">${teamName}</strong> 
+                                  in the <strong style="color: #B20000;">${leagueName}</strong> league.
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- What's Next Section -->
+                      <tr>
+                        <td style="padding-bottom: 30px;">
+                          <h3 style="color: #2c3e50; font-size: 18px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">What's Next?</h3>
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                              <td style="color: #5a6c7d; font-size: 16px; line-height: 24px; font-family: Arial, sans-serif; padding-left: 20px;">
+                                • Click the button below to create your OFSL account<br>
+                                • Complete your player profile with your skill level and preferences<br>
+                                • You'll automatically be added to ${teamName} once registered<br>
+                                • Start playing with your new team!
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- CTA Button -->
+                      <tr>
+                        <td align="center" style="padding: 20px 0 40px 0;">
+                          <table cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" style="background-color: #B20000; border-radius: 4px;">
+                                <a href="${inviteUrl}" style="display: inline-block; padding: 16px 32px; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #ffffff; text-decoration: none;">
+                                  Create Account & Join Team
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- About OFSL -->
+                      <tr>
+                        <td style="padding-bottom: 30px;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #e8f4f8;">
+                            <tr>
+                              <td style="padding: 20px;">
+                                <h4 style="color: #2c3e50; font-size: 16px; margin: 0 0 12px 0; font-family: Arial, sans-serif;">About OFSL</h4>
+                                <p style="color: #5a6c7d; font-size: 14px; line-height: 21px; margin: 0; font-family: Arial, sans-serif;">
+                                  We're Ottawa's premier adult sports league, offering volleyball, badminton, and more. 
+                                  Our leagues provide structured environments that encourage sportsmanship, physical activity, and healthy competition.
+                                  Join thousands of players who have made lasting friendships through OFSL!
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      
+                      <!-- Contact -->
+                      <tr>
+                        <td align="center">
+                          <p style="color: #7f8c8d; font-size: 14px; line-height: 21px; font-family: Arial, sans-serif;">
+                            Questions? Contact us at 
+                            <a href="mailto:info@ofsl.ca" style="color: #B20000; text-decoration: none; font-weight: bold;">info@ofsl.ca</a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td align="center" style="background-color: #2c3e50; padding: 25px 20px;">
+                    <p style="color: #bdc3c7; font-size: 12px; margin: 0 0 5px 0; font-family: Arial, sans-serif;">
+                      © ${new Date().getFullYear()} Ottawa Fun Sports League. All rights reserved.
+                    </p>
+                    <p style="color: #95a5a6; font-size: 11px; margin: 0; font-family: Arial, sans-serif;">
+                      This invitation was sent by ${captainName} on behalf of ${teamName}.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       `,
     };
 
