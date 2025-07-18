@@ -148,7 +148,8 @@ serve(async (req: Request) => {
     }
 
     // Create the invite email content
-    const inviteUrl = `${Deno.env.get("SITE_URL") || "https://ofsl.ca"}/#/signup?invite=true`
+    const siteUrl = Deno.env.get("SITE_URL") || "https://ofsl.ca"
+    const inviteUrl = `${siteUrl}/#/signup?invite=true`
     
     const emailContent = {
       to: [email],
