@@ -81,7 +81,7 @@ export function TeamsSection({
                         </div>
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-4 w-4 flex-shrink-0" />
-                          <span>${teamPayment.amount_paid.toFixed(2)} / ${teamPayment.amount_due.toFixed(2)}</span>
+                          <span>${teamPayment.amount_paid.toFixed(2)} / ${(teamPayment.amount_due * 1.13).toFixed(2)} (${teamPayment.amount_due.toFixed(2)} + HST)</span>
                         </div>
                       </div>
                       <span className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap self-start sm:self-center ${
