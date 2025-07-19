@@ -104,14 +104,17 @@ export function useTeamsData(userId?: string) {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      const teamsData = data || [];
+      const teamsData = (data || []).map(team => ({
+        ...team,
+        roster: team.roster || [] // Ensure roster is always an array
+      }));
       console.log('fetchTeams returned data:', teamsData);
       console.log('Setting teams state with:', teamsData.length, 'teams');
       
       // Debug: show the roster for each team to verify user is not in it
       teamsData.forEach(team => {
         console.log(`Team "${team.name}" (ID: ${team.id}) roster:`, team.roster);
-        console.log(`User ${userId} in roster:`, team.roster.includes(userId));
+        console.log(`User ${userId} in roster:`, team.roster?.includes(userId));
       });
       setTeams(teamsData);
       return teamsData;

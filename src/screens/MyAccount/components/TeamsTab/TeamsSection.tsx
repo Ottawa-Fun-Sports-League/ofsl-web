@@ -150,7 +150,7 @@ export function TeamsSection({
                     <div className="flex items-center gap-2">
                       <User className="h-5 w-5 text-blue-500 flex-shrink-0" />
                       <span className="text-[#6F6F6F]">
-                        Team Size: {team.roster.length} players
+                        Team Size: {team.roster?.length || 0} players
                       </span>
                     </div>
 

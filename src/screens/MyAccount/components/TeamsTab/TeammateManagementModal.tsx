@@ -223,6 +223,8 @@ export function TeammateManagementModal({
         showToast(`Invite sent successfully to ${searchEmail}`, 'success');
         setSearchEmail('');
         setUserNotFound(false);
+        // Reload teammates to show the pending invite
+        await loadTeammates();
       } else {
         throw new Error(result.error || 'Failed to send invite');
       }
@@ -297,32 +299,10 @@ export function TeammateManagementModal({
       return;
     }
 
-    // Check if this is a pending invite
+    // Don't allow removing pending invites
     const teammate = teammates.find(t => t.id === userId);
-    if (teammate?.isPending && teammate.inviteId) {
-      try {
-        setRemovingTeammate(userId);
-        
-        // Remove pending invite from database
-        const { error } = await supabase
-          .from('team_invites')
-          .delete()
-          .eq('id', teammate.inviteId);
-
-        if (error) {
-          throw new Error('Failed to remove pending invite');
-        }
-        
-        showToast('Pending invite removed successfully', 'success');
-        
-        // Reload teammates list
-        await loadTeammates();
-      } catch (error) {
-        console.error('Error removing pending invite:', error);
-        showToast(error.message || 'Failed to remove pending invite', 'error');
-      } finally {
-        setRemovingTeammate(null);
-      }
+    if (teammate?.isPending) {
+      showToast('Pending invites cannot be removed', 'info');
       return;
     }
 
@@ -565,23 +545,23 @@ export function TeammateManagementModal({
                           </div>
                         </div>
                       </div>
-                      {!isCaptain && !readOnly ? (
+                      {!isCaptain && !readOnly && !isPending ? (
                         <Button
                           onClick={() => removeTeammate(teammate.id)}
                           size="sm"
                           disabled={removingTeammate === teammate.id}
-                          className={`text-white w-full sm:w-auto ${isPending ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-600 hover:bg-red-700'}`}
+                          className="text-white w-full sm:w-auto bg-red-600 hover:bg-red-700"
                         >
                           {removingTeammate === teammate.id ? (
                             <>
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                              {isPending ? 'Canceling...' : 'Removing...'}
+                              Removing...
                             </>
                           ) : (
                             <>
                               <Trash2 className="h-4 w-4 mr-1" />
-                              <span className="hidden sm:inline">{isPending ? 'Cancel Invite' : 'Remove'}</span>
-                              <span className="sm:hidden">{isPending ? 'Cancel' : 'Remove'}</span>
+                              <span className="hidden sm:inline">Remove</span>
+                              <span className="sm:hidden">Remove</span>
                             </>
                           )}
                         </Button>
