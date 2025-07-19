@@ -52,7 +52,7 @@ export default function TeamCard({ team }: { team: Team }) {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <DollarSign className="h-4 w-4" />
-          <span>${team.league?.cost || 'TBD'}</span>
+          <span>${team.league?.cost ? (team.league.cost * 1.13).toFixed(2) : 'TBD'}</span>
         </div>
       </div>
       
