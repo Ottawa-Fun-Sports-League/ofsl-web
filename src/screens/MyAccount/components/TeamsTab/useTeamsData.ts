@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
+import { getUserLeaguePayments } from '../../../../lib/payments';
 import { LeaguePayment, Team } from './types';
 
 export function useTeamsData(userId?: string) {
@@ -20,8 +21,19 @@ export function useTeamsData(userId?: string) {
       const { data, error } = await supabase
         .from('league_payments')
         .select(`
-          *,
-          league:leagues(name, location),
+          id,
+          user_id,
+          team_id,
+          league_id,
+          amount_due,
+          amount_paid,
+          status,
+          due_date,
+          payment_method,
+          notes,
+          created_at,
+          updated_at,
+          league:leagues!inner(name, location, cost),
           team:teams(name)
         `)
         .eq('user_id', userId)
@@ -30,20 +42,42 @@ export function useTeamsData(userId?: string) {
       if (error) throw error;
       
       // Transform the data to match the expected format
-      const transformedData = data?.map(payment => ({
-        user_id: payment.user_id,
-        league_name: payment.league?.name || '',
-        team_name: payment.team?.name || '',
-        amount_due: payment.amount_due,
-        amount_paid: payment.amount_paid,
-        amount_outstanding: payment.amount_due - payment.amount_paid,
-        status: payment.status,
-        due_date: payment.due_date,
-        payment_method: payment.payment_method,
-        created_at: payment.created_at,
-        updated_at: payment.updated_at,
-        id: payment.id
-      })) || [];
+      const transformedData = data?.map(payment => {
+        // Calculate amount paid from payment history if available
+        let calculatedAmountPaid = payment.amount_paid;
+        
+        if (payment.notes) {
+          try {
+            const paymentHistory = JSON.parse(payment.notes);
+            if (Array.isArray(paymentHistory)) {
+              calculatedAmountPaid = paymentHistory.reduce((total, entry) => {
+                const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(entry.amount.toString()) || 0;
+                return total + amount;
+              }, 0);
+            }
+          } catch (error) {
+            // If JSON parsing fails, use the database amount_paid value
+            calculatedAmountPaid = payment.amount_paid;
+          }
+        }
+        
+        
+        return {
+          user_id: payment.user_id,
+          league_name: payment.league?.name || '',
+          team_name: payment.team?.name || `Unknown Team (ID: ${payment.team_id})`,
+          amount_due: payment.amount_due,
+          amount_paid: calculatedAmountPaid,
+          league_cost: payment.league?.cost || null,
+          amount_outstanding: payment.amount_due - calculatedAmountPaid,
+          status: payment.status,
+          due_date: payment.due_date,
+          payment_method: payment.payment_method,
+          created_at: payment.created_at,
+          updated_at: payment.updated_at,
+          id: payment.id
+        };
+      }) || [];
       
       setLeaguePayments(transformedData);
     } catch (error) {
@@ -55,17 +89,30 @@ export function useTeamsData(userId?: string) {
     if (!userId) return [];
 
     try {
+      console.log('fetchTeams called for userId:', userId);
+      
+      // Add a small delay to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data, error } = await supabase
         .from('teams')
         .select(`
           *,
-          league:leagues(name, location)
+          league:leagues(id, name, location, cost)
         `)
         .contains('roster', [userId])
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       const teamsData = data || [];
+      console.log('fetchTeams returned data:', teamsData);
+      console.log('Setting teams state with:', teamsData.length, 'teams');
+      
+      // Debug: show the roster for each team to verify user is not in it
+      teamsData.forEach(team => {
+        console.log(`Team "${team.name}" (ID: ${team.id}) roster:`, team.roster);
+        console.log(`User ${userId} in roster:`, team.roster.includes(userId));
+      });
       setTeams(teamsData);
       return teamsData;
     } catch (error) {
@@ -78,11 +125,36 @@ export function useTeamsData(userId?: string) {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchLeaguePayments(), fetchTeams()]);
+    await Promise.all([fetchLeaguePaymentsSimple(), fetchTeams()]);
+  };
+
+  const fetchLeaguePaymentsSimple = async () => {
+    if (!userId) return;
+
+    try {
+      const payments = await getUserLeaguePayments();
+      
+      // Transform to match our local interface
+      const transformedData = payments.map(payment => ({
+        id: payment.id,
+        league_name: payment.league_name,
+        team_name: payment.team_name || '',
+        amount_due: payment.amount_due,
+        amount_paid: payment.amount_paid,
+        league_cost: payment.amount_due, // Use amount_due as league cost for now
+        status: payment.status,
+        due_date: payment.due_date || '',
+        payment_method: payment.payment_method
+      }));
+      
+      setLeaguePayments(transformedData);
+    } catch (error) {
+      console.error('Error fetching league payments:', error);
+    }
   };
 
   const refetchLeaguePayments = () => {
-    fetchLeaguePayments();
+    fetchLeaguePaymentsSimple();
   };
 
   const updateTeamRoster = (teamId: number, newRoster: string[]) => {
@@ -100,6 +172,7 @@ export function useTeamsData(userId?: string) {
     teams,
     loading,
     setLeaguePayments,
+    setTeams,
     refetchLeaguePayments,
     refetchTeams: fetchTeams,
     updateTeamRoster

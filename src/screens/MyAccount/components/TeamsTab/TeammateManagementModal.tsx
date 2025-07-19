@@ -24,6 +24,7 @@ interface TeammateManagementModalProps {
   captainId: string;
   onRosterUpdate: (newRoster: string[]) => Promise<void>;
   leagueName?: string;
+  readOnly?: boolean;
 }
 
 export function TeammateManagementModal({
@@ -34,7 +35,8 @@ export function TeammateManagementModal({
   currentRoster,
   captainId,
   onRosterUpdate,
-  leagueName
+  leagueName,
+  readOnly = false
 }: TeammateManagementModalProps) {
   const [teammates, setTeammates] = useState<User[]>([]);
   const [searchEmail, setSearchEmail] = useState('');
@@ -81,6 +83,21 @@ export function TeammateManagementModal({
         throw new Error('No authentication session found');
       }
 
+      // First, get the fresh roster from the database
+      const { data: teamData, error: teamError } = await supabase
+        .from('teams')
+        .select('roster')
+        .eq('id', teamId)
+        .single();
+
+      if (teamError) {
+        throw new Error('Failed to get current team roster');
+      }
+
+      const freshRoster = teamData?.roster || [];
+      console.log('Fresh roster from database:', freshRoster);
+      console.log('Props currentRoster:', currentRoster);
+
       // Use Edge Function to load teammates (bypasses RLS restrictions)
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-team-members`, {
         method: 'POST',
@@ -90,7 +107,7 @@ export function TeammateManagementModal({
         },
         body: JSON.stringify({
           teamId: teamId,
-          currentRoster: currentRoster
+          currentRoster: freshRoster // Use fresh roster instead of props
         }),
       });
 
@@ -359,7 +376,7 @@ export function TeammateManagementModal({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-auto">
         <div className="flex items-center justify-between p-4 sm:p-6 border-b">
           <h2 className="text-lg sm:text-xl font-semibold text-[#6F6F6F] pr-4">
-            <span className="hidden sm:inline">Manage Teammates - {teamName}</span>
+            <span className="hidden sm:inline">{readOnly ? 'View' : 'Manage'} Teammates - {teamName}</span>
             <span className="sm:hidden">Teammates</span>
           </h2>
           <button
@@ -371,8 +388,9 @@ export function TeammateManagementModal({
         </div>
 
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Add Teammate Section */}
-          <div className="border rounded-lg p-4">
+          {/* Add Teammate Section - Only show for captains */}
+          {!readOnly && (
+            <div className="border rounded-lg p-4">
             <h3 className="text-base sm:text-lg font-medium text-[#6F6F6F] mb-4">Add Teammate</h3>
             <div className="flex flex-col sm:flex-row gap-2">
               <Input
@@ -472,6 +490,7 @@ export function TeammateManagementModal({
               </div>
             )}
           </div>
+          )}
 
           {/* Current Teammates Section */}
           <div className="border rounded-lg p-4">
@@ -544,7 +563,7 @@ export function TeammateManagementModal({
                           </div>
                         </div>
                       </div>
-                      {!isCaptain ? (
+                      {!isCaptain && !readOnly ? (
                         <Button
                           onClick={() => removeTeammate(teammate.id)}
                           size="sm"
@@ -566,7 +585,7 @@ export function TeammateManagementModal({
                         </Button>
                       ) : (
                         <div className="text-sm text-gray-500 italic text-center sm:text-left">
-                          Team Captain
+                          {/* Captain tag is shown elsewhere, no text needed here */}
                         </div>
                       )}
                     </div>

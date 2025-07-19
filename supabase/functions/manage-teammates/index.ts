@@ -88,10 +88,13 @@ serve(async (req: Request) => {
       )
     }
 
-    // Verify the authenticated user is the team captain
-    if (user.id !== captainId) {
+    // Allow team captains to manage any teammates, or allow users to remove themselves
+    const isTeamCaptain = user.id === captainId;
+    const isRemovingSelf = action === 'remove' && user.id === userId;
+    
+    if (!isTeamCaptain && !isRemovingSelf) {
       return new Response(
-        JSON.stringify({ error: "Only team captains can manage teammates" }),
+        JSON.stringify({ error: "Only team captains can manage teammates, or users can remove themselves" }),
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -99,17 +102,16 @@ serve(async (req: Request) => {
       )
     }
 
-    // Verify the team exists and the user is the captain
+    // Verify the team exists
     const { data: teamData, error: teamError } = await supabase
       .from('teams')
-      .select('id, captain_id')
+      .select('id, captain_id, roster')
       .eq('id', teamId)
-      .eq('captain_id', captainId)
       .single()
 
     if (teamError || !teamData) {
       return new Response(
-        JSON.stringify({ error: "Team not found or you are not the captain" }),
+        JSON.stringify({ error: "Team not found" }),
         {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -117,28 +119,43 @@ serve(async (req: Request) => {
       )
     }
 
+    // Additional verification: if not team captain, ensure user is removing themselves and is in the roster
+    if (!isTeamCaptain) {
+      if (!teamData.roster.includes(userId)) {
+        return new Response(
+          JSON.stringify({ error: "You are not a member of this team" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        )
+      }
+    }
+
     if (action === 'add') {
-      // Add user to team
+      // Add user to team roster
+      const currentRoster = teamData.roster || [];
+      
+      // Check if user is already in the roster
+      if (currentRoster.includes(userId)) {
+        return new Response(
+          JSON.stringify({ error: "User is already a member of this team" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        )
+      }
+
+      const updatedRoster = [...currentRoster, userId];
+      
       const { data, error } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: teamId,
-          user_id: userId,
-          joined_at: new Date().toISOString()
-        })
+        .from('teams')
+        .update({ roster: updatedRoster })
+        .eq('id', teamId)
         .select()
 
       if (error) {
-        // Check if user is already on the team
-        if (error.code === '23505') { // unique_violation
-          return new Response(
-            JSON.stringify({ error: "User is already a member of this team" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          )
-        }
         throw error
       }
 
@@ -155,19 +172,11 @@ serve(async (req: Request) => {
       )
 
     } else if (action === 'remove') {
-      // Remove user from team
-      const { data, error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', teamId)
-        .eq('user_id', userId)
-        .select()
-
-      if (error) {
-        throw error
-      }
-
-      if (!data || data.length === 0) {
+      // Remove user from team roster
+      const currentRoster = teamData.roster || [];
+      
+      // Check if user is in the roster
+      if (!currentRoster.includes(userId)) {
         return new Response(
           JSON.stringify({ error: "User is not a member of this team" }),
           {
@@ -175,6 +184,18 @@ serve(async (req: Request) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         )
+      }
+
+      const updatedRoster = currentRoster.filter(id => id !== userId);
+      
+      const { data, error } = await supabase
+        .from('teams')
+        .update({ roster: updatedRoster })
+        .eq('id', teamId)
+        .select()
+
+      if (error) {
+        throw error
       }
 
       return new Response(

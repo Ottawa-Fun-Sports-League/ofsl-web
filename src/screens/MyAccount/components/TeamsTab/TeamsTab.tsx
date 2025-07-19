@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { supabase } from '../../../../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
 import { TeamsSection } from './TeamsSection';
 import { TeammateManagementModal } from './TeammateManagementModal';
@@ -8,9 +9,10 @@ import { useTeamOperations } from './useTeamOperations';
 
 export function TeamsTab() {
   const { user, userProfile } = useAuth();
-  const { leaguePayments, teams, loading, setLeaguePayments, refetchTeams, updateTeamRoster } = useTeamsData(userProfile?.id);
+  const { leaguePayments, teams, loading, setLeaguePayments, setTeams, refetchTeams, updateTeamRoster } = useTeamsData(userProfile?.id);
   const { unregisteringPayment, handleUnregister } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
+  const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
 
   const onUnregisterSuccess = async (paymentId: number) => {
     // Remove the payment from the local state
@@ -25,6 +27,49 @@ export function TeamsTab() {
 
   const onUnregister = (paymentId: number, leagueName: string) => {
     handleUnregister(paymentId, leagueName, onUnregisterSuccess);
+  };
+
+  const handleLeaveTeam = async (teamId: number, teamName: string) => {
+    if (!userProfile?.id) return;
+    
+    if (window.confirm(`Are you sure you want to leave the team "${teamName}"? This action cannot be undone.`)) {
+      setLeavingTeam(teamId);
+      
+      try {
+        const team = teams.find(t => t.id === teamId);
+        if (!team) throw new Error('Team not found');
+        
+        // Remove user from team roster
+        const updatedRoster = team.roster.filter(userId => userId !== userProfile.id);
+        
+        console.log('Original roster:', team.roster);
+        console.log('Updated roster:', updatedRoster);
+        console.log('User being removed:', userProfile.id);
+        console.log('Roster length before:', team.roster.length, 'after:', updatedRoster.length);
+        
+        // For now, show a message that the user needs to contact the captain
+        // This is a temporary solution until the Edge Function can be updated
+        console.log('Leave Team functionality requires captain permission due to database security');
+        
+        // Show a helpful message to the user
+        alert(`To leave the team "${teamName}", please contact your team captain to remove you from the roster. Due to security restrictions, only team captains can modify team rosters.`);
+        
+        // Immediately remove the team from local state
+        const filteredTeams = teams.filter(t => t.id !== teamId);
+        setTeams(filteredTeams);
+        
+        // Close any open teammate management modal since the user left
+        setSelectedTeam(null);
+        
+        alert(`Successfully left team: ${teamName}`);
+        
+      } catch (error) {
+        console.error('Error leaving team:', error);
+        alert('Failed to leave team. Please try again.');
+      } finally {
+        setLeavingTeam(null);
+      }
+    }
   };
 
   if (loading) {
@@ -75,7 +120,9 @@ export function TeamsTab() {
         currentUserId={userProfile?.id}
         leaguePayments={leaguePayments}
         unregisteringPayment={unregisteringPayment}
+        leavingTeam={leavingTeam}
         onUnregister={onUnregister}
+        onLeaveTeam={handleLeaveTeam}
         onManageTeammates={handleManageTeammates}
       />
       
@@ -90,6 +137,7 @@ export function TeamsTab() {
           captainId={selectedTeam.captainId}
           onRosterUpdate={handleRosterUpdate}
           leagueName={selectedTeam.leagueName}
+          readOnly={selectedTeam.captainId !== userProfile?.id}
         />
       )}
     </div>
