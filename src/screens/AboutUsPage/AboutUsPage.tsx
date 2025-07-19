@@ -293,7 +293,7 @@ export const AboutUsPage = (): JSX.Element => {
         </div>
 
         {/* Diabetes Canada section - New section with 2 columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28">
+        <div id="diabetes-canada-section" className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28">
           {/* First column - Image */}
           <div className="flex items-center justify-center">
             <img
