@@ -49,7 +49,7 @@ export function LeaguePaymentsSection({
                   </div>
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-4 w-4" />
-                    <span>${payment.amount_paid.toFixed(2)} / ${payment.amount_due.toFixed(2)}</span>
+                    <span>${payment.amount_paid.toFixed(2)} / ${(payment.amount_due * 1.13).toFixed(2)}</span>
                   </div>
                   <span className={`px-2 py-0.5 text-xs rounded-full ${
                     payment.status === 'paid' ? 'bg-green-100 text-green-800' :

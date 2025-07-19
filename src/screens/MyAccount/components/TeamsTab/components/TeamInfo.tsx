@@ -52,13 +52,13 @@ export function TeamInfo({ team, isCaptain, currentUserId }: TeamInfoProps) {
         {team.payment ? (
           <div className="flex items-center gap-2">
             <p className="text-[#6F6F6F]">
-              ${team.payment.amount_paid.toFixed(2)} / ${team.payment.amount_due.toFixed(2)}
+              ${team.payment.amount_paid.toFixed(2)} / ${(team.payment.amount_due * 1.13).toFixed(2)}
             </p>
             <StatusBadge status={team.payment.status} />
           </div>
         ) : (
           <p className="text-[#6F6F6F]">
-            ${team.league?.cost ? parseFloat(team.league.cost.toString()).toFixed(2) : '0.00'}
+            ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
           </p>
         )}
       </div>

@@ -17,6 +17,15 @@ interface TeamData {
   payment_status: 'pending' | 'partial' | 'paid' | 'overdue' | null;
   amount_due: number | null;
   amount_paid: number | null;
+  league?: {
+    id: number;
+    name: string;
+    cost: number | null;
+    location: string | null;
+    sports?: {
+      name: string;
+    } | null;
+  } | null;
 }
 
 interface LeagueTeamsProps {
@@ -98,6 +107,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
             payment_status: paymentData?.status || null,
             amount_due: paymentData?.amount_due || null,
             amount_paid: paymentData?.amount_paid || null,
+            league: team.leagues, // Add the league data
           };
         })
       );
@@ -288,7 +298,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
                   {team.amount_due && team.amount_paid !== null ? (
                     <div className="flex items-center gap-2">
                       <span className="text-[#6F6F6F] whitespace-nowrap">
-                        ${team.amount_paid.toFixed(2)} / ${team.amount_due.toFixed(2)}
+                        ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
                       </span>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${getPaymentStatusColor(team.payment_status)}`}>
                         {team.payment_status && team.payment_status.charAt(0).toUpperCase() + team.payment_status.slice(1)}
@@ -297,7 +307,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="text-[#6F6F6F] whitespace-nowrap">
-                        $0.00 / ${team.league?.cost ? parseFloat(team.league.cost.toString()).toFixed(2) : '0.00'}
+                        $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
                       </span>
                       <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
                         Pending
