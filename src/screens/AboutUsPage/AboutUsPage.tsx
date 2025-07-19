@@ -9,10 +9,10 @@ import { Mail, ChevronDown, ChevronUp } from "lucide-react";
 export const AboutUsPage = (): JSX.Element => {
   // Stats final values
   const statsData = [
-    { value: 1500, label: "Weekly players", suffix: "+" },
+    { value: 1800, label: "Weekly players", suffix: "+" },
     { value: 15, label: "Years of operation", suffix: "+" },
     { value: 260, label: "Volleyball teams", suffix: "+" },
-    { value: 50, label: "Raised for charities", suffix: "K+" },
+    { value: 85, label: "Raised for charities", suffix: "K+" },
   ];
 
   // Newsletter form state
@@ -209,7 +209,7 @@ export const AboutUsPage = (): JSX.Element => {
         <div className="text-center text-white">
           <h1 className="text-5xl mb-4 font-heading">About Us</h1>
           <p className="text-xl max-w-2xl mx-auto">
-            Ottawa Fun Sports League - Building community through sports since 2010
+            Founded in 2010, The Ottawa Fun Sports League (OFSL) is a volunteer-run, non-profit organization dedicated to making a meaningful impact in the Ottawa community through sport and recreation.
           </p>
         </div>
       </HeroBanner>
@@ -243,15 +243,12 @@ export const AboutUsPage = (): JSX.Element => {
           <div className="flex flex-col justify-center">
             <h2 className="text-3xl font-bold text-[#6F6F6F] mb-6">Our Mission</h2>
             <p className="text-lg text-[#6F6F6F]">
-              The Ottawa Fun Sports League (OFSL) aims to provide opportunities to be active and 
-              promote a healthy lifestyle for youths and adults, while having fun at the same time. 
-              We are dedicated to creating a welcoming environment where people of all skill levels 
-              can enjoy sports, make connections, and build community.
+              Our mission is to create inclusive, affordable, and enjoyable opportunities for individuals of all ages to stay active, meet new people, and live a healthy lifestyle, while having fun at the same time. We are dedicated to creating a welcoming environment where people of all skill levels can enjoy sports, make connections, and build community.
             </p>
           </div>
           <div>
             <img
-              src="/mask-group.png"
+              src="/AdobeStock_80339042.jpeg"
               alt="OFSL Community in Action"
               className="w-full h-[350px] object-cover rounded-lg"
             />
