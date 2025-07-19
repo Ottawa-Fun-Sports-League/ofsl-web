@@ -36,12 +36,12 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
       title: "Team Coaching",
       description: "Customized team training sessions",
       features: [
-        "Saturdays 11:30am-1:30pm",
-        "$300 per session",
-        "Maximum 12 players",
-        "Personalized team development"
+        "Custom practice sessions designed for your team's objectives",
+        "Focus on individual skills development", 
+        "Defensive and offensive systems training",
+        "Strategy implementation and formation"
       ],
-      requirement: "Contact: ottawafunsports@gmail.com",
+      requirement: "Contact: info@ofsl.ca to book a session",
       icon: <Users className="w-8 h-8 text-[#B20000]" />
     }
   ];
@@ -49,7 +49,7 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
   return (
     <div className="bg-white w-full">
       <HeroBanner
-        image="/group-2-1.png"
+        image="/AdobeStock_84066897.jpeg"
         imageAlt="Skills and drills training"
         height="500px"
       >
@@ -107,7 +107,7 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
             <div className="flex items-center justify-center">
               <img 
-                src="/group-2-1.png" 
+                src="/JamesBattiston_WEB.jpg" 
                 alt="James Battiston coaching" 
                 className="rounded-lg w-full max-w-[400px] h-[400px] object-cover shadow-lg"
               />
@@ -125,8 +125,117 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
         <div className="pb-16 md:pb-24">
           <h2 className="text-3xl font-bold text-center text-[#6F6F6F] mb-12">Session Types</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {sessionTypes.map((session, index) => (
+          {/* General Skill Sessions - Full Width Row */}
+          <div className="mb-12">
+            <Card className="h-full">
+              <CardContent className="p-8">
+                <div className="flex items-center mb-6">
+                  <Target className="w-8 h-8 text-[#B20000]" />
+                  <h3 className="text-xl font-bold text-[#6F6F6F] ml-4">General Skill Sessions</h3>
+                </div>
+                
+                <div className="mb-8">
+                  <p className="text-[#6F6F6F] mb-6">
+                    We offer four foundational skill sessions for players at any level. Our fundamentals training covers all main aspects of volleyball - passing, attacking, serving, and defense - with drills designed to maximize contacts and small games for real-time feedback. Custom sessions can also be arranged.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h4 className="text-lg font-bold text-[#B20000] mb-3">Setters</h4>
+                    <ul className="space-y-2 text-[#6F6F6F]">
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Footwork and hand positioning techniques</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Decision-making and court awareness</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Accurate sets and quick decisions under pressure</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Controlling game tempo and building chemistry with hitters</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h4 className="text-lg font-bold text-[#B20000] mb-3">Reception</h4>
+                    <ul className="space-y-2 text-[#6F6F6F]">
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>First contact techniques - overhead and underhand</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>When and how to apply different passing methods</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Reception forms and positioning strategies</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Maximizing success of team's first contact</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h4 className="text-lg font-bold text-[#B20000] mb-3">Attacking</h4>
+                    <ul className="space-y-2 text-[#6F6F6F]">
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Arm swing mechanics and approach techniques</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Hand contact and timing of attack</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Attacks from all court positions (front and back row)</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Game situation drills based on skill level</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-gray-50 p-6 rounded-lg">
+                    <h4 className="text-lg font-bold text-[#B20000] mb-3">Defense/Blocking</h4>
+                    <ul className="space-y-2 text-[#6F6F6F]">
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Reading sets and efficient blocking movement</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Footwork for stronger block jumps and hand placement</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Back row positioning and reading attackers</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="mr-2">•</span>
+                        <span>Defensive strategy and court coverage systems</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Strategy and Team Coaching - Two Column Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[sessionTypes[0], sessionTypes[2]].map((session, index) => (
               <Card key={index} className="h-full">
                 <CardContent className="p-8">
                   <div className="flex items-center mb-6">
@@ -154,29 +263,28 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
           </div>
         </div>
 
-        {/* Registration Information */}
-        <div className="pb-16 md:pb-24">
-          <Card className="bg-[#B20000] text-white">
-            <CardContent className="p-8 md:p-12 text-center">
-              <h2 className="text-3xl font-bold mb-6">Ready to Improve Your Game?</h2>
-              <p className="text-xl mb-8 max-w-2xl mx-auto">
-                Limited spots available - maximum 24 participants per session
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                <Button className="bg-white hover:bg-gray-100 text-[#B20000] rounded-[10px] px-8 py-3">
-                  Register Now
-                </Button>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-[#B20000] rounded-[10px] px-8 py-3">
-                  Contact Us
-                </Button>
+        {/* Session Status Information */}
+        <div className="flex justify-center pb-16 md:pb-24">
+          <Card className="bg-[#ffeae5] rounded-lg shadow-none border-none max-w-4xl w-full">
+            <CardContent className="flex flex-col md:flex-row items-center justify-center p-6 md:p-8 gap-6 md:gap-8">
+              <div className="flex-shrink-0">
+                <span className="material-symbols-outlined text-[50px] md:text-[64px] text-[#B20000]">
+                  sports_volleyball
+                </span>
               </div>
-              
-              <div className="text-center">
-                <p className="text-lg mb-2">Questions? Contact us:</p>
-                <a href="mailto:ottawafunsports@gmail.com" className="text-xl font-bold hover:underline">
-                  ottawafunsports@gmail.com
-                </a>
+              <div className="text-center md:text-left flex-1">
+                <h3 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[28px] leading-7 md:leading-8 mb-3">
+                  There are no skills and drills sessions currently scheduled
+                </h3>
+                <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-4">
+                  Contact us to inquire about setting up the next training session.
+                </p>
+                <Link 
+                  to="/about-us"
+                  className="text-[#B20000] text-base md:text-lg underline font-bold hover:text-[#8a0000]"
+                >
+                  Contact us
+                </Link>
               </div>
             </CardContent>
           </Card>
