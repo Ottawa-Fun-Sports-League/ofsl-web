@@ -8,49 +8,35 @@ export const BadmintonPage = (): JSX.Element => {
   // League card data for badminton
   const leagueCards = [
     {
-      title: "Advanced Singles",
+      title: "Wednesday Competitive",
       image: "/badminton-card.png",
       link: "/leagues/badminton-advanced-singles"
     },
     {
-      title: "Intermediate Doubles",
-      image: "/coed-badminton.png",
+      title: "Wednesday Intermediate",
+      image: "/AdobeStock_319667211.jpeg",
       link: "/leagues/badminton-intermediate-doubles"
     },
     {
-      title: "Competitive Singles",
-      image: "/badminton-card.png",
+      title: "Monday Int/Adv/Comp",
+      image: "/AdobeStock_480292293.jpeg",
       link: "/leagues/badminton-competitive-singles"
     },
-    {
-      title: "Coed Intermediate Doubles",
-      image: "/coed-badminton.png",
-      link: "/leagues/badminton-coed-intermediate"
-    },
-    {
-      title: "Advanced Doubles",
-      image: "/badminton-card.png",
-      link: "/leagues/badminton-advanced-doubles"
-    },
-    {
-      title: "Competitive Doubles",
-      image: "/coed-badminton.png",
-      link: "/leagues/badminton-competitive-doubles"
-    },
+    
   ];
 
   return (
     <div className="bg-white flex flex-row justify-center w-full">
       <div className="bg-white w-full relative">
         <HeroBanner
-          image="/coed-badminton.png"
+          image="/AdobeStock_283705208.jpeg"
           imageAlt="Badminton players"
           height="500px"
         >
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Badminton Leagues</h1>
             <p className="text-xl max-w-2xl mx-auto mb-8">
-              OFSL's badminton leagues offer competitive play for all skill levels, from intermediate to advanced players. Experience fast-paced action and improve your game in a supportive community environment.
+              OFSL's badminton leagues offer high-caliber play for a range of skill levels, from competitive to advanced. Enjoy fast-paced action and elevate your game in a supportive and inclusive community.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
               <Link to="/leagues?sport=Badminton" className="w-full sm:w-auto">
@@ -63,14 +49,7 @@ export const BadmintonPage = (): JSX.Element => {
                   </span>
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-              >
-                <span className="text-base md:text-lg text-white">
-                  Schedule & Standings
-                </span>
-              </Button>
+              
             </div>
           </div>
         </HeroBanner>
@@ -84,7 +63,8 @@ export const BadmintonPage = (): JSX.Element => {
           {/* About badminton leagues text */}
           <div className="text-center mb-12">
             <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-              OFSL badminton leagues feature both singles and doubles play across multiple skill levels. Our leagues are designed to provide competitive matches while maintaining a fun and inclusive atmosphere. Whether you're looking to improve your technique or compete at a high level, we have a league that's right for you.
+              OFSL’s badminton leagues feature doubles play across competitive and advanced skill levels. Designed to deliver exciting matchups in a fun and inclusive environment, our leagues offer the perfect balance of challenge and community. Whether you're looking to sharpen your skills or compete at a higher level, there's a spot for you.
+
             </p>
           </div>
           
@@ -143,7 +123,7 @@ export const BadmintonPage = (): JSX.Element => {
             {/* First column with image */}
             <div className="flex items-center justify-center">
               <img 
-                src="/coed-badminton.png" 
+                src="/AdobeStock_286739717.jpeg" 
                 alt="Badminton Players" 
                 className="rounded-lg w-[400px] h-[400px] object-cover object-center shadow-lg"
               />
@@ -155,23 +135,24 @@ export const BadmintonPage = (): JSX.Element => {
               <ul className="space-y-3 text-[#6F6F6F] text-base md:text-lg mb-8">
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Both singles and doubles formats available across all skill levels.</span>
+                  <span>Doubles format offered across competitive and advanced skill levels.</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Focused on players who want competitive yet enjoyable matches.</span>
+                  <span>Tailored for players seeking challenging yet enjoyable match play.</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Professional-grade shuttlecocks provided for all league play.</span>
+                  <span>Professional-grade shuttlecocks provided at select locations.</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Multiple courts available to ensure optimal playing conditions.</span>
+                  <span>Multiple courts ensure smooth scheduling and quality playing conditions.</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Individual registration - we'll match you with players of similar skill level.</span>
+                  <span>Individual registration available — we’ll recommend an evening that matches your skill level
+.</span>
                 </li>
               </ul>
               <Link to="/leagues?sport=Badminton" className="self-start">
@@ -322,9 +303,9 @@ export const BadmintonPage = (): JSX.Element => {
                     Proudly partnering with Diabetes Canada to promote healthier
                     lifestyles through sport and community wellness.
                   </span>
-                  <a href="#" className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold">
+                  <Link to="/about-us#diabetes-canada-section" className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold">
                     Learn more
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
