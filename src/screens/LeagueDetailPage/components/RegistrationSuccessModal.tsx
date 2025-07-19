@@ -18,6 +18,11 @@ export function RegistrationSuccessModal({
 }: RegistrationSuccessModalProps) {
   if (!showModal) return null;
 
+  // Calculate HST (13%) and total amount
+  const baseAmount = leagueCost || 0;
+  const hstAmount = baseAmount * 0.13;
+  const totalAmount = baseAmount + hstAmount;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
@@ -44,10 +49,7 @@ export function RegistrationSuccessModal({
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
             <h3 className="text-amber-800 font-medium mb-2">Important Payment Information</h3>
             <p className="text-amber-700 text-sm mb-3">
-              To fully secure your spot in this league, a deposit of $200 or full payment of ${leagueCost?.toFixed(2) || '0.00'} +HST is required.
-            </p>
-            <p className="text-amber-700 text-sm">
-              If payment is not received, your spot is not guaranteed.
+              To fully secure your spot in this league, a deposit of $200 or full payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) is required.
             </p>
             <p className="text-amber-700 text-sm font-medium">
               If payment is not received, your spot is not guaranteed.
