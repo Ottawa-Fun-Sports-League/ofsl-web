@@ -61,7 +61,10 @@ export function PaymentInformation({
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="text-sm text-[#6F6F6F] mb-1">Amount Due</div>
             <div className="text-2xl font-bold text-[#6F6F6F]">
-              ${paymentInfo.amount_due.toFixed(2)}
+              ${(paymentInfo.amount_due * 1.13).toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              ${paymentInfo.amount_due.toFixed(2)} + HST (${(paymentInfo.amount_due * 0.13).toFixed(2)})
             </div>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -73,9 +76,9 @@ export function PaymentInformation({
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="text-sm text-[#6F6F6F] mb-1">Amount Owing</div>
             <div className={`text-2xl font-bold ${
-              (paymentInfo.amount_due - paymentInfo.amount_paid) > 0 ? 'text-orange-600' : 'text-green-600'
+              ((paymentInfo.amount_due * 1.13) - paymentInfo.amount_paid) > 0 ? 'text-orange-600' : 'text-green-600'
             }`}>
-              ${(paymentInfo.amount_due - paymentInfo.amount_paid).toFixed(2)}
+              ${((paymentInfo.amount_due * 1.13) - paymentInfo.amount_paid).toFixed(2)}
             </div>
           </div>
         </div>

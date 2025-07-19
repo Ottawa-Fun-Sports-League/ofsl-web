@@ -9,7 +9,8 @@
       "Bash(mv:*)",
       "Bash(touch:*)",
       "Bash(rm:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   },
