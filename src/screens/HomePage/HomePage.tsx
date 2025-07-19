@@ -229,14 +229,16 @@ export const HomePage = (): JSX.Element => {
                 </span>
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-            >
-              <span className="text-base md:text-lg text-white">
-                Register Now
-              </span>
-            </Button>
+            <Link to="/leagues" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
+              >
+                <span className="text-base md:text-lg text-white">
+                  Register Now
+                </span>
+              </Button>
+            </Link>
             <Button
               variant="outline"
               className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
@@ -272,23 +274,25 @@ export const HomePage = (): JSX.Element => {
         </div>
 
         {/* Holiday break notification */}
-        <Card className="bg-[#ffeae5] rounded-lg mb-16 md:mb-24 shadow-none border-none">
-          <CardContent className="flex flex-col md:flex-row items-center p-6 md:p-8 gap-6">
-            <img
-              className="w-[50px] h-[50px] md:w-[71px] md:h-[71px] rounded-lg"
-              alt="Notification"
-              src="/notification-important-24dp-000000-fill0-wght200-grad0-opsz24-1.svg"
-            />
-            <div className="md:ml-6 text-center md:text-left">
-              <h3 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[32px] leading-8 md:leading-10 mb-2">
-                LoveGive's Charity Tournament 
-              </h3>
-              <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-                Come out and experience a day of fun on Aug 17, 2025 at Britannia Beach, for a 6v6 and 4v4 tournament. 
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex justify-center mb-16 md:mb-24">
+          <Card className="bg-[#ffeae5] rounded-lg shadow-none border-none max-w-4xl w-full">
+            <CardContent className="flex flex-col md:flex-row items-center justify-center p-6 md:p-8 gap-6 md:gap-8">
+              <div className="flex-shrink-0">
+                <span className="material-symbols-outlined text-[50px] md:text-[64px] text-[#B20000]">
+                  diversity_4
+                </span>
+              </div>
+              <div className="text-center md:text-left flex-1">
+                <h3 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[28px] leading-7 md:leading-8 mb-3">
+                  LoveGive's Charity Tournament 
+                </h3>
+                <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
+                  Come out and experience a day of fun on Aug 17, 2025 at Britannia Beach, for a 6v6 and 4v4 tournament. 
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* League description */}
         <div className="text-center mb-16 md:mb-24">
@@ -397,11 +401,13 @@ export const HomePage = (): JSX.Element => {
                 Led by James Battiston, former member of the Canadian Beach National Team.
               </p>
             </div>
-            <Button className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5 w-full md:w-auto">
-              <span className="text-base md:text-lg text-[#b20000] hover:text-white">
-                Learn more
-              </span>
-            </Button>
+            <Link to="/skills-and-drills">
+              <Button className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5 w-full md:w-auto">
+                <span className="text-base md:text-lg text-[#b20000] hover:text-white">
+                  Learn more
+                </span>
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
@@ -421,12 +427,12 @@ export const HomePage = (): JSX.Element => {
               <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-6 md:mb-8">
               Whether you're just starting out or a seasoned player aiming to refine your fundamentals, elevate your skills with <strong>OFSL’s Skills & Drills Program</strong>, led by <strong>James Battiston</strong>, former professional volleyball player and Canadian Beach National Team member. Learn from one of the best and take your game to the next level!
               </p>
-              <a 
-                href="#" 
+              <Link 
+                to="/skills-and-drills" 
                 className="text-base md:text-lg text-[#b20000] underline font-bold"
               >
                 Sign me up
-              </a>
+              </Link>
             </div>
           </div>
 

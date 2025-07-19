@@ -108,14 +108,6 @@ export function Header({ isCompact = false }: HeaderProps) {
                   Badminton
                 </Link>
               </NavigationMenuItem>
-              <NavigationMenuItem className="flex items-center">
-                <Link 
-                  to="https://hoops.ofsl.ca"
-                  className={getLinkClasses("/basketball")}
-                >
-                  Basketball
-                </Link>
-              </NavigationMenuItem>
               <NavigationMenuItem className="relative flex items-center">
                 <div className="absolute -top-2.5 w-full text-center">
                   <span className="text-[10px] text-[#ffeae5] font-medium whitespace-nowrap">Coming Soon!</span>
@@ -258,13 +250,6 @@ export function Header({ isCompact = false }: HeaderProps) {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Badminton
-              </Link>
-              <Link 
-                to="https://hoops.ofsl.ca" 
-                className={getMobileLinkClasses("/basketball")}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Basketball
               </Link>
               <div className="flex flex-col">
                 <span className="text-[10px] text-[#ffeae5] font-medium px-4 whitespace-nowrap">Coming Soon!</span>
