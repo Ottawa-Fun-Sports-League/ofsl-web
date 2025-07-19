@@ -40,12 +40,12 @@ export function TeamsTab() {
         if (!team) throw new Error('Team not found');
         
         // Remove user from team roster
-        const updatedRoster = team.roster.filter(userId => userId !== userProfile.id);
+        const updatedRoster = (team.roster || []).filter(userId => userId !== userProfile.id);
         
         console.log('Original roster:', team.roster);
         console.log('Updated roster:', updatedRoster);
         console.log('User being removed:', userProfile.id);
-        console.log('Roster length before:', team.roster.length, 'after:', updatedRoster.length);
+        console.log('Roster length before:', team.roster?.length || 0, 'after:', updatedRoster.length);
         
         // For now, show a message that the user needs to contact the captain
         // This is a temporary solution until the Edge Function can be updated
