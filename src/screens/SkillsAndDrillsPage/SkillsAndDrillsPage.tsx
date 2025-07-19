@@ -280,7 +280,7 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
                   Contact us to inquire about setting up the next training session.
                 </p>
                 <Link 
-                  to="/about-us"
+                  to="/about-us#contact"
                   className="text-[#B20000] text-base md:text-lg underline font-bold hover:text-[#8a0000]"
                 >
                   Contact us

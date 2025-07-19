@@ -3,49 +3,52 @@ import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
 import { BookOpen, Star } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 
 export const VolleyballPage = (): JSX.Element => {
+  const { user } = useAuth();
+
   // League card data
   const leagueCards = [
     {
-      title: "Indoor Elite Womens",
+      title: "Tuesday Women's ELite",
       image: "/womens-elite-card.jpg",
-      link: "/leagues/womens-elite"
+      link: "/leagues?sport=Volleyball"
     },
     {
-      title: "Indoor Coed Intermediate 6s",
-      image: "/indoor-coed.jpg",
-      link: "/leagues/coed-intermediate"
+      title: "Monday Mens",
+      image: "/monday mens.jpg",
+      link: "/leagues?sport=Volleyball"
     },
     {
-      title: "Indoor Coed Advanced 6s",
-      image: "/indoor-coed.jpg",
-      link: "/leagues/coed-advanced"
+      title: "Sunday Day Mixed (Officiated)",
+      image: "/Sunday Day Mixed.jpg",
+      link: "/leagues?sport=Volleyball"
     },
     {
-      title: "Indoor Womens Int/Adv 6s",
-      image: "/womens-elite-card.jpg",
-      link: "/leagues/womens-int-adv"
+      title: "Monday Women's",
+      image: "/Monday Wonems.png",
+      link: "/leagues?sport=Volleyball"
     },
     {
-      title: "Indoor Mens Int/Adv 6s",
-      image: "/indoor-coed.jpg",
-      link: "/leagues/mens-int-adv"
+      title: "Thursday Mixed Elite",
+      image: "/Thursday elits 2.jpg",
+      link: "/leagues?sport=Volleyball"
     },
     {
-      title: "Indoor Coed Int/Adv 4s",
-      image: "/indoor-coed.jpg",
-      link: "/leagues/coed-int-adv-4s"
+      title: "Thursday Mixed Adv/Comp",
+      image: "/Thursday Mixed.jpg",
+      link: "/leagues?sport=Volleyball"
     },
     {
-      title: "Indoor Coed Competitive 6s",
-      image: "/571North-CR3_0335-Indoor-VB-Header-Featured.jpg",
-      link: "/leagues/coed-competitive-6s"
+      title: "Wednesday Women's Premier",
+      image: "/Thursday womens premier.webp",
+      link: "/leagues?sport=Volleyball"
     },
     {
-      title: "Indoor Coed Competitive 4s",
-      image: "/571North-CR3_0335-Indoor-VB-Header-Featured.jpg",
-      link: "/leagues/coed-competitive-4s"
+      title: "Sunday Evening Mixed",
+      image: "/sunday evening mixed.jpg",
+      link: "/leagues?sport=Volleyball"
     },
   ];
 
@@ -60,7 +63,7 @@ export const VolleyballPage = (): JSX.Element => {
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Volleyball Leagues</h1>
             <p className="text-xl max-w-2xl mx-auto mb-8">
-              OFSL's volleyball leagues are organized to provide participants with a structured environment that encourages sportsmanship, physical activity and healthy competition free of negative attitudes.
+              OFSL's volleyball leagues are organized to provide participants with a structured environment that encourages sportsmanship, physical activity and healthy competition.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
               <Link to="/leagues?sport=Volleyball" className="w-full sm:w-auto">
@@ -73,14 +76,16 @@ export const VolleyballPage = (): JSX.Element => {
                   </span>
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-              >
-                <span className="text-base md:text-lg text-white">
-                  Schedule & Standings
-                </span>
-              </Button>
+              <Link to={user ? "/my-account/teams" : "/login?redirect=/my-account/teams"} className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
+                >
+                  <span className="text-base md:text-lg text-white">
+                    Schedule & Standings
+                  </span>
+                </Button>
+              </Link>
             </div>
           </div>
         </HeroBanner>
@@ -94,7 +99,7 @@ export const VolleyballPage = (): JSX.Element => {
           {/* Added text about volleyball divisions */}
           <div className="text-center mb-12">
             <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-              OFSL offers several nights of Advanced-Intermediate and Intermediate volleyball consisting of four separate divisions: Women, Co-ed, Men and Elite Womens. For the 2024/25 season, each league follows a tiered system or schedule. Our tiered and hybrid system is designed to allow every team to find a level of play that is even and fair.
+              OFSL offers a variety of league nights across four divisions: Women’s, Mixed, Men’s, and Elite Women’s. at the Elite, Competitive, Advanced, and Intermediate levels; with some divisions featuring referees. For the 2025/26 season, all leagues will follow either a tiered or hybrid format. This system ensures balanced, competitive play by finding the level that best suits their skills and experience.
             </p>
           </div>
           
@@ -173,11 +178,11 @@ export const VolleyballPage = (): JSX.Element => {
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Schools and play times may vary between tiers.</span>
+                  <span>Schools and play times may vary between tiers and leagues.</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>You must be registered in to see the standings and schedules.</span>
+                  <span>You must be registered to access standings and schedules.</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
@@ -206,19 +211,19 @@ export const VolleyballPage = (): JSX.Element => {
               <ul className="space-y-3 text-[#6F6F6F]">
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+                  <span>Highly skilled players with advanced technical abilities</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Sed do eiusmod tempor incididunt ut labore et dolore.</span>
+                  <span>Fast-paced play with strong team systems required</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Ut enim ad minim veniam, quis nostrud exercitation.</span>
+                  <span>Competitive club, college, or university experience</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Duis aute irure dolor in reprehenderit in voluptate.</span>
+                  <span>All teams are extremely competitive</span>
                 </li>
               </ul>
             </div>
@@ -235,19 +240,19 @@ export const VolleyballPage = (): JSX.Element => {
               <ul className="space-y-3 text-[#6F6F6F]">
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+                  <span>Solid foundation skills with competitive experience</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Sed do eiusmod tempor incididunt ut labore et dolore.</span>
+                  <span>Structured team play and strategic positioning</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Ut enim ad minim veniam, quis nostrud exercitation.</span>
+                  <span>High school, club, or intramural experience</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Duis aute irure dolor in reprehenderit in voluptate.</span>
+                  <span>Teams may advance to Elite based on performance</span>
                 </li>
               </ul>
             </div>
@@ -269,19 +274,19 @@ export const VolleyballPage = (): JSX.Element => {
               <ul className="space-y-3 text-[#6F6F6F]">
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+                  <span>Strong game understanding and solid technical skills</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Sed do eiusmod tempor incididunt ut labore et dolore.</span>
+                  <span>Organized rotations with moderately competitive pace</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Ut enim ad minim veniam, quis nostrud exercitation.</span>
+                  <span>Recreational league or school-level experience</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Duis aute irure dolor in reprehenderit in voluptate.</span>
+                  <span>Teams can advance to Competitive based on results</span>
                 </li>
               </ul>
             </div>
@@ -298,19 +303,19 @@ export const VolleyballPage = (): JSX.Element => {
               <ul className="space-y-3 text-[#6F6F6F]">
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+                  <span>Developing consistency and game awareness skills</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Sed do eiusmod tempor incididunt ut labore et dolore.</span>
+                  <span>Focus on fundamentals: passing, setting, positioning</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Ut enim ad minim veniam, quis nostrud exercitation.</span>
+                  <span>Great for returning players or limited experience</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Duis aute irure dolor in reprehenderit in voluptate.</span>
+                  <span>Promotion to Advanced possible with strong performance</span>
                 </li>
               </ul>
             </div>
@@ -332,9 +337,9 @@ export const VolleyballPage = (): JSX.Element => {
                     Proudly partnering with Diabetes Canada to promote healthier
                     lifestyles through sport and community wellness.
                   </span>
-                  <a href="#" className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold">
+                  <Link to="/about-us#diabetes-canada-section" className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold">
                     Learn more
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
