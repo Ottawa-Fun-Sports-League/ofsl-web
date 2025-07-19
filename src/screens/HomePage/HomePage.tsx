@@ -239,14 +239,16 @@ export const HomePage = (): JSX.Element => {
                 </span>
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-            >
-              <span className="text-base md:text-lg text-white">
-                Tournaments
-              </span>
-            </Button>
+            <Link to="/tournaments" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
+              >
+                <span className="text-base md:text-lg text-white">
+                  Tournaments
+                </span>
+              </Button>
+            </Link>
           </div>
         </div>
       </HeroBanner>

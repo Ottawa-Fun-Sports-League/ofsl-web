@@ -84,7 +84,7 @@ export function MobileFilterDrawer({
           <div>
             <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">Sport</h3>
             <div className="flex flex-wrap gap-2">
-              {['Volleyball', 'Badminton', 'Basketball', 'Pickleball'].map((sportName) => {
+              {['Volleyball', 'Badminton', 'Pickleball'].map((sportName) => {
                 const sport = sports.find(s => s.name === sportName);
                 if (!sport) return null;
                 

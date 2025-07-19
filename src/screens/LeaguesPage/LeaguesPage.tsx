@@ -332,8 +332,8 @@ export const LeaguesPage = (): JSX.Element => {
         <div className="mb-16 hidden md:block">
           {/* First row - Sport Filter Buttons */}
           <div className="flex flex-wrap justify-center gap-3 mb-4">
-            {/* Order sports as: Volleyball, Badminton, Basketball, Pickleball */}
-            {['Volleyball', 'Badminton', 'Basketball', 'Pickleball'].map((sportName) => {
+            {/* Order sports as: Volleyball, Badminton, Pickleball */}
+            {['Volleyball', 'Badminton', 'Pickleball'].map((sportName) => {
               const sport = sports.find(s => s.name === sportName);
               if (!sport) return null;
               
