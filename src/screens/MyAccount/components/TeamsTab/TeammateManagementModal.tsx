@@ -212,7 +212,9 @@ export function TeammateManagementModal({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send invite');
+        const errorData = await response.json();
+        console.error('Send invite error:', errorData);
+        throw new Error(errorData.error || 'Failed to send invite');
       }
 
       const result = await response.json();

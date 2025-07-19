@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
 };
 
 interface InviteRequest {
@@ -93,6 +93,23 @@ serve(async (req: Request) => {
 
     // Store the invite in the database if teamId and captainId are provided
     if (teamId && captainId) {
+      // First, get the user's profile to get their users.id from their auth_id
+      const { data: userProfileData, error: userProfileError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", user.id)
+        .single();
+
+      if (userProfileError || !userProfileData) {
+        return new Response(
+          JSON.stringify({ error: "User profile not found" }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       // Verify the user is the captain of the team they're trying to invite to
       const { data: teamData, error: teamError } = await supabase
         .from("teams")
@@ -108,9 +125,12 @@ serve(async (req: Request) => {
       }
 
       // Check if the authenticated user is the captain of this team
-      if (teamData.captain_id !== user.id) {
+      // Compare the team's captain_id with the user's profile id (not auth_id)
+      if (teamData.captain_id !== userProfileData.id) {
         return new Response(
-          JSON.stringify({ error: "Only team captains can send invites" }),
+          JSON.stringify({ 
+            error: "Only team captains can send invites"
+          }),
           {
             status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },

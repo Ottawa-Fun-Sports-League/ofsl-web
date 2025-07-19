@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
 }
 
 interface ManageTeammatesRequest {
@@ -88,9 +88,26 @@ serve(async (req: Request) => {
       )
     }
 
+    // Get the user's profile to get their users.id from their auth_id
+    const { data: userProfileData, error: userProfileError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_id", user.id)
+      .single();
+
+    if (userProfileError || !userProfileData) {
+      return new Response(
+        JSON.stringify({ error: "User profile not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Allow team captains to manage any teammates, or allow users to remove themselves
-    const isTeamCaptain = user.id === captainId;
-    const isRemovingSelf = action === 'remove' && user.id === userId;
+    const isTeamCaptain = userProfileData.id === captainId;
+    const isRemovingSelf = action === 'remove' && userProfileData.id === userId;
     
     if (!isTeamCaptain && !isRemovingSelf) {
       return new Response(

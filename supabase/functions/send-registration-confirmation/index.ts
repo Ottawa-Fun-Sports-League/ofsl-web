@@ -4,7 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, x-client-info, apikey",
 };
 
 interface RegistrationRequest {
@@ -31,12 +32,8 @@ serve(async (req: Request) => {
       });
     }
 
-    const {
-      email,
-      userName,
-      teamName,
-      leagueName,
-    }: RegistrationRequest = await req.json();
+    const { email, userName, teamName, leagueName }: RegistrationRequest =
+      await req.json();
 
     if (!email || !userName || !teamName || !leagueName) {
       return new Response(
@@ -111,7 +108,6 @@ serve(async (req: Request) => {
                       <!-- Title Section -->
                       <tr>
                         <td align="center" style="padding-bottom: 30px;">
-                          <p style="font-size: 48px; margin: 0 0 20px 0;">✅</p>
                           <h2 style="color: #2c3e50; margin: 0; font-size: 24px; font-weight: bold; font-family: Arial, sans-serif;">Registration Received!</h2>
                         </td>
                       </tr>
@@ -279,7 +275,9 @@ serve(async (req: Request) => {
       const errorText = await emailResponse.text();
       console.error("Resend API error:", errorText);
       return new Response(
-        JSON.stringify({ error: "Failed to send registration confirmation email" }),
+        JSON.stringify({
+          error: "Failed to send registration confirmation email",
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -309,3 +307,4 @@ serve(async (req: Request) => {
     });
   }
 });
+
