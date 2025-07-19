@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Separator } from "./ui/separator";
 import { Mail, Phone } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 // Data for footer links
 const footerLinks = {
@@ -12,6 +13,8 @@ const footerLinks = {
 };
 
 export function Footer() {
+  const { user } = useAuth();
+  
   return (
     <footer className="w-full bg-black text-white">
       <div className="max-w-[1280px] mx-auto px-4 pt-16 md:pt-24 pb-8 md:pb-12">
@@ -35,8 +38,16 @@ export function Footer() {
                   Volleyball
                 </Link>
               </li>
-              <li>Badminton</li>
-              <li>Pickleball</li>
+              <li>
+                <Link to="/badminton" className="footer-link hover:text-[#ffeae5]">
+                  Badminton
+                </Link>
+              </li>
+              <li>
+                <Link to="/pickleball" className="footer-link hover:text-[#ffeae5]">
+                  Pickleball
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -51,8 +62,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/signup" className="footer-link hover:text-[#ffeae5]">
-                  Registration
+                <Link to="/skills-and-drills" className="footer-link hover:text-[#ffeae5]">
+                  Skills and Drills
                 </Link>
               </li>
               <li>
@@ -73,7 +84,14 @@ export function Footer() {
                   Leagues
                 </Link>
               </li>
-              <li>Schedule & Standings</li>
+              <li>
+                <Link 
+                  to={user ? "/my-account/teams" : "/login?redirect=/my-account/teams"} 
+                  className="footer-link hover:text-[#ffeae5]"
+                >
+                  Schedule & Standings
+                </Link>
+              </li>
               <li>
                 <Link to="/standards-of-play" className="footer-link hover:text-[#ffeae5]">
                   Standards of play

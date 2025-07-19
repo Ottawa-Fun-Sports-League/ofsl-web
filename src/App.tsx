@@ -11,6 +11,7 @@ import { ResetPasswordPage } from "./screens/ResetPasswordPage";
 import { SignupConfirmation } from "./screens/SignupPage";
 import { AboutUsPage } from "./screens/AboutUsPage";
 import { StandardsOfPlayPage } from "./screens/StandardsOfPlayPage";
+import { SkillsAndDrillsPage } from "./screens/SkillsAndDrillsPage";
 import { SuccessPage } from "./screens/SuccessPage";
 import { CancelPage } from "./screens/CancelPage";
 import { Layout } from "./components/Layout";
@@ -72,6 +73,10 @@ export function App() {
             <Route
               path="/standards-of-play"
               element={<ConditionalRoute><StandardsOfPlayPage /></ConditionalRoute>}
+            />
+            <Route
+              path="/skills-and-drills"
+              element={<ConditionalRoute><SkillsAndDrillsPage /></ConditionalRoute>}
             />
             <Route path="/success" element={<ConditionalRoute><SuccessPage /></ConditionalRoute>} />
             <Route path="/cancel" element={<ConditionalRoute><CancelPage /></ConditionalRoute>} />
