@@ -20,7 +20,9 @@ import { MobileFilterDrawer } from "./components/MobileFilterDrawer";
 // Filter options data
 const filterOptions = {
   location: ["All Locations", "Central", "East", "West", "South", "Gatineau"],
-  day: ["All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+  day: ["All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+  type: ["All Types", "Regular Season", "Tournament", "Skills and Drills"],
+  gender: ["All Genders", "Mixed", "Female", "Male"]
 };
 
 export const LeaguesPage = (): JSX.Element => {
@@ -42,7 +44,9 @@ export const LeaguesPage = (): JSX.Element => {
     sport: "All Sports",
     location: "All Locations",
     skillLevels: [] as string[],
-    day: "All Days"
+    day: "All Days",
+    type: "All Types",
+    gender: "All Genders"
   });
 
   // Open/close state for dropdowns
@@ -179,7 +183,9 @@ export const LeaguesPage = (): JSX.Element => {
       sport: "All Sports",
       location: "All Locations",
       skillLevels: [],
-      day: "All Days"
+      day: "All Days",
+      type: "All Types",
+      gender: "All Genders"
     });
   };
 
@@ -193,7 +199,9 @@ export const LeaguesPage = (): JSX.Element => {
     return filters.sport !== "All Sports" ||
            filters.location !== "All Locations" ||
            filters.skillLevels.length > 0 ||
-           filters.day !== "All Days";
+           filters.day !== "All Days" ||
+           filters.type !== "All Types" ||
+           filters.gender !== "All Genders";
   };
 
   // Filter leagues based on selected filters
@@ -229,12 +237,34 @@ export const LeaguesPage = (): JSX.Element => {
       // Check if any of the league's gym locations match the selected location
       return leagueLocations.includes(filters.location);
     };
+
+    // Helper function to check if league matches type filter
+    const matchesType = () => {
+      if (filters.type === "All Types") return true;
+      if (!league.league_type) return false;
+      
+      const typeMapping: Record<string, string> = {
+        'regular_season': 'Regular Season',
+        'tournament': 'Tournament',
+        'skills_drills': 'Skills and Drills'
+      };
+      
+      return typeMapping[league.league_type] === filters.type;
+    };
+
+    // Helper function to check if league matches gender filter
+    const matchesGender = () => {
+      if (filters.gender === "All Genders") return true;
+      return league.gender === filters.gender;
+    };
     
     return (
       (filters.sport === "All Sports" || league.sport_name === filters.sport) &&
       matchesLocation() &&
       matchesSkillLevels() &&
-      (filters.day === "All Days" || dayName === filters.day)
+      (filters.day === "All Days" || dayName === filters.day) &&
+      matchesType() &&
+      matchesGender()
     );
   });
 
@@ -332,8 +362,8 @@ export const LeaguesPage = (): JSX.Element => {
         <div className="mb-16 hidden md:block">
           {/* First row - Sport Filter Buttons */}
           <div className="flex flex-wrap justify-center gap-3 mb-4">
-            {/* Order sports as: Volleyball, Badminton, Basketball, Pickleball */}
-            {['Volleyball', 'Badminton', 'Basketball', 'Pickleball'].map((sportName) => {
+            {/* Order sports as: Volleyball, Badminton, Pickleball */}
+            {['Volleyball', 'Badminton', 'Pickleball'].map((sportName) => {
               const sport = sports.find(s => s.name === sportName);
               if (!sport) return null;
               
@@ -363,11 +393,11 @@ export const LeaguesPage = (): JSX.Element => {
             {/* Location Filter */}
             <div className="relative" ref={el => dropdownRefs.current['location'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[180px] bg-white border border-[#D4D4D4] rounded-lg px-4 py-2.5 hover:border-[#B20000] transition-colors duration-200"
+                className="flex items-center justify-between w-full md:w-auto min-w-[180px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
                 onClick={() => toggleDropdown('location')}
               >
-                <span className="text-[#6F6F6F]">{filters.location}</span>
-                <ChevronDown className="h-5 w-5 text-[#6F6F6F] ml-2" />
+                <span className="text-gray-600">{filters.location}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
               </button>
               {openDropdown === 'location' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
@@ -389,17 +419,17 @@ export const LeaguesPage = (): JSX.Element => {
             {/* Skill Level Filter */}
             <div className="relative" ref={el => dropdownRefs.current['skillLevel'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[180px] bg-white border border-[#D4D4D4] rounded-lg px-4 py-2.5 hover:border-[#B20000] transition-colors duration-200"
+                className="flex items-center justify-between w-full md:w-auto min-w-[180px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
                 onClick={() => toggleDropdown('skillLevel')}
               >
-                <span className="text-[#6F6F6F]">
+                <span className="text-gray-600">
                   {filters.skillLevels.length === 0 
                     ? "All Skill Levels" 
                     : filters.skillLevels.length === 1 
                       ? filters.skillLevels[0] 
                       : `${filters.skillLevels.length} Skill Levels`}
                 </span>
-                <ChevronDown className="h-5 w-5 text-[#6F6F6F] ml-2" />
+                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
               </button>
               {openDropdown === 'skillLevel' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
@@ -438,14 +468,66 @@ export const LeaguesPage = (): JSX.Element => {
               )}
             </div>
 
+            {/* Type Filter */}
+            <div className="relative" ref={el => dropdownRefs.current['type'] = el}>
+              <button
+                className="flex items-center justify-between w-full md:w-auto min-w-[140px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
+                onClick={() => toggleDropdown('type')}
+              >
+                <span className="text-gray-600">{filters.type}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+              </button>
+              {openDropdown === 'type' && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
+                  {filterOptions.type.map((option) => (
+                    <button
+                      key={option}
+                      className={`block w-full text-left px-4 py-2 transition-colors duration-200 hover:bg-[#ffeae5] hover:text-[#B20000] ${
+                        filters.type === option ? 'bg-[#ffeae5] text-[#B20000] font-medium' : ''
+                      }`}
+                      onClick={() => handleFilterChange('type', option)}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Gender Filter */}
+            <div className="relative" ref={el => dropdownRefs.current['gender'] = el}>
+              <button
+                className="flex items-center justify-between w-full md:w-auto min-w-[140px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
+                onClick={() => toggleDropdown('gender')}
+              >
+                <span className="text-gray-600">{filters.gender}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+              </button>
+              {openDropdown === 'gender' && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
+                  {filterOptions.gender.map((option) => (
+                    <button
+                      key={option}
+                      className={`block w-full text-left px-4 py-2 transition-colors duration-200 hover:bg-[#ffeae5] hover:text-[#B20000] ${
+                        filters.gender === option ? 'bg-[#ffeae5] text-[#B20000] font-medium' : ''
+                      }`}
+                      onClick={() => handleFilterChange('gender', option)}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Day Filter */}
             <div className="relative" ref={el => dropdownRefs.current['day'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[140px] bg-white border border-[#D4D4D4] rounded-lg px-4 py-2.5 hover:border-[#B20000] transition-colors duration-200"
+                className="flex items-center justify-between w-full md:w-auto min-w-[140px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
                 onClick={() => toggleDropdown('day')}
               >
-                <span className="text-[#6F6F6F]">{filters.day}</span>
-                <ChevronDown className="h-5 w-5 text-[#6F6F6F] ml-2" />
+                <span className="text-gray-600">{filters.day}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
               </button>
               {openDropdown === 'day' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">

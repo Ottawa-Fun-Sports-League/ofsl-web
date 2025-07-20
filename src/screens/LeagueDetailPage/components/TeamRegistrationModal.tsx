@@ -45,6 +45,11 @@ export function TeamRegistrationModal({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredTeamName, setRegisteredTeamName] = useState('');
 
+  // Calculate HST (13%) and total amount
+  const baseAmount = league?.cost || 0;
+  const hstAmount = baseAmount * 0.13;
+  const totalAmount = baseAmount + hstAmount;
+
   useEffect(() => {
     if (showModal) {
       loadSkills();
@@ -275,7 +280,7 @@ export function TeamRegistrationModal({
                         )}
                         {league.cost && (
                           <p className="text-sm text-[#6F6F6F] mt-1">
-                            <span className="font-medium">Cost:</span> ${league.cost.toFixed(2)}
+                            <span className="font-medium">Cost:</span> ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST)
                           </p>
                         )}
                       </>
@@ -332,7 +337,7 @@ export function TeamRegistrationModal({
                         <div>
                           <p className="text-sm text-amber-800 font-medium">Registration Information</p>
                           <p className="text-sm text-amber-700 mt-1">
-                            To secure your spot in this league, a deposit of $200 or full payment of ${league.cost.toFixed(2)} +HST will be required after registration.
+                            To secure your spot in this league, a deposit of $200 or full payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be required after registration.
                           </p>
                         </div>
                       </div>

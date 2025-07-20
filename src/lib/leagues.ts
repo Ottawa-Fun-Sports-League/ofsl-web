@@ -6,6 +6,8 @@ export interface League {
   description: string | null;
   additional_info: string | null;
   location: string | null;
+  league_type: 'regular_season' | 'tournament' | 'skills_drills' | null;
+  gender: 'Mixed' | 'Female' | 'Male' | null;
   sport_id: number | null;
   skill_id: number | null;
   skill_ids: number[] | null;

@@ -9,6 +9,8 @@ interface MobileFilterDrawerProps {
     location: string;
     skillLevels: string[];
     day: string;
+    type: string;
+    gender: string;
   };
   handleFilterChange: (filterType: string, value: string) => void;
   clearFilters: () => void;
@@ -17,6 +19,8 @@ interface MobileFilterDrawerProps {
   filterOptions: {
     location: string[];
     day: string[];
+    type: string[];
+    gender: string[];
   };
   isAnyFilterActive: () => boolean;
   clearSkillLevels: () => void;
@@ -84,7 +88,7 @@ export function MobileFilterDrawer({
           <div>
             <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">Sport</h3>
             <div className="flex flex-wrap gap-2">
-              {['Volleyball', 'Badminton', 'Basketball', 'Pickleball'].map((sportName) => {
+              {['Volleyball', 'Badminton', 'Pickleball'].map((sportName) => {
                 const sport = sports.find(s => s.name === sportName);
                 if (!sport) return null;
                 
@@ -162,6 +166,38 @@ export function MobileFilterDrawer({
                 )
               ))}
             </div>
+          </div>
+
+          {/* Type Filter */}
+          <div>
+            <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">Type</h3>
+            <select
+              value={filters.type}
+              onChange={(e) => handleFilterChange('type', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+            >
+              {filterOptions.type.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Gender Filter */}
+          <div>
+            <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">Gender</h3>
+            <select
+              value={filters.gender}
+              onChange={(e) => handleFilterChange('gender', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+            >
+              {filterOptions.gender.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Day Filter */}
