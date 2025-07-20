@@ -3,7 +3,6 @@ import { Input } from '../../../../../components/ui/input';
 import { Key } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EditUserForm, UserRegistration } from '../types';
-import { POSITION_OPTIONS } from '../constants';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -65,20 +64,6 @@ export function EditUserModal({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Preferred Position</label>
-              <select
-                value={editForm.preferred_position || ''}
-                onChange={(e) => onFormChange({ ...editForm, preferred_position: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
-              >
-                {POSITION_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Registrations</label>

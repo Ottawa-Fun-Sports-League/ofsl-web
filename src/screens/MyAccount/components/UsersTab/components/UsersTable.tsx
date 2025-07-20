@@ -1,6 +1,6 @@
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
-import { Edit2, Trash2, Crown, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
+import { Edit2, Trash2, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
 import { User, SortField, SortDirection } from '../types';
 
 interface UsersTableProps {
@@ -66,15 +66,6 @@ export function UsersTable({
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => onSort('is_admin')}
-                >
-                  <div className="flex items-center">
-                    Role
-                    {getSortIcon('is_admin')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => onSort('team_count')}
                 >
                   <div className="flex items-center">
@@ -116,7 +107,9 @@ export function UsersTable({
                             {user.name || 'No Name'}
                           </div>
                           {user.is_admin && (
-                            <Crown className="h-4 w-4 text-yellow-500" />
+                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                              Admin
+                            </span>
                           )}
                           {user.is_facilitator && (
                             <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center" title="Facilitator">
@@ -144,25 +137,6 @@ export function UsersTable({
                           {user.phone}
                         </div>
                       )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        {user.is_admin && (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                            Admin
-                          </span>
-                        )}
-                        {user.is_facilitator && (
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                            Facilitator
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-[#6F6F6F]">
-                        {user.preferred_position || 'No position'}
-                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
