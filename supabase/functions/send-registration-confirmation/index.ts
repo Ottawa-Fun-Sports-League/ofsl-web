@@ -97,7 +97,7 @@ serve(async (req: Request) => {
                 <tr>
                   <td align="center" style="background-color: #B20000; padding: 30px 20px;">
                     <img src="https://ofsl.ca/group-1.png" alt="OFSL Logo" style="width: 300px; height: auto; max-width: 100%;" />
-                    <p style="color: #ffcccc; margin: 15px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">Ottawa's Premier Adult Sports Community</p>
+                    <p style="color: #ffcccc; margin: 15px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">Ottawa's leading adult volleyball and badminton league</p>
                   </td>
                 </tr>
                 
