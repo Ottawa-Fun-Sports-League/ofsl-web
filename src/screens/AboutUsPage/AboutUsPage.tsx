@@ -474,7 +474,8 @@ export const AboutUsPage = (): JSX.Element => {
           </Card>
         </div>
 
-        {/* FAQ Section - Accordion style */}
+        {/* FAQ Section - Hidden */}
+        {/*
         <div id="faq-section" className="mb-20 md:mb-28">
           <h2 className="text-3xl font-bold text-[#6F6F6F] mb-8 text-center">Frequently Asked Questions</h2>
           
@@ -515,6 +516,7 @@ export const AboutUsPage = (): JSX.Element => {
             ))}
           </div>
         </div>
+        */}
       </div>
 
       {/* Newsletter Signup Section */}
