@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -19,6 +19,7 @@ import {
 import {
   useActiveView,
   useScoreSubmissionModal,
+  type ActiveView,
 } from "./hooks/useLeagueDetail";
 import { NavigationTabs } from "./components/NavigationTabs";
 import { LeagueInfo } from "./components/LeagueInfo";
@@ -29,13 +30,18 @@ import { LeagueTeams } from "./components/LeagueTeams";
 
 export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const { userProfile } = useAuth();
   const [league, setLeague] = useState<League | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [spotsRemaining, setSpotsRemaining] = useState(0);
 
-  const { activeView, setActiveView } = useActiveView();
+  // Get initial view from URL search params
+  const tabParam = searchParams.get('tab');
+  const initialView: ActiveView = (tabParam === 'schedule' || tabParam === 'standings' || tabParam === 'teams') ? tabParam as ActiveView : 'info';
+  
+  const { activeView, setActiveView } = useActiveView(initialView);
   const {
     showScoreSubmissionModal,
     selectedTier,
@@ -114,7 +120,7 @@ export function LeagueDetailPage() {
       league.end_date,
       league.hide_day || false,
     ),
-    skillLevel: league.skill_name || "Not specified",
+    skillLevel: league.skill_names?.[0] || league.skill_name || "Not specified",
     price: league.cost || 0,
     spotsRemaining: league.max_teams ? Math.max(0, league.max_teams - 0) : 0, // TODO: Calculate from actual team count
   };
@@ -167,7 +173,7 @@ export function LeagueDetailPage() {
             <LeagueInfo
               league={leagueForInfo}
               sport={league.sport_name || ""}
-              skillLevels={league.skill_name ? [league.skill_name] : undefined}
+              skillLevels={league.skill_names || undefined}
               onSpotsUpdate={handleSpotsUpdate}
             />
           </div>

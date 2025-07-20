@@ -25,6 +25,8 @@ export interface LeagueWithTeamCount extends League {
 export interface NewLeague {
   name: string;
   description: string;
+  league_type: 'regular_season' | 'tournament' | 'skills_drills' | null;
+  gender: 'Mixed' | 'Female' | 'Male' | null;
   sport_id: number | null;
   skill_ids: number[];
   day_of_week: number | null;
@@ -34,4 +36,5 @@ export interface NewLeague {
   cost: number | null;
   max_teams: number;
   gym_ids: number[];
+  hide_day?: boolean;
 }

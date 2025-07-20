@@ -28,6 +28,8 @@ export function LeagueEditPage() {
   const [editLeague, setEditLeague] = useState<{
     name: string;
     description: string;
+    league_type: 'regular_season' | 'tournament' | 'skills_drills' | null;
+    gender: 'Mixed' | 'Female' | 'Male' | null;
     location: string;
     sport_id: number | null;
     skill_id: number | null;
@@ -43,6 +45,8 @@ export function LeagueEditPage() {
   }>({
     name: '',
     description: '',
+    league_type: null,
+    gender: null,
     location: '',
     sport_id: null,
     skill_id: null,
@@ -108,6 +112,8 @@ export function LeagueEditPage() {
         setEditLeague({
           name: leagueData.name,
           description: leagueData.description || '',
+          league_type: leagueData.league_type || 'regular_season',
+          gender: leagueData.gender || 'Mixed',
           location: leagueData.location || '',
           sport_id: leagueData.sport_id,
           skill_id: leagueData.skill_id,
@@ -145,6 +151,8 @@ export function LeagueEditPage() {
         .update({
           name: editLeague.name,
           description: editLeague.description,
+          league_type: editLeague.league_type,
+          gender: editLeague.gender,
           location: editLeague.location,
           sport_id: editLeague.sport_id,
           skill_id: editLeague.skill_id,
@@ -240,19 +248,59 @@ export function LeagueEditPage() {
         <Card>
           <CardContent className="p-6">
             <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Sport</label>
-                <select
-                  value={editLeague.sport_id || ''}
-                  onChange={(e) => setEditLeague({ ...editLeague, sport_id: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
-                  required
-                >
-                  <option value="">Select sport...</option>
-                  {sports.map(sport => (
-                    <option key={sport.id} value={sport.id}>{sport.name}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Sport</label>
+                  <select
+                    value={editLeague.sport_id || ''}
+                    onChange={(e) => setEditLeague({ ...editLeague, sport_id: e.target.value ? parseInt(e.target.value) : null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                    required
+                  >
+                    <option value="">Select sport...</option>
+                    {sports.map(sport => (
+                      <option key={sport.id} value={sport.id}>{sport.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Location</label>
+                  <select
+                    value={editLeague.location || ''}
+                    onChange={(e) => setEditLeague({ ...editLeague, location: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                    required
+                  >
+                    <option value="">Select location...</option>
+                    <option value="Various (see details)">Various (see details)</option>
+                    <option value="Inner city">Inner city</option>
+                    <option value="East end">East end</option>
+                    <option value="West end">West end</option>
+                    <option value="Orleans">Orleans</option>
+                    <option value="Kanata">Kanata</option>
+                    <option value="Barrhaven">Barrhaven</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Day of Week</label>
+                  <select
+                    value={editLeague.day_of_week || ''}
+                    onChange={(e) => setEditLeague({ ...editLeague, day_of_week: e.target.value ? parseInt(e.target.value) : null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                    required
+                  >
+                    <option value="">Select day...</option>
+                    <option value="0">Sunday</option>
+                    <option value="1">Monday</option>
+                    <option value="2">Tuesday</option>
+                    <option value="3">Wednesday</option>
+                    <option value="4">Thursday</option>
+                    <option value="5">Friday</option>
+                    <option value="6">Saturday</option>
+                  </select>
+                </div>
               </div>
               
               <div>
@@ -266,9 +314,89 @@ export function LeagueEditPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">League Type</label>
+                  <div className="flex flex-col gap-2 p-3 border border-gray-300 rounded-lg">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="league_type"
+                        value="regular_season"
+                        checked={editLeague.league_type === 'regular_season'}
+                        onChange={(e) => setEditLeague({ ...editLeague, league_type: e.target.value as 'regular_season' | 'tournament' | 'skills_drills' })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Regular Season</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="league_type"
+                        value="tournament"
+                        checked={editLeague.league_type === 'tournament'}
+                        onChange={(e) => setEditLeague({ ...editLeague, league_type: e.target.value as 'regular_season' | 'tournament' | 'skills_drills' })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Tournament</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="league_type"
+                        value="skills_drills"
+                        checked={editLeague.league_type === 'skills_drills'}
+                        onChange={(e) => setEditLeague({ ...editLeague, league_type: e.target.value as 'regular_season' | 'tournament' | 'skills_drills' })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Skills and Drills</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Gender</label>
+                  <div className="flex flex-col gap-2 p-3 border border-gray-300 rounded-lg">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="Mixed"
+                        checked={editLeague.gender === 'Mixed'}
+                        onChange={(e) => setEditLeague({ ...editLeague, gender: e.target.value as 'Mixed' | 'Female' | 'Male' })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Mixed</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="Female"
+                        checked={editLeague.gender === 'Female'}
+                        onChange={(e) => setEditLeague({ ...editLeague, gender: e.target.value as 'Mixed' | 'Female' | 'Male' })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Female</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="Male"
+                        checked={editLeague.gender === 'Male'}
+                        onChange={(e) => setEditLeague({ ...editLeague, gender: e.target.value as 'Mixed' | 'Female' | 'Male' })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Male</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Skill Level</label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                <div className="flex flex-wrap gap-4 border border-gray-300 rounded-lg p-3">
                   {skills.map(skill => (
                     <label key={skill.id} className="flex items-center">
                       <input
@@ -308,64 +436,29 @@ export function LeagueEditPage() {
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Location</label>
-                <select
-                  value={editLeague.location || ''}
-                  onChange={(e) => setEditLeague({ ...editLeague, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
-                  required
-                >
-                  <option value="">Select location...</option>
-                  <option value="Various (see details)">Various (see details)</option>
-                  <option value="Inner city">Inner city</option>
-                  <option value="East end">East end</option>
-                  <option value="West end">West end</option>
-                  <option value="Orleans">Orleans</option>
-                  <option value="Kanata">Kanata</option>
-                  <option value="Barrhaven">Barrhaven</option>
-                </select>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Day of Week</label>
-                <select
-                  value={editLeague.day_of_week || ''}
-                  onChange={(e) => setEditLeague({ ...editLeague, day_of_week: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
-                  required
-                >
-                  <option value="">Select day...</option>
-                  <option value="0">Sunday</option>
-                  <option value="1">Monday</option>
-                  <option value="2">Tuesday</option>
-                  <option value="3">Wednesday</option>
-                  <option value="4">Thursday</option>
-                  <option value="5">Friday</option>
-                  <option value="6">Saturday</option>
-                </select>
-              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Start Date</label>
+                  <Input
+                    type="date"
+                    value={editLeague.start_date}
+                    onChange={(e) => setEditLeague({ ...editLeague, start_date: e.target.value })}
+                    className="w-full"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Start Date</label>
-                <Input
-                  type="date"
-                  value={editLeague.start_date}
-                  onChange={(e) => setEditLeague({ ...editLeague, start_date: e.target.value })}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">End Date</label>
-                <Input
-                  type="date"
-                  value={editLeague.end_date}
-                  onChange={(e) => setEditLeague({ ...editLeague, end_date: e.target.value })}
-                  className="w-full"
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">End Date</label>
+                  <Input
+                    type="date"
+                    value={editLeague.end_date}
+                    onChange={(e) => setEditLeague({ ...editLeague, end_date: e.target.value })}
+                    className="w-full"
+                    required
+                  />
+                </div>
               </div>
               
               <div>
@@ -378,35 +471,37 @@ export function LeagueEditPage() {
                     id="hide-day"
                   />
                   <label htmlFor="hide-day" className="ml-2 text-sm font-medium text-[#6F6F6F]">
-                    Hide day of week
+                    Hide day from end date display
                   </label>
                 </div>
                 <p className="text-xs text-gray-500 mt-1 ml-6">
-                  When checked, only month and year will be displayed for the end date
+                  When checked, only month and year will be shown for the end date
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Cost ($)</label>
-                <Input
-                  type="number"
-                  value={editLeague.cost || ''}
-                  onChange={(e) => setEditLeague({ ...editLeague, cost: e.target.value ? parseFloat(e.target.value) : null })}
-                  placeholder="0.00"
-                  className="w-full"
-                  required
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Cost ($)</label>
+                  <Input
+                    type="number"
+                    value={editLeague.cost || ''}
+                    onChange={(e) => setEditLeague({ ...editLeague, cost: e.target.value ? parseFloat(e.target.value) : null })}
+                    placeholder="0.00"
+                    className="w-full"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Max Teams</label>
-                <Input
-                  type="number"
-                  value={editLeague.max_teams}
-                  onChange={(e) => setEditLeague({ ...editLeague, max_teams: parseInt(e.target.value) || 20 })}
-                  className="w-full"
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Max Teams</label>
+                  <Input
+                    type="number"
+                    value={editLeague.max_teams}
+                    onChange={(e) => setEditLeague({ ...editLeague, max_teams: parseInt(e.target.value) || 20 })}
+                    className="w-full"
+                    required
+                  />
+                </div>
               </div>
               
               <div>
@@ -454,7 +549,7 @@ export function LeagueEditPage() {
             <div className="mt-8 flex gap-4">
               <Button
                 onClick={handleUpdateLeague}
-                disabled={saving || !editLeague.name || !editLeague.sport_id || !editLeague.skill_id || !editLeague.location || editLeague.day_of_week === null || !editLeague.start_date || !editLeague.end_date || editLeague.cost === null || !editLeague.max_teams}
+                disabled={saving || !editLeague.name || !editLeague.league_type || !editLeague.gender || !editLeague.sport_id || (editLeague.skill_ids.length === 0 && !editLeague.skill_id) || !editLeague.location || editLeague.day_of_week === null || !editLeague.start_date || !editLeague.end_date || editLeague.cost === null || !editLeague.max_teams}
                 className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-2 flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />
