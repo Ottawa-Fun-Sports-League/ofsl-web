@@ -5,9 +5,10 @@ interface LeaguesListProps {
   leagues: LeagueWithTeamCount[];
   onDelete: (leagueId: number) => Promise<void>;
   onCopy: (league: LeagueWithTeamCount) => void;
+  onShowTeams: (league: LeagueWithTeamCount) => void;
 }
 
-export function LeaguesList({ leagues, onDelete, onCopy }: LeaguesListProps) {
+export function LeaguesList({ leagues, onDelete, onCopy, onShowTeams }: LeaguesListProps) {
   if (leagues.length === 0) {
     return (
       <div className="text-center py-12">
@@ -25,6 +26,7 @@ export function LeaguesList({ leagues, onDelete, onCopy }: LeaguesListProps) {
           league={league}
           onDelete={onDelete}
           onCopy={onCopy}
+          onShowTeams={onShowTeams}
         />
       ))}
     </div>

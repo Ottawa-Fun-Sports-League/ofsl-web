@@ -88,10 +88,10 @@ serve(async (req: Request) => {
       )
     }
 
-    // Get the user's profile to get their users.id from their auth_id
+    // Get the user's profile to get their users.id from their auth_id and check admin status
     const { data: userProfileData, error: userProfileError } = await supabase
       .from("users")
-      .select("id")
+      .select("id, is_admin")
       .eq("auth_id", user.id)
       .single();
 
@@ -105,13 +105,14 @@ serve(async (req: Request) => {
       );
     }
 
-    // Allow team captains to manage any teammates, or allow users to remove themselves
+    // Allow team captains, admins to manage any teammates, or allow users to remove themselves
     const isTeamCaptain = userProfileData.id === captainId;
+    const isAdmin = userProfileData.is_admin === true;
     const isRemovingSelf = action === 'remove' && userProfileData.id === userId;
     
-    if (!isTeamCaptain && !isRemovingSelf) {
+    if (!isTeamCaptain && !isAdmin && !isRemovingSelf) {
       return new Response(
-        JSON.stringify({ error: "Only team captains can manage teammates, or users can remove themselves" }),
+        JSON.stringify({ error: "Only team captains, admins can manage teammates, or users can remove themselves" }),
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -136,8 +137,8 @@ serve(async (req: Request) => {
       )
     }
 
-    // Additional verification: if not team captain, ensure user is removing themselves and is in the roster
-    if (!isTeamCaptain) {
+    // Additional verification: if not team captain or admin, ensure user is removing themselves and is in the roster
+    if (!isTeamCaptain && !isAdmin) {
       if (!teamData.roster.includes(userId)) {
         return new Response(
           JSON.stringify({ error: "You are not a member of this team" }),
