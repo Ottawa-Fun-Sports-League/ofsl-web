@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { LeaguesHeader } from './LeaguesTab/components/LeaguesHeader';
 import { LeaguesList } from './LeaguesTab/components/LeaguesList';
 import { CopyLeagueDialog } from './LeaguesTab/components/CopyLeagueDialog';
+import { LeagueTeamsModal } from './LeaguesTab/components/LeagueTeamsModal';
 import { useLeaguesData } from './LeaguesTab/hooks/useLeaguesData';
 import { useLeagueActions } from './LeaguesTab/hooks/useLeagueActions';
 import { LeagueWithTeamCount } from './LeaguesTab/types';
@@ -16,6 +17,8 @@ export function LeaguesTab() {
   const navigate = useNavigate();
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [leagueToCopy, setLeagueToCopy] = useState<LeagueWithTeamCount | null>(null);
+  const [teamsModalOpen, setTeamsModalOpen] = useState(false);
+  const [selectedLeague, setSelectedLeague] = useState<LeagueWithTeamCount | null>(null);
 
   const {
     leagues,
@@ -55,6 +58,16 @@ export function LeaguesTab() {
     setLeagueToCopy(null);
   };
 
+  const handleShowTeams = (league: LeagueWithTeamCount) => {
+    setSelectedLeague(league);
+    setTeamsModalOpen(true);
+  };
+
+  const handleTeamsModalClose = () => {
+    setTeamsModalOpen(false);
+    setSelectedLeague(null);
+  };
+
   if (!userProfile?.is_admin) {
     return (
       <Card>
@@ -81,6 +94,7 @@ export function LeaguesTab() {
         leagues={leagues}
         onDelete={handleDeleteLeague}
         onCopy={handleCopyClick}
+        onShowTeams={handleShowTeams}
       />
 
       <CopyLeagueDialog
@@ -89,6 +103,12 @@ export function LeaguesTab() {
         onConfirm={handleCopyConfirm}
         league={leagueToCopy}
         saving={saving}
+      />
+      
+      <LeagueTeamsModal
+        isOpen={teamsModalOpen}
+        onClose={handleTeamsModalClose}
+        league={selectedLeague}
       />
     </div>
   );

@@ -47,6 +47,7 @@ export function TeammateManagementModal({
   const [sendingInvite, setSendingInvite] = useState(false);
   const [addingTeammate, setAddingTeammate] = useState(false);
   const [removingTeammate, setRemovingTeammate] = useState<string | null>(null);
+  const [reassigningCaptain, setReassigningCaptain] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userProfile } = useAuth();
 
@@ -76,11 +77,21 @@ export function TeammateManagementModal({
     try {
       setLoading(true);
       
-      // Get the session to authenticate with Supabase
-      const { data: { session } } = await supabase.auth.getSession();
+      // Try refreshing the session first
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      
+      console.log('Refreshed session data:', {
+        hasSession: !!session,
+        sessionError,
+        accessToken: session?.access_token ? 'Present' : 'Missing',
+        tokenLength: session?.access_token?.length,
+        user: session?.user?.id,
+        email: session?.user?.email,
+        expires: session?.expires_at
+      });
       
       if (!session) {
-        throw new Error('No authentication session found');
+        throw new Error('No authentication session found after refresh');
       }
 
       // First, get the fresh roster from the database
@@ -97,9 +108,11 @@ export function TeammateManagementModal({
       const freshRoster = teamData?.roster || [];
       console.log('Fresh roster from database:', freshRoster);
       console.log('Props currentRoster:', currentRoster);
+      console.log('TeamId:', teamId);
+      console.log('Edge Function URL:', 'https://api.ofsl.ca/functions/v1/get-team-members');
 
       // Use Edge Function to load teammates (bypasses RLS restrictions)
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-team-members`, {
+      const response = await fetch('https://api.ofsl.ca/functions/v1/get-team-members', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,15 +125,23 @@ export function TeammateManagementModal({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load teammates');
+        const errorText = await response.text();
+        console.error('Edge Function response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+        throw new Error(`Failed to load teammates: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('Edge Function response:', result);
 
       if (result.success) {
         console.log('Loaded teammates:', result.teammates);
         setTeammates(result.teammates);
       } else {
+        console.error('Edge Function returned error:', result.error);
         throw new Error(result.error || 'Failed to load teammates');
       }
     } catch (error) {
@@ -147,7 +168,7 @@ export function TeammateManagementModal({
       }
 
       // Use Edge Function to search for users (bypasses RLS restrictions)
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-users`, {
+      const response = await fetch('https://api.ofsl.ca/functions/v1/search-users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,7 +216,7 @@ export function TeammateManagementModal({
         throw new Error('No authentication session found');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invite`, {
+      const response = await fetch('https://api.ofsl.ca/functions/v1/send-invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -253,7 +274,7 @@ export function TeammateManagementModal({
       }
 
       // Call the Edge Function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-teammates`, {
+      const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -274,7 +295,11 @@ export function TeammateManagementModal({
       }
       
       // Update the parent component state and wait for refetch
-      await onRosterUpdate(result.newRoster);
+      const newRoster = result.data?.[0]?.roster || [];
+      await onRosterUpdate(newRoster);
+      
+      // Reload the teammates list to show the new member
+      await loadTeammates();
       
       // Clear the search state
       setSearchEmail('');
@@ -282,8 +307,6 @@ export function TeammateManagementModal({
       setUserNotFound(false);
       
       showToast('Teammate added successfully', 'success');
-      
-      // Note: teammates list will reload automatically via useEffect when currentRoster changes
     } catch (error) {
       console.error('Error adding teammate:', error);
       showToast(error.message || 'Failed to add teammate. Please try again.', 'error');
@@ -318,7 +341,7 @@ export function TeammateManagementModal({
       }
 
       // Call the Edge Function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-teammates`, {
+      const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -339,15 +362,58 @@ export function TeammateManagementModal({
       }
       
       // Update the parent component state and wait for refetch
-      await onRosterUpdate(result.newRoster);
-      showToast('Teammate removed successfully', 'success');
+      const newRoster = result.data?.[0]?.roster || [];
+      await onRosterUpdate(newRoster);
       
-      // Note: teammates list will reload automatically via useEffect when currentRoster changes
+      // Reload the teammates list to reflect the removal
+      await loadTeammates();
+      
+      showToast('Teammate removed successfully', 'success');
     } catch (error) {
       console.error('Error removing teammate:', error);
       showToast(error.message || 'Failed to remove teammate. Please try again.', 'error');
     } finally {
       setRemovingTeammate(null);
+    }
+  };
+
+  const reassignCaptain = async (newCaptainId: string) => {
+    if (!userProfile?.is_admin) {
+      showToast('Only admins can reassign team captains', 'error');
+      return;
+    }
+
+    const newCaptain = teammates.find(t => t.id === newCaptainId);
+    if (!newCaptain || newCaptain.isPending) {
+      showToast('Cannot assign captain to pending invite', 'error');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to make ${newCaptain.name} the new team captain? This will remove captain privileges from the current captain.`)) {
+      return;
+    }
+
+    try {
+      setReassigningCaptain(newCaptainId);
+      
+      // Update the team captain in the database
+      const { error } = await supabase
+        .from('teams')
+        .update({ captain_id: newCaptainId })
+        .eq('id', teamId);
+
+      if (error) throw error;
+
+      showToast(`${newCaptain.name} is now the team captain`, 'success');
+      
+      // Reload teammates to reflect the change
+      await loadTeammates();
+      
+    } catch (error) {
+      console.error('Error reassigning captain:', error);
+      showToast('Failed to reassign captain. Please try again.', 'error');
+    } finally {
+      setReassigningCaptain(null);
     }
   };
 
@@ -545,27 +611,56 @@ export function TeammateManagementModal({
                           </div>
                         </div>
                       </div>
-                      {!isCaptain && !readOnly && !isPending ? (
-                        <Button
-                          onClick={() => removeTeammate(teammate.id)}
-                          size="sm"
-                          disabled={removingTeammate === teammate.id}
-                          className="text-white w-full sm:w-auto bg-red-600 hover:bg-red-700"
-                        >
-                          {removingTeammate === teammate.id ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                              Removing...
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              <span className="hidden sm:inline">Remove</span>
-                              <span className="sm:hidden">Remove</span>
-                            </>
-                          )}
-                        </Button>
-                      ) : (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {/* Make Captain button - only for admins, non-captains, registered users, when there are multiple members */}
+                        {!isCaptain && !isPending && userProfile?.is_admin && teammates.filter(t => !t.isPending).length > 1 && (
+                          <Button
+                            onClick={() => reassignCaptain(teammate.id)}
+                            size="sm"
+                            disabled={reassigningCaptain === teammate.id}
+                            className="text-white w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+                          >
+                            {reassigningCaptain === teammate.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                                Assigning...
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Make Captain</span>
+                                <span className="sm:hidden">Captain</span>
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        
+                        {/* Remove button - for non-captains when not read-only */}
+                        {!isCaptain && !readOnly && !isPending && (
+                          <Button
+                            onClick={() => removeTeammate(teammate.id)}
+                            size="sm"
+                            disabled={removingTeammate === teammate.id}
+                            className="text-white w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                          >
+                            {removingTeammate === teammate.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                                Removing...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                <span className="hidden sm:inline">Remove</span>
+                                <span className="sm:hidden">Remove</span>
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {/* Show message when no actions available */}
+                      {(isCaptain || (readOnly && !userProfile?.is_admin)) && (
                         <div className="text-sm text-gray-500 italic text-center sm:text-left">
                           {/* Captain tag is shown elsewhere, no text needed here */}
                         </div>

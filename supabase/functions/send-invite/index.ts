@@ -93,10 +93,10 @@ serve(async (req: Request) => {
 
     // Store the invite in the database if teamId and captainId are provided
     if (teamId && captainId) {
-      // First, get the user's profile to get their users.id from their auth_id
+      // First, get the user's profile to get their users.id from their auth_id and check admin status
       const { data: userProfileData, error: userProfileError } = await supabase
         .from("users")
-        .select("id")
+        .select("id, is_admin")
         .eq("auth_id", user.id)
         .single();
 
@@ -124,12 +124,15 @@ serve(async (req: Request) => {
         });
       }
 
-      // Check if the authenticated user is the captain of this team
+      // Check if the authenticated user is the captain of this team or an admin
       // Compare the team's captain_id with the user's profile id (not auth_id)
-      if (teamData.captain_id !== userProfileData.id) {
+      const isTeamCaptain = teamData.captain_id === userProfileData.id;
+      const isAdmin = userProfileData.is_admin === true;
+      
+      if (!isTeamCaptain && !isAdmin) {
         return new Response(
           JSON.stringify({ 
-            error: "Only team captains can send invites"
+            error: "Only team captains or admins can send invites"
           }),
           {
             status: 403,
