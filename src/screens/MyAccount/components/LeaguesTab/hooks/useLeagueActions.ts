@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../../../../lib/supabase';
-import { NewLeague } from '../types';
+import { NewLeague, LeagueWithTeamCount } from '../types';
 import { updateStripeProductLeagueId } from '../../../../../lib/stripe';
 
 interface UseLeagueActionsProps {
@@ -77,9 +77,53 @@ export function useLeagueActions({ loadData, showToast }: UseLeagueActionsProps)
     }
   };
 
+  const handleCopyLeague = async (originalLeague: LeagueWithTeamCount, newName: string): Promise<{id: number} | null> => {
+    try {
+      setSaving(true);
+      
+      const { data, error } = await supabase
+        .from('leagues')
+        .insert({
+          name: newName,
+          description: originalLeague.description,
+          league_type: originalLeague.league_type,
+          gender: originalLeague.gender,
+          location: originalLeague.location,
+          sport_id: originalLeague.sport_id,
+          skill_ids: originalLeague.skill_ids,
+          skill_id: originalLeague.skill_id,
+          day_of_week: originalLeague.day_of_week,
+          year: originalLeague.year,
+          start_date: originalLeague.start_date,
+          end_date: originalLeague.end_date,
+          hide_day: originalLeague.hide_day,
+          cost: originalLeague.cost,
+          max_teams: originalLeague.max_teams,
+          gym_ids: originalLeague.gym_ids,
+          active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      showToast('League copied successfully!', 'success');
+      await loadData();
+      
+      return data;
+    } catch (error) {
+      console.error('Error copying league:', error);
+      showToast('Failed to copy league', 'error');
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return {
     saving,
     handleCreateLeague,
     handleDeleteLeague,
+    handleCopyLeague,
   };
 }

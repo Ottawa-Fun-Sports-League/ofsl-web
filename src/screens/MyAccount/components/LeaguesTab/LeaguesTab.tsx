@@ -6,13 +6,20 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { LeaguesHeader } from './components/LeaguesHeader';
 import { NewLeagueForm } from './components/NewLeagueForm';
 import { LeaguesList } from './components/LeaguesList';
+import { CopyLeagueDialog } from './components/CopyLeagueDialog';
+import { LeagueTeamsModal } from './components/LeagueTeamsModal';
 import { useLeaguesData } from './hooks/useLeaguesData';
 import { useLeagueActions } from './hooks/useLeagueActions';
+import { LeagueWithTeamCount, NewLeague } from './types';
 
 export function LeaguesTab() {
   const { userProfile } = useAuth();
   const { showToast } = useToast();
   const [showNewLeagueForm, setShowNewLeagueForm] = useState(false);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [leagueToCopy, setLeagueToCopy] = useState<LeagueWithTeamCount | null>(null);
+  const [teamsModalOpen, setTeamsModalOpen] = useState(false);
+  const [selectedLeague, setSelectedLeague] = useState<LeagueWithTeamCount | null>(null);
 
   const [selectedProductForLeague, setSelectedProductForLeague] = useState<{
     productId: string | null;
@@ -31,7 +38,8 @@ export function LeaguesTab() {
   const {
     saving,
     handleCreateLeague,
-    handleDeleteLeague
+    handleDeleteLeague,
+    handleCopyLeague
   } = useLeagueActions({ loadData, showToast });
 
   // Function to handle product selection for a new league
@@ -75,6 +83,34 @@ export function LeaguesTab() {
     }
   };
 
+  const handleCopyClick = (league: LeagueWithTeamCount) => {
+    setLeagueToCopy(league);
+    setCopyDialogOpen(true);
+  };
+
+  const handleCopyConfirm = async (newName: string) => {
+    if (leagueToCopy) {
+      await handleCopyLeague(leagueToCopy, newName);
+      setCopyDialogOpen(false);
+      setLeagueToCopy(null);
+    }
+  };
+
+  const handleCopyCancel = () => {
+    setCopyDialogOpen(false);
+    setLeagueToCopy(null);
+  };
+
+  const handleShowTeams = (league: LeagueWithTeamCount) => {
+    setSelectedLeague(league);
+    setTeamsModalOpen(true);
+  };
+
+  const handleTeamsModalClose = () => {
+    setTeamsModalOpen(false);
+    setSelectedLeague(null);
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -116,6 +152,22 @@ export function LeaguesTab() {
       <LeaguesList
         leagues={leagues}
         onDelete={handleDeleteLeague}
+        onCopy={handleCopyClick}
+        onShowTeams={handleShowTeams}
+      />
+
+      <CopyLeagueDialog
+        isOpen={copyDialogOpen}
+        onClose={handleCopyCancel}
+        onConfirm={handleCopyConfirm}
+        league={leagueToCopy}
+        saving={saving}
+      />
+      
+      <LeagueTeamsModal
+        isOpen={teamsModalOpen}
+        onClose={handleTeamsModalClose}
+        league={selectedLeague}
       />
     </div>
   );
