@@ -60,7 +60,7 @@ export function RegistrationSuccessModal({
             <p>You can make your payment through:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
               <li>The "My Teams" section in your account</li>
-              <li>E-transfer to <span className="font-medium text-[#B20000]">payments@ofsl.ca</span></li>
+              <li>E-transfer to <span className="font-medium text-[#B20000]">ofslpayments@gmail.com</span></li>
             </ul>
           </div>
           

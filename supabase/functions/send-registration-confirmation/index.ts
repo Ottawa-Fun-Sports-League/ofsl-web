@@ -96,8 +96,8 @@ serve(async (req: Request) => {
                 <!-- Header -->
                 <tr>
                   <td align="center" style="background-color: #B20000; padding: 30px 20px;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">Ottawa Fun Sports League</h1>
-                    <p style="color: #ffcccc; margin: 8px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">Ottawa's Premier Adult Sports Community</p>
+                    <img src="https://ofsl.ca/group-1.png" alt="OFSL Logo" style="width: 300px; height: auto; max-width: 100%;" />
+                    <p style="color: #ffcccc; margin: 15px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">Ottawa's Premier Adult Sports Community</p>
                   </td>
                 </tr>
                 
