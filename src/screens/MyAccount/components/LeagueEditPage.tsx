@@ -8,9 +8,11 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { supabase } from '../../../lib/supabase';
 import { fetchSports, fetchSkills, fetchLeagueById } from '../../../lib/leagues';
-import { ChevronLeft, Save } from 'lucide-react';
+import { ChevronLeft, Save, Copy, Eye } from 'lucide-react';
 import { RichTextEditor } from '../../../components/ui/rich-text-editor';
 import { StripeProductSelector } from './LeaguesTab/components/StripeProductSelector';
+import { CopyLeagueDialog } from './LeaguesTab/components/CopyLeagueDialog';
+import { useLeagueActions } from './LeaguesTab/hooks/useLeagueActions';
 
 export function LeagueEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +26,7 @@ export function LeagueEditPage() {
   const [gyms, setGyms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
   
   const [editLeague, setEditLeague] = useState<{
     name: string;
@@ -61,6 +64,11 @@ export function LeagueEditPage() {
   });
   
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  
+  const { handleCopyLeague, saving: copyingSaving } = useLeagueActions({
+    loadData: async () => {}, // We'll navigate away after copy, so no need to reload
+    showToast
+  });
 
   useEffect(() => {
     if (!userProfile?.is_admin) {
@@ -199,6 +207,16 @@ export function LeagueEditPage() {
     }
   };
 
+  const handleCopy = async (newName: string) => {
+    if (!league) return;
+    
+    const result = await handleCopyLeague(league, newName);
+    if (result) {
+      setShowCopyDialog(false);
+      navigate(`/my-account/leagues/edit/${result.id}`);
+    }
+  };
+
   if (!userProfile?.is_admin) {
     return null;
   }
@@ -236,12 +254,31 @@ export function LeagueEditPage() {
     <div className="bg-white w-full min-h-screen">
       <div className="max-w-[1280px] mx-auto px-4 py-8">
         <div className="mb-8">
-          <Link to={`/leagues/${id}`} className="flex items-center text-[#B20000] hover:underline mb-4">
+          <Link to="/my-account/leagues" className="flex items-center text-[#B20000] hover:underline mb-4">
             <ChevronLeft className="h-5 w-5 mr-1" />
-            Back to League Detail
+            Back to Manage Leagues
           </Link>
           
-          <h2 className="text-2xl font-bold text-[#6F6F6F]">Edit League Details</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-[#6F6F6F]">Edit League Details</h2>
+            <div className="flex items-center gap-3">
+              <Link to={`/leagues/${id}`} target="_blank">
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-[10px] px-4 py-2 flex items-center gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+              </Link>
+              <Button
+                onClick={() => setShowCopyDialog(true)}
+                className="bg-gray-600 hover:bg-gray-700 text-white rounded-[10px] px-4 py-2 flex items-center gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                Copy League
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Edit League Form - Using same Card structure as Add New League */}
@@ -565,6 +602,14 @@ export function LeagueEditPage() {
             </div>
           </CardContent>
         </Card>
+        
+        <CopyLeagueDialog
+          isOpen={showCopyDialog}
+          onClose={() => setShowCopyDialog(false)}
+          onConfirm={handleCopy}
+          league={league}
+          saving={copyingSaving}
+        />
       </div>
     </div>
   );
