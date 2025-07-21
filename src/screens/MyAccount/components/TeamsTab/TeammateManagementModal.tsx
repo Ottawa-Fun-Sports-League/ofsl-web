@@ -23,6 +23,7 @@ interface TeammateManagementModalProps {
   currentRoster: string[];
   captainId: string;
   onRosterUpdate: (newRoster: string[]) => Promise<void>;
+  onCaptainUpdate?: (newCaptainId: string) => Promise<void>;
   leagueName?: string;
   readOnly?: boolean;
 }
@@ -35,6 +36,7 @@ export function TeammateManagementModal({
   currentRoster,
   captainId,
   onRosterUpdate,
+  onCaptainUpdate,
   leagueName,
   readOnly = false
 }: TeammateManagementModalProps) {
@@ -378,8 +380,8 @@ export function TeammateManagementModal({
   };
 
   const reassignCaptain = async (newCaptainId: string) => {
-    if (!userProfile?.is_admin) {
-      showToast('Only admins can reassign team captains', 'error');
+    if (!userProfile?.is_admin && captainId !== userProfile?.id) {
+      showToast('Only team captains and admins can reassign team captains', 'error');
       return;
     }
 
@@ -405,6 +407,15 @@ export function TeammateManagementModal({
       if (error) throw error;
 
       showToast(`${newCaptain.name} is now the team captain`, 'success');
+      
+      // Call the parent's captain update to trigger a full data reload
+      // This ensures the team list shows the new captain info
+      if (onCaptainUpdate) {
+        await onCaptainUpdate(newCaptainId);
+      } else {
+        // Fallback to roster update if captain update is not available
+        await onRosterUpdate(currentRoster);
+      }
       
       // Reload teammates to reflect the change
       await loadTeammates();
@@ -612,8 +623,8 @@ export function TeammateManagementModal({
                         </div>
                       </div>
                       <div className="flex flex-col sm:flex-row gap-2">
-                        {/* Make Captain button - only for admins, non-captains, registered users, when there are multiple members */}
-                        {!isCaptain && !isPending && userProfile?.is_admin && teammates.filter(t => !t.isPending).length > 1 && (
+                        {/* Make Captain button - for captains and admins, non-captains, registered users, when there are multiple members */}
+                        {!isCaptain && !isPending && (userProfile?.is_admin || captainId === userProfile?.id) && teammates.filter(t => !t.isPending).length > 1 && (
                           <Button
                             onClick={() => reassignCaptain(teammate.id)}
                             size="sm"

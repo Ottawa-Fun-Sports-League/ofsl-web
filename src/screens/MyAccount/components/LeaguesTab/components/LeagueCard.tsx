@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { Edit2, Trash2, Copy, Users } from 'lucide-react';
@@ -9,10 +9,10 @@ interface LeagueCardProps {
   league: LeagueWithTeamCount;
   onDelete: (leagueId: number) => Promise<void>;
   onCopy: (league: LeagueWithTeamCount) => void;
-  onShowTeams: (league: LeagueWithTeamCount) => void;
 }
 
-export function LeagueCard({ league, onDelete, onCopy, onShowTeams }: LeagueCardProps) {
+export function LeagueCard({ league, onDelete, onCopy }: LeagueCardProps) {
+  const navigate = useNavigate();
   const getSportIcon = (sport: string | null) => {
     if (!sport) return "";
     switch (sport) {
@@ -121,7 +121,7 @@ export function LeagueCard({ league, onDelete, onCopy, onShowTeams }: LeagueCard
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => onShowTeams(league)}
+              onClick={() => navigate(`/leagues/${league.id}/teams`)}
               className="h-8 w-8 p-0 hover:bg-blue-100 relative"
             >
               <Users className="h-4 w-4 text-blue-600" />

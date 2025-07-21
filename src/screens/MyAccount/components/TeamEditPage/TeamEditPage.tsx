@@ -5,11 +5,10 @@ import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ConfirmationModal } from './ConfirmationModal';
 import { TeamDetails } from './TeamDetails';
-import { PaymentInformation } from './PaymentInformation';
 import { TeamMembers } from './TeamMembers';
 import { useTeamEditData } from './useTeamEditData';
 import { useTeamOperations } from './useTeamOperations';
-import { usePaymentOperations } from './usePaymentOperations';
+import { UnifiedPaymentSection, usePaymentOperations } from '../../../../components/payments';
 
 export function TeamEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -120,7 +119,7 @@ export function TeamEditPage() {
         />
 
         {paymentInfo && (
-          <PaymentInformation
+          <UnifiedPaymentSection
             paymentInfo={paymentInfo}
             paymentHistory={paymentHistory}
             editingNoteId={editingNoteId}

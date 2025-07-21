@@ -41,8 +41,29 @@ export function SignupPage() {
       return;
     }
     
+    // Comprehensive password validation
     if (password.length < 12) {
       setError("Password must be at least 12 characters");
+      return;
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+    
+    if (!/[a-z]/.test(password)) {
+      setError("Password must contain at least one lowercase letter");
+      return;
+    }
+    
+    if (!/\d/.test(password)) {
+      setError("Password must contain at least one number");
+      return;
+    }
+    
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      setError("Password must contain at least one special character");
       return;
     }
     
@@ -281,6 +302,18 @@ export function SignupPage() {
               >
                 Password (minimum 12 characters)
               </label>
+              
+              {/* Password Requirements */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">Password Requirements:</h4>
+                <ul className="text-xs text-blue-800 space-y-1">
+                  <li>• At least 12 characters long</li>
+                  <li>• Contains at least one uppercase letter (A-Z)</li>
+                  <li>• Contains at least one lowercase letter (a-z)</li>
+                  <li>• Contains at least one number (0-9)</li>
+                  <li>• Contains at least one special character (!@#$%^&*)</li>
+                </ul>
+              </div>
               <div className="relative">
                 <Input
                   id="password"

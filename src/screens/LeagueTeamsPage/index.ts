@@ -1,0 +1,1 @@
+export { LeagueTeamsPage } from './LeagueTeamsPage';

@@ -7,15 +7,12 @@ interface PasswordSecurityProps {
   showPasswordSection: boolean;
   passwordForm: PasswordForm;
   passwordValidation: PasswordValidationState;
-  showCurrentPassword: boolean;
   showNewPassword: boolean;
   showConfirmPassword: boolean;
   onTogglePasswordSection: () => void;
   onPasswordFormChange: (form: PasswordForm) => void;
-  onToggleCurrentPassword: () => void;
   onToggleNewPassword: () => void;
   onToggleConfirmPassword: () => void;
-  onValidateCurrentPassword: (password: string) => Promise<boolean>;
   onValidateNewPassword: (password: string) => boolean;
   onValidateConfirmPassword: (confirmPassword: string) => boolean;
   onPasswordChange: () => void;
@@ -26,15 +23,12 @@ export function PasswordSecurity({
   showPasswordSection,
   passwordForm,
   passwordValidation,
-  showCurrentPassword,
   showNewPassword,
   showConfirmPassword,
   onTogglePasswordSection,
   onPasswordFormChange,
-  onToggleCurrentPassword,
   onToggleNewPassword,
   onToggleConfirmPassword,
-  onValidateCurrentPassword,
   onValidateNewPassword,
   onValidateConfirmPassword,
   onPasswordChange,
@@ -68,36 +62,16 @@ export function PasswordSecurity({
             </div>
           )}
           
-          <div>
-            <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Current Password</label>
-            <div className="relative">
-              <Input 
-                type={showCurrentPassword ? "text" : "password"}
-                value={passwordForm.currentPassword}
-                onChange={(e) => {
-                  onPasswordFormChange({...passwordForm, currentPassword: e.target.value});
-                }}
-                onBlur={(e) => onValidateCurrentPassword(e.target.value)}
-                placeholder="Enter your current password"
-                className={`w-full pr-10 ${passwordValidation.currentPasswordError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                onClick={onToggleCurrentPassword}
-              >
-                {showCurrentPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-              </button>
-            </div>
-            {passwordValidation.validatingPassword && (
-              <div className="mt-1 text-sm text-blue-600 flex items-center">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
-                Validating password...
-              </div>
-            )}
-            {passwordValidation.currentPasswordError && (
-              <div className="mt-1 text-sm text-red-600">{passwordValidation.currentPasswordError}</div>
-            )}
+          {/* Password Requirements */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">Password Requirements:</h4>
+            <ul className="text-xs text-blue-800 space-y-1">
+              <li>• At least 12 characters long</li>
+              <li>• Contains at least one uppercase letter (A-Z)</li>
+              <li>• Contains at least one lowercase letter (a-z)</li>
+              <li>• Contains at least one number (0-9)</li>
+              <li>• Contains at least one special character (!@#$%^&*)</li>
+            </ul>
           </div>
           
           <div>
@@ -129,9 +103,6 @@ export function PasswordSecurity({
             {!passwordValidation.newPasswordError && passwordForm.newPassword && (
               <div className="mt-1 text-sm text-green-600">Password meets requirements</div>
             )}
-            <div className="mt-2 text-xs text-gray-500">
-              Password must be at least 12 characters and include uppercase, lowercase, number, and special character.
-            </div>
           </div>
           
           <div>
