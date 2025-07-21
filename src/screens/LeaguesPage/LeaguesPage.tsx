@@ -73,12 +73,21 @@ export const LeaguesPage = (): JSX.Element => {
   // Initialize filters from URL parameters
   useEffect(() => {
     const sportParam = searchParams.get('sport');
-    if (sportParam) {
-      setFilters(prev => ({
-        ...prev,
-        sport: sportParam
-      }));
-    }
+    const dayParam = searchParams.get('day');
+    const levelParam = searchParams.get('level');
+    const genderParam = searchParams.get('gender');
+    const locationParam = searchParams.get('location');
+    const typeParam = searchParams.get('type');
+
+    setFilters(prev => ({
+      ...prev,
+      ...(sportParam && { sport: sportParam }),
+      ...(dayParam && { day: dayParam }),
+      ...(levelParam && { skillLevels: [levelParam] }),
+      ...(genderParam && { gender: genderParam }),
+      ...(locationParam && { location: locationParam }),
+      ...(typeParam && { type: typeParam })
+    }));
   }, [searchParams, sports]);
 
   const loadStripeProducts = async () => {
@@ -393,11 +402,17 @@ export const LeaguesPage = (): JSX.Element => {
             {/* Location Filter */}
             <div className="relative" ref={el => dropdownRefs.current['location'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[180px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
+                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
+                  filters.location !== "All Locations"
+                    ? 'border-b-[#B20000] text-[#B20000]'
+                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
+                }`}
                 onClick={() => toggleDropdown('location')}
               >
-                <span className="text-gray-600">{filters.location}</span>
-                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+                <span>{filters.location}</span>
+                <ChevronDown className={`h-4 w-4 ml-2 ${
+                  filters.location !== "All Locations" ? 'text-[#B20000]' : 'text-gray-400'
+                }`} />
               </button>
               {openDropdown === 'location' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
@@ -419,17 +434,23 @@ export const LeaguesPage = (): JSX.Element => {
             {/* Skill Level Filter */}
             <div className="relative" ref={el => dropdownRefs.current['skillLevel'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[180px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
+                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
+                  filters.skillLevels.length > 0
+                    ? 'border-b-[#B20000] text-[#B20000]'
+                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
+                }`}
                 onClick={() => toggleDropdown('skillLevel')}
               >
-                <span className="text-gray-600">
+                <span>
                   {filters.skillLevels.length === 0 
                     ? "All Skill Levels" 
                     : filters.skillLevels.length === 1 
                       ? filters.skillLevels[0] 
                       : `${filters.skillLevels.length} Skill Levels`}
                 </span>
-                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+                <ChevronDown className={`h-4 w-4 ml-2 ${
+                  filters.skillLevels.length > 0 ? 'text-[#B20000]' : 'text-gray-400'
+                }`} />
               </button>
               {openDropdown === 'skillLevel' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
@@ -471,11 +492,17 @@ export const LeaguesPage = (): JSX.Element => {
             {/* Type Filter */}
             <div className="relative" ref={el => dropdownRefs.current['type'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[140px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
+                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
+                  filters.type !== "All Types"
+                    ? 'border-b-[#B20000] text-[#B20000]'
+                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
+                }`}
                 onClick={() => toggleDropdown('type')}
               >
-                <span className="text-gray-600">{filters.type}</span>
-                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+                <span>{filters.type}</span>
+                <ChevronDown className={`h-4 w-4 ml-2 ${
+                  filters.type !== "All Types" ? 'text-[#B20000]' : 'text-gray-400'
+                }`} />
               </button>
               {openDropdown === 'type' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
@@ -497,11 +524,17 @@ export const LeaguesPage = (): JSX.Element => {
             {/* Gender Filter */}
             <div className="relative" ref={el => dropdownRefs.current['gender'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[140px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
+                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
+                  filters.gender !== "All Genders"
+                    ? 'border-b-[#B20000] text-[#B20000]'
+                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
+                }`}
                 onClick={() => toggleDropdown('gender')}
               >
-                <span className="text-gray-600">{filters.gender}</span>
-                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+                <span>{filters.gender}</span>
+                <ChevronDown className={`h-4 w-4 ml-2 ${
+                  filters.gender !== "All Genders" ? 'text-[#B20000]' : 'text-gray-400'
+                }`} />
               </button>
               {openDropdown === 'gender' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
@@ -523,11 +556,17 @@ export const LeaguesPage = (): JSX.Element => {
             {/* Day Filter */}
             <div className="relative" ref={el => dropdownRefs.current['day'] = el}>
               <button
-                className="flex items-center justify-between w-full md:w-auto min-w-[140px] bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm hover:border-gray-300 transition-colors duration-200"
+                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
+                  filters.day !== "All Days"
+                    ? 'border-b-[#B20000] text-[#B20000]'
+                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
+                }`}
                 onClick={() => toggleDropdown('day')}
               >
-                <span className="text-gray-600">{filters.day}</span>
-                <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+                <span>{filters.day}</span>
+                <ChevronDown className={`h-4 w-4 ml-2 ${
+                  filters.day !== "All Days" ? 'text-[#B20000]' : 'text-gray-400'
+                }`} />
               </button>
               {openDropdown === 'day' && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
