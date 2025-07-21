@@ -319,16 +319,49 @@ export function ProfileCompletionPage() {
       // Small delay to ensure auth state is fully propagated
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Process any pending team invites for this user using the database function
+      // Process any pending team invites for this user
       try {
+        // First try using the database function
         const { data: inviteResult, error: inviteError } = await supabase
           .rpc('process_user_team_invites', { p_user_id: result.id });
         
         if (!inviteError && inviteResult?.success && inviteResult.processed_count > 0) {
           const teams = inviteResult.teams.join(', ');
           showToast(`Profile completed! You've been added to: ${teams}`, "success");
+          // Store for welcome message
+          sessionStorage.setItem('signup_teams_added', JSON.stringify(inviteResult.teams));
         } else {
-          showToast("Profile completed successfully!", "success");
+          // Fallback: Try the Edge Function as well
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+              const response = await fetch('https://api.ofsl.ca/functions/v1/process-signup-invites', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                if (result.processedCount > 0) {
+                  sessionStorage.setItem('signup_teams_added', JSON.stringify(result.teams));
+                  showToast(`Profile completed! You've been added to: ${result.teams.join(', ')}`, "success");
+                } else {
+                  showToast("Profile completed successfully!", "success");
+                }
+              } else {
+                showToast("Profile completed successfully!", "success");
+              }
+            } else {
+              showToast("Profile completed successfully!", "success");
+            }
+          } catch (edgeFuncError) {
+            console.error('Error calling Edge Function:', edgeFuncError);
+            showToast("Profile completed successfully!", "success");
+          }
         }
       } catch (error) {
         // If invite processing fails, still show success for profile completion

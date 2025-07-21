@@ -105,10 +105,15 @@ export function SignupPage() {
 
       // Create basic user profile record if it doesn't exist
       try {
+        // Generate a unique ID for the user profile using timestamp + random string
+        const timestamp = Date.now() / 1000; // Unix timestamp in seconds
+        const randomStr = Math.random().toString(36).substring(2, 10);
+        const profileId = `${timestamp}_${randomStr}`;
+        
         const { error: profileError } = await supabase
           .from('users')
           .insert({
-            id: authData.user.id,
+            id: profileId,
             auth_id: authData.user.id,
             name: name,
             email: email,
@@ -120,6 +125,34 @@ export function SignupPage() {
           
         if (profileError && !profileError.message.includes('duplicate key')) {
           console.error('Error creating user profile:', profileError);
+        } else if (!profileError) {
+          // Profile created successfully, now process any pending team invites
+          try {
+            // Get the session for the Edge Function call
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+              // Call the Edge Function to process signup invites
+              const response = await fetch('https://api.ofsl.ca/functions/v1/process-signup-invites', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                if (result.processedCount > 0) {
+                  // Store a flag to show notification later
+                  sessionStorage.setItem('signup_teams_added', JSON.stringify(result.teams));
+                }
+              }
+            }
+          } catch (inviteError) {
+            console.error('Error processing team invites:', inviteError);
+            // Don't fail signup if invite processing fails
+          }
         }
       } catch (profileError) {
         console.error('Error creating user profile:', profileError);
