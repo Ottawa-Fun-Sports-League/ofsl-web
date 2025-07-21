@@ -128,6 +128,12 @@ export function SignupPage() {
         } else if (!profileError) {
           // Profile created successfully, now process any pending team invites
           try {
+            console.log('Processing team invites for new user:', {
+              profileId,
+              email: email.toLowerCase(),
+              authId: authData.user.id
+            });
+            
             // Get the session for the Edge Function call
             const { data: { session } } = await supabase.auth.getSession();
             
@@ -141,13 +147,22 @@ export function SignupPage() {
                 },
               });
 
+              console.log('Edge Function response status:', response.status);
+              
               if (response.ok) {
                 const result = await response.json();
+                console.log('Edge Function result:', result);
+                
                 if (result.processedCount > 0) {
                   // Store a flag to show notification later
                   sessionStorage.setItem('signup_teams_added', JSON.stringify(result.teams));
                 }
+              } else {
+                const errorText = await response.text();
+                console.error('Edge Function error response:', errorText);
               }
+            } else {
+              console.warn('No session available for processing invites');
             }
           } catch (inviteError) {
             console.error('Error processing team invites:', inviteError);
