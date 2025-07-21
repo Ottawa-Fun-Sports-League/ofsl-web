@@ -11,7 +11,7 @@ export function TeamsTab() {
   const { user, userProfile } = useAuth();
   const { leaguePayments, teams, loading, setLeaguePayments, setTeams, refetchTeams, updateTeamRoster } = useTeamsData(userProfile?.id);
   const { unregisteringPayment, handleUnregister } = useTeamOperations();
-  const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, coCaptainIds: string[], leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
 
   const onUnregisterSuccess = async (paymentId: number) => {
@@ -84,6 +84,7 @@ export function TeamsTab() {
         name: teamName, 
         roster: [...team.roster], // Create a copy to prevent reference issues
         captainId: team.captain_id,
+        coCaptainIds: [...(team.co_captains || [])], // Create a copy to prevent reference issues
         leagueName: team.league?.name || 'OFSL League'
       });
     }
@@ -106,7 +107,53 @@ export function TeamsTab() {
         if (updatedTeam) {
           setSelectedTeam({
             ...selectedTeam,
-            roster: [...updatedTeam.roster] // Ensure we have the latest roster from database
+            roster: [...updatedTeam.roster], // Ensure we have the latest roster from database
+            coCaptainIds: [...(updatedTeam.co_captains || [])] // Ensure we have the latest co-captains from database
+          });
+        }
+      }
+    }
+  };
+
+  const handleCaptainUpdate = async (newCaptainId: string) => {
+    if (selectedTeam) {
+      // Update the selectedTeam state immediately for modal consistency
+      setSelectedTeam({ ...selectedTeam, captainId: newCaptainId });
+      
+      // Refetch teams data to ensure everything is in sync with database
+      const updatedTeams = await refetchTeams();
+      
+      // Update selectedTeam with the fresh data from database to ensure consistency
+      if (updatedTeams) {
+        const updatedTeam = updatedTeams.find(t => t.id === selectedTeam.id);
+        if (updatedTeam) {
+          setSelectedTeam({
+            ...selectedTeam,
+            captainId: updatedTeam.captain_id, // Ensure we have the latest captain from database
+            coCaptainIds: [...(updatedTeam.co_captains || [])] // Ensure we have the latest co-captains from database
+          });
+        }
+      }
+    }
+  };
+
+  const handleCoCaptainUpdate = async (newCoCaptainIds: string[]) => {
+    if (selectedTeam) {
+      // Update the selectedTeam state immediately for modal consistency
+      setSelectedTeam({ ...selectedTeam, coCaptainIds: [...newCoCaptainIds] });
+      
+      // Refetch teams data to ensure everything is in sync with database
+      const updatedTeams = await refetchTeams();
+      
+      // Update selectedTeam with the fresh data from database to ensure consistency
+      if (updatedTeams) {
+        const updatedTeam = updatedTeams.find(t => t.id === selectedTeam.id);
+        if (updatedTeam) {
+          setSelectedTeam({
+            ...selectedTeam,
+            roster: [...updatedTeam.roster], // Keep roster in sync
+            captainId: updatedTeam.captain_id, // Keep captain in sync
+            coCaptainIds: [...(updatedTeam.co_captains || [])] // Ensure we have the latest co-captains from database
           });
         }
       }
@@ -135,7 +182,10 @@ export function TeamsTab() {
           teamName={selectedTeam.name}
           currentRoster={selectedTeam.roster}
           captainId={selectedTeam.captainId}
+          coCaptainIds={selectedTeam.coCaptainIds}
           onRosterUpdate={handleRosterUpdate}
+          onCaptainUpdate={handleCaptainUpdate}
+          onCoCaptainUpdate={handleCoCaptainUpdate}
           leagueName={selectedTeam.leagueName}
           readOnly={selectedTeam.captainId !== userProfile?.id}
         />

@@ -106,7 +106,8 @@ export function useTeamsData(userId?: string) {
       if (error) throw error;
       const teamsData = (data || []).map(team => ({
         ...team,
-        roster: team.roster || [] // Ensure roster is always an array
+        roster: team.roster || [], // Ensure roster is always an array
+        co_captains: team.co_captains || [] // Ensure co_captains is always an array
       }));
       console.log('fetchTeams returned data:', teamsData);
       console.log('Setting teams state with:', teamsData.length, 'teams');

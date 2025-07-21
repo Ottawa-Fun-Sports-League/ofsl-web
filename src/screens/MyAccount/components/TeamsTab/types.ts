@@ -21,5 +21,6 @@ export interface Team {
   };
   captain_id: string;
   roster: string[];
+  co_captains?: string[];
   active: boolean;
 }

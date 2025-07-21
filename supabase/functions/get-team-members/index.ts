@@ -10,6 +10,7 @@ const corsHeaders = {
 interface GetTeamMembersRequest {
   teamId: number
   currentRoster: string[]
+  coCaptainIds?: string[]
 }
 
 serve(async (req: Request) => {
@@ -44,7 +45,7 @@ serve(async (req: Request) => {
       )
     }
 
-    const { teamId, currentRoster }: GetTeamMembersRequest = await req.json()
+    const { teamId, currentRoster, coCaptainIds = [] }: GetTeamMembersRequest = await req.json()
 
     // Validate required fields
     if (!teamId || !Array.isArray(currentRoster)) {
@@ -78,6 +79,7 @@ serve(async (req: Request) => {
 
     const teammates = []
 
+
     // Load registered users from roster (bypassing RLS with service role)
     if (currentRoster.length > 0) {
       const { data: registeredUsers, error: usersError } = await supabase
@@ -96,11 +98,12 @@ serve(async (req: Request) => {
         )
       }
       
-      // Add registered users to the list
+      // Add registered users to the list with co-captain flag
       if (registeredUsers) {
         teammates.push(...registeredUsers.map(user => ({ 
           ...user, 
-          isPending: false 
+          isPending: false,
+          isCoCaptain: coCaptainIds.includes(user.id)
         })))
       }
     }
@@ -129,10 +132,12 @@ serve(async (req: Request) => {
           email: invite.email,
           phone: '',
           isPending: true,
+          isCoCaptain: false, // Pending invites can't be co-captains
           inviteId: invite.id
         }))
       )
     }
+
 
     return new Response(
       JSON.stringify({ 

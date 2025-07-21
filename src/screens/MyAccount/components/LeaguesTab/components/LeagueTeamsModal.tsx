@@ -166,6 +166,22 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
     }
   };
 
+  const handleCaptainUpdate = async (newCaptainId: string) => {
+    if (!managingTeam) return;
+
+    try {
+      // Update the managing team state immediately for modal consistency
+      setManagingTeam(prev => prev ? { ...prev, captainId: newCaptainId } : null);
+      
+      // Reload the teams data from the database to get fresh information
+      await loadTeams();
+      
+    } catch (error) {
+      console.error('Error updating captain:', error);
+      showToast('Failed to update team captain', 'error');
+    }
+  };
+
   const handleDeleteTeam = async (teamId: number) => {
     const team = teams.find(t => t.id === teamId);
     if (!team) return;
@@ -402,6 +418,7 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
             currentRoster={managingTeam.roster}
             captainId={managingTeam.captainId}
             onRosterUpdate={handleRosterUpdate}
+            onCaptainUpdate={handleCaptainUpdate}
             leagueName={managingTeam.leagueName}
             readOnly={!userProfile?.is_admin && managingTeam.captainId !== userProfile?.id}
           />
