@@ -334,9 +334,16 @@ export function ProfileCompletionPage() {
           return;
         }
         
+        console.log('Processing invites for user:', {
+          userId: currentUserData.id,
+          email: user?.email
+        });
+        
         // First try using the database function
         const { data: inviteResult, error: inviteError } = await supabase
           .rpc('process_user_team_invites', { p_user_id: currentUserData.id });
+        
+        console.log('Database function result:', inviteResult, 'error:', inviteError);
         
         if (!inviteError && inviteResult?.success && inviteResult.processed_count > 0) {
           const teams = inviteResult.teams.join(', ');
