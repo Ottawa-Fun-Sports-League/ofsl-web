@@ -29,6 +29,7 @@ import {
   SchoolsTab,
   UsersTab,
   WaiversTab,
+  ManageTeamsTab,
   LeagueEditPage,
   TeamEditPage,
   LeagueNewPage,
@@ -135,6 +136,14 @@ export function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <WaiversTab />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="manage-teams"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManageTeamsTab />
                   </ProtectedRoute>
                 }
               />
