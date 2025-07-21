@@ -82,15 +82,6 @@ export function TeammateManagementModal({
       // Try refreshing the session first
       const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
       
-        hasSession: !!session,
-        sessionError,
-        accessToken: session?.access_token ? 'Present' : 'Missing',
-        tokenLength: session?.access_token?.length,
-        user: session?.user?.id,
-        email: session?.user?.email,
-        expires: session?.expires_at
-      });
-      
       if (!session) {
         throw new Error('No authentication session found after refresh');
       }
