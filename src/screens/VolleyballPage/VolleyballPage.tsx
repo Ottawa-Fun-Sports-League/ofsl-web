@@ -16,37 +16,37 @@ export const VolleyballPage = (): JSX.Element => {
       link: "/leagues?sport=Volleyball&day=Tuesday&level=Elite"
     },
     {
-      title: "Sunday Mixed",
+      title: "Sunday Mixed League",
       image: "/Sunday Day Mixed.jpg",
       link: "/leagues?sport=Volleyball&day=Sunday&gender=Mixed"
     },
     {
-      title: "OFSL Men's",
+      title: "OFSL Men's League",
       image: "/monday mens.jpg",
       link: "/leagues?sport=Volleyball&gender=Men's"
     },
     {
-      title: "OFSL Women's",
+      title: "OFSL Women's League",
       image: "/Monday Wonems.png",
       link: "/leagues?sport=Volleyball&gender=Women's"
     },
     {
-      title: "Monday Mixed",
+      title: "Monday Mixed League",
       image: "/Thursday elits 2.jpg",
       link: "/leagues?sport=Volleyball&day=Monday"
     },
     {
-      title: "Tuesday Mixed",
+      title: "Tuesday Mixed League",
       image: "/Thursday Mixed.jpg",
       link: "/leagues?sport=Volleyball&day=Tuesday"
     },
     {
-      title: "Wednesday Mixed",
+      title: "Wednesday Mixed League",
       image: "/Thursday womens premier.webp",
       link: "/leagues?sport=Volleyball&day=Wednesday"
     },
     {
-      title: "Thursday Mixed",
+      title: "Thursday Mixed League",
       image: "/sunday evening mixed.jpg",
       link: "/leagues?sport=Volleyball&day=Thursday"
     },
