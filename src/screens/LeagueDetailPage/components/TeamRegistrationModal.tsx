@@ -22,6 +22,7 @@ interface TeamRegistrationModalProps {
   leagueId: number;
   leagueName: string;
   league?: any; // Add league prop to get additional details
+  isWaitlist?: boolean; // Add prop to indicate if this is a waitlist registration
 }
 
 export function TeamRegistrationModal({ 
@@ -29,7 +30,8 @@ export function TeamRegistrationModal({
   closeModal, 
   leagueId, 
   leagueName,
-  league
+  league,
+  isWaitlist = false
 }: TeamRegistrationModalProps) {
   const [teamName, setTeamName] = useState('');
   const [skillLevelId, setSkillLevelId] = useState<number | null>(null);
@@ -75,17 +77,21 @@ export function TeamRegistrationModal({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
     // Reset error state
     setError(null);
     
-    if (!teamName.trim()) {
-      showToast('Please enter a team name', 'error');
-      return;
+    // For waitlist registrations, we only need skill level (not team name)
+    if (!isWaitlist) {
+      if (!teamName.trim()) {
+        showToast('Please enter a team name', 'error');
+        return;
+      }
     }
 
+    // Skill level is required for both regular and waitlist registrations
     if (!skillLevelId) {
       showToast('Please select a skill level', 'error');
       return;
@@ -121,17 +127,39 @@ export function TeamRegistrationModal({
 
       if (leagueError) throw leagueError;
 
+      // Get the highest display_order for this league to add new team at the end
+      const { data: maxOrderData } = await supabase
+        .from('teams')
+        .select('display_order')
+        .eq('league_id', leagueId)
+        .eq('active', !isWaitlist) // Same section (active or waitlist)
+        .order('display_order', { ascending: false })
+        .limit(1);
+
+      const nextDisplayOrder = (maxOrderData?.[0]?.display_order || 0) + 1;
+
       // Create the team
+      const teamInsertData: any = {
+        name: isWaitlist ? `Waitlist - ${userProfile.name || 'Team'}` : teamName.trim(),
+        league_id: leagueId,
+        captain_id: userProfile.id,
+        roster: [userProfile.id], // Captain is automatically added to roster
+        active: !isWaitlist, // Set inactive for waitlist teams
+        display_order: nextDisplayOrder,
+      };
+
+      // Add skill_level_id for both regular and waitlist registrations
+      if (skillLevelId) {
+        teamInsertData.skill_level_id = skillLevelId;
+      }
+
+      // Try to add is_waitlisted field if the schema supports it
+      // Note: We'll use the active field to distinguish waitlist teams (active=false)
+      // and can add a separate waitlist tracking table if needed later
+
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
-        .insert({
-          name: teamName.trim(),
-          league_id: leagueId,
-          captain_id: userProfile.id,
-          skill_level_id: skillLevelId,
-          roster: [userProfile.id], // Captain is automatically added to roster
-          active: true
-        })
+        .insert(teamInsertData)
         .select()
         .single();
 
@@ -155,8 +183,9 @@ export function TeamRegistrationModal({
             body: {
               email: user.email,
               userName: userProfile.name || 'Team Captain',
-              teamName: teamName.trim(),
-              leagueName: leagueName
+              teamName: isWaitlist ? `Waitlist - ${userProfile.name || 'Team'}` : teamName.trim(),
+              leagueName: leagueName,
+              isWaitlist: isWaitlist
             }
           });
 
@@ -172,18 +201,22 @@ export function TeamRegistrationModal({
         // Continue with registration flow even if email fails
       }
 
-      // Payment record will be automatically created by database trigger
-      if (leagueData?.cost && leagueData.cost > 0) {
-        // Show success modal instead of toast
-        setRegisteredTeamName(teamName);
-        setShowSuccessModal(true);
+      // Payment record will be automatically created by database trigger for regular registrations
+      if (isWaitlist) {
+        // For waitlist, show a simple success message and close
+        showToast(`You've been added to the waitlist for ${leagueName}. We'll contact you if a spot opens up!`, 'success');
+        closeModal();
       } else {
-        // Show success modal even for free leagues
-        setRegisteredTeamName(teamName);
-        setShowSuccessModal(true);
+        // For regular registrations, show the full success modal
+        if (leagueData?.cost && leagueData.cost > 0) {
+          setRegisteredTeamName(teamName);
+          setShowSuccessModal(true);
+        } else {
+          setRegisteredTeamName(teamName);
+          setShowSuccessModal(true);
+        }
+        closeModal();
       }
-
-      closeModal();
 
     } catch (error: any) {
       console.error('Error registering team:', error);
@@ -248,7 +281,9 @@ export function TeamRegistrationModal({
               {!error && (
                 <>
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-[#6F6F6F]">Register Team</h2>
+                    <h2 className="text-2xl font-bold text-[#6F6F6F]">
+                      {isWaitlist ? "Join Waitlist" : "Register Team"}
+                    </h2>
                     <button 
                       onClick={handleClose}
                       className="text-gray-500 hover:text-gray-700 bg-transparent hover:bg-gray-100 rounded-full p-2 transition-colors"
@@ -290,84 +325,144 @@ export function TeamRegistrationModal({
                     </p>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                        Team Name *
-                      </label>
-                      <Input
-                        value={teamName}
-                        onChange={(e) => setTeamName(e.target.value)}
-                        placeholder="Enter your team name"
-                        className="w-full"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                        Team Skill Level *
-                      </label>
-                      {skillsLoading ? (
-                        <div className="text-sm text-[#6F6F6F]">Loading skill levels...</div>
-                      ) : (
-                        <select
-                          value={skillLevelId || ''}
-                          onChange={(e) => setSkillLevelId(e.target.value ? parseInt(e.target.value) : null)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
-                          required
-                        >
-                          <option value="">Select skill level...</option>
-                          {skills.map(skill => (
-                            <option 
-                              key={skill.id} 
-                              value={skill.id} 
-                            >
-                              {skill.name}
-                              {skill.description && ` - ${skill.description}`}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-
-                    {league && league.cost && league.cost > 0 && (
-                      <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3">
+                  {isWaitlist ? (
+                    // Waitlist-specific content
+                    <>
+                      <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3 mb-6">
                         <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-sm text-amber-800 font-medium">Registration Information</p>
-                          <p className="text-sm text-amber-700 mt-1">
-                            To secure your spot in this league, a deposit of $200 or full payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be required after registration.
+                          <p className="text-sm text-amber-800 font-medium mb-2">League's Full (For Now!)</p>
+                          <p className="text-sm text-amber-700">
+                            Thanks for your interest—we love the enthusiasm. The league's currently full, but sometimes people bail (life happens) and spots open up. Want us to add you to the waitlist? No promises, but we'll reach out if a spot frees up.
                           </p>
                         </div>
                       </div>
-                    )}
 
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> You will be automatically added as the team captain and first player. 
-                        After registration, you can add more players to your team from the "My Teams\" page.
-                        Registration fees will be tracked and due within 30 days.
-                      </p>
-                    </div>
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                          Team Skill Level *
+                        </label>
+                        {skillsLoading ? (
+                          <div className="text-sm text-[#6F6F6F]">Loading skill levels...</div>
+                        ) : (
+                          <select
+                            value={skillLevelId || ''}
+                            onChange={(e) => setSkillLevelId(e.target.value ? parseInt(e.target.value) : null)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                            required
+                          >
+                            <option value="">Select skill level...</option>
+                            {skills.map(skill => (
+                              <option 
+                                key={skill.id} 
+                                value={skill.id} 
+                              >
+                                {skill.name}
+                                {skill.description && ` - ${skill.description}`}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
 
-                    <div className="flex gap-4">
-                      <Button
-                        type="submit"
-                        disabled={loading || skillsLoading}
-                        className="flex-1 border-[#B20000] bg-white hover:bg-[#B20000] text-[#B20000] hover:text-white rounded-[10px] px-6 py-2"
-                      >
-                        {loading ? 'Registering...' : 'Register Team'}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleClose}
-                        className="flex-1 bg-gray-500 hover:bg-gray-600 text-white rounded-[10px] px-6 py-2"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
+                      <div className="flex gap-4">
+                        <Button
+                          onClick={handleSubmit}
+                          disabled={loading || skillsLoading}
+                          className="flex-1 border-[#B20000] bg-white hover:bg-[#B20000] text-[#B20000] hover:text-white rounded-[10px] px-6 py-2"
+                        >
+                          {loading ? 'Joining...' : 'Yes, join waitlist'}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleClose}
+                          className="flex-1 bg-gray-500 hover:bg-gray-600 text-white rounded-[10px] px-6 py-2"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    // Normal registration form
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                          Team Name *
+                        </label>
+                        <Input
+                          value={teamName}
+                          onChange={(e) => setTeamName(e.target.value)}
+                          placeholder="Enter your team name"
+                          className="w-full"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                          Team Skill Level *
+                        </label>
+                        {skillsLoading ? (
+                          <div className="text-sm text-[#6F6F6F]">Loading skill levels...</div>
+                        ) : (
+                          <select
+                            value={skillLevelId || ''}
+                            onChange={(e) => setSkillLevelId(e.target.value ? parseInt(e.target.value) : null)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                            required
+                          >
+                            <option value="">Select skill level...</option>
+                            {skills.map(skill => (
+                              <option 
+                                key={skill.id} 
+                                value={skill.id} 
+                              >
+                                {skill.name}
+                                {skill.description && ` - ${skill.description}`}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      {league && league.cost && league.cost > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3">
+                          <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-amber-800 font-medium">Registration Information</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                              To secure your spot in this league, a deposit of $200 or full payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be required after registration.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          <strong>Note:</strong> You will be automatically added as the team captain and first player. 
+                          After registration, you can add more players to your team from the "My Teams\" page.
+                          Registration fees will be tracked and due within 30 days.
+                        </p>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <Button
+                          type="submit"
+                          disabled={loading || skillsLoading}
+                          className="flex-1 border-[#B20000] bg-white hover:bg-[#B20000] text-[#B20000] hover:text-white rounded-[10px] px-6 py-2"
+                        >
+                          {loading ? 'Registering...' : 'Register Team'}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleClose}
+                          className="flex-1 bg-gray-500 hover:bg-gray-600 text-white rounded-[10px] px-6 py-2"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  )}
                 </>
               )}
             </div>

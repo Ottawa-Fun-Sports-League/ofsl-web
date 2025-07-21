@@ -674,11 +674,8 @@ export const LeaguesPage = (): JSX.Element => {
                     </div>
                     
                     <Button 
-                      className={`bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-4 ${
-                        league.spots_remaining === 0 ? 'opacity-90' : ''
-                      }`}
+                      className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-4"
                       variant="default"
-                      disabled={league.spots_remaining === 0}
                     >
                       {league.spots_remaining === 0 ? 'Join Waitlist' : 'View Details'}
                     </Button>

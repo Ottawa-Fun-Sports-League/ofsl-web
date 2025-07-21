@@ -13,6 +13,7 @@ interface RegistrationRequest {
   userName: string;
   teamName: string;
   leagueName: string;
+  isWaitlist?: boolean;
 }
 
 serve(async (req: Request) => {
@@ -32,7 +33,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const { email, userName, teamName, leagueName }: RegistrationRequest =
+    const { email, userName, teamName, leagueName, isWaitlist = false }: RegistrationRequest =
       await req.json();
 
     if (!email || !userName || !teamName || !leagueName) {
@@ -85,9 +86,13 @@ serve(async (req: Request) => {
     }
 
     // Create the registration confirmation email content
+    const emailSubject = isWaitlist 
+      ? `Waitlist Confirmation: ${teamName} in ${leagueName}`
+      : `Registration Confirmation: ${teamName} in ${leagueName}`;
+
     const emailContent = {
       to: [email],
-      subject: `Registration Confirmation: ${teamName} in ${leagueName}`,
+      subject: emailSubject,
       html: `
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
           <tr>
@@ -108,7 +113,9 @@ serve(async (req: Request) => {
                       <!-- Title Section -->
                       <tr>
                         <td align="center" style="padding-bottom: 30px;">
-                          <h2 style="color: #2c3e50; margin: 0; font-size: 24px; font-weight: bold; font-family: Arial, sans-serif;">Registration Received!</h2>
+                          <h2 style="color: #2c3e50; margin: 0; font-size: 24px; font-weight: bold; font-family: Arial, sans-serif;">
+                            ${isWaitlist ? 'Added to Waitlist!' : 'Registration Received!'}
+                          </h2>
                         </td>
                       </tr>
                       
@@ -122,8 +129,10 @@ serve(async (req: Request) => {
                                   Hello ${userName},
                                 </p>
                                 <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
-                                  Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> 
-                                  for <strong style="color: #B20000;">${leagueName}</strong>!
+                                  ${isWaitlist 
+                                    ? `Thank you for joining the waitlist for <strong style="color: #B20000;">${leagueName}</strong>! Your team <strong style="color: #B20000;">${teamName}</strong> has been added to our waitlist.`
+                                    : `Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> for <strong style="color: #B20000;">${leagueName}</strong>!`
+                                  }
                                 </p>
                               </td>
                             </tr>
@@ -134,6 +143,33 @@ serve(async (req: Request) => {
                       <!-- Important Notice -->
                       <tr>
                         <td style="padding-bottom: 30px;">
+                          ${isWaitlist ? `
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fff8e1; border: 1px solid #ffe082;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="font-family: Arial, sans-serif;">
+                                      <h3 style="color: #f57f17; font-size: 18px; margin: 0 0 15px 0;">
+                                        ⏳ You're on the Waitlist
+                                      </h3>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
+                                        The league is currently full, but don't worry! Sometimes people change their plans and spots open up. We'll keep you posted if a space becomes available.
+                                      </p>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                        <strong>No payment is required at this time.</strong> If a spot opens up, we'll contact you with payment instructions.
+                                      </p>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                          ` : `
                           <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fff5f5; border: 1px solid #ffe0e0;">
                             <tr>
                               <td style="padding: 25px;">
@@ -179,6 +215,7 @@ serve(async (req: Request) => {
                               </td>
                             </tr>
                           </table>
+                          `}
                         </td>
                       </tr>
                       
@@ -189,10 +226,17 @@ serve(async (req: Request) => {
                           <table cellpadding="0" cellspacing="0" border="0" width="100%">
                             <tr>
                               <td style="color: #5a6c7d; font-size: 16px; line-height: 28px; font-family: Arial, sans-serif; padding-left: 20px;">
+                                ${isWaitlist ? `
+                                1. <strong>Sit tight!</strong> We'll monitor the league for any openings<br>
+                                2. If a spot becomes available, we'll contact you immediately<br>
+                                3. You'll have 24 hours to confirm and provide payment<br>
+                                4. Keep an eye on your email for updates!
+                                ` : `
                                 1. Send your $200 deposit via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
                                 2. Include your team name "<strong>${teamName}</strong>" in the e-transfer message<br>
                                 3. You'll receive a confirmation once we process your payment<br>
                                 4. Get ready for an amazing season!
+                                `}
                               </td>
                             </tr>
                           </table>
@@ -235,7 +279,7 @@ serve(async (req: Request) => {
                       © ${new Date().getFullYear()} Ottawa Fun Sports League. All rights reserved.
                     </p>
                     <p style="color: #95a5a6; font-size: 11px; margin: 0; font-family: Arial, sans-serif;">
-                      This email was sent because you registered a team for ${leagueName}.
+                      This email was sent because you ${isWaitlist ? 'joined the waitlist for' : 'registered a team for'} ${leagueName}.
                     </p>
                   </td>
                 </tr>

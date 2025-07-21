@@ -251,7 +251,6 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
           <Button
             onClick={handleRegisterClick}
             className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] w-full py-3"
-            disabled={actualSpotsRemaining === 0}
           >
             {actualSpotsRemaining === 0 ? "Join Waitlist" : "Register Team"}
           </Button>
@@ -269,6 +268,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
         leagueId={league.id}
         leagueName={league.name}
         league={league}
+        isWaitlist={actualSpotsRemaining === 0}
       />
     </>
   );
