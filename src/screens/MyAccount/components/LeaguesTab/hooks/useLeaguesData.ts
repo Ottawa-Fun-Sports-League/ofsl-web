@@ -35,7 +35,9 @@ export function useLeaguesData() {
           `).order('created_at', { ascending: false })
         ]);
 
-        if (gymsResponse.data) setGyms(gymsResponse.data);
+        if (gymsResponse.data) {
+          setGyms(gymsResponse.data);
+        }
         
         const { data: leaguesData, error: leaguesError } = leaguesResponse;
         if (leaguesError) throw leaguesError;
@@ -54,11 +56,11 @@ export function useLeaguesData() {
         const allGymIds = new Set<number>();
         leaguesData?.forEach(league => {
           if (league.gym_ids) {
-            league.gym_ids.forEach((id: number) => allGymIds.add(id));
+            league.gym_ids.forEach((id: string | number) => allGymIds.add(Number(id)));
           }
         });
 
-        const gymsMap = new Map(gyms.map(gym => [gym.id, gym]) || []);
+        const gymsMap = new Map(gymsResponse.data?.map(gym => [gym.id, gym]) || []);
         const teamCountsMap = new Map<number, number>();
         
         // Count teams per league
@@ -75,7 +77,7 @@ export function useLeaguesData() {
 
             // Get gyms for this league
             const leagueGyms = (league.gym_ids || [])
-              .map((gymId: number) => gymsMap.get(gymId))
+              .map((gymId: string | number) => gymsMap.get(Number(gymId)))
               .filter(gym => gym !== undefined);
 
             return {

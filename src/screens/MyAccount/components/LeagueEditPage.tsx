@@ -7,7 +7,7 @@ import { Input } from '../../../components/ui/input';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { supabase } from '../../../lib/supabase';
-import { fetchSports, fetchSkills, fetchLeagueById } from '../../../lib/leagues';
+import { fetchSports, fetchSkills, fetchLeagueById, getPrimaryLocation } from '../../../lib/leagues';
 import { ChevronLeft, Save, Copy, Eye } from 'lucide-react';
 import { RichTextEditor } from '../../../components/ui/rich-text-editor';
 import { StripeProductSelector } from './LeaguesTab/components/StripeProductSelector';
@@ -70,6 +70,7 @@ export function LeagueEditPage() {
     showToast
   });
 
+
   useEffect(() => {
     if (!userProfile?.is_admin) {
       navigate('/my-account/profile');
@@ -80,6 +81,7 @@ export function LeagueEditPage() {
       loadData();
     }
   }, [id, userProfile]);
+
 
   const loadData = async () => {
     try {
@@ -161,7 +163,6 @@ export function LeagueEditPage() {
           description: editLeague.description,
           league_type: editLeague.league_type,
           gender: editLeague.gender,
-          location: editLeague.location,
           sport_id: editLeague.sport_id,
           skill_id: editLeague.skill_id,
           skill_ids: editLeague.skill_ids,
@@ -301,24 +302,6 @@ export function LeagueEditPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Location</label>
-                  <select
-                    value={editLeague.location || ''}
-                    onChange={(e) => setEditLeague({ ...editLeague, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
-                    required
-                  >
-                    <option value="">Select location...</option>
-                    <option value="Various (see details)">Various (see details)</option>
-                    <option value="Inner city">Inner city</option>
-                    <option value="East end">East end</option>
-                    <option value="West end">West end</option>
-                    <option value="Orleans">Orleans</option>
-                    <option value="Kanata">Kanata</option>
-                    <option value="Barrhaven">Barrhaven</option>
-                  </select>
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Day of Week</label>
@@ -586,7 +569,7 @@ export function LeagueEditPage() {
             <div className="mt-8 flex gap-4">
               <Button
                 onClick={handleUpdateLeague}
-                disabled={saving || !editLeague.name || !editLeague.league_type || !editLeague.gender || !editLeague.sport_id || (editLeague.skill_ids.length === 0 && !editLeague.skill_id) || !editLeague.location || editLeague.day_of_week === null || !editLeague.start_date || !editLeague.end_date || editLeague.cost === null || !editLeague.max_teams}
+                disabled={saving || !editLeague.name || !editLeague.league_type || !editLeague.gender || !editLeague.sport_id || (editLeague.skill_ids.length === 0 && !editLeague.skill_id) || editLeague.day_of_week === null || !editLeague.start_date || !editLeague.end_date || editLeague.cost === null || !editLeague.max_teams}
                 className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-2 flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />

@@ -10,12 +10,14 @@ import {
   getDayName,
   formatLeagueDates,
   getPrimaryLocation,
+  getGymNames,
   LeagueWithTeamCount 
 } from "../../lib/leagues";
 import { formatPrice } from '../../stripe-config';
 import { getStripeProductByLeagueId } from '../../lib/stripe';
 import { useAuth } from "../../contexts/AuthContext";
 import { MobileFilterDrawer } from "./components/MobileFilterDrawer";
+import { LocationPopover } from "../../components/ui/LocationPopover";
 
 // Filter options data
 const filterOptions = {
@@ -643,14 +645,30 @@ export const LeaguesPage = (): JSX.Element => {
                     </div>
                     
                     {/* Location */}
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <p className="text-sm font-medium text-[#6F6F6F]">Location</p>
+                    <div className="flex items-center flex-wrap">
+                      <MapPin className="h-4 w-4 text-[#B20000] mr-1.5 flex-shrink-0" />
+                      <p className="text-sm font-medium text-[#6F6F6F] mr-2">Location:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const gymLocations = getPrimaryLocation(league.gyms || []);
+                          
+                          if (gymLocations.length === 0) {
+                            return <span className="text-sm text-gray-500">TBD</span>;
+                          }
+                          
+                          return gymLocations.map((location, index) => (
+                            <LocationPopover
+                              key={index}
+                              location={location}
+                              locations={getGymNames(league.gyms || [])}
+                            >
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
+                                {location}
+                              </span>
+                            </LocationPopover>
+                          ));
+                        })()}
                       </div>
-                      <p className="text-xs text-gray-500 ml-6">
-                        {league.location || 'TBD'}
-                      </p>
                     </div>
                     
                     {/* Price */}
