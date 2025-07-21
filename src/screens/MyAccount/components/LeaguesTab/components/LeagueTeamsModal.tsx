@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
-import { Users, X, Trash2, Search, UserPlus } from 'lucide-react';
+import { Users, X, Trash2, Search, UserPlus, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 import { LeagueWithTeamCount } from '../types';
 import { supabase } from '../../../../../lib/supabase';
 import { useToast } from '../../../../../components/ui/toast';
 import { useAuth } from '../../../../../contexts/AuthContext';
-import { TeammateManagementModal } from '../../TeamsTab/TeammateManagementModal';
+import { PaymentManagementSection } from '../../shared/PaymentManagementSection';
 
 interface Team {
   id: number;
@@ -33,18 +34,13 @@ interface LeagueTeamsModalProps {
 }
 
 export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalProps) {
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingTeamId, setDeletingTeamId] = useState<number | null>(null);
-  const [managingTeam, setManagingTeam] = useState<{
-    id: number;
-    name: string;
-    roster: string[];
-    captainId: string;
-    leagueName: string;
-  } | null>(null);
+  const [expandedPayments, setExpandedPayments] = useState<Set<number>>(new Set());
   const { showToast } = useToast();
   const { userProfile } = useAuth();
 
@@ -131,39 +127,8 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
   }, [searchTerm, teams]);
 
   const handleManageTeam = (teamId: number) => {
-    const team = teams.find(t => t.id === teamId);
-    if (!team) return;
-
-    setManagingTeam({
-      id: teamId,
-      name: team.name,
-      roster: [...team.roster], // Create a copy to avoid reference issues
-      captainId: team.captain_id,
-      leagueName: team.league_name
-    });
-  };
-
-  const handleCloseTeamManagement = () => {
-    setManagingTeam(null);
-  };
-
-  const handleRosterUpdate = async (newRoster: string[]) => {
-    if (!managingTeam) return;
-
-    try {
-      // Ensure newRoster is an array
-      const safeRoster = newRoster || [];
-      
-      // Update the managing team state immediately for modal consistency
-      setManagingTeam(prev => prev ? { ...prev, roster: safeRoster } : null);
-      
-      // Reload the teams data from the database to get fresh information
-      await loadTeams();
-      
-    } catch (error) {
-      console.error('Error updating roster:', error);
-      showToast('Failed to update team roster', 'error');
-    }
+    console.log('Navigating to team management page for team:', teamId);
+    navigate(`/teams/${teamId}/manage`);
   };
 
   const handleDeleteTeam = async (teamId: number) => {
@@ -241,6 +206,18 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const togglePaymentExpansion = (teamId: number) => {
+    setExpandedPayments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(teamId)) {
+        newSet.delete(teamId);
+      } else {
+        newSet.add(teamId);
+      }
+      return newSet;
+    });
   };
 
   if (!isOpen || !league) return null;
@@ -372,6 +349,16 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => togglePaymentExpansion(team.id)}
+                        className="h-8 w-8 p-0 hover:bg-purple-100"
+                        title="View Payment Details"
+                      >
+                        <CreditCard className="h-4 w-4 text-purple-600" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDeleteTeam(team.id)}
                         disabled={deletingTeamId === team.id || (!userProfile?.is_admin && team.captain_id !== userProfile?.id)}
                         className="h-8 w-8 p-0 hover:bg-red-100 disabled:opacity-50"
@@ -386,26 +373,31 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
                       </Button>
                     </div>
                   </div>
+                  
+                  {/* Expandable Payment Management Section */}
+                  {expandedPayments.has(team.id) && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <PaymentManagementSection
+                        teamId={team.id}
+                        title={`Payment Records for ${team.name}`}
+                        allowDelete={userProfile?.is_admin}
+                        allowCreate={userProfile?.is_admin}
+                        onPaymentDeleted={() => {
+                          // Optionally refresh team data after payment deletion
+                          loadTeams();
+                        }}
+                        onPaymentCreated={() => {
+                          // Refresh team data after payment creation
+                          loadTeams();
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
-        
-        {/* Teammate Management Modal */}
-        {managingTeam && (
-          <TeammateManagementModal
-            isOpen={!!managingTeam}
-            onClose={handleCloseTeamManagement}
-            teamId={managingTeam.id}
-            teamName={managingTeam.name}
-            currentRoster={managingTeam.roster}
-            captainId={managingTeam.captainId}
-            onRosterUpdate={handleRosterUpdate}
-            leagueName={managingTeam.leagueName}
-            readOnly={!userProfile?.is_admin && managingTeam.captainId !== userProfile?.id}
-          />
-        )}
       </div>
     </div>
   );

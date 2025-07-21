@@ -33,6 +33,7 @@ import {
   TeamEditPage,
   LeagueNewPage,
 } from "./screens/MyAccount";
+import { LeagueTeamsPage } from "./screens/LeagueTeamsPage";
 import { ProfileCompletionPage } from "./screens/ProfileCompletionPage/ProfileCompletionPage";
 import { Navigate } from "react-router-dom";
 import { GoogleSignupRedirect } from "./screens/SignupPage/GoogleSignupRedirect";
@@ -165,6 +166,17 @@ export function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <TeamEditPage />
+                </ProtectedRoute>
+              }
+            />
+
+
+            {/* League Teams Page - separate route */}
+            <Route
+              path="/leagues/:leagueId/teams"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <LeagueTeamsPage />
                 </ProtectedRoute>
               }
             />

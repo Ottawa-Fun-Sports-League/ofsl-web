@@ -1,107 +1,44 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../../lib/supabase';
-import { fetchSkills } from '../../../../lib/leagues';
-import { useToast } from '../../../../components/ui/toast';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { Team, Skill, TeamMember, EditTeamForm } from './types';
-import { PaymentInfo, PaymentHistoryEntry } from '../../../../components/payments';
+import { supabase } from '../../lib/supabase';
+import { useToast } from '../../components/ui/toast';
+import { PaymentInfo, PaymentHistoryEntry } from '../../components/payments';
 
-export function useTeamEditData(teamId: string | undefined) {
-  const { userProfile } = useAuth();
+export function useLeagueTeamsPayments(teamId: number | null) {
   const { showToast } = useToast();
-
-  const [team, setTeam] = useState<Team | null>(null);
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editTeam, setEditTeam] = useState<EditTeamForm>({
-    name: '',
-    skill_level_id: null
-  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!userProfile?.is_admin || !teamId) {
-      return;
+    if (teamId) {
+      loadPaymentInfo();
     }
-    loadData();
-  }, [teamId, userProfile]);
+  }, [teamId]);
 
-  const loadData = async () => {
+  const loadPaymentInfo = async () => {
+    if (!teamId) return;
+    
     try {
       setLoading(true);
       
-      const skillsData = await fetchSkills();
-      setSkills(skillsData);
-
+      // Get team data to find league_id
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
-        .select(`
-          *,
-          leagues:league_id(id, name),
-          skills:skill_level_id(name),
-          users:captain_id(name, email)
-        `)
+        .select('league_id')
         .eq('id', teamId)
         .single();
-      
+
       if (teamError) throw teamError;
-      
-      if (!teamData) {
-        throw new Error('Team not found');
-      }
-      
-      setTeam(teamData);
-      setEditTeam({
-        name: teamData.name,
-        skill_level_id: teamData.skill_level_id
-      });
+      if (!teamData) throw new Error('Team not found');
 
-      await loadTeamMembers(teamData.roster);
-      await loadPaymentInfo(teamData.id, teamData.league_id);
-      
-    } catch (error) {
-      console.error('Error loading data:', error);
-      showToast('Failed to load team data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTeamMembers = async (roster: string[]) => {
-    if (!roster || roster.length === 0) {
-      setTeamMembers([]);
-      return;
-    }
-    
-    try {
-      const { data: membersData, error: membersError } = await supabase
-        .from('users')
-        .select('id, name, email')
-        .in('id', roster);
-
-      if (membersError) {
-        console.error('Error loading team members:', membersError);
-        return;
-      }
-      
-      setTeamMembers(membersData || []);
-    } catch (error) {
-      console.error('Error in loadTeamMembers:', error);
-    }
-  };
-
-  const loadPaymentInfo = async (teamId: number, leagueId: number) => {
-    try {
       const { data: paymentData, error: paymentError } = await supabase
         .from('league_payments')
         .select('*')
         .eq('team_id', teamId)
-        .eq('league_id', leagueId)
+        .eq('league_id', teamData.league_id)
         .maybeSingle();
 
-      if (paymentError) {
+      if (paymentError && paymentError.code !== 'PGRST116') {
         console.error('Error loading payment information:', paymentError);
         return;
       }
@@ -109,9 +46,52 @@ export function useTeamEditData(teamId: string | undefined) {
       if (paymentData) {
         setPaymentInfo(paymentData);
         parsePaymentHistory(paymentData.notes, paymentData);
+      } else {
+        // Create payment record if it doesn't exist
+        await createPaymentRecord(teamId, teamData.league_id);
       }
     } catch (error) {
       console.error('Error in loadPaymentInfo:', error);
+      showToast('Failed to load payment information', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createPaymentRecord = async (teamId: number, leagueId: number) => {
+    try {
+      // Get league cost for default amount_due
+      const { data: leagueData, error: leagueError } = await supabase
+        .from('leagues')
+        .select('cost')
+        .eq('id', leagueId)
+        .single();
+
+      if (leagueError) throw leagueError;
+
+      const { data: newPayment, error: createError } = await supabase
+        .from('league_payments')
+        .insert({
+          team_id: teamId,
+          league_id: leagueId,
+          amount_due: leagueData?.cost || 0,
+          amount_paid: 0,
+          status: 'pending',
+          payment_method: null,
+          notes: null,
+          due_date: null
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      
+      if (newPayment) {
+        setPaymentInfo(newPayment);
+        setPaymentHistory([]);
+      }
+    } catch (error) {
+      console.error('Error creating payment record:', error);
     }
   };
 
@@ -199,19 +179,18 @@ export function useTeamEditData(teamId: string | undefined) {
     }
   };
 
+  const refreshPaymentInfo = () => {
+    if (teamId) {
+      loadPaymentInfo();
+    }
+  };
+
   return {
-    team,
-    skills,
-    teamMembers,
     paymentInfo,
     paymentHistory,
     loading,
-    editTeam,
-    setTeam,
-    setEditTeam,
     setPaymentInfo,
     setPaymentHistory,
-    setTeamMembers,
-    loadData
+    refreshPaymentInfo
   };
 }

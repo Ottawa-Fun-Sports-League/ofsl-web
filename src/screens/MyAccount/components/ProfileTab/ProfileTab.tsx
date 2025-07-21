@@ -30,20 +30,17 @@ export function ProfileTab() {
     showPasswordSection,
     passwordForm,
     passwordValidation,
-    showCurrentPassword,
     showNewPassword,
     showConfirmPassword,
     setPasswordForm,
-    setShowCurrentPassword,
     setShowNewPassword,
     setShowConfirmPassword,
     handleTogglePasswordSection,
-    validateCurrentPassword,
     validateNewPassword,
     validateConfirmPassword,
     handlePasswordChange,
     handleCancelPasswordChange
-  } = usePasswordOperations(profile);
+  } = usePasswordOperations();
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -93,15 +90,12 @@ export function ProfileTab() {
         showPasswordSection={showPasswordSection}
         passwordForm={passwordForm}
         passwordValidation={passwordValidation}
-        showCurrentPassword={showCurrentPassword}
         showNewPassword={showNewPassword}
         showConfirmPassword={showConfirmPassword}
         onTogglePasswordSection={handleTogglePasswordSection}
         onPasswordFormChange={setPasswordForm}
-        onToggleCurrentPassword={() => setShowCurrentPassword(!showCurrentPassword)}
         onToggleNewPassword={() => setShowNewPassword(!showNewPassword)}
         onToggleConfirmPassword={() => setShowConfirmPassword(!showConfirmPassword)}
-        onValidateCurrentPassword={validateCurrentPassword}
         onValidateNewPassword={validateNewPassword}
         onValidateConfirmPassword={validateConfirmPassword}
         onPasswordChange={handlePasswordChange}

@@ -31,17 +31,14 @@ export interface NotificationPreferences {
 }
 
 export interface PasswordForm {
-  currentPassword: string;
   newPassword: string;
   confirmPassword: string;
 }
 
 export interface PasswordValidationState {
   passwordError: string | null;
-  currentPasswordError: string | null;
   newPasswordError: string | null;
   confirmPasswordError: string | null;
   confirmPasswordSuccess: boolean;
-  validatingPassword: boolean;
   changingPassword: boolean;
 }

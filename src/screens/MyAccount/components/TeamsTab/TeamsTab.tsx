@@ -9,7 +9,7 @@ import { useTeamOperations } from './useTeamOperations';
 
 export function TeamsTab() {
   const { user, userProfile } = useAuth();
-  const { leaguePayments, teams, loading, setLeaguePayments, setTeams, refetchTeams, updateTeamRoster } = useTeamsData(userProfile?.id);
+  const { leaguePayments, teams, loading, setLeaguePayments, setTeams, refetchTeams, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
   const { unregisteringPayment, handleUnregister } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
@@ -30,7 +30,7 @@ export function TeamsTab() {
   };
 
   const handleLeaveTeam = async (teamId: number, teamName: string) => {
-    if (!userProfile?.id) return;
+    if (!userProfile?.id || !user) return;
     
     if (window.confirm(`Are you sure you want to leave the team "${teamName}"? This action cannot be undone.`)) {
       setLeavingTeam(teamId);
@@ -38,25 +38,45 @@ export function TeamsTab() {
       try {
         const team = teams.find(t => t.id === teamId);
         if (!team) throw new Error('Team not found');
+
+        // Get the user's access token for the API call
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Not authenticated');
+        }
+
+        // Call the manage-teammates edge function to remove the user from the team
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         
-        // Remove user from team roster
-        const updatedRoster = (team.roster || []).filter(userId => userId !== userProfile.id);
+        const response = await fetch(`${supabaseUrl}/functions/v1/manage-teammates`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': supabaseAnonKey
+          },
+          body: JSON.stringify({
+            action: 'remove',
+            teamId: teamId.toString(),
+            userId: userProfile.id,
+            captainId: team.captain_id
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to leave team');
+        }
+
+        const result = await response.json();
         
-        console.log('Original roster:', team.roster);
-        console.log('Updated roster:', updatedRoster);
-        console.log('User being removed:', userProfile.id);
-        console.log('Roster length before:', team.roster?.length || 0, 'after:', updatedRoster.length);
-        
-        // For now, show a message that the user needs to contact the captain
-        // This is a temporary solution until the Edge Function can be updated
-        console.log('Leave Team functionality requires captain permission due to database security');
-        
-        // Show a helpful message to the user
-        alert(`To leave the team "${teamName}", please contact your team captain to remove you from the roster. Due to security restrictions, only team captains can modify team rosters.`);
-        
-        // Immediately remove the team from local state
-        const filteredTeams = teams.filter(t => t.id !== teamId);
-        setTeams(filteredTeams);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to leave team');
+        }
+
+        // Refetch teams data to get updated information from database
+        await refetchTeams();
         
         // Close any open teammate management modal since the user left
         setSelectedTeam(null);
@@ -65,7 +85,7 @@ export function TeamsTab() {
         
       } catch (error) {
         console.error('Error leaving team:', error);
-        alert('Failed to leave team. Please try again.');
+        alert(`Failed to leave team: ${error.message}`);
       } finally {
         setLeavingTeam(null);
       }
@@ -105,8 +125,38 @@ export function TeamsTab() {
         const updatedTeam = updatedTeams.find(t => t.id === selectedTeam.id);
         if (updatedTeam) {
           setSelectedTeam({
-            ...selectedTeam,
-            roster: [...updatedTeam.roster] // Ensure we have the latest roster from database
+            id: updatedTeam.id,
+            name: updatedTeam.name,
+            roster: [...updatedTeam.roster], // Ensure we have the latest roster from database
+            captainId: updatedTeam.captain_id, // Update captain ID in case it changed
+            leagueName: updatedTeam.league?.name || 'OFSL League'
+          });
+        }
+      }
+    }
+  };
+
+  const handleCaptainUpdate = async (newCaptainId: string) => {
+    if (selectedTeam) {
+      // Update the selectedTeam state immediately for modal consistency
+      setSelectedTeam({ ...selectedTeam, captainId: newCaptainId });
+      
+      // Update the main teams state immediately for instant UI update
+      updateTeamCaptain(selectedTeam.id, newCaptainId);
+      
+      // Refetch teams data to ensure everything is in sync with database
+      const updatedTeams = await refetchTeams();
+      
+      // Update selectedTeam with the fresh data from database to ensure consistency
+      if (updatedTeams) {
+        const updatedTeam = updatedTeams.find(t => t.id === selectedTeam.id);
+        if (updatedTeam) {
+          setSelectedTeam({
+            id: updatedTeam.id,
+            name: updatedTeam.name,
+            roster: [...updatedTeam.roster],
+            captainId: updatedTeam.captain_id, // Ensure we have the latest captain from database
+            leagueName: updatedTeam.league?.name || 'OFSL League'
           });
         }
       }
@@ -136,6 +186,7 @@ export function TeamsTab() {
           currentRoster={selectedTeam.roster}
           captainId={selectedTeam.captainId}
           onRosterUpdate={handleRosterUpdate}
+          onCaptainUpdate={handleCaptainUpdate}
           leagueName={selectedTeam.leagueName}
           readOnly={selectedTeam.captainId !== userProfile?.id}
         />

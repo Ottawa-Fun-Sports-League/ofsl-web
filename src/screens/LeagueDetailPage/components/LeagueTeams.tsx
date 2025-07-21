@@ -479,137 +479,146 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
         style={style}
         className={`shadow-md overflow-hidden rounded-lg ${isWaitlisted ? 'bg-gray-50' : ''} ${isDragging ? 'z-50' : ''}`}
       >
-        <CardContent className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-start gap-3 flex-1">
-              {/* Drag Handle - only show if drag is enabled */}
+        <CardContent className="p-4">
+          {/* Header Section - Team Name and Status */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {/* Drag Handle */}
               {dragEnabled && (
                 <div 
                   {...attributes} 
                   {...listeners}
-                  className="cursor-grab active:cursor-grabbing mt-1 p-1 hover:bg-gray-100 rounded"
+                  className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded flex-shrink-0 self-start"
                   title="Drag to reorder"
                 >
                   <GripVertical className="h-4 w-4 text-gray-400" />
                 </div>
               )}
               
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-lg font-bold text-[#6F6F6F]">
-                    {team.name}
-                  </h3>
-                  {isWaitlisted && (
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">
-                      Waitlisted
-                    </span>
-                  )}
-                  {team.skill_name && (
-                    <span className={`px-3 py-1 text-sm rounded-full ${isWaitlisted ? 'bg-gray-300 text-gray-700' : 'bg-blue-100 text-blue-800'}`}>
-                      {team.skill_name}
-                    </span>
-                  )}
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Link 
-                      to={`/my-account/teams/edit/${team.id}`}
-                      className={`text-sm hover:underline ${isWaitlisted ? 'text-gray-600 hover:text-gray-800' : 'text-[#B20000] hover:text-[#8A0000]'}`}
-                    >
-                      Edit registration
-                    </Link>
-                    
-                    {/* Move team buttons */}
-                    <Button
-                      onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
-                      disabled={movingTeam === team.id}
-                      size="sm"
-                      variant="outline"
-                      className={`h-8 px-3 text-xs ${isWaitlisted 
-                        ? 'border-green-300 text-green-700 hover:bg-green-50' 
-                        : 'border-yellow-300 text-yellow-700 hover:bg-yellow-50'
-                      }`}
-                      title={isWaitlisted ? 'Move team to active registration' : 'Move team to waitlist'}
-                    >
-                      {movingTeam === team.id ? (
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                      ) : isWaitlisted ? (
-                        'Move to Active'
-                      ) : (
-                        'Move to Waitlist'
-                      )}
-                    </Button>
-                    
-                    {/* Delete team button */}
-                    <Button
-                      onClick={() => handleDeleteTeam(team.id, team.name)}
-                      disabled={deleting === team.id}
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-2 border-red-300 text-red-700 hover:bg-red-50"
-                      title="Delete team"
-                    >
-                      {deleting === team.id ? (
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                      ) : (
-                        <Trash2 className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                <p className={`text-sm ${isWaitlisted ? 'text-gray-600' : 'text-gray-600'}`}>
-                  {team.league?.name}
-                </p>
+              {/* Team Name and Badges */}
+              <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                <h3 className="text-lg font-bold text-[#6F6F6F] truncate">
+                  {team.name}
+                </h3>
+                {isWaitlisted && (
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full whitespace-nowrap">
+                    Waitlisted
+                  </span>
+                )}
+                {team.skill_name && (
+                  <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${isWaitlisted ? 'bg-gray-300 text-gray-700' : 'bg-blue-100 text-blue-800'}`}>
+                    {team.skill_name}
+                  </span>
+                )}
               </div>
             </div>
           </div>
+
+          {/* League Name */}
+          <p className={`text-sm mb-3 ${dragEnabled ? 'ml-6' : ''} ${isWaitlisted ? 'text-gray-600' : 'text-gray-600'}`}>
+            {team.league?.name}
+          </p>
           
-          <div className="mt-2 text-sm ml-7">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <div className="flex items-center gap-2" title="Captain">
-                <Crown className={`h-5 w-5 ${isWaitlisted ? 'text-yellow-600' : 'text-yellow-500'}`} />
-                <span className={isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}>
-                  {team.captain_name || 'Unknown'}
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Users className={`h-5 w-5 ${isWaitlisted ? 'text-blue-600' : 'text-blue-500'}`} />
-                <span className={isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}>
-                  {team.roster.length} players
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-2" title="Registration Date">
-                <Calendar className={`h-5 w-5 ${isWaitlisted ? 'text-green-600' : 'text-green-500'}`} />
-                <span className={isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}>
-                  {formatDate(team.created_at)}
-                </span>
-              </div>
-              
-              {!isWaitlisted && (
-                <div className="flex items-center gap-2" title="Payment">
-                  <DollarSign className="h-5 w-5 text-purple-500" />
+          {/* Body Section - Team Info Grid */}
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm ${dragEnabled ? 'ml-6' : ''}`}>
+            {/* Captain Info */}
+            <div className="flex items-center gap-1.5" title="Captain">
+              <Crown className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-yellow-600' : 'text-yellow-500'}`} />
+              <span className={`truncate ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+                {team.captain_name || 'Unknown'}
+              </span>
+            </div>
+            
+            {/* Player Count */}
+            <div className="flex items-center gap-1.5">
+              <Users className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-blue-600' : 'text-blue-500'}`} />
+              <span className={`whitespace-nowrap ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+                {team.roster.length} players
+              </span>
+            </div>
+            
+            {/* Registration Date */}
+            <div className="flex items-center gap-1.5 col-span-2 md:col-span-1" title="Registration Date">
+              <Calendar className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-green-600' : 'text-green-500'}`} />
+              <span className={`text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+                {formatDate(team.created_at)}
+              </span>
+            </div>
+            
+            {/* Payment Info */}
+            {!isWaitlisted && (
+              <div className="flex items-center gap-1.5 col-span-2 md:col-span-1" title="Payment">
+                <DollarSign className="h-4 w-4 flex-shrink-0 text-purple-500" />
+                <div className="flex items-center gap-1 min-w-0">
                   {team.amount_due && team.amount_paid !== null ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#6F6F6F] whitespace-nowrap">
+                    <>
+                      <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
                         ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
                       </span>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${getPaymentStatusColor(team.payment_status)}`}>
+                      <span className={`px-1.5 py-0.5 text-xs rounded-full ${getPaymentStatusColor(team.payment_status)}`}>
                         {team.payment_status && team.payment_status.charAt(0).toUpperCase() + team.payment_status.slice(1)}
                       </span>
-                    </div>
+                    </>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#6F6F6F] whitespace-nowrap">
+                    <>
+                      <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
                         $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
                       </span>
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
+                      <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
                         Pending
                       </span>
-                    </div>
+                    </>
                   )}
                 </div>
-              )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer Section - Action Buttons */}
+          <div className={`flex justify-between items-center pt-2 border-t border-gray-100 ${dragEnabled ? 'ml-6' : ''}`}>
+            <div className="flex items-center gap-2">
+              <Link 
+                to={`/my-account/teams/edit/${team.id}`}
+                className={`text-xs hover:underline ${isWaitlisted ? 'text-gray-600 hover:text-gray-800' : 'text-[#B20000] hover:text-[#8A0000]'}`}
+              >
+                Edit registration
+              </Link>
+              
+              <div className="h-3 w-px bg-gray-300"></div>
+              
+              <button
+                onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
+                disabled={movingTeam === team.id}
+                className={`text-xs hover:underline disabled:cursor-not-allowed disabled:opacity-50 ${isWaitlisted 
+                  ? 'text-green-700 hover:text-green-800' 
+                  : 'text-yellow-700 hover:text-yellow-800'
+                }`}
+                title={isWaitlisted ? 'Move team to active registration' : 'Move team to waitlist'}
+              >
+                {movingTeam === team.id ? (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></div>
+                ) : isWaitlisted ? (
+                  'Move to Active'
+                ) : (
+                  'Move to Waitlist'
+                )}
+              </button>
             </div>
+            
+            <Button
+              onClick={() => handleDeleteTeam(team.id, team.name)}
+              disabled={deleting === team.id}
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 border-red-300 text-red-700 hover:bg-red-50"
+              title="Delete team"
+            >
+              {deleting === team.id ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+              ) : (
+                <Trash2 className="h-3 w-3" />
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
