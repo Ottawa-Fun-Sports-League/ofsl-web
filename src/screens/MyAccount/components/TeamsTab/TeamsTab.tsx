@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { supabase } from '../../../../lib/supabase';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -6,6 +6,9 @@ import { TeamsSection } from './TeamsSection';
 import { TeammateManagementModal } from './TeammateManagementModal';
 import { useTeamsData } from './useTeamsData';
 import { useTeamOperations } from './useTeamOperations';
+import { PendingInvites } from '../../../../components/PendingInvites';
+import { Card, CardContent } from '../../../../components/ui/card';
+import { CheckCircle } from 'lucide-react';
 
 export function TeamsTab() {
   const { user, userProfile } = useAuth();
@@ -13,6 +16,25 @@ export function TeamsTab() {
   const { unregisteringPayment, handleUnregister } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
+  const [welcomeTeams, setWelcomeTeams] = useState<string[]>([]);
+
+  // Check for teams added during signup
+  useEffect(() => {
+    const teamsAdded = sessionStorage.getItem('signup_teams_added');
+    if (teamsAdded) {
+      try {
+        const teams = JSON.parse(teamsAdded);
+        setWelcomeTeams(teams);
+        // Clear the flag after showing
+        setTimeout(() => {
+          sessionStorage.removeItem('signup_teams_added');
+          setWelcomeTeams([]);
+        }, 10000); // Show for 10 seconds
+      } catch (error) {
+        console.error('Error parsing signup teams:', error);
+      }
+    }
+  }, []);
 
   const onUnregisterSuccess = async (paymentId: number) => {
     // Remove the payment from the local state
@@ -165,6 +187,31 @@ export function TeamsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Show welcome message if user was auto-added to teams */}
+      {welcomeTeams.length > 0 && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Welcome to OFSL!</h3>
+                <p className="text-gray-700">
+                  You've been automatically added to the following team{welcomeTeams.length > 1 ? 's' : ''}:
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {welcomeTeams.map((team, index) => (
+                    <li key={index} className="text-gray-700 font-medium">• {team}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Show pending invites at the top */}
+      <PendingInvites onInviteAccepted={refetchTeams} />
+      
       <TeamsSection
         teams={teams}
         currentUserId={userProfile?.id}

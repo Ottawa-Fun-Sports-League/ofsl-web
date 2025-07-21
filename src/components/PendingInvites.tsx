@@ -16,7 +16,11 @@ interface TeamInvite {
   created_at: string;
 }
 
-export function PendingInvites() {
+interface PendingInvitesProps {
+  onInviteAccepted?: () => void;
+}
+
+export function PendingInvites({ onInviteAccepted }: PendingInvitesProps = {}) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [invites, setInvites] = useState<TeamInvite[]>([]);
@@ -59,60 +63,43 @@ export function PendingInvites() {
     setProcessing(invite.id);
 
     try {
-      // Get the user's database ID
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_id', user!.id)
-        .single();
-
-      if (userError || !userData) {
-        throw new Error('User profile not found');
+      // Get the session to authenticate with the Edge Function
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
       }
 
-      // Get the team's current roster
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select('roster')
-        .eq('id', invite.team_id)
-        .single();
+      // Use the Edge Function to accept the invite
+      const response = await fetch('https://api.ofsl.ca/functions/v1/accept-team-invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          inviteId: invite.id
+        }),
+      });
 
-      if (teamError || !teamData) {
-        throw new Error('Team not found');
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to accept invite');
       }
 
-      // Add user to roster
-      const currentRoster = teamData.roster || [];
-      const updatedRoster = [...new Set([...currentRoster, userData.id])];
-
-      // Update team roster
-      const { error: updateError } = await supabase
-        .from('teams')
-        .update({ roster: updatedRoster })
-        .eq('id', invite.team_id);
-
-      if (updateError) {
-        throw updateError;
+      showToast(result.message || `Successfully joined ${invite.team_name}!`, 'success');
+      
+      // Refresh the invites list
+      fetchPendingInvites();
+      
+      // Call the parent callback to refresh teams if provided
+      if (onInviteAccepted) {
+        onInviteAccepted();
       }
-
-      // Mark invite as accepted
-      const { error: inviteError } = await supabase
-        .from('team_invites')
-        .update({ 
-          status: 'accepted', 
-          processed_at: new Date().toISOString() 
-        })
-        .eq('id', invite.id);
-
-      if (inviteError) {
-        throw inviteError;
-      }
-
-      showToast(`Successfully joined ${invite.team_name}!`, 'success');
-      fetchPendingInvites(); // Refresh the list
     } catch (error) {
       console.error('Error accepting invite:', error);
-      showToast('Failed to accept invite', 'error');
+      showToast(error.message || 'Failed to accept invite', 'error');
     } finally {
       setProcessing(null);
     }
