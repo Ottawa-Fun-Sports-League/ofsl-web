@@ -201,6 +201,31 @@ export function TeamRegistrationModal({
         // Continue with registration flow even if email fails
       }
 
+      // Trigger notification processing for new team registrations (not waitlist)
+      if (!isWaitlist) {
+        try {
+          // Get current session for authorization
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            // Call the notification queue processor
+            fetch('https://api.ofsl.ca/functions/v1/process-notification-queue', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+            }).catch(error => {
+              // Don't block the user flow for notification errors
+              console.error('Error triggering notification processing:', error);
+            });
+          }
+        } catch (error) {
+          // Don't block the user flow for notification errors
+          console.error('Error triggering notification processing:', error);
+        }
+      }
+
       // Payment record will be automatically created by database trigger for regular registrations
       if (isWaitlist) {
         // For waitlist, show a simple success message and close
