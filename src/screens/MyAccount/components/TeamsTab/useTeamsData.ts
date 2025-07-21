@@ -170,6 +170,16 @@ export function useTeamsData(userId?: string) {
     );
   };
 
+  const updateTeamCaptain = (teamId: number, newCaptainId: string) => {
+    setTeams(prevTeams => 
+      prevTeams.map(team => 
+        team.id === teamId 
+          ? { ...team, captain_id: newCaptainId }
+          : team
+      )
+    );
+  };
+
   return {
     leaguePayments,
     teams,
@@ -178,6 +188,7 @@ export function useTeamsData(userId?: string) {
     setTeams,
     refetchLeaguePayments,
     refetchTeams: fetchTeams,
-    updateTeamRoster
+    updateTeamRoster,
+    updateTeamCaptain
   };
 }

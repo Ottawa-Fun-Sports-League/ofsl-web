@@ -14,17 +14,14 @@ export const INITIAL_NOTIFICATIONS = {
 };
 
 export const INITIAL_PASSWORD_FORM = {
-  currentPassword: '',
   newPassword: '',
   confirmPassword: ''
 };
 
 export const INITIAL_PASSWORD_VALIDATION = {
   passwordError: null,
-  currentPasswordError: null,
   newPasswordError: null,
   confirmPasswordError: null,
   confirmPasswordSuccess: false,
-  validatingPassword: false,
   changingPassword: false
 };

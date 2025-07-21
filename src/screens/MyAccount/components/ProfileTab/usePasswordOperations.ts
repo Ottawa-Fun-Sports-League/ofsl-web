@@ -4,52 +4,14 @@ import { useToast } from '../../../../components/ui/toast';
 import { PasswordForm, PasswordValidationState } from './types';
 import { INITIAL_PASSWORD_FORM, INITIAL_PASSWORD_VALIDATION } from './constants';
 
-export function usePasswordOperations(profile: { email: string }) {
+export function usePasswordOperations() {
   const { showToast } = useToast();
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [passwordForm, setPasswordForm] = useState<PasswordForm>(INITIAL_PASSWORD_FORM);
   const [passwordValidation, setPasswordValidation] = useState<PasswordValidationState>(INITIAL_PASSWORD_VALIDATION);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Validate current password when field is blurred
-  const validateCurrentPassword = async (password: string) => {
-    if (!password) {
-      setPasswordValidation(prev => ({ ...prev, currentPasswordError: "Current password is required" }));
-      return false;
-    }
-    
-    try {
-      setPasswordValidation(prev => ({ ...prev, validatingPassword: true }));
-      
-      // Verify the current password by attempting to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: profile.email,
-        password: password
-      });
-      
-      if (signInError) {
-        // Only log unexpected errors, not invalid credentials which are expected during validation
-        if (signInError.message !== 'Invalid login credentials') {
-          console.error('Unexpected error validating password:', signInError);
-        }
-        setPasswordValidation(prev => ({ ...prev, currentPasswordError: "Current password is incorrect" }));
-        return false;
-      }
-      
-      // Password is correct
-      setPasswordValidation(prev => ({ ...prev, currentPasswordError: null }));
-      return true;
-      
-    } catch (error: any) {
-      console.error('Error validating password:', error);
-      setPasswordValidation(prev => ({ ...prev, currentPasswordError: "Failed to validate password" }));
-      return false;
-    } finally {
-      setPasswordValidation(prev => ({ ...prev, validatingPassword: false }));
-    }
-  };
 
   // Validate new password when field is blurred or changed
   const validateNewPassword = (password: string) => {
@@ -126,11 +88,6 @@ export function usePasswordOperations(profile: { email: string }) {
     setPasswordValidation(prev => ({ ...prev, passwordError: null }));
     
     // Validate passwords
-    if (!passwordForm.currentPassword) {
-      setPasswordValidation(prev => ({ ...prev, passwordError: "Current password is required" }));
-      return;
-    }
-    
     if (!passwordForm.newPassword) {
       setPasswordValidation(prev => ({ ...prev, passwordError: "New password is required" }));
       return;
@@ -147,15 +104,10 @@ export function usePasswordOperations(profile: { email: string }) {
       return;
     }
     
-    // Current password validation is already done on blur
-    if (passwordValidation.currentPasswordError) {
-      return;
-    }
-    
     try {
       setPasswordValidation(prev => ({ ...prev, changingPassword: true }));
       
-      // Update the password
+      // Update the password - since user is authenticated, no current password needed
       const { error: updateError } = await supabase.auth.updateUser({
         password: passwordForm.newPassword
       });
@@ -194,15 +146,12 @@ export function usePasswordOperations(profile: { email: string }) {
     showPasswordSection,
     passwordForm,
     passwordValidation,
-    showCurrentPassword,
     showNewPassword,
     showConfirmPassword,
     setPasswordForm,
-    setShowCurrentPassword,
     setShowNewPassword,
     setShowConfirmPassword,
     handleTogglePasswordSection,
-    validateCurrentPassword,
     validateNewPassword,
     validateConfirmPassword,
     handlePasswordChange,
