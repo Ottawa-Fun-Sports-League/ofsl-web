@@ -130,7 +130,6 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
 
       // Check if display_order column doesn't exist
       if (activeResult.error && activeResult.error.message?.includes('display_order')) {
-        console.log('display_order column not found, using created_at ordering');
         dragSupported = false;
         
         // Fallback to created_at ordering

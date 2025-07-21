@@ -5,6 +5,7 @@ import { PasswordSecurity } from './PasswordSecurity';
 import { NotificationPreferences } from './NotificationPreferences';
 import { WaiverStatus } from './WaiverStatus';
 import { SportsSkillsSelector } from '../../../../components/SportsSkillsSelector';
+import { PendingInvites } from '../../../../components/PendingInvites';
 import { useProfileData } from './useProfileData';
 import { useProfileOperations } from './useProfileOperations';
 import { usePasswordOperations } from './usePasswordOperations';
@@ -75,6 +76,8 @@ export function ProfileTab() {
 
   return (
     <div className="space-y-8">
+      <PendingInvites />
+      
       <ProfileInformation
         profile={profile}
         isEditing={isEditing}

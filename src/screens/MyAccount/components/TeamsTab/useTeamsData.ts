@@ -89,7 +89,6 @@ export function useTeamsData(userId?: string) {
     if (!userId) return [];
 
     try {
-      console.log('fetchTeams called for userId:', userId);
       
       // Add a small delay to ensure database consistency
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -108,13 +107,9 @@ export function useTeamsData(userId?: string) {
         ...team,
         roster: team.roster || [] // Ensure roster is always an array
       }));
-      console.log('fetchTeams returned data:', teamsData);
-      console.log('Setting teams state with:', teamsData.length, 'teams');
       
       // Debug: show the roster for each team to verify user is not in it
       teamsData.forEach(team => {
-        console.log(`Team "${team.name}" (ID: ${team.id}) roster:`, team.roster);
-        console.log(`User ${userId} in roster:`, team.roster?.includes(userId));
       });
       setTeams(teamsData);
       return teamsData;

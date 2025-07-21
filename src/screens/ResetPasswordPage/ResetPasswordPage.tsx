@@ -34,18 +34,15 @@ export function ResetPasswordPage() {
         const hash = window.location.hash;
         const type = searchParams.get('type');
         
-        console.log('Validating reset token. Type:', type, 'Hash present:', !!hash);
         
         // Check if this is a password reset flow
         if (type === 'recovery' || hash.includes('type=recovery')) {
-          console.log('Valid recovery flow detected');
           setTokenValid(true);
         } else {
           // Check if user is already authenticated
           const { data } = await supabase.auth.getSession();
           
           if (data.session) {
-            console.log('User is already authenticated, token is valid');
             setTokenValid(true);
           } else {
             console.error("No active session and not a recovery flow");
@@ -165,7 +162,6 @@ export function ResetPasswordPage() {
     
     try {
       const { error } = await supabase.auth.updateUser({ password });
-      console.log('Password update response received');
       
       if (error) {
         console.error('Error updating password:', error);
@@ -173,11 +169,9 @@ export function ResetPasswordPage() {
       }
       
       setSuccess(true);
-      console.log('Password reset successful');
       
       // Redirect to login page after 3 seconds
       setTimeout(() => {
-        console.log('Redirecting to login page');
         navigate("/login", { 
           state: { 
             message: "Your password has been reset successfully. You can now log in with your new password." 

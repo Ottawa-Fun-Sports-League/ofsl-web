@@ -125,6 +125,23 @@ export const getGymNames = (
     .filter((name): name is string => name !== null && name.trim() !== "");
 };
 
+// Get gym names filtered by specific location
+export const getGymNamesByLocation = (
+  gyms: Array<{
+    gym: string | null;
+    address: string | null;
+    locations: string[] | null;
+  }>,
+  location: string
+): string[] => {
+  if (!gyms || gyms.length === 0) return [];
+
+  return gyms
+    .filter((gym) => gym.locations && gym.locations.includes(location))
+    .map((gym) => gym.gym)
+    .filter((name): name is string => name !== null && name.trim() !== "");
+};
+
 // Get location display text based on gym locations
 export const getLocationDisplay = (
   gyms: Array<{

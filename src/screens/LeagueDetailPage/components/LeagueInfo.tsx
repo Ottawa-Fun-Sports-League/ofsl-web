@@ -10,7 +10,7 @@ import { supabase } from "../../../lib/supabase";
 import { useEffect } from "react";
 import { getStripeProductByLeagueId } from "../../../lib/stripe";
 import { LocationPopover } from "../../../components/ui/LocationPopover";
-import { getGymNames, getLocationDisplay, getPrimaryLocation } from "../../../lib/leagues";
+import { getGymNames, getGymNamesByLocation, getLocationDisplay, getPrimaryLocation } from "../../../lib/leagues";
 
 // Function to get spots badge color
 const getSpotsBadgeColor = (spots: number) => {
@@ -156,7 +156,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
                   <LocationPopover
                     key={index}
                     location={location}
-                    locations={getGymNames(league.gyms || [])}
+                    locations={getGymNamesByLocation(league.gyms || [], location)}
                   >
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
                       {location}

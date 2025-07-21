@@ -82,16 +82,6 @@ export function TeammateManagementModal({
       // Try refreshing the session first
       const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
       
-      console.log('Refreshed session data:', {
-        hasSession: !!session,
-        sessionError,
-        accessToken: session?.access_token ? 'Present' : 'Missing',
-        tokenLength: session?.access_token?.length,
-        user: session?.user?.id,
-        email: session?.user?.email,
-        expires: session?.expires_at
-      });
-      
       if (!session) {
         throw new Error('No authentication session found after refresh');
       }
@@ -108,10 +98,6 @@ export function TeammateManagementModal({
       }
 
       const freshRoster = teamData?.roster || [];
-      console.log('Fresh roster from database:', freshRoster);
-      console.log('Props currentRoster:', currentRoster);
-      console.log('TeamId:', teamId);
-      console.log('Edge Function URL:', 'https://api.ofsl.ca/functions/v1/get-team-members');
 
       // Use Edge Function to load teammates (bypasses RLS restrictions)
       const response = await fetch('https://api.ofsl.ca/functions/v1/get-team-members', {
@@ -137,10 +123,8 @@ export function TeammateManagementModal({
       }
 
       const result = await response.json();
-      console.log('Edge Function response:', result);
 
       if (result.success) {
-        console.log('Loaded teammates:', result.teammates);
         setTeammates(result.teammates);
       } else {
         console.error('Edge Function returned error:', result.error);

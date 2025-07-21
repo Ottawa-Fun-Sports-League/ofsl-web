@@ -34,7 +34,6 @@ export const getUserIpAddress = async (): Promise<string> => {
         }
       } catch (error) {
         // Continue to next service if this one fails
-        console.log(`IP service ${service} failed:`, error);
         continue;
       }
     }
