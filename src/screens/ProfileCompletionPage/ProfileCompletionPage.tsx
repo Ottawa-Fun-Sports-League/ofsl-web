@@ -118,7 +118,6 @@ export function ProfileCompletionPage() {
         hasSportsSkills &&
         userProfile.profile_completed === true
       ) {
-        console.log("Profile already complete, redirecting to teams");
         const redirectPath =
           localStorage.getItem("redirectAfterLogin") || "/my-account/teams";
         localStorage.removeItem("redirectAfterLogin");
@@ -126,6 +125,113 @@ export function ProfileCompletionPage() {
       }
     }
   }, [userProfile, loading, initialLoading, navigate]);
+
+  // Process pending team invites for the newly registered user
+  const processPendingInvites = async () => {
+    if (!user?.email) return;
+    
+    try {
+      // Find pending invites for this user's email (lowercase to match storage format)
+      const userEmail = user.email.toLowerCase();
+      
+      const { data: invites, error: invitesError } = await supabase
+        .from('team_invites')
+        .select('*')
+        .eq('email', userEmail)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString());
+
+      if (invitesError) {
+        console.error('Error fetching pending invites:', invitesError);
+        return;
+      }
+
+      if (!invites || invites.length === 0) {
+        return; // No pending invites
+      }
+
+
+      // Get the user's database ID
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (userError || !userData) {
+        console.error('Error getting user ID:', userError);
+        return;
+      }
+
+      // Process each invite
+      const processed = [];
+      for (const invite of invites) {
+        try {
+          // Add user to the team roster
+          const { data: team, error: teamError } = await supabase
+            .from('teams')
+            .select('roster, name, league_id, active')
+            .eq('id', invite.team_id)
+            .single();
+
+          if (teamError || !team) {
+            console.error(`Error fetching team ${invite.team_id}:`, teamError);
+            continue;
+          }
+
+          // Skip if team is not active
+          if (!team.active) {
+            console.warn(`Team ${invite.team_id} is not active, skipping invite ${invite.id}`);
+            // Mark invite as declined since team is inactive
+            await supabase
+              .from('team_invites')
+              .update({ 
+                status: 'declined', 
+                processed_at: new Date().toISOString() 
+              })
+              .eq('id', invite.id);
+            continue;
+          }
+
+          // Add user to roster if not already present
+          const currentRoster = team.roster || [];
+          if (!currentRoster.includes(userData.id)) {
+            const updatedRoster = [...currentRoster, userData.id];
+
+            const { error: updateError } = await supabase
+              .from('teams')
+              .update({ roster: updatedRoster })
+              .eq('id', invite.team_id);
+
+            if (updateError) {
+              console.error(`Error updating team roster for team ${invite.team_id}:`, updateError);
+              continue;
+            }
+
+            // Mark invite as accepted
+            await supabase
+              .from('team_invites')
+              .update({ 
+                status: 'accepted', 
+                processed_at: new Date().toISOString() 
+              })
+              .eq('id', invite.id);
+
+            processed.push(invite);
+          }
+        } catch (error) {
+          console.error(`Error processing invite ${invite.id}:`, error);
+        }
+      }
+
+      if (processed.length > 0) {
+        const teams = processed.map(inv => `${inv.team_name} (${inv.league_name})`).join(', ');
+        showToast(`Welcome! You've been automatically added to: ${teams}`, "success");
+      }
+    } catch (error) {
+      console.error('Error processing pending invites:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,6 +315,13 @@ export function ProfileCompletionPage() {
 
       // Refresh the user profile
       await refreshUserProfile();
+      
+      // Small delay to ensure auth state is fully propagated
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Process any pending team invites for this user
+      await processPendingInvites();
+      
       showToast("Profile completed successfully!", "success");
 
       // Clear the new user flag since profile is now complete

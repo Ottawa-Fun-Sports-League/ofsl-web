@@ -114,32 +114,20 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
 
     setDeleting(userId);
     try {
-      const { data: userData, error: fetchError } = await supabase
-        .from('users')
-        .select('auth_id')
-        .eq('id', userId)
-        .single();
-
-      if (fetchError) throw fetchError;
-      
-      if (!userData || !userData.auth_id) {
-        throw new Error('Could not find auth_id for this user');
-      }
-      
-      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(
-        userData.auth_id
-      );
-      
-      if (authDeleteError) {
-        console.error('Error deleting auth user:', authDeleteError);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
       }
 
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userId);
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
       if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to delete user');
 
       showToast('User deleted successfully!', 'success');
       loadUsers();

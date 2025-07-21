@@ -81,7 +81,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         if (error.code === "PGRST116") {
           // No profile found - this is expected for new users
-          console.log("No user profile found for auth_id:", authUser.id);
           return null;
         } else {
           // Unexpected error - log and return null to prevent data leaks
@@ -181,7 +180,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Store the current path for potential redirect after profile completion
     const currentPath = getCurrentPath();
 
-    console.log({ currentPath, event, lastRedirectPath, isRedirecting, redirectingRef: redirectingRef.current });
 
     // If we're already redirecting to complete-profile, skip redirect logic
     if (redirectingRef.current === "/complete-profile" || (isRedirecting && lastRedirectPath === "/complete-profile")) {
@@ -303,7 +301,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             profile.user_sports_skills.length === 0;
 
           const currentPathNow = getCurrentPath();
-          console.log({ needsProfileCompletion, currentPathNow, isRedirecting, lastRedirectPath });
           if (
             needsProfileCompletion &&
             currentPathNow !== "/complete-profile" &&
@@ -311,7 +308,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             lastRedirectPath !== "/complete-profile" &&
             redirectingRef.current !== "/complete-profile"
           ) {
-            console.log("Redirecting to complete-profile from:", currentPathNow);
             // Set ref immediately to prevent race condition
             redirectingRef.current = "/complete-profile";
             setIsRedirecting(true);
@@ -320,12 +316,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Use replace to avoid race condition and ensure immediate URL change
             window.location.hash = "#/complete-profile";
             // Don't return - continue processing as if we're on complete-profile page
-            console.log("Continuing auth state processing for complete-profile page");
           }
         }
       } else {
         // Profile creation failed or doesn't exist
-        console.log("No user profile found, redirecting to profile completion");
         setUserProfile(null);
         setProfileComplete(false);
 
@@ -352,9 +346,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // Always redirect to profile completion if no profile exists
           const currentPathNow = getCurrentPath();
-          console.log("No profile - checking redirect:", { currentPathNow, isRedirecting, lastRedirectPath });
           if (currentPathNow !== "/complete-profile" && !isRedirecting && lastRedirectPath !== "/complete-profile" && redirectingRef.current !== "/complete-profile") {
-            console.log("Redirecting to complete-profile (no profile) from:", currentPathNow);
             // Set ref immediately to prevent race condition
             redirectingRef.current = "/complete-profile";
             setIsRedirecting(true);
@@ -363,7 +355,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Use replace to avoid race condition and ensure immediate URL change
             window.location.hash = "#/complete-profile";
             // Don't return - continue processing as if we're on complete-profile page
-            console.log("Continuing auth state processing for complete-profile page (no profile)");
           }
         }
       }

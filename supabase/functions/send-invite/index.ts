@@ -4,7 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, x-client-info, apikey",
 };
 
 interface InviteRequest {
@@ -128,11 +129,11 @@ serve(async (req: Request) => {
       // Compare the team's captain_id with the user's profile id (not auth_id)
       const isTeamCaptain = teamData.captain_id === userProfileData.id;
       const isAdmin = userProfileData.is_admin === true;
-      
+
       if (!isTeamCaptain && !isAdmin) {
         return new Response(
-          JSON.stringify({ 
-            error: "Only team captains or admins can send invites"
+          JSON.stringify({
+            error: "Only team captains or admins can send invites",
           }),
           {
             status: 403,
@@ -189,8 +190,7 @@ serve(async (req: Request) => {
                 <!-- Header -->
                 <tr>
                   <td align="center" style="background-color: #B20000; padding: 30px 20px;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif;">Ottawa Fun Sports League</h1>
-                    <p style="color: #ffcccc; margin: 8px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">Ottawa's Premier Adult Sports Community</p>
+                    <img src="https://ofsl.ca/group-1.png" alt="OFSL" style="width: 300px; height: auto; max-width: 100%;" />
                   </td>
                 </tr>
                 
@@ -362,4 +362,3 @@ serve(async (req: Request) => {
     });
   }
 });
-

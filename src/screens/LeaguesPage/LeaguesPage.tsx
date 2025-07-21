@@ -11,6 +11,7 @@ import {
   formatLeagueDates,
   getPrimaryLocation,
   getGymNames,
+  getGymNamesByLocation,
   LeagueWithTeamCount 
 } from "../../lib/leagues";
 import { formatPrice } from '../../stripe-config';
@@ -660,7 +661,7 @@ export const LeaguesPage = (): JSX.Element => {
                             <LocationPopover
                               key={index}
                               location={location}
-                              locations={getGymNames(league.gyms || [])}
+                              locations={getGymNamesByLocation(league.gyms || [], location)}
                             >
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
                                 {location}

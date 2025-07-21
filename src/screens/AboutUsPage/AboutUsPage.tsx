@@ -88,7 +88,6 @@ export const AboutUsPage = (): JSX.Element => {
     e.preventDefault();
     
     // Here you would typically send the form data to a backend API
-    console.log("Contact form submitted:", contactForm);
     
     // Show success message
     setSubmitStatus("success");
@@ -117,7 +116,6 @@ export const AboutUsPage = (): JSX.Element => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Here you would typically send the data to your backend or email service
-    console.log("Submitted:", { email, interests, agreeToTerms });
     // Reset form after submission
     setEmail("");
     setInterests({

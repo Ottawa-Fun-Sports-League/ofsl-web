@@ -172,7 +172,6 @@ export function SignupPage() {
     
     try {
       setEmailChecking(true);
-      console.log('Checking if email exists:', email);
       setEmailError(null);
       
       // Check public.users table for existing email
@@ -188,7 +187,6 @@ export function SignupPage() {
       
       if (publicUsers && publicUsers.length > 0) {
         setEmailError('An account with this email already exists');
-        console.log('Email already exists in users table');
       }
       
     } catch (error) {

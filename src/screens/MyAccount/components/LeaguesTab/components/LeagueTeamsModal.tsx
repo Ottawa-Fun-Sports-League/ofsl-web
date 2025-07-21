@@ -127,7 +127,6 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
   }, [searchTerm, teams]);
 
   const handleManageTeam = (teamId: number) => {
-    console.log('Navigating to team management page for team:', teamId);
     navigate(`/teams/${teamId}/manage`);
   };
 
