@@ -5,10 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import "../../styles/rich-text.css";
 import {
-  mockStandings,
-  mockSchedule,
   getSportIcon,
-  getTeamNameFromPosition,
 } from "./utils/leagueUtils";
 import {
   fetchLeagueById,
@@ -18,14 +15,11 @@ import {
 } from "../../lib/leagues";
 import {
   useActiveView,
-  useScoreSubmissionModal,
   type ActiveView,
 } from "./hooks/useLeagueDetail";
 import { NavigationTabs } from "./components/NavigationTabs";
 import { LeagueInfo } from "./components/LeagueInfo";
-import { LeagueSchedule } from "./components/LeagueSchedule";
 import { LeagueStandings } from "./components/LeagueStandings";
-import { ScoreSubmissionModal } from "./components/ScoreSubmissionModal";
 import { LeagueTeams } from "./components/LeagueTeams";
 
 export function LeagueDetailPage() {
@@ -39,15 +33,9 @@ export function LeagueDetailPage() {
 
   // Get initial view from URL search params
   const tabParam = searchParams.get('tab');
-  const initialView: ActiveView = (tabParam === 'schedule' || tabParam === 'standings' || tabParam === 'teams') ? tabParam as ActiveView : 'info';
+  const initialView: ActiveView = (tabParam === 'standings' || tabParam === 'teams') ? tabParam as ActiveView : 'info';
   
   const { activeView, setActiveView } = useActiveView(initialView);
-  const {
-    showScoreSubmissionModal,
-    selectedTier,
-    openScoreSubmissionModal,
-    closeScoreSubmissionModal,
-  } = useScoreSubmissionModal();
 
   useEffect(() => {
     loadLeague();
@@ -112,7 +100,6 @@ export function LeagueDetailPage() {
   const leagueForInfo = {
     ...league,
     day: getDayName(league.day_of_week),
-    location: league.location || "Location TBD",
     hide_day: league.hide_day || false,
     specificLocation: league.gyms[0]?.address || undefined,
     dates: formatLeagueDates(
@@ -205,17 +192,9 @@ export function LeagueDetailPage() {
               </div>
             )}
 
-            {/* Schedule View - Only for Volleyball */}
-            {activeView === "schedule" && (
-              <LeagueSchedule
-                mockSchedule={mockSchedule}
-                openScoreSubmissionModal={openScoreSubmissionModal}
-              />
-            )}
-
             {/* Standings View */}
             {activeView === "standings" && (
-              <LeagueStandings mockStandings={mockStandings} />
+              <LeagueStandings leagueId={id} />
             )}
 
             {/* Admin Teams View */}
@@ -229,14 +208,6 @@ export function LeagueDetailPage() {
         </div>
       </div>
 
-      {/* Score Submission Modal */}
-      <ScoreSubmissionModal
-        showModal={showScoreSubmissionModal}
-        selectedTier={selectedTier}
-        mockSchedule={mockSchedule}
-        getTeamNameFromPosition={getTeamNameFromPosition}
-        closeModal={closeScoreSubmissionModal}
-      />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import { formatPrice } from "../../../stripe-config";
 import { supabase } from "../../../lib/supabase";
 import { useEffect } from "react";
 import { getStripeProductByLeagueId } from "../../../lib/stripe";
+import { LocationPopover } from "../../../components/ui/LocationPopover";
+import { getGymNames, getLocationDisplay, getPrimaryLocation } from "../../../lib/leagues";
 
 // Function to get spots badge color
 const getSpotsBadgeColor = (spots: number) => {
@@ -139,10 +141,29 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
           </div>
 
           {/* Location */}
-          <div className="flex items-start">
-            <MapPin className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" />
-            <div>
-              <p className="font-medium text-[#6F6F6F]">{league.location || 'Location TBD'}</p>
+          <div className="flex items-center flex-wrap">
+            <MapPin className="h-4 w-4 text-[#B20000] mr-2 flex-shrink-0" />
+            <p className="font-medium text-[#6F6F6F] mr-2">Location:</p>
+            <div className="flex flex-wrap gap-1">
+              {(() => {
+                const gymLocations = getPrimaryLocation(league.gyms || []);
+                
+                if (gymLocations.length === 0) {
+                  return <span className="font-medium text-[#6F6F6F]">TBD</span>;
+                }
+                
+                return gymLocations.map((location, index) => (
+                  <LocationPopover
+                    key={index}
+                    location={location}
+                    locations={getGymNames(league.gyms || [])}
+                  >
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
+                      {location}
+                    </span>
+                  </LocationPopover>
+                ));
+              })()}
             </div>
           </div>
 

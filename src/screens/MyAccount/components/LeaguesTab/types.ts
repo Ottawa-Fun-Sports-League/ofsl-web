@@ -15,6 +15,7 @@ export interface Gym {
   gym: string | null;
   address: string | null;
   instructions: string | null;
+  locations: string[] | null;
 }
 
 export interface LeagueWithTeamCount extends League {

@@ -7,7 +7,7 @@ import { Input } from '../../../components/ui/input';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { supabase } from '../../../lib/supabase';
-import { fetchSports, fetchSkills } from '../../../lib/leagues';
+import { fetchSports, fetchSkills, getPrimaryLocation } from '../../../lib/leagues';
 import { ChevronLeft, Save, X } from 'lucide-react';
 import { RichTextEditor } from '../../../components/ui/rich-text-editor';
 import { StripeProductSelector } from './LeaguesTab/components/StripeProductSelector';
@@ -60,6 +60,7 @@ export function LeagueNewPage() {
   
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
+
   useEffect(() => {
     if (!userProfile?.is_admin) {
       navigate('/my-account/profile');
@@ -68,6 +69,7 @@ export function LeagueNewPage() {
     
     loadData();
   }, [userProfile]);
+
 
   const loadData = async () => {
     try {
@@ -114,7 +116,6 @@ export function LeagueNewPage() {
           description: newLeague.description,
           league_type: newLeague.league_type,
           gender: newLeague.gender,
-          location: newLeague.location,
           sport_id: newLeague.sport_id,
           skill_id: newLeague.skill_id,
           skill_ids: newLeague.skill_ids,
@@ -202,24 +203,6 @@ export function LeagueNewPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Location</label>
-                  <select
-                    value={newLeague.location || ''}
-                    onChange={(e) => setNewLeague({ ...newLeague, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
-                    required
-                  >
-                    <option value="">Select location...</option>
-                    <option value="Various (see details)">Various (see details)</option>
-                    <option value="Inner city">Inner city</option>
-                    <option value="East end">East end</option>
-                    <option value="West end">West end</option>
-                    <option value="Orleans">Orleans</option>
-                    <option value="Kanata">Kanata</option>
-                    <option value="Barrhaven">Barrhaven</option>
-                  </select>
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Day of Week</label>
@@ -486,7 +469,7 @@ export function LeagueNewPage() {
               <div className="mt-8 flex gap-4">
                 <Button
                   onClick={handleCreateLeague}
-                  disabled={saving || !newLeague.name || !newLeague.league_type || !newLeague.gender || !newLeague.sport_id || newLeague.skill_ids.length === 0 || !newLeague.location || newLeague.day_of_week === null || !newLeague.start_date || !newLeague.end_date || newLeague.cost === null || !newLeague.max_teams}
+                  disabled={saving || !newLeague.name || !newLeague.league_type || !newLeague.gender || !newLeague.sport_id || newLeague.skill_ids.length === 0 || newLeague.day_of_week === null || !newLeague.start_date || !newLeague.end_date || newLeague.cost === null || !newLeague.max_teams}
                   className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-2 flex items-center gap-2"
                 >
                   <Save className="h-4 w-4" />
