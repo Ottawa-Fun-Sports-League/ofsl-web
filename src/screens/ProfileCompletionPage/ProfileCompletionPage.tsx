@@ -319,10 +319,22 @@ export function ProfileCompletionPage() {
       // Small delay to ensure auth state is fully propagated
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Process any pending team invites for this user
-      await processPendingInvites();
-      
-      showToast("Profile completed successfully!", "success");
+      // Process any pending team invites for this user using the database function
+      try {
+        const { data: inviteResult, error: inviteError } = await supabase
+          .rpc('process_user_team_invites', { p_user_id: result.id });
+        
+        if (!inviteError && inviteResult?.success && inviteResult.processed_count > 0) {
+          const teams = inviteResult.teams.join(', ');
+          showToast(`Profile completed! You've been added to: ${teams}`, "success");
+        } else {
+          showToast("Profile completed successfully!", "success");
+        }
+      } catch (error) {
+        // If invite processing fails, still show success for profile completion
+        console.error('Error processing team invites:', error);
+        showToast("Profile completed successfully!", "success");
+      }
 
       // Clear the new user flag since profile is now complete
       setIsNewUser(false);

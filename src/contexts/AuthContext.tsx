@@ -162,6 +162,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
+      // If this is a new user (profile was just created), process any pending team invites
+      if (profile && isNewUser && user.email) {
+        try {
+          // Get the session for the Edge Function call
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          
+          if (currentSession) {
+            // Call the Edge Function to process signup invites
+            const response = await fetch('https://api.ofsl.ca/functions/v1/process-signup-invites', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentSession.access_token}`,
+              },
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              if (result.processedCount > 0) {
+                // Store a flag to show notification later
+                sessionStorage.setItem('signup_teams_added', JSON.stringify(result.teams));
+              }
+            }
+          }
+        } catch (error) {
+          // Don't fail the profile creation if invite processing fails
+          console.error('Error processing signup invites:', error);
+        }
+      }
+
       return profile;
     } catch (error) {
       console.error("Error in handleUserProfileCreation:", error);
