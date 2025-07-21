@@ -30,8 +30,15 @@ export function PendingInvites({ onInviteAccepted }: PendingInvitesProps = {}) {
   useEffect(() => {
     if (user?.email) {
       fetchPendingInvites();
+      
+      // Also check if teams were just added during signup
+      const teamsAdded = sessionStorage.getItem('signup_teams_added');
+      if (teamsAdded && onInviteAccepted) {
+        // Trigger a refresh of the teams list
+        onInviteAccepted();
+      }
     }
-  }, [user]);
+  }, [user, onInviteAccepted]);
 
   const fetchPendingInvites = async () => {
     if (!user?.email) return;
