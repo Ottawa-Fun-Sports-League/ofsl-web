@@ -159,9 +159,9 @@ export function LeagueDetailPage() {
             <img
               src={getSportIcon(league.sport_name)}
               alt={league.sport_name || "Sport"}
-              className="w-10 h-10 mr-3 flex-shrink-0"
+              className="w-10 h-10 mr-3 flex-shrink-0 object-contain"
             />
-            <h1 className="text-3xl md:text-4xl font-bold text-[#6F6F6F]">
+            <h1 className="text-3xl md:text-4xl font-bold text-[#6F6F6F] my-0 leading-relaxed">
               {league.name}
             </h1>
           </div>
