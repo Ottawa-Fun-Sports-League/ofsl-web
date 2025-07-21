@@ -321,9 +321,22 @@ export function ProfileCompletionPage() {
       
       // Process any pending team invites for this user
       try {
+        // Get the user's database ID first
+        const { data: currentUserData, error: userDataError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', user?.id)
+          .single();
+        
+        if (userDataError || !currentUserData) {
+          console.error('Error getting user data for invites:', userDataError);
+          showToast("Profile completed successfully!", "success");
+          return;
+        }
+        
         // First try using the database function
         const { data: inviteResult, error: inviteError } = await supabase
-          .rpc('process_user_team_invites', { p_user_id: result.id });
+          .rpc('process_user_team_invites', { p_user_id: currentUserData.id });
         
         if (!inviteError && inviteResult?.success && inviteResult.processed_count > 0) {
           const teams = inviteResult.teams.join(', ');
