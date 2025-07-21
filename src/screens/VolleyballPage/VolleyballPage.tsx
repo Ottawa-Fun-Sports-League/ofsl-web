@@ -11,44 +11,44 @@ export const VolleyballPage = (): JSX.Element => {
   // League card data
   const leagueCards = [
     {
-      title: "Tuesday Women's ELite",
+      title: "Tuesday Women's Elite",
       image: "/womens-elite-card.jpg",
-      link: "/leagues?sport=Volleyball"
+      link: "/leagues?sport=Volleyball&day=Tuesday&level=Elite"
     },
     {
-      title: "Monday Mens",
-      image: "/monday mens.jpg",
-      link: "/leagues?sport=Volleyball"
-    },
-    {
-      title: "Sunday Day Mixed (Officiated)",
+      title: "Sunday Mixed",
       image: "/Sunday Day Mixed.jpg",
-      link: "/leagues?sport=Volleyball"
+      link: "/leagues?sport=Volleyball&day=Sunday&gender=Mixed"
     },
     {
-      title: "Monday Women's",
+      title: "OFSL Men's",
+      image: "/monday mens.jpg",
+      link: "/leagues?sport=Volleyball&gender=Men's"
+    },
+    {
+      title: "OFSL Women's",
       image: "/Monday Wonems.png",
-      link: "/leagues?sport=Volleyball"
+      link: "/leagues?sport=Volleyball&gender=Women's"
     },
     {
-      title: "Thursday Mixed Elite",
+      title: "Monday Mixed",
       image: "/Thursday elits 2.jpg",
-      link: "/leagues?sport=Volleyball"
+      link: "/leagues?sport=Volleyball&day=Monday"
     },
     {
-      title: "Thursday Mixed Adv/Comp",
+      title: "Tuesday Mixed",
       image: "/Thursday Mixed.jpg",
-      link: "/leagues?sport=Volleyball"
+      link: "/leagues?sport=Volleyball&day=Tuesday"
     },
     {
-      title: "Wednesday Women's Premier",
+      title: "Wednesday Mixed",
       image: "/Thursday womens premier.webp",
-      link: "/leagues?sport=Volleyball"
+      link: "/leagues?sport=Volleyball&day=Wednesday"
     },
     {
-      title: "Sunday Evening Mixed",
+      title: "Thursday Mixed",
       image: "/sunday evening mixed.jpg",
-      link: "/leagues?sport=Volleyball"
+      link: "/leagues?sport=Volleyball&day=Thursday"
     },
   ];
 
