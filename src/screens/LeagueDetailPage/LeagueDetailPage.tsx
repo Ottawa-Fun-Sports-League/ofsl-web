@@ -20,7 +20,6 @@ import {
 import { NavigationTabs } from "./components/NavigationTabs";
 import { LeagueInfo } from "./components/LeagueInfo";
 import { LeagueStandings } from "./components/LeagueStandings";
-import { LeagueTeams } from "./components/LeagueTeams";
 
 export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +32,7 @@ export function LeagueDetailPage() {
 
   // Get initial view from URL search params
   const tabParam = searchParams.get('tab');
-  const initialView: ActiveView = (tabParam === 'standings' || tabParam === 'teams') ? tabParam as ActiveView : 'info';
+  const initialView: ActiveView = tabParam === 'standings' ? 'standings' : 'info';
   
   const { activeView, setActiveView } = useActiveView(initialView);
 
@@ -197,13 +196,6 @@ export function LeagueDetailPage() {
               <LeagueStandings leagueId={id} />
             )}
 
-            {/* Admin Teams View */}
-            {activeView === "teams" && userProfile?.is_admin && (
-              <LeagueTeams
-                leagueId={league.id}
-                onTeamsUpdate={() => handleSpotsUpdate(spotsRemaining)}
-              />
-            )}
           </div>
         </div>
       </div>
