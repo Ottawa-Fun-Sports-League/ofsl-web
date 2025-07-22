@@ -8,7 +8,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { supabase } from '../../../lib/supabase';
 import { fetchSports, fetchSkills, getPrimaryLocation } from '../../../lib/leagues';
-import { ChevronLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save, X } from 'lucide-react';
 import { RichTextEditor } from '../../../components/ui/rich-text-editor';
 import { StripeProductSelector } from './LeaguesTab/components/StripeProductSelector';
 
@@ -176,7 +176,7 @@ export function LeagueNewPage() {
       <div className="max-w-[1280px] mx-auto px-4 py-8">
         <div className="mb-8">
           <Link to="/my-account/leagues" className="flex items-center text-[#B20000] hover:underline mb-4">
-            <ChevronLeft className="h-5 w-5 mr-1" />
+            <ArrowLeft className="h-5 w-5 mr-1" />
             Back to Manage Leagues
           </Link>
           

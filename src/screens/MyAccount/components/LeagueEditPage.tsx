@@ -8,7 +8,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { supabase } from '../../../lib/supabase';
 import { fetchSports, fetchSkills, fetchLeagueById, getPrimaryLocation } from '../../../lib/leagues';
-import { ChevronLeft, Save, Copy, Eye } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Eye } from 'lucide-react';
 import { RichTextEditor } from '../../../components/ui/rich-text-editor';
 import { StripeProductSelector } from './LeaguesTab/components/StripeProductSelector';
 import { CopyLeagueDialog } from './LeaguesTab/components/CopyLeagueDialog';
@@ -259,7 +259,7 @@ export function LeagueEditPage() {
             onClick={() => navigate(-1)} 
             className="flex items-center text-[#B20000] hover:underline mb-4"
           >
-            <ChevronLeft className="h-5 w-5 mr-1" />
+            <ArrowLeft className="h-5 w-5 mr-1" />
             Back
           </button>
           

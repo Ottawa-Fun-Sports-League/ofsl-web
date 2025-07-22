@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
-import { ChevronLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import "../../styles/rich-text.css";
 import {
@@ -125,7 +125,7 @@ export function LeagueDetailPage() {
             to="/leagues"
             className="flex items-center text-[#B20000] hover:underline"
           >
-            <ChevronLeft className="h-5 w-5 mr-1" />
+            <ArrowLeft className="h-5 w-5 mr-1" />
             Back to Leagues
           </Link>
 
