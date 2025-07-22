@@ -151,7 +151,7 @@ export function TeamDetailsModal({
                               {player.name || 'No Name'}
                             </span>
                             {player.id === team.captain_id && (
-                              <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                              <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                 <Crown className="h-3 w-3" />
                                 Captain
                               </div>

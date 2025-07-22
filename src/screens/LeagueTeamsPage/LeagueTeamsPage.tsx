@@ -1,40 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { 
   Users, 
   Trash2, 
-  Search, 
-  UserPlus, 
-  CreditCard, 
-  ArrowLeft, 
-  Plus
+  ArrowLeft,
+  Crown,
+  Calendar,
+  DollarSign,
+  GripVertical,
+  Search
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { TeammateManagementModal } from '../MyAccount/components/TeamsTab/TeammateManagementModal';
-import { ConfirmationModal } from '../MyAccount/components/TeamEditPage/ConfirmationModal';
-import { UnifiedPaymentSection, usePaymentOperations } from '../../components/payments';
-import { useLeagueTeamsPayments } from './useLeagueTeamsPayments';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-interface Team {
+interface TeamData {
   id: number;
   name: string;
   captain_id: string;
-  captain_name: string;
-  captain_email: string;
-  captain_phone: string | null;
   roster: string[];
-  team_size: number;
   created_at: string;
-  league_id: number;
-  league_name: string;
-  sport_name: string;
-  payment_status: 'pending' | 'paid' | 'failed' | null;
-  payment_amount: number | null;
-  payment_due_date: string | null;
+  skill_level_id: number | null;
+  display_order: number;
+  captain_name: string | null;
+  skill_name: string | null;
+  payment_status: 'pending' | 'partial' | 'paid' | 'overdue' | null;
+  amount_due: number | null;
+  amount_paid: number | null;
+  league?: {
+    id: number;
+    name: string;
+    cost: number | null;
+    location: string | null;
+    sports?: {
+      name: string;
+    } | null;
+  } | null;
 }
 
 interface League {
@@ -49,95 +72,90 @@ export function LeagueTeamsPage() {
   const { leagueId } = useParams<{ leagueId: string }>();
   const navigate = useNavigate();
   const [league, setLeague] = useState<League | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTeams, setActiveTeams] = useState<TeamData[]>([]);
+  const [waitlistedTeams, setWaitlistedTeams] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingTeamId, setDeletingTeamId] = useState<number | null>(null);
-  const [expandedPayments, setExpandedPayments] = useState<Set<number>>(new Set());
-  const [activePaymentTeamId, setActivePaymentTeamId] = useState<number | null>(null);
-  const [managingTeam, setManagingTeam] = useState<{
-    id: number;
-    name: string;
-    roster: string[];
-    captainId: string;
-    leagueName: string;
-  } | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [movingTeam, setMovingTeam] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [dragEnabled, setDragEnabled] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredActiveTeams, setFilteredActiveTeams] = useState<TeamData[]>([]);
+  const [filteredWaitlistedTeams, setFilteredWaitlistedTeams] = useState<TeamData[]>([]);
   const { showToast } = useToast();
   const { userProfile } = useAuth();
-  
-  // Payment management for the currently expanded team
-  const {
-    paymentInfo,
-    paymentHistory,
-    loading: paymentLoading,
-    setPaymentInfo,
-    setPaymentHistory,
-    refreshPaymentInfo
-  } = useLeagueTeamsPayments(activePaymentTeamId);
 
-  // Payment operations hook
-  const {
-    depositAmount,
-    paymentMethod,
-    paymentNotes,
-    processingPayment,
-    editingNoteId,
-    editingPayment,
-    showDeleteConfirmation,
-    paymentToDelete,
-    setDepositAmount,
-    setPaymentMethod,
-    setPaymentNotes,
-    setEditingPayment,
-    setShowDeleteConfirmation,
-    handleProcessPayment,
-    handleDeletePayment,
-    confirmDeletePayment,
-    handleEditPayment,
-    handleSavePaymentEdit,
-    handleCancelEdit
-  } = usePaymentOperations(paymentInfo, paymentHistory, setPaymentInfo, setPaymentHistory);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (leagueId) {
-      loadLeagueAndTeams();
+      loadLeagueData();
+      loadTeams();
     }
   }, [leagueId]);
 
-  const loadLeagueAndTeams = async () => {
-    if (!leagueId) return;
-    
-    try {
-      setLoading(true);
+  // Filter teams based on search term
+  useEffect(() => {
+    const filterTeams = (teams: TeamData[]) => {
+      if (!searchTerm.trim()) return teams;
       
-      // Load league information
-      const { data: leagueData, error: leagueError } = await supabase
+      const term = searchTerm.toLowerCase();
+      return teams.filter(team => 
+        team.name.toLowerCase().includes(term) ||
+        (team.captain_name && team.captain_name.toLowerCase().includes(term)) ||
+        team.captain_id.toLowerCase().includes(term)
+      );
+    };
+
+    setFilteredActiveTeams(filterTeams(activeTeams));
+    setFilteredWaitlistedTeams(filterTeams(waitlistedTeams));
+  }, [activeTeams, waitlistedTeams, searchTerm]);
+
+  const loadLeagueData = async () => {
+    try {
+      const { data, error } = await supabase
         .from('leagues')
         .select(`
           id,
           name,
           location,
           cost,
-          sports(name)
+          sports:sport_id(name)
         `)
-        .eq('id', leagueId)
+        .eq('id', parseInt(leagueId!))
         .single();
 
-      if (leagueError) throw leagueError;
+      if (error) throw error;
 
-      if (leagueData) {
-        setLeague({
-          id: leagueData.id,
-          name: leagueData.name,
-          sport_name: leagueData.sports?.name || '',
-          location: leagueData.location || 'TBD',
-          cost: leagueData.cost || 0
-        });
-      }
-      
-      // Load teams
-      const { data: teamsData, error: teamsError } = await supabase
+      setLeague({
+        id: data.id,
+        name: data.name,
+        sport_name: data.sports?.name || '',
+        location: data.location || '',
+        cost: data.cost || 0
+      });
+    } catch (err) {
+      console.error('Error loading league:', err);
+      setError('Failed to load league data');
+    }
+  };
+
+  const loadTeams = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Try to get teams with display_order first, fall back to created_at if column doesn't exist
+      let activeTeamsData, waitlistedTeamsData;
+      let dragSupported = true;
+
+      // First attempt with display_order
+      let activeResult = await supabase
         .from('teams')
         .select(`
           id,
@@ -145,445 +163,670 @@ export function LeagueTeamsPage() {
           captain_id,
           roster,
           created_at,
-          leagues!inner(
+          skill_level_id,
+          display_order,
+          users:captain_id(name),
+          skills:skill_level_id(name),
+          leagues:league_id(id, name, cost, location, sports(name))
+        `)
+        .eq('league_id', parseInt(leagueId!))
+        .eq('active', true)
+        .order('display_order', { ascending: true });
+
+      let waitlistResult = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          captain_id,
+          roster,
+          created_at,
+          skill_level_id,
+          display_order,
+          users:captain_id(name),
+          skills:skill_level_id(name),
+          leagues:league_id(id, name, cost, location, sports(name))
+        `)
+        .eq('league_id', parseInt(leagueId!))
+        .eq('active', false)
+        .order('display_order', { ascending: true });
+
+      // Check if display_order column doesn't exist
+      if (activeResult.error && activeResult.error.message?.includes('display_order')) {
+        dragSupported = false;
+        
+        // Fallback to created_at ordering
+        activeResult = await supabase
+          .from('teams')
+          .select(`
             id,
             name,
-            sport:sports(name)
-          ),
-          captain:captain_id(
+            captain_id,
+            roster,
+            created_at,
+            skill_level_id,
+            users:captain_id(name),
+            skills:skill_level_id(name),
+            leagues:league_id(id, name, cost, location, sports(name))
+          `)
+          .eq('league_id', parseInt(leagueId!))
+          .eq('active', true)
+          .order('created_at', { ascending: false });
+
+        waitlistResult = await supabase
+          .from('teams')
+          .select(`
+            id,
             name,
-            email,
-            phone
-          ),
-          league_payments(
-            status,
-            amount_due,
-            amount_paid,
-            due_date
-          )
-        `)
-        .eq('league_id', leagueId)
-        .order('created_at', { ascending: false });
+            captain_id,
+            roster,
+            created_at,
+            skill_level_id,
+            users:captain_id(name),
+            skills:skill_level_id(name),
+            leagues:league_id(id, name, cost, location, sports(name))
+          `)
+          .eq('league_id', parseInt(leagueId!))
+          .eq('active', false)
+          .order('created_at', { ascending: false });
+      }
 
-      if (teamsError) throw teamsError;
+      if (activeResult.error) throw activeResult.error;
+      if (waitlistResult.error) throw waitlistResult.error;
 
-      const teamsWithPayments = teamsData?.map(team => ({
-        id: team.id,
-        name: team.name,
-        captain_id: team.captain_id,
-        captain_name: team.captain?.name || 'Unknown',
-        captain_email: team.captain?.email || '',
-        captain_phone: team.captain?.phone || null,
-        roster: team.roster || [],
-        team_size: team.roster?.length || 0,
-        created_at: team.created_at,
-        league_id: team.leagues.id,
-        league_name: team.leagues.name,
-        sport_name: team.leagues.sport?.name || '',
-        payment_status: team.league_payments?.[0]?.status || null,
-        payment_amount: team.league_payments?.[0]?.amount_due || null,
-        payment_due_date: team.league_payments?.[0]?.due_date || null,
-      })) || [];
+      activeTeamsData = activeResult.data;
+      waitlistedTeamsData = waitlistResult.data;
+      setDragEnabled(dragSupported);
 
-      setTeams(teamsWithPayments);
-      setFilteredTeams(teamsWithPayments);
-    } catch (error) {
-      console.error('Error loading league and teams:', error);
-      showToast('Failed to load league data', 'error');
-      navigate('/my-account/leagues');
+      // Helper function to process teams with payment data
+      const processTeamsWithPayments = async (teams: any[]) => {
+        if (!teams) return [];
+        
+        return Promise.all(
+          teams.map(async (team) => {
+            const { data: paymentData, error: paymentError } = await supabase
+              .from('league_payments')
+              .select('status, amount_due, amount_paid')
+              .eq('team_id', team.id)
+              .eq('league_id', parseInt(leagueId!))
+              .maybeSingle();
+
+            if (paymentError) {
+              console.error('Error fetching payment for team:', team.id, paymentError);
+            }
+
+            return {
+              id: team.id,
+              name: team.name,
+              captain_id: team.captain_id,
+              roster: team.roster || [],
+              created_at: team.created_at,
+              skill_level_id: team.skill_level_id,
+              display_order: team.display_order || 0,
+              captain_name: team.users?.name || null,
+              skill_name: team.skills?.name || null,
+              payment_status: paymentData?.status || null,
+              amount_due: paymentData?.amount_due || null,
+              amount_paid: paymentData?.amount_paid || null,
+              league: team.leagues,
+            };
+          })
+        );
+      };
+
+      const [processedActiveTeams, processedWaitlistedTeams] = await Promise.all([
+        processTeamsWithPayments(activeTeamsData),
+        processTeamsWithPayments(waitlistedTeamsData)
+      ]);
+
+      setActiveTeams(processedActiveTeams);
+      setWaitlistedTeams(processedWaitlistedTeams);
+    } catch (err) {
+      console.error('Error loading teams:', err);
+      setError('Failed to load teams data');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredTeams(teams);
-    } else {
-      const filtered = teams.filter(team =>
-        team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.captain_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredTeams(filtered);
-    }
-  }, [searchTerm, teams]);
-
-  const handleManageTeam = (teamId: number) => {
-    const team = teams.find(t => t.id === teamId);
-    if (!team) return;
-
-    setManagingTeam({
-      id: teamId,
-      name: team.name,
-      roster: [...team.roster], // Create a copy to prevent reference issues
-      captainId: team.captain_id,
-      leagueName: team.league_name
-    });
-  };
-
-  const handleCloseTeamManagement = () => {
-    setManagingTeam(null);
-  };
-
-  const handleRosterUpdate = async (newRoster: string[]) => {
-    if (!managingTeam) return;
-
-    try {
-      // Ensure newRoster is an array
-      const safeRoster = newRoster || [];
-      
-      // Update the managing team state immediately for modal consistency
-      setManagingTeam(prev => prev ? { ...prev, roster: safeRoster } : null);
-      
-      // Reload the teams data from the database to get fresh information
-      await loadLeagueAndTeams();
-      
-    } catch (error) {
-      console.error('Error updating roster:', error);
-      showToast('Failed to update team roster', 'error');
-    }
-  };
-
-  const handleDeleteTeam = async (teamId: number) => {
-    const team = teams.find(t => t.id === teamId);
-    if (!team) return;
-
-    const isUserCaptain = team.captain_id === userProfile?.id;
-    if (!isUserCaptain && !userProfile?.is_admin) {
-      showToast('Only team captains or admins can delete teams', 'error');
-      return;
-    }
-
-    const confirmMessage = isUserCaptain 
-      ? `Are you sure you want to delete your team "${team.name}"? This will:\n\n• Remove all team members\n• Delete payment records\n• Cancel your league registration\n\nThis action cannot be undone.`
-      : `Are you sure you want to delete team "${team.name}"? This action cannot be undone.`;
+  const handleDeleteTeam = async (teamId: number, teamName: string) => {
+    const confirmDelete = confirm(`Are you sure you want to delete the team "${teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`);
     
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-
+    if (!confirmDelete) return;
+    
     try {
-      setDeletingTeamId(teamId);
-
+      setDeleting(teamId);
+      
+      // 1. Update team_ids for all users in the roster
+      const { data: teamData, error: teamFetchError } = await supabase
+        .from('teams')
+        .select('roster')
+        .eq('id', teamId)
+        .single();
+        
+      if (teamFetchError) {
+        console.error(`Error fetching team ${teamId}:`, teamFetchError);
+      } else if (teamData.roster && teamData.roster.length > 0) {
+        for (const userId of teamData.roster) {
+          const { data: userData, error: fetchError } = await supabase
+            .from('users')
+            .select('team_ids')
+            .eq('id', userId)
+            .single();
+            
+          if (fetchError) {
+            console.error(`Error fetching user ${userId}:`, fetchError);
+            continue;
+          }
+          
+          if (userData) {
+            const updatedTeamIds = (userData.team_ids || []).filter((id: number) => id !== teamId);
+            
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ team_ids: updatedTeamIds })
+              .eq('id', userId);
+              
+            if (updateError) {
+              console.error(`Error updating user ${userId}:`, updateError);
+            }
+          }
+        }
+      }
+      
+      // 2. Delete the team (league_payments will be deleted via ON DELETE CASCADE)
       const { error: deleteError } = await supabase
         .from('teams')
         .delete()
         .eq('id', teamId);
-
+        
       if (deleteError) throw deleteError;
-
-      // Update local state
-      const updatedTeams = teams.filter(t => t.id !== teamId);
-      setTeams(updatedTeams);
-      setFilteredTeams(updatedTeams.filter(team =>
-        searchTerm.trim() === '' ||
-        team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        team.captain_name.toLowerCase().includes(searchTerm.toLowerCase())
-      ));
-
+      
       showToast('Team deleted successfully', 'success');
-    } catch (error) {
+      
+      // Reload teams to update the UI
+      await loadTeams();
+      
+    } catch (error: any) {
       console.error('Error deleting team:', error);
-      showToast('Failed to delete team', 'error');
+      showToast(error.message || 'Failed to delete team', 'error');
     } finally {
-      setDeletingTeamId(null);
+      setDeleting(null);
     }
   };
 
-  const getPaymentStatusBadge = (status: string | null) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  const handleMoveTeam = async (teamId: number, teamName: string, currentlyActive: boolean) => {
+    const actionText = currentlyActive ? 'move to waitlist' : 'activate from waitlist';
+    const confirmMove = confirm(`Are you sure you want to ${actionText} the team "${teamName}"?`);
+    
+    if (!confirmMove) return;
+    
+    try {
+      setMovingTeam(teamId);
+      
+      // Update the team's active status
+      const { error: updateError } = await supabase
+        .from('teams')
+        .update({ active: !currentlyActive })
+        .eq('id', teamId);
+        
+      if (updateError) throw updateError;
+      
+      const successMessage = currentlyActive 
+        ? `Team "${teamName}" moved to waitlist` 
+        : `Team "${teamName}" activated from waitlist`;
+      
+      showToast(successMessage, 'success');
+      
+      // Reload teams to update the UI
+      await loadTeams();
+      
+    } catch (error: any) {
+      console.error('Error moving team:', error);
+      showToast(error.message || 'Failed to move team', 'error');
+    } finally {
+      setMovingTeam(null);
     }
   };
 
-  const getPaymentStatusText = (status: string | null) => {
+  const handleActiveTeamDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = activeTeams.findIndex((team) => team.id === active.id);
+      const newIndex = activeTeams.findIndex((team) => team.id === over.id);
+
+      const newActiveTeams = arrayMove(activeTeams, oldIndex, newIndex);
+      setActiveTeams(newActiveTeams);
+
+      // Update display_order in database
+      try {
+        const updates = newActiveTeams.map((team, index) => ({
+          id: team.id,
+          display_order: index + 1
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from('teams')
+            .update({ display_order: update.display_order })
+            .eq('id', update.id);
+        }
+
+        showToast('Team order updated successfully', 'success');
+      } catch (error) {
+        console.error('Error updating team order:', error);
+        showToast('Failed to update team order', 'error');
+        // Revert the optimistic update
+        loadTeams();
+      }
+    }
+  };
+
+  const handleWaitlistTeamDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = waitlistedTeams.findIndex((team) => team.id === active.id);
+      const newIndex = waitlistedTeams.findIndex((team) => team.id === over.id);
+
+      const newWaitlistedTeams = arrayMove(waitlistedTeams, oldIndex, newIndex);
+      setWaitlistedTeams(newWaitlistedTeams);
+
+      // Update display_order in database
+      try {
+        const updates = newWaitlistedTeams.map((team, index) => ({
+          id: team.id,
+          display_order: index + 1
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from('teams')
+            .update({ display_order: update.display_order })
+            .eq('id', update.id);
+        }
+
+        showToast('Waitlist order updated successfully', 'success');
+      } catch (error) {
+        console.error('Error updating waitlist order:', error);
+        showToast('Failed to update waitlist order', 'error');
+        // Revert the optimistic update
+        loadTeams();
+      }
+    }
+  };
+
+  const getPaymentStatusColor = (status: string | null) => {
     switch (status) {
       case 'paid':
-        return 'Paid';
+        return 'bg-green-100 text-green-800';
+      case 'partial':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
       case 'pending':
-        return 'Pending';
-      case 'failed':
-        return 'Failed';
+        return 'bg-gray-100 text-gray-800';
       default:
-        return 'No Payment';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  const togglePaymentExpansion = (teamId: number) => {
-    setExpandedPayments(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(teamId)) {
-        newSet.delete(teamId);
-        setActivePaymentTeamId(null);
-      } else {
-        newSet.clear(); // Only allow one payment section open at a time
-        newSet.add(teamId);
-        setActivePaymentTeamId(teamId);
-      }
-      return newSet;
-    });
+  // Sortable team card component
+  const SortableTeamCard = ({ team, isWaitlisted = false }: { team: TeamData; isWaitlisted?: boolean }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: team.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <Card 
+        ref={setNodeRef} 
+        style={style}
+        className={`shadow-md overflow-hidden rounded-lg ${isWaitlisted ? 'bg-gray-50' : ''} ${isDragging ? 'z-50' : ''}`}
+      >
+        <CardContent className="p-4">
+          {/* Header Section - Team Name and Status */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {/* Drag Handle */}
+              {dragEnabled && (
+                <div 
+                  {...attributes} 
+                  {...listeners}
+                  className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded flex-shrink-0 self-start"
+                  title="Drag to reorder"
+                >
+                  <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
+              )}
+              
+              {/* Team Name and Badges */}
+              <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                <h3 className="text-lg font-bold text-[#6F6F6F] truncate">
+                  {team.name}
+                </h3>
+                {isWaitlisted && (
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full whitespace-nowrap">
+                    Waitlisted
+                  </span>
+                )}
+                {team.skill_name && (
+                  <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${isWaitlisted ? 'bg-gray-300 text-gray-700' : 'bg-blue-100 text-blue-800'}`}>
+                    {team.skill_name}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* League Name */}
+          <p className={`text-sm mb-3 ${dragEnabled ? 'ml-6' : ''} ${isWaitlisted ? 'text-gray-600' : 'text-gray-600'}`}>
+            {team.league?.name}
+          </p>
+          
+          {/* Body Section - Team Info Grid */}
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm ${dragEnabled ? 'ml-6' : ''}`}>
+            {/* Captain Info */}
+            <div className="flex items-center gap-1.5" title="Captain">
+              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${isWaitlisted ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'} text-xs`}>
+                <Crown className="h-3 w-3" />
+                <span className="truncate">Captain</span>
+              </div>
+              <span className={`truncate text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+                {team.captain_name || 'Unknown'}
+              </span>
+            </div>
+            
+            {/* Player Count */}
+            <div className="flex items-center gap-1.5">
+              <Users className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-blue-600' : 'text-blue-500'}`} />
+              <span className={`whitespace-nowrap ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+                {team.roster.length} players
+              </span>
+            </div>
+            
+            {/* Registration Date */}
+            <div className="flex items-center gap-1.5 col-span-2 md:col-span-1" title="Registration Date">
+              <Calendar className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-green-600' : 'text-green-500'}`} />
+              <span className={`text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+                {formatDate(team.created_at)}
+              </span>
+            </div>
+            
+            {/* Payment Info */}
+            {!isWaitlisted && (
+              <div className="flex items-center gap-1.5 col-span-2 md:col-span-1" title="Payment">
+                <DollarSign className="h-4 w-4 flex-shrink-0 text-purple-500" />
+                <div className="flex items-center gap-1 min-w-0">
+                  {team.amount_due && team.amount_paid !== null ? (
+                    <>
+                      <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
+                        ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
+                      </span>
+                      <span className={`px-1.5 py-0.5 text-xs rounded-full ${getPaymentStatusColor(team.payment_status)}`}>
+                        {team.payment_status && team.payment_status.charAt(0).toUpperCase() + team.payment_status.slice(1)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
+                        $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
+                      </span>
+                      <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
+                        Pending
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Section - Action Buttons */}
+          <div className={`flex justify-between items-center pt-2 border-t border-gray-100 ${dragEnabled ? 'ml-6' : ''}`}>
+            <div className="flex items-center gap-2">
+              <Link 
+                to={`/my-account/teams/edit/${team.id}`}
+                className={`text-xs hover:underline ${isWaitlisted ? 'text-gray-600 hover:text-gray-800' : 'text-[#B20000] hover:text-[#8A0000]'}`}
+              >
+                Edit registration
+              </Link>
+              
+              <div className="h-3 w-px bg-gray-300"></div>
+              
+              <button
+                onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
+                disabled={movingTeam === team.id}
+                className={`text-xs hover:underline disabled:cursor-not-allowed disabled:opacity-50 ${isWaitlisted 
+                  ? 'text-green-700 hover:text-green-800' 
+                  : 'text-yellow-700 hover:text-yellow-800'
+                }`}
+                title={isWaitlisted ? 'Move team to active registration' : 'Move team to waitlist'}
+              >
+                {movingTeam === team.id ? (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></div>
+                ) : isWaitlisted ? (
+                  'Move to Active'
+                ) : (
+                  'Move to Waitlist'
+                )}
+              </button>
+            </div>
+            
+            <Button
+              onClick={() => handleDeleteTeam(team.id, team.name)}
+              disabled={deleting === team.id}
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 border-red-300 text-red-700 hover:bg-red-50"
+              title="Delete team"
+            >
+              {deleting === team.id ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+              ) : (
+                <Trash2 className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-2 text-gray-600">Loading teams...</span>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#B20000]"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!league) {
+  if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">League Not Found</h1>
-          <p className="text-gray-600 mb-6">The league you're looking for doesn't exist.</p>
-          <Link to="/my-account/leagues">
-            <Button>Back to Leagues</Button>
-          </Link>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-red-600 text-lg">{error}</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            onClick={() => navigate('/my-account/leagues')}
-            variant="ghost"
-            size="sm"
-            className="p-2"
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Enhanced Header */}
+        <div className="mb-8">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="flex items-center text-[#B20000] hover:underline mb-4"
           >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{league.name} Teams</h1>
-            <p className="text-gray-600">{league.sport_name} • {league.location}</p>
-          </div>
-          {userProfile?.is_admin && (
-            <Link to={`/my-account/leagues/edit/${leagueId}`}>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Edit League
-              </Button>
-            </Link>
-          )}
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <p className="text-gray-600">
-            {filteredTeams.length} of {teams.length} {teams.length === 1 ? 'team' : 'teams'}
-            {searchTerm && ` matching "${searchTerm}"`}
-          </p>
-          <div className="text-lg font-medium text-gray-900">
-            League Fee: ${league.cost} + HST
-          </div>
-        </div>
-      </div>
-
-      {/* Search Filter */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search teams or captains..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      {/* Teams List */}
-      {filteredTeams.length === 0 && teams.length > 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No teams found</h3>
-          <p className="text-gray-500">No teams match your search criteria.</p>
-          <Button
-            onClick={() => setSearchTerm('')}
-            variant="ghost"
-            className="mt-3"
-          >
-            Clear search
-          </Button>
-        </div>
-      ) : teams.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No teams registered</h3>
-          <p className="text-gray-500">This league doesn't have any teams registered yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredTeams.map((team) => (
-            <div key={team.id} className="bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
-              <div className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h4 className="text-lg font-semibold text-gray-900">{team.name}</h4>
-                      <span className={`text-xs font-medium py-1 px-2 rounded-full border ${getPaymentStatusBadge(team.payment_status)}`}>
-                        {getPaymentStatusText(team.payment_status)}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-gray-700">Captain:</span>
-                        <p className="text-gray-600">{team.captain_name}</p>
-                        <p className="text-gray-500 text-xs">{team.captain_email}</p>
-                        {team.captain_phone && (
-                          <p className="text-gray-500 text-xs">{team.captain_phone}</p>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <span className="font-medium text-gray-700">Team Size:</span>
-                        <p className="text-gray-600">{team.team_size} players</p>
-                      </div>
-                      
-                      <div>
-                        <span className="font-medium text-gray-700">Registered:</span>
-                        <p className="text-gray-600">{formatDate(team.created_at)}</p>
-                      </div>
-                      
-                      {team.payment_amount && (
-                        <div>
-                          <span className="font-medium text-gray-700">Amount:</span>
-                          <p className="text-gray-600">${team.payment_amount}</p>
-                          {team.payment_due_date && (
-                            <p className="text-gray-500 text-xs">Due: {formatDate(team.payment_due_date)}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+            <ArrowLeft className="h-5 w-5 mr-1" />
+            Back
+          </button>
+          
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-[#6F6F6F] mb-2">
+                  {league?.name} - Teams Management
+                </h1>
+                <p className="text-[#6F6F6F] mb-2">
+                  Sport: {league?.sport_name} | Location: {league?.location}
+                </p>
+                {/* League Cost Display */}
+                {league?.cost && (
+                  <div className="flex items-center">
+                    <DollarSign className="h-4 w-4 text-[#B20000] mr-1.5" />
+                    <p className="text-sm font-medium text-[#6F6F6F]">
+                      ${league.cost} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
+                    </p>
                   </div>
-                  
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleManageTeam(team.id)}
-                      className="h-8 w-8 p-0 hover:bg-blue-100"
-                      title="Manage Team"
-                    >
-                      <UserPlus className="h-4 w-4 text-blue-600" />
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => togglePaymentExpansion(team.id)}
-                      className="h-8 w-8 p-0 hover:bg-purple-100"
-                      title="View Payments"
-                    >
-                      <CreditCard className="h-4 w-4 text-purple-600" />
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteTeam(team.id)}
-                      disabled={deletingTeamId === team.id || (!userProfile?.is_admin && team.captain_id !== userProfile?.id)}
-                      className="h-8 w-8 p-0 hover:bg-red-100 disabled:opacity-50"
-                      title={deletingTeamId === team.id ? 'Deleting...' : 
-                             (!userProfile?.is_admin && team.captain_id !== userProfile?.id) ? 'Only captain or admin can delete' : 'Delete Team'}
-                    >
-                      {deletingTeamId === team.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                      ) : (
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                )}
               </div>
               
-              {/* Expandable Payment Management Section */}
-              {expandedPayments.has(team.id) && paymentInfo && (
-                <div className="border-t border-gray-200 p-6 bg-gray-50">
-                  {paymentLoading ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#B20000]"></div>
-                    </div>
-                  ) : (
-                    <UnifiedPaymentSection
-                      paymentInfo={paymentInfo}
-                      paymentHistory={paymentHistory}
-                      editingNoteId={editingNoteId}
-                      editingPayment={editingPayment}
-                      depositAmount={depositAmount}
-                      paymentMethod={paymentMethod}
-                      paymentNotes={paymentNotes}
-                      processingPayment={processingPayment}
-                      onEditPayment={handleEditPayment}
-                      onUpdateEditingPayment={setEditingPayment}
-                      onSavePaymentEdit={handleSavePaymentEdit}
-                      onCancelEdit={handleCancelEdit}
-                      onDeletePayment={confirmDeletePayment}
-                      onDepositAmountChange={setDepositAmount}
-                      onPaymentMethodChange={setPaymentMethod}
-                      onPaymentNotesChange={setPaymentNotes}
-                      onProcessPayment={handleProcessPayment}
-                    />
-                  )}
-                </div>
+              {/* Edit League Button */}
+              {userProfile?.is_admin && league?.id && (
+                <Link
+                  to={`/my-account/leagues/edit/${league.id}`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Edit league
+                </Link>
               )}
             </div>
-          ))}
+            
+            {/* Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
+                <Input
+                  placeholder="Search teams by name, captain, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full"
+                />
+              </div>
+              <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
+                {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} teams
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-      
-      {/* Teammate Management Modal */}
-      {managingTeam && (
-        <TeammateManagementModal
-          isOpen={!!managingTeam}
-          onClose={handleCloseTeamManagement}
-          teamId={managingTeam.id}
-          teamName={managingTeam.name}
-          currentRoster={managingTeam.roster}
-          captainId={managingTeam.captainId}
-          onRosterUpdate={handleRosterUpdate}
-          leagueName={managingTeam.leagueName}
-          readOnly={!userProfile?.is_admin && managingTeam.captainId !== userProfile?.id}
-        />
-      )}
-      
-      {/* Payment Deletion Confirmation Modal */}
-      {paymentToDelete && (
-        <ConfirmationModal
-          isOpen={showDeleteConfirmation}
-          title="Delete Payment Entry"
-          message={`Are you sure you want to delete this payment entry of $${paymentToDelete.amount.toFixed(2)}? This action cannot be undone.`}
-          confirmText="Delete"
-          cancelText="Cancel"
-          onConfirm={() => {
-            handleDeletePayment(paymentToDelete);
-          }}
-          onCancel={() => {
-            setShowDeleteConfirmation(false);
-          }}
-        />
-      )}
+
+        {/* Teams Content */}
+        {activeTeams.length === 0 && waitlistedTeams.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+            <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Teams Registered</h3>
+            <p className="text-[#6F6F6F]">No teams have registered for this league yet.</p>
+          </div>
+        ) : filteredActiveTeams.length === 0 && filteredWaitlistedTeams.length === 0 && searchTerm ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+            <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Teams Found</h3>
+            <p className="text-[#6F6F6F]">No teams match your search criteria. Try adjusting your search term.</p>
+          </div>
+        ) : (
+          <div>
+            {/* Active Teams Section */}
+            {filteredActiveTeams.length > 0 && (
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-[#6F6F6F]">Registered Teams</h2>
+                  <div className="text-sm text-[#6F6F6F]">
+                    {searchTerm ? `${filteredActiveTeams.length} of ${activeTeams.length}` : `${activeTeams.length}`} Active Teams
+                  </div>
+                </div>
+
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleActiveTeamDragEnd}
+                >
+                  <SortableContext items={filteredActiveTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {filteredActiveTeams.map((team) => (
+                        <SortableTeamCard key={team.id} team={team} isWaitlisted={false} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            )}
+
+            {/* Waitlisted Teams Section */}
+            {filteredWaitlistedTeams.length > 0 && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-500">Waitlist</h2>
+                  <div className="text-sm text-gray-500">
+                    {searchTerm ? `${filteredWaitlistedTeams.length} of ${waitlistedTeams.length}` : `${waitlistedTeams.length}`} Waitlisted Teams
+                  </div>
+                </div>
+
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleWaitlistTeamDragEnd}
+                >
+                  <SortableContext items={filteredWaitlistedTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {filteredWaitlistedTeams.map((team) => (
+                        <SortableTeamCard key={team.id} team={team} isWaitlisted={true} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            )}
+
+            {/* Show total if both sections exist */}
+            {(filteredActiveTeams.length > 0 || filteredWaitlistedTeams.length > 0) && (activeTeams.length > 0 || waitlistedTeams.length > 0) && (
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="text-center text-sm text-[#6F6F6F]">
+                  {searchTerm ? (
+                    <>
+                      Showing: {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} teams 
+                      ({filteredActiveTeams.length} active, {filteredWaitlistedTeams.length} waitlisted)
+                    </>
+                  ) : (
+                    <>
+                      Total Teams: {activeTeams.length + waitlistedTeams.length} ({activeTeams.length} active, {waitlistedTeams.length} waitlisted)
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

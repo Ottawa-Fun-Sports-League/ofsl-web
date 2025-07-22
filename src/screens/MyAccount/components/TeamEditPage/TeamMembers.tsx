@@ -1,14 +1,32 @@
 import { Card, CardContent } from '../../../../components/ui/card';
-import { Users, Crown, Mail, Trash2 } from 'lucide-react';
+import { Button } from '../../../../components/ui/button';
+import { Users, Crown, Mail, Phone, Edit2 } from 'lucide-react';
 import { TeamMember } from './types';
 
 interface TeamMembersProps {
   teamMembers: TeamMember[];
   captainId: string;
-  onRemoveMember: (memberId: string) => void;
+  onEditTeam?: () => void;
 }
 
-export function TeamMembers({ teamMembers, captainId, onRemoveMember }: TeamMembersProps) {
+export function TeamMembers({ teamMembers, captainId, onEditTeam }: TeamMembersProps) {
+  // Reorder team members: captain first, then regular members, then pending invites
+  const orderedMembers = [...teamMembers].sort((a, b) => {
+    // Captain comes first
+    if (a.id === captainId) return -1;
+    if (b.id === captainId) return 1;
+    
+    // Pending invites come last (assuming they have isPending property or no id/empty id)
+    const aIsPending = !a.id || a.id.length === 0;
+    const bIsPending = !b.id || b.id.length === 0;
+    
+    if (aIsPending && !bIsPending) return 1;
+    if (!aIsPending && bIsPending) return -1;
+    
+    // Regular members ordered by name
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -17,6 +35,17 @@ export function TeamMembers({ teamMembers, captainId, onRemoveMember }: TeamMemb
             <Users className="h-5 w-5" />
             Team Members ({teamMembers.length})
           </h3>
+          {onEditTeam && (
+            <Button
+              onClick={onEditTeam}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Edit2 className="h-4 w-4" />
+              Edit Team
+            </Button>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -26,7 +55,7 @@ export function TeamMembers({ teamMembers, captainId, onRemoveMember }: TeamMemb
               <p>No team members found</p>
             </div>
           ) : (
-            teamMembers.map((member) => (
+            orderedMembers.map((member) => (
               <div 
                 key={member.id} 
                 className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
@@ -44,30 +73,29 @@ export function TeamMembers({ teamMembers, captainId, onRemoveMember }: TeamMemb
                         {member.name || 'No Name'}
                       </span>
                       {member.id === captainId && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                           <Crown className="h-3 w-3" />
                           Captain
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-[#6F6F6F]">
-                      <Mail className="h-3 w-3" />
-                      {member.email}
+                    <div className="flex items-center gap-3 text-sm text-[#6F6F6F] flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {member.email}
+                      </div>
+                      {member.phone && (
+                        <>
+                          <div className="h-3 w-px bg-gray-300"></div>
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {member.phone}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                {member.id !== captainId && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onRemoveMember(member.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors duration-200"
-                      title="Remove from team"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
               </div>
             ))
           )}

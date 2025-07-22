@@ -4,7 +4,7 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { useToast } from '../../../../components/ui/toast';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { X, UserPlus, Trash2, Mail, Phone, User, Send } from 'lucide-react';
+import { X, UserPlus, Trash2, Mail, Phone, User, Send, Crown } from 'lucide-react';
 
 interface User {
   id: string;
@@ -465,9 +465,9 @@ export function TeammateManagementModal({
                   </div>
                   <Button
                     onClick={() => addTeammate(searchResult.id)}
-                    size="sm"
+                    size="xs"
                     disabled={addingTeammate}
-                    className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                    className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto text-xs px-2 py-1"
                   >
                     {addingTeammate ? (
                       <>
@@ -501,8 +501,8 @@ export function TeammateManagementModal({
                       <Button
                         onClick={sendInvite}
                         disabled={sendingInvite}
-                        size="sm"
-                        className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
+                        size="xs"
+                        className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto text-xs px-2 py-1"
                       >
                         {sendingInvite ? (
                           <>
@@ -521,9 +521,9 @@ export function TeammateManagementModal({
                           setUserNotFound(false);
                           setSearchEmail('');
                         }}
-                        size="sm"
+                        size="xs"
                         variant="outline"
-                        className="w-full sm:w-auto"
+                        className="w-full sm:w-auto text-xs px-2 py-1"
                       >
                         Cancel
                       </Button>
@@ -611,18 +611,19 @@ export function TeammateManagementModal({
                         {!isCaptain && !isPending && (userProfile?.is_admin || captainId === userProfile?.id) && teammates.filter(t => !t.isPending).length > 1 && (
                           <Button
                             onClick={() => reassignCaptain(teammate.id)}
-                            size="sm"
+                            size="xs"
+                            variant="outline"
                             disabled={reassigningCaptain === teammate.id}
-                            className="text-white w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+                            className="w-full sm:w-auto border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-800 text-xs px-2 py-1"
                           >
                             {reassigningCaptain === teammate.id ? (
                               <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-1"></div>
                                 Assigning...
                               </>
                             ) : (
                               <>
-                                <UserPlus className="h-4 w-4 mr-1" />
+                                <Crown className="h-4 w-4 mr-1" />
                                 <span className="hidden sm:inline">Make Captain</span>
                                 <span className="sm:hidden">Captain</span>
                               </>
@@ -634,9 +635,9 @@ export function TeammateManagementModal({
                         {!isCaptain && !readOnly && !isPending && (
                           <Button
                             onClick={() => removeTeammate(teammate.id)}
-                            size="sm"
+                            size="xs"
                             disabled={removingTeammate === teammate.id}
-                            className="text-white w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                            className="text-white w-full sm:w-auto bg-red-600 hover:bg-red-700 text-xs px-2 py-1"
                           >
                             {removingTeammate === teammate.id ? (
                               <>

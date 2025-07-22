@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../../../../components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -9,11 +9,14 @@ import { TeamMembers } from './TeamMembers';
 import { useTeamEditData } from './useTeamEditData';
 import { useTeamOperations } from './useTeamOperations';
 import { UnifiedPaymentSection, usePaymentOperations } from '../../../../components/payments';
+import { TeammateManagementModal } from '../TeamsTab/TeammateManagementModal';
 
 export function TeamEditPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { userProfile } = useAuth();
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showTeammateModal, setShowTeammateModal] = useState(false);
 
   const {
     team,
@@ -96,13 +99,13 @@ export function TeamEditPage() {
     <div className="bg-white w-full min-h-screen">
       <div className="max-w-[1280px] mx-auto px-4 py-8">
         <div className="mb-8">
-          <Link 
-            to={`/leagues/${team.leagues?.id}?tab=teams`} 
+          <button 
+            onClick={() => navigate(-1)}
             className="flex items-center text-[#B20000] hover:underline mb-4"
           >
             <ChevronLeft className="h-5 w-5 mr-1" />
-            Back to League Details
-          </Link>
+            Back
+          </button>
           
           <h2 className="text-2xl font-bold text-[#6F6F6F]">Edit Team Registration</h2>
         </div>
@@ -143,7 +146,7 @@ export function TeamEditPage() {
         <TeamMembers
           teamMembers={teamMembers}
           captainId={team.captain_id}
-          onRemoveMember={handleRemoveMember}
+          onEditTeam={() => setShowTeammateModal(true)}
         />
       </div>
       
@@ -174,6 +177,27 @@ export function TeamEditPage() {
             setShowPaymentDeleteConfirmation(false);
             setPaymentToDelete(null);
           }}
+        />
+      )}
+
+      {team && (
+        <TeammateManagementModal
+          isOpen={showTeammateModal}
+          onClose={() => setShowTeammateModal(false)}
+          teamId={team.id}
+          teamName={team.name}
+          currentRoster={team.roster || []}
+          captainId={team.captain_id}
+          onRosterUpdate={async (newRoster: string[]) => {
+            // Update the roster and reload data
+            await loadData();
+          }}
+          onCaptainUpdate={async (newCaptainId: string) => {
+            // Update captain and reload data
+            await loadData();
+          }}
+          leagueName={team.leagues?.name}
+          readOnly={false}
         />
       )}
     </div>

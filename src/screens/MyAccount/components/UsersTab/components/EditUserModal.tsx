@@ -1,6 +1,6 @@
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
-import { Key } from 'lucide-react';
+import { Key, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EditUserForm, UserRegistration } from '../types';
 
@@ -80,11 +80,12 @@ export function EditUserModal({
                             {league.name}
                           </Link>
                           {league.sport_name === 'Volleyball' && (
-                            <span className={`px-2 py-1 text-xs rounded-full ${
+                            <span className={`flex items-center gap-1 px-2 py-1 text-xs rounded-full ${
                               league.role === 'captain' 
-                                ? 'bg-yellow-100 text-yellow-800' 
-                                : 'bg-blue-100 text-blue-800'
+                                ? 'bg-blue-100 text-blue-800' 
+                                : 'bg-purple-100 text-purple-800'
                             }`}>
+                              {league.role === 'captain' && <Crown className="h-3 w-3" />}
                               {league.role === 'captain' ? 'Captain' : 'Player'}
                             </span>
                           )}

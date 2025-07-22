@@ -6,6 +6,7 @@ import {
   Clock,
   DollarSign,
   Users,
+  Crown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
@@ -111,12 +112,13 @@ export function TeamsSection({
                       </span>
 
                       <span
-                        className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium ${
+                        className={`flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium ${
                           isCaptain
                             ? "bg-blue-100 text-blue-800"
                             : "bg-purple-100 text-purple-800"
                         }`}
                       >
+                        {isCaptain && <Crown className="h-3 w-3" />}
                         {isCaptain ? "Captain" : "Player"}
                       </span>
 

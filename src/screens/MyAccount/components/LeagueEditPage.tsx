@@ -255,10 +255,13 @@ export function LeagueEditPage() {
     <div className="bg-white w-full min-h-screen">
       <div className="max-w-[1280px] mx-auto px-4 py-8">
         <div className="mb-8">
-          <Link to="/my-account/leagues" className="flex items-center text-[#B20000] hover:underline mb-4">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="flex items-center text-[#B20000] hover:underline mb-4"
+          >
             <ChevronLeft className="h-5 w-5 mr-1" />
-            Back to Manage Leagues
-          </Link>
+            Back
+          </button>
           
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-[#6F6F6F]">Edit League Details</h2>
@@ -575,13 +578,12 @@ export function LeagueEditPage() {
                 <Save className="h-4 w-4" />
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
-              <Link to="/my-account/leagues">
-                <Button
-                className="bg-gray-500 hover:bg-gray-600 text-white rounded-[10px] px-6 py-2"
+              <button 
+                onClick={() => navigate(-1)} 
+                className="text-[#B20000] hover:underline px-6 py-2"
               >
-                Back to Manage Leagues
-                </Button>
-              </Link>
+                Back
+              </button>
             </div>
           </CardContent>
         </Card>

@@ -36,7 +36,10 @@ export function TeamInfo({ team, isCaptain, currentUserId }: TeamInfoProps) {
 
       {/* Captain */}
       <div className="flex items-center gap-2" title="Captain">
-        <Crown className="h-5 w-5 text-yellow-500" />
+        <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+          <Crown className="h-4 w-4" />
+          <span>Captain</span>
+        </div>
         <p className="text-[#6F6F6F]">{team.captain_id === currentUserId ? 'You' : (team.captain_name || 'Unknown')}</p>
       </div>
 
