@@ -5,8 +5,12 @@ import { Separator } from "../../components/ui/separator";
 import { Input } from "../../components/ui/input";
 import { Card, CardContent } from "../../components/ui/card";
 import { Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
 
 export const AboutUsPage = (): JSX.Element => {
+  const { session } = useAuth();
+  
   // Stats final values
   const statsData = [
     { value: 1800, label: "Weekly players", suffix: "+" },
@@ -84,24 +88,52 @@ export const AboutUsPage = (): JSX.Element => {
   };
 
   // Handle contact form submission
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Here you would typically send the form data to a backend API
-    
-    // Show success message
-    setSubmitStatus("success");
-    
-    // Reset form after submission
-    setTimeout(() => {
-      setContactForm({
-        name: "",
-        email: "",
-        subject: "",
-        message: ""
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: contactForm,
       });
-      setSubmitStatus(null);
-    }, 3000);
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        setSubmitStatus("error");
+        setTimeout(() => {
+          setSubmitStatus(null);
+        }, 5000);
+        return;
+      }
+
+      const response = { ok: true };
+
+      if (response.ok) {
+        setSubmitStatus("success");
+        // Reset form after successful submission
+        setTimeout(() => {
+          setContactForm({
+            name: "",
+            email: "",
+            subject: "",
+            message: ""
+          });
+          setSubmitStatus(null);
+        }, 3000);
+      } else {
+        setSubmitStatus("error");
+        // Clear error message after 5 seconds
+        setTimeout(() => {
+          setSubmitStatus(null);
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Error sending contact form:', error);
+      setSubmitStatus("error");
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setSubmitStatus(null);
+      }, 5000);
+    }
   };
 
   // Handle checkbox changes
@@ -316,14 +348,21 @@ export const AboutUsPage = (): JSX.Element => {
           <Card className="bg-[#ffeae5] rounded-lg shadow-none border-none mb-20 md:mb-28">
             <CardContent className="p-8 md:p-12">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Left side - Contact emails with flex to push content to bottom */}
+                {/* Left side - Contact emails */}
                 <div className="flex flex-col h-full">
                   <div className="mb-4">
                     <div className="flex flex-col items-center md:items-start">
                       <Mail className="w-[40px] h-[40px] text-[#B20000] mb-3" />
-                      <h2 className="text-xl md:text-2xl font-bold text-[#6F6F6F]">
+                      <h2 className="text-xl md:text-2xl font-bold text-[#6F6F6F] mb-4">
                         Contact Us
                       </h2>
+                      {/* General inquiries moved up */}
+                      <div>
+                        <p className="text-[#6F6F6F] font-bold mb-1">General inquiries</p>
+                        <a href="mailto:info@ofsl.ca" className="text-[#B20000] hover:underline">
+                          info@ofsl.ca
+                        </a>
+                      </div>
                     </div>
                   </div>
                   
@@ -332,12 +371,7 @@ export const AboutUsPage = (): JSX.Element => {
                   
                   {/* Contact information at the bottom */}
                   <div className="space-y-4 mt-auto">
-                    <div>
-                      <p className="text-[#6F6F6F] font-bold mb-1">General inquiries</p>
-                      <a href="mailto:info@ofsl.ca" className="text-[#B20000] hover:underline">
-                        info@ofsl.ca
-                      </a>
-                    </div>
+                    {/* Temporarily hidden email addresses
                     <div>
                       <p className="text-[#6F6F6F] font-bold mb-1">Volleyball</p>
                       <a href="mailto:Volleyball@ofsl.ca" className="text-[#B20000] hover:underline">
@@ -356,6 +390,7 @@ export const AboutUsPage = (): JSX.Element => {
                         sponsor@ofsl.ca
                       </a>
                     </div>
+                    */}
                   </div>
                 </div>
                 

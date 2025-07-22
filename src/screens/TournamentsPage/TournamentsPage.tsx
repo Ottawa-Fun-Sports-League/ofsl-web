@@ -19,7 +19,7 @@ export const TournamentsPage = (): JSX.Element => {
               OFSL's volleyball tournaments are designed to offer players a fun, competitive, and well-organized experience that promotes teamwork, sportsmanship, and a positive atmosphere.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-              <Link to="/leagues" className="w-full sm:w-auto">
+              <Link to="/leagues?type=Tournament" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
@@ -119,7 +119,7 @@ export const TournamentsPage = (): JSX.Element => {
                   <span>Teams can expect a tournament that's neck and neck, ensuring competitive play throughout the day</span>
                 </li>
               </ul>
-              <Link to="/leagues" className="self-start">
+              <Link to="/leagues?type=Tournament" className="self-start">
                 <Button variant="outline" className="border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white rounded-[10px] px-6 py-3">
                   View Tournaments
                 </Button>
@@ -159,7 +159,7 @@ export const TournamentsPage = (): JSX.Element => {
             <p className="text-xl mb-8 max-w-2xl mx-auto">
               Whether you're striving for high-level competition or simply looking to enjoy a well-run event with friends, our tournaments offer a dynamic and inclusive experience for all.
             </p>
-            <Link to="/leagues">
+            <Link to="/leagues?type=Tournament">
               <Button
                 className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5"
               >
