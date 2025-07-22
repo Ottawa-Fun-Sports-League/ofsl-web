@@ -522,8 +522,11 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
           <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm ${dragEnabled ? 'ml-6' : ''}`}>
             {/* Captain Info */}
             <div className="flex items-center gap-1.5" title="Captain">
-              <Crown className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-yellow-600' : 'text-yellow-500'}`} />
-              <span className={`truncate ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${isWaitlisted ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'} text-xs`}>
+                <Crown className="h-3 w-3" />
+                <span className="truncate">Captain</span>
+              </div>
+              <span className={`truncate text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
                 {team.captain_name || 'Unknown'}
               </span>
             </div>
@@ -699,7 +702,10 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
         <div className="mt-2 text-sm">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex items-center gap-2" title="Captain">
-              <Crown className={`h-5 w-5 ${isWaitlisted ? 'text-yellow-600' : 'text-yellow-500'}`} />
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${isWaitlisted ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'} text-sm`}>
+                <Crown className="h-4 w-4" />
+                <span>Captain</span>
+              </div>
               <span className={isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}>
                 {team.captain_name || 'Unknown'}
               </span>

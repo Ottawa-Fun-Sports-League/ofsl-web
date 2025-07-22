@@ -78,7 +78,7 @@ export function useTeamEditData(teamId: string | undefined) {
     try {
       const { data: membersData, error: membersError } = await supabase
         .from('users')
-        .select('id, name, email')
+        .select('id, name, email, phone')
         .in('id', roster);
 
       if (membersError) {
