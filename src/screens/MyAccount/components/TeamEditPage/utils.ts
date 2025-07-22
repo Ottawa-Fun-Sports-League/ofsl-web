@@ -1,14 +1,14 @@
 export const getPaymentStatusColor = (status: string) => {
   switch (status) {
     case 'paid':
-      return 'bg-green-100 text-green-800';
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     case 'partial':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-amber-50 text-amber-700 border-amber-200';
     case 'overdue':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-50 text-red-700 border-red-200';
     case 'pending':
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-rose-50 text-rose-700 border-rose-200';
   }
 };
 

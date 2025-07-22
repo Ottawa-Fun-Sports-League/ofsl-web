@@ -1,6 +1,6 @@
 interface NavigationTabsProps {
-  activeView: 'info' | 'standings' | 'teams';
-  setActiveView: (view: 'info' | 'standings' | 'teams') => void;
+  activeView: 'info' | 'standings';
+  setActiveView: (view: 'info' | 'standings') => void;
   sport: string;
   isAdmin?: boolean;
 }
@@ -40,22 +40,6 @@ export function NavigationTabs({ activeView, setActiveView, sport, isAdmin = fal
           </div>
         )}
         
-        {/* Admin Teams Tab */}
-        {isAdmin && (
-          <div 
-            onClick={() => setActiveView('teams')}
-            className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-              activeView === 'teams' 
-                ? 'text-[#B20000] font-medium' 
-                : 'text-[#6F6F6F] hover:text-[#B20000]'
-            }`}
-          >
-            <span>Teams</span>
-            {activeView === 'teams' && (
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

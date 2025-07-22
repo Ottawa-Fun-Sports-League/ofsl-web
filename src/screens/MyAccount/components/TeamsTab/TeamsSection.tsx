@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
+import { PaymentStatusBadge } from "../../../../components/ui/payment-status-badge";
 import { Team, LeaguePayment } from "./types";
 
 interface TeamsSectionProps {
@@ -123,20 +124,10 @@ export function TeamsSection({
                       </span>
 
                       {teamPayment && (
-                        <span
-                          className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap ${
-                            teamPayment.status === "paid"
-                              ? "bg-green-100 text-green-800"
-                              : teamPayment.status === "partial"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : teamPayment.status === "overdue"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {teamPayment.status.charAt(0).toUpperCase() +
-                            teamPayment.status.slice(1)}
-                        </span>
+                        <PaymentStatusBadge 
+                          status={teamPayment.status} 
+                          size="sm"
+                        />
                       )}
                     </div>
                   </div>

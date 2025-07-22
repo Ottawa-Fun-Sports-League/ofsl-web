@@ -35,9 +35,14 @@ export function usePaymentOperations(
 
     const depositValue = parseFloat(depositAmount);
     const newAmountPaid = paymentInfo.amount_paid + depositValue;
+    
+    // Calculate total amount due including 13% HST
+    const totalAmountDueWithTax = paymentInfo.amount_due * 1.13;
 
-    if (newAmountPaid > paymentInfo.amount_due) {
-      showToast('Deposit amount cannot exceed the amount owing', 'error');
+    // Use a tolerance to handle floating point precision issues
+    // Allow payments up to 1 cent over the amount due (including tax) to handle rounding
+    if (newAmountPaid > totalAmountDueWithTax + 0.01) {
+      showToast('Payment amount cannot exceed the amount owing', 'error');
       return;
     }
 
@@ -92,6 +97,12 @@ export function usePaymentOperations(
 
   const handleDeletePayment = async (entry: PaymentHistoryEntry) => {
     if (!paymentInfo) return;
+    
+    // Confirmation dialog before deleting payment entry
+    const confirmMessage = `Are you sure you want to delete this payment entry of $${entry.amount.toFixed(2)}?\n\nThis action cannot be undone.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
     
     try {
       setProcessingPayment(true);

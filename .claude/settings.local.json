@@ -14,7 +14,11 @@
       "Bash(git commit:*)",
       "Bash(node:*)",
       "Bash(echo:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(cp:*)",
+      "Bash(grep:*)",
+      "Bash(taskkill:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   },

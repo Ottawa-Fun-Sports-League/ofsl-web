@@ -194,6 +194,20 @@ export function Header({ isCompact = false }: HeaderProps) {
                         >
                           Manage Users
                         </Link>
+                        <Link 
+                          to="/my-account/waivers"
+                          className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
+                          onClick={() => setIsUserDropdownOpen(false)}
+                        >
+                          Manage Waivers
+                        </Link>
+                        <Link 
+                          to="/my-account/manage-teams"
+                          className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
+                          onClick={() => setIsUserDropdownOpen(false)}
+                        >
+                          Manage Teams
+                        </Link>
                       </>
                     )}
                     
@@ -330,6 +344,26 @@ export function Header({ isCompact = false }: HeaderProps) {
                           <path d="M16,4C16.88,4 17.67,4.38 18.18,5H20C21.11,5 22,5.89 22,7V17C22,18.11 21.11,19 20,19H4C2.89,19 2,18.11 2,17V7C2,5.89 2.89,5 4,5H5.82C6.33,4.38 7.12,4 8,4H16M8,6A1,1 0 0,0 7,7A1,1 0 0,0 8,8A1,1 0 0,0 9,7A1,1 0 0,0 8,6M16,6A1,1 0 0,0 15,7A1,1 0 0,0 16,8A1,1 0 0,0 17,7A1,1 0 0,0 16,6M4,9V17H20V9H4M6,11H8V13H6V11M6,15H14V17H6V15M10,11H18V13H10V11Z" />
                         </svg>
                         Manage Users
+                      </Link>
+                      <Link
+                        to="/my-account/waivers"
+                        className={`${getMobileLinkClasses("/my-account/waivers")} flex items-center`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                        </svg>
+                        Manage Waivers
+                      </Link>
+                      <Link
+                        to="/my-account/manage-teams"
+                        className={`${getMobileLinkClasses("/my-account/manage-teams")} flex items-center`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z"/>
+                        </svg>
+                        Manage Teams
                       </Link>
                     </>
                   )}

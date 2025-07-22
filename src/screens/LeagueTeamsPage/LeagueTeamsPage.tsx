@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { PaymentStatusBadge } from '../../components/ui/payment-status-badge';
 import { 
   Users, 
   Trash2, 
@@ -457,20 +458,6 @@ export function LeagueTeamsPage() {
     }
   };
 
-  const getPaymentStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'partial':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'overdue':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -549,10 +536,7 @@ export function LeagueTeamsPage() {
           <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm ${dragEnabled ? 'ml-6' : ''}`}>
             {/* Captain Info */}
             <div className="flex items-center gap-1.5" title="Captain">
-              <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${isWaitlisted ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'} text-xs`}>
-                <Crown className="h-3 w-3" />
-                <span className="truncate">Captain</span>
-              </div>
+              <Crown className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-gray-600' : 'text-blue-600'}`} />
               <span className={`truncate text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
                 {team.captain_name || 'Unknown'}
               </span>
@@ -584,18 +568,22 @@ export function LeagueTeamsPage() {
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
                         ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
                       </span>
-                      <span className={`px-1.5 py-0.5 text-xs rounded-full ${getPaymentStatusColor(team.payment_status)}`}>
-                        {team.payment_status && team.payment_status.charAt(0).toUpperCase() + team.payment_status.slice(1)}
-                      </span>
+                      {team.payment_status && (
+                        <PaymentStatusBadge 
+                          status={team.payment_status} 
+                          size="sm"
+                        />
+                      )}
                     </>
                   ) : (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
                         $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
                       </span>
-                      <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
-                        Pending
-                      </span>
+                      <PaymentStatusBadge 
+                        status="pending" 
+                        size="sm"
+                      />
                     </>
                   )}
                 </div>
@@ -608,19 +596,22 @@ export function LeagueTeamsPage() {
             <div className="flex items-center gap-2">
               <Link 
                 to={`/my-account/teams/edit/${team.id}`}
-                className={`text-xs hover:underline ${isWaitlisted ? 'text-gray-600 hover:text-gray-800' : 'text-[#B20000] hover:text-[#8A0000]'}`}
+                className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors inline-flex items-center ${
+                  isWaitlisted 
+                    ? 'border-gray-300 text-gray-600 hover:text-gray-800' 
+                    : 'border-red-300 text-[#B20000] hover:text-[#8A0000]'
+                }`}
               >
                 Edit registration
               </Link>
               
-              <div className="h-3 w-px bg-gray-300"></div>
-              
               <button
                 onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
                 disabled={movingTeam === team.id}
-                className={`text-xs hover:underline disabled:cursor-not-allowed disabled:opacity-50 ${isWaitlisted 
-                  ? 'text-green-700 hover:text-green-800' 
-                  : 'text-yellow-700 hover:text-yellow-800'
+                className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isWaitlisted 
+                    ? 'border-green-300 text-green-700 hover:text-green-800' 
+                    : 'border-yellow-300 text-yellow-700 hover:text-yellow-800'
                 }`}
                 title={isWaitlisted ? 'Move team to active registration' : 'Move team to waitlist'}
               >
