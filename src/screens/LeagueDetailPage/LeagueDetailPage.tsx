@@ -119,7 +119,7 @@ export function LeagueDetailPage() {
     <div className="bg-white w-full">
       <div className="max-w-[1280px] mx-auto px-4 py-12">
         {/* Back button */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8">
           <Link
             to="/leagues"
             className="flex items-center text-[#B20000] hover:underline"
@@ -127,27 +127,17 @@ export function LeagueDetailPage() {
             <ArrowLeft className="h-5 w-5 mr-1" />
             Back to Leagues
           </Link>
-
-          {/* Admin Edit Link */}
-          {userProfile?.is_admin && (
-            <Link
-              to={`/my-account/leagues/edit/${league.id}`}
-              className="text-[#B20000] hover:underline text-sm"
-            >
-              Edit league
-            </Link>
-          )}
         </div>
 
         {/* League title */}
         <div className="mb-8">
-          <div className="flex items-center mb-2">
+          <div className="flex items-start mb-2">
             <img
               src={getSportIcon(league.sport_name)}
               alt={league.sport_name || "Sport"}
-              className="w-10 h-10 mr-3 flex-shrink-0"
+              className="w-10 h-10 mr-3 flex-shrink-0 mt-1"
             />
-            <h1 className="text-3xl md:text-4xl font-bold text-[#6F6F6F]">
+            <h1 className="text-3xl md:text-4xl font-bold text-[#6F6F6F] leading-none">
               {league.name}
             </h1>
           </div>

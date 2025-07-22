@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
-import { Users, X, Trash2, Search, UserPlus, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, X, Trash2, Search, UserPlus, CreditCard, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { LeagueWithTeamCount } from '../types';
 import { supabase } from '../../../../../lib/supabase';
 import { useToast } from '../../../../../components/ui/toast';
@@ -180,13 +180,16 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
   const getPaymentStatusBadge = (status: string | null) => {
     switch (status) {
       case 'paid':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'partial':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case 'overdue':
+        return 'bg-red-50 text-red-700 border-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-rose-50 text-rose-700 border-rose-200';
     }
   };
 
@@ -304,11 +307,13 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <span className="font-medium text-gray-700">Captain:</span>
-                          <p className="text-gray-600">{team.captain_name}</p>
-                          <p className="text-gray-500 text-xs">{team.captain_email}</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Crown className="h-4 w-4 text-blue-600" />
+                            <span className="text-gray-600">{team.captain_name}</span>
+                          </div>
+                          <p className="text-gray-500 text-xs ml-6">{team.captain_email}</p>
                           {team.captain_phone && (
-                            <p className="text-gray-500 text-xs">{team.captain_phone}</p>
+                            <p className="text-gray-500 text-xs ml-6">{team.captain_phone}</p>
                           )}
                         </div>
                         

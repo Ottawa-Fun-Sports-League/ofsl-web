@@ -301,6 +301,45 @@ export function TeammateManagementModal({
     }
   };
 
+  const removePendingInvite = async (teammate: User) => {
+    // Confirmation dialog before canceling invite
+    const confirmMessage = `Are you sure you want to cancel the pending invite for ${teammate.email}?\n\nThis will remove the invitation and they will no longer be able to join the team using this invite.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setRemovingTeammate(teammate.id);
+      
+      // Get the session to authenticate with Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authentication session found');
+      }
+
+      // Cancel the pending invite using the inviteId
+      if (teammate.inviteId) {
+        const { error } = await supabase
+          .from('team_invites')
+          .delete()
+          .eq('id', teammate.inviteId);
+
+        if (error) throw error;
+      }
+      
+      // Reload the teammates list to reflect the removal
+      await loadTeammates();
+      
+      showToast(`Pending invite for ${teammate.email} has been canceled`, 'success');
+    } catch (error) {
+      console.error('Error canceling invite:', error);
+      showToast('Failed to cancel invite. Please try again.', 'error');
+    } finally {
+      setRemovingTeammate(null);
+    }
+  };
+
   const removeTeammate = async (userId: string) => {
     // Prevent captain from removing themselves
     if (userId === captainId) {
@@ -308,10 +347,16 @@ export function TeammateManagementModal({
       return;
     }
 
-    // Don't allow removing pending invites
     const teammate = teammates.find(t => t.id === userId);
+    
+    // Handle pending invites differently
     if (teammate?.isPending) {
-      showToast('Pending invites cannot be removed', 'info');
+      return removePendingInvite(teammate);
+    }
+
+    // Confirmation dialog before removing teammate
+    const confirmMessage = `Are you sure you want to remove ${teammate?.name || 'this teammate'} from the team?\n\nThis action cannot be undone.`;
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -623,7 +668,6 @@ export function TeammateManagementModal({
                               </>
                             ) : (
                               <>
-                                <Crown className="h-4 w-4 mr-1" />
                                 <span className="hidden sm:inline">Make Captain</span>
                                 <span className="sm:hidden">Captain</span>
                               </>
@@ -631,25 +675,19 @@ export function TeammateManagementModal({
                           </Button>
                         )}
                         
-                        {/* Remove button - for non-captains when not read-only */}
-                        {!isCaptain && !readOnly && !isPending && (
+                        {/* Remove button - for non-captains when not read-only, and for pending invites */}
+                        {!isCaptain && !readOnly && (
                           <Button
                             onClick={() => removeTeammate(teammate.id)}
                             size="xs"
                             disabled={removingTeammate === teammate.id}
-                            className="text-white w-full sm:w-auto bg-red-600 hover:bg-red-700 text-xs px-2 py-1"
+                            className="text-white w-8 h-8 p-0 bg-red-600 hover:bg-red-700"
+                            title={isPending ? "Cancel invite" : "Remove teammate"}
                           >
                             {removingTeammate === teammate.id ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                                Removing...
-                              </>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                             ) : (
-                              <>
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                <span className="hidden sm:inline">Remove</span>
-                                <span className="sm:hidden">Remove</span>
-                              </>
+                              <Trash2 className="h-4 w-4" />
                             )}
                           </Button>
                         )}

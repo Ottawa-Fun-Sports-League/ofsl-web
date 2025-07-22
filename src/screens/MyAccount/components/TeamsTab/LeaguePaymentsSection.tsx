@@ -1,4 +1,5 @@
 import { Button } from '../../../../components/ui/button';
+import { PaymentStatusBadge } from '../../../../components/ui/payment-status-badge';
 import { Clock, DollarSign, Trash2 } from 'lucide-react';
 import { LeaguePayment } from './types';
 
@@ -51,14 +52,10 @@ export function LeaguePaymentsSection({
                     <DollarSign className="h-4 w-4" />
                     <span>${payment.amount_paid.toFixed(2)} / ${(payment.amount_due * 1.13).toFixed(2)}</span>
                   </div>
-                  <span className={`px-2 py-0.5 text-xs rounded-full ${
-                    payment.status === 'paid' ? 'bg-green-100 text-green-800' :
-                    payment.status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
-                    payment.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                  </span>
+                  <PaymentStatusBadge 
+                    status={payment.status} 
+                    size="sm"
+                  />
                 </div>
               </div>
               

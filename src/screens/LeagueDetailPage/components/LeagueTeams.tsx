@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
+import { PaymentStatusBadge } from '../../../components/ui/payment-status-badge';
 import { supabase } from '../../../lib/supabase';
 import { Crown, Users, Calendar, DollarSign, Trash2, GripVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -404,20 +405,6 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
     }
   };
 
-  const getPaymentStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'partial':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'overdue':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -557,18 +544,22 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
                         ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
                       </span>
-                      <span className={`px-1.5 py-0.5 text-xs rounded-full ${getPaymentStatusColor(team.payment_status)}`}>
-                        {team.payment_status && team.payment_status.charAt(0).toUpperCase() + team.payment_status.slice(1)}
-                      </span>
+                      {team.payment_status && (
+                        <PaymentStatusBadge 
+                          status={team.payment_status} 
+                          size="sm"
+                        />
+                      )}
                     </>
                   ) : (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
                         $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
                       </span>
-                      <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
-                        Pending
-                      </span>
+                      <PaymentStatusBadge 
+                        status="pending" 
+                        size="sm"
+                      />
                     </>
                   )}
                 </div>
@@ -733,18 +724,22 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
                     <span className="text-[#6F6F6F] whitespace-nowrap">
                       ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
                     </span>
-                    <span className={`px-2 py-0.5 text-xs rounded-full ${getPaymentStatusColor(team.payment_status)}`}>
-                      {team.payment_status && team.payment_status.charAt(0).toUpperCase() + team.payment_status.slice(1)}
-                    </span>
+                    {team.payment_status && (
+                      <PaymentStatusBadge 
+                        status={team.payment_status} 
+                        size="sm"
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="text-[#6F6F6F] whitespace-nowrap">
                       $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
                     </span>
-                    <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
-                      Pending
-                    </span>
+                    <PaymentStatusBadge 
+                      status="pending" 
+                      size="sm"
+                    />
                   </div>
                 )}
               </div>

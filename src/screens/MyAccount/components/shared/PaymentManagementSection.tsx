@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
+import { PaymentStatusBadge } from '../../../../components/ui/payment-status-badge';
 import { Clock, DollarSign, Trash2, CreditCard, Plus, Calendar, User } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { useToast } from '../../../../components/ui/toast';
@@ -259,18 +260,6 @@ export function PaymentManagementSection({
     }
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'partial':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'overdue':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   if (loading) {
     return (
@@ -499,9 +488,10 @@ export function PaymentManagementSection({
                     <DollarSign className="h-4 w-4" />
                     <span>${payment.amount_paid.toFixed(2)} / ${(payment.amount_due * 1.13).toFixed(2)}</span>
                   </div>
-                  <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusBadgeClass(payment.status)}`}>
-                    {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                  </span>
+                  <PaymentStatusBadge 
+                    status={payment.status} 
+                    size="sm"
+                  />
                 </div>
               </div>
               

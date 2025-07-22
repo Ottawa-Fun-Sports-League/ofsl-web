@@ -1,4 +1,5 @@
 import { Button } from '../../../../../components/ui/button';
+import { PaymentStatusBadge } from '../../../../../components/ui/payment-status-badge';
 import { Clock, Trash2 } from 'lucide-react';
 import { LeaguePayment } from '../../../../../lib/payments';
 
@@ -9,14 +10,6 @@ interface PaymentCardProps {
 }
 
 export function PaymentCard({ payment, onUnregister, unregisteringPayment }: PaymentCardProps) {
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'partial': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -44,12 +37,13 @@ export function PaymentCard({ payment, onUnregister, unregisteringPayment }: Pay
         </div>
         
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(payment.status)}`}>
-            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-          </span>
+          <PaymentStatusBadge 
+            status={payment.status as any} 
+            size="sm"
+          />
           
           <Button
-            onClick={() => showUnregisterConfirmation(payment.id, payment.league_name)}
+            onClick={() => onUnregister(payment.id, payment.league_name)}
             disabled={unregisteringPayment === payment.id}
             className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 text-sm transition-colors flex items-center gap-1"
           >
