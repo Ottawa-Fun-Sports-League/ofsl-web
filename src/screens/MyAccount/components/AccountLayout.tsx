@@ -71,7 +71,7 @@ export function AccountLayout() {
 
                 {/* Admin Label */}
                 <div className="flex items-center px-2 py-2.5">
-                  <span className="text-[10px] font-semibold text-gray-50 uppercase tracking-widest bg-gray-400 px-2 py-1 rounded-md">Admin</span>
+                  <span className="text-[10px] font-semibold text-gray-50 uppercase tracking-widest bg-gray-400 px-2 py-1 rounded-md">Admin Manage:</span>
                 </div>
 
                 {/* Admin Section - More Spaced Out */}

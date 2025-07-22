@@ -18,7 +18,11 @@
       "Bash(cp:*)",
       "Bash(grep:*)",
       "Bash(taskkill:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(supabase functions:*)",
+      "Bash(scoop install:*)",
+      "Bash(npx supabase functions deploy:*)",
+      "Bash(npx supabase link:*)"
     ],
     "deny": []
   },
