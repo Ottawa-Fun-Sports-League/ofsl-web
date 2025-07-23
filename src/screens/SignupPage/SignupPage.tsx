@@ -7,7 +7,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import { logger } from "../../lib/logger";
-import { analyticsEvents } from "../../hooks/useGoogleAnalytics";
 
 export function SignupPage() {
   const [name, setName] = useState("");
@@ -178,9 +177,6 @@ export function SignupPage() {
       
       // Mark user as new for profile completion flow
       setIsNewUser(true);
-      
-      // Track successful signup
-      analyticsEvents.signUp();
       
       // Navigate to confirmation page
       navigate('/signup-confirmation', {

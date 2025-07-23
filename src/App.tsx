@@ -41,7 +41,6 @@ import { GoogleSignupRedirect } from "./screens/SignupPage/GoogleSignupRedirect"
 import { AdminOnlyRoute } from "./components/AdminOnlyRoute";
 import { ConditionalRoute } from "./components/ConditionalRoute";
 import { ComingSoonPage } from "./screens/ComingSoonPage";
-import { useGoogleAnalytics } from "./hooks/useGoogleAnalytics";
 
 // Create a catch-all route component to handle direct URL access
 // const CatchAllRoute = () => {
@@ -50,9 +49,6 @@ import { useGoogleAnalytics } from "./hooks/useGoogleAnalytics";
 // };
 
 export function App() {
-  // Track page views for Google Analytics
-  useGoogleAnalytics();
-  
   return (
     <ToastProvider>
       <AuthProvider>
