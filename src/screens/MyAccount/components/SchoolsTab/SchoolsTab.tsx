@@ -98,8 +98,6 @@ export function SchoolsTab() {
   return (
     <div>
       <MobileHeader
-        gymCount={gyms.length}
-        filteredGymCount={filteredGyms.length}
         searchTerm={searchTerm}
         isAnyFilterActive={isAnyFilterActive()}
         onSearchChange={setSearchTerm}
@@ -129,6 +127,8 @@ export function SchoolsTab() {
         sports={sports}
         daysOfWeek={DAYS_OF_WEEK}
         isAnyFilterActive={isAnyFilterActive()}
+        gymCount={gyms.length}
+        filteredGymCount={filteredGyms.length}
         onSearchChange={setSearchTerm}
         onFilterChange={handleFilterChange}
         onDayFilterToggle={handleDayFilterToggle}

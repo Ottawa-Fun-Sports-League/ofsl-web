@@ -1,10 +1,8 @@
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
-import { MapPin, SlidersHorizontal, Search } from 'lucide-react';
+import { SlidersHorizontal, Search } from 'lucide-react';
 
 interface MobileHeaderProps {
-  gymCount: number;
-  filteredGymCount: number;
   searchTerm: string;
   isAnyFilterActive: boolean;
   onSearchChange: (term: string) => void;
@@ -14,8 +12,6 @@ interface MobileHeaderProps {
 }
 
 export function MobileHeader({
-  gymCount,
-  filteredGymCount,
   searchTerm,
   isAnyFilterActive,
   onSearchChange,
@@ -28,9 +24,7 @@ export function MobileHeader({
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MapPin className="h-6 w-6 text-[#6F6F6F]" />
-            <h2 className="text-2xl font-bold text-[#6F6F6F]">Schools</h2>
-            <span className="text-sm text-[#6F6F6F]">({filteredGymCount} of {gymCount})</span>
+            <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Schools</h2>
           </div>
           <Button
             onClick={onOpenFilterDrawer}
