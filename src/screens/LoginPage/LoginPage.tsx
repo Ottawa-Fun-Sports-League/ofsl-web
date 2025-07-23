@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { logger } from "../../lib/logger";
+import { analyticsEvents } from "../../hooks/useGoogleAnalytics";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -68,6 +69,8 @@ export function LoginPage() {
         setError(error.message);
         setLoading(false);
       } else {
+        // Track successful login
+        analyticsEvents.login();
         // The redirect will be handled by the auth context
         // Keep loading state true to show the user something is happening
         // It will be reset by the auth context after redirect or after 5 seconds as fallback
@@ -96,6 +99,8 @@ export function LoginPage() {
         setError(error.message);
         setGoogleLoading(false);
       } else {
+        // Track successful Google login
+        analyticsEvents.login();
         // Google OAuth will handle the redirect automatically
         // Keep loading state true to show the user something is happening
       }

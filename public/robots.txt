@@ -1,29 +1,53 @@
+# Ottawa Fun Sports League - Robots.txt
+# Allow search engines to crawl and index the site
+
 User-agent: *
-Disallow: /
-
-# Disallow all crawlers from accessing the site
-# This prevents search engines from indexing the site until it's ready for production
-
-User-agent: Googlebot
-Disallow: /
-
-User-agent: Bingbot
-Disallow: /
-
-User-agent: Slurp
-Disallow: /
-
-User-agent: DuckDuckBot
-Disallow: /
-
-User-agent: Baiduspider
-Disallow: /
-
-User-agent: YandexBot
-Disallow: /
-
-# Disallow API routes
+Allow: /
 Disallow: /api/
 Disallow: /.netlify/functions/
+Disallow: /my-account/
+Disallow: /admin/
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /complete-profile
+Disallow: /google-signup-redirect
+Disallow: /success
+Disallow: /cancel
 
-# Sitemap: https://ofsl.ca/sitemap.xml
+# Allow major search engines full access to public pages
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /.netlify/functions/
+Disallow: /my-account/
+Disallow: /admin/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /.netlify/functions/
+Disallow: /my-account/
+Disallow: /admin/
+
+User-agent: Slurp
+Allow: /
+Disallow: /api/
+Disallow: /.netlify/functions/
+Disallow: /my-account/
+Disallow: /admin/
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /api/
+Disallow: /.netlify/functions/
+Disallow: /my-account/
+Disallow: /admin/
+
+# Set crawl delay to be respectful of server resources
+User-agent: *
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://ofsl.ca/sitemap.xml
