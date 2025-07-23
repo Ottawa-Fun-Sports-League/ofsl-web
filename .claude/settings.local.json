@@ -22,7 +22,12 @@
       "Bash(supabase functions:*)",
       "Bash(scoop install:*)",
       "Bash(npx supabase functions deploy:*)",
-      "Bash(npx supabase link:*)"
+      "Bash(npx supabase link:*)",
+      "Bash(env)",
+      "Bash(npx supabase:*)",
+      "Bash(npm install:*)",
+      "Bash(del:*)",
+      "mcp__ide__executeCode"
     ],
     "deny": []
   },

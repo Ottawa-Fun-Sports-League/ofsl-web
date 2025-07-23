@@ -28,9 +28,20 @@ export interface PaymentSummary {
 }
 
 // Get all league payments for the current user, including "virtual" payments for teams without payment records
-export const getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
+export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePayment[]> => {
   try {
-    // Get actual payment records from the database
+    // Get current user if not provided
+    let currentUserId = userId;
+    if (!currentUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUserId = user?.id;
+    }
+    
+    if (!currentUserId) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get actual payment records from the database for the current user
     const { data, error } = await supabase
       .from('league_payments')
       .select(`
@@ -49,7 +60,8 @@ export const getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
         updated_at,
         leagues!inner(name),
         teams(name)
-      `);
+      `)
+      .eq('user_id', currentUserId);
 
     if (error) throw error;
 
@@ -82,7 +94,8 @@ export const getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
         league_id,
         leagues:league_id(id, name, cost)
       `)
-      .eq('active', true);
+      .eq('active', true)
+      .contains('roster', [currentUserId]);
 
     if (teamsError) {
       console.error('Error fetching user teams:', teamsError);
@@ -115,7 +128,7 @@ export const getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
 
       virtualPayments.push({
         id: -team.id, // Use negative team ID to ensure uniqueness
-        user_id: '', // Will be filled by the current user's ID
+        user_id: currentUserId, // Use the current user's ID
         team_id: team.id,
         league_id: team.league_id,
         amount_due: team.leagues.cost,

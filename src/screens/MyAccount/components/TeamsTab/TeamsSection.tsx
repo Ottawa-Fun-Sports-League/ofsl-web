@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   User,
   MapPin,
@@ -11,6 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
 import { PaymentStatusBadge } from "../../../../components/ui/payment-status-badge";
+import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
 import { Team, LeaguePayment } from "./types";
 
 interface TeamsSectionProps {
@@ -34,6 +36,8 @@ export function TeamsSection({
   onLeaveTeam,
   onManageTeammates,
 }: TeamsSectionProps) {
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
   return (
     <div className="mt-8">
       <h3 className="text-lg font-semibold text-[#6F6F6F] mb-4">My Teams</h3>
@@ -46,7 +50,7 @@ export function TeamsSection({
           {teams.map((team) => {
             // Find the corresponding league payment for this team
             const teamPayment = leaguePayments.find(
-              (payment) => payment.team_name === team.name,
+              (payment) => payment.team_id === team.id,
             );
             const isCaptain = team.captain_id === currentUserId;
 
@@ -172,7 +176,7 @@ export function TeamsSection({
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t pt-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     {onManageTeammates && (
                       <Button
                         onClick={() => onManageTeammates(team.id, team.name)}
@@ -198,6 +202,16 @@ export function TeamsSection({
                           </>
                         )}
                       </Button>
+                    )}
+                    
+                    {/* Make a payment link for captains with partial or pending payments */}
+                    {isCaptain && teamPayment && (teamPayment.status === 'partial' || teamPayment.status === 'pending') && (
+                      <button
+                        onClick={() => setShowPaymentModal(true)}
+                        className="text-sm text-[#B20000] hover:text-[#8A0000] hover:underline transition-colors font-medium"
+                      >
+                        Make a payment
+                      </button>
                     )}
                   </div>
 
@@ -255,6 +269,12 @@ export function TeamsSection({
           })}
         </div>
       )}
+      
+      {/* Payment Instructions Modal */}
+      <PaymentInstructionsModal 
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+      />
     </div>
   );
 }
