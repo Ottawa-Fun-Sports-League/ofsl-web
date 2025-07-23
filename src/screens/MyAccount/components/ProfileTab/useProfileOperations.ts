@@ -30,7 +30,9 @@ export function useProfileOperations(userProfile: { id: string } | null, refresh
         })
         .eq('id', userProfile.id);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       if (!skipRefresh) {
         await refreshUserProfile();

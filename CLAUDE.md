@@ -128,6 +128,7 @@ Claude Code can manage the Supabase database for this project:
 - Rich text editing uses React Quill with custom styling
 - Ensure all files past linting
 - Avoid barrel files
+- **IMPORTANT**: Do NOT run the app to test changes. Instead, create integration tests for every feature and bug fix. If the test passes, the task is complete.
 
 ## Recent Session Summary
 
