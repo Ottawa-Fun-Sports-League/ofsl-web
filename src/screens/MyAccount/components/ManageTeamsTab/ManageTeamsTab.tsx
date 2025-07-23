@@ -138,6 +138,14 @@ export function ManageTeamsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Teams</h2>
+        <p className="text-[#6F6F6F] mt-1">
+          View and manage all teams across leagues
+        </p>
+      </div>
+
       {/* Search Bar */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">

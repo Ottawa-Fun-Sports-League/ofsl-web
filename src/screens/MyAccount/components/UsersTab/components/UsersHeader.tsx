@@ -1,5 +1,5 @@
 import { Button } from '../../../../../components/ui/button';
-import { Users, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 
 interface UsersHeaderProps {
   userCount: number;
@@ -12,7 +12,6 @@ export function UsersHeader({ userCount, onOpenMobileFilter, onRefresh }: UsersH
     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
       <div className="flex items-center gap-2 justify-between">
         <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-[#6F6F6F]" />
           <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Users</h2>
         </div>
         <Button

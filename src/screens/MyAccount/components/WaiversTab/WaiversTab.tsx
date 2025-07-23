@@ -245,7 +245,7 @@ export function WaiversTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#6F6F6F]">Waiver Management</h2>
+          <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Waivers</h2>
           <p className="text-[#6F6F6F] mt-1">
             Manage terms & conditions and liability waivers for your league
           </p>
