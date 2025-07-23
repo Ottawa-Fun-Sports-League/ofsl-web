@@ -35,6 +35,12 @@ npm run preview
 
 # Run TypeScript type checking
 npm run typecheck
+
+# Run Linting
+npm run lint
+
+# Run Integration tests
+npm run test
 ```
 
 ## Environment Configuration
@@ -116,16 +122,17 @@ Claude Code can manage the Supabase database for this project:
 
 ## Important Notes
 
-- No test framework is currently configured
 - Google OAuth requires specific redirect URI configuration (see README.md)
 - All API calls use the custom domain https://api.ofsl.ca
 - Supabase RLS policies enforce data access rules
 - Rich text editing uses React Quill with custom styling
+- Ensure all files past linting
 - Avoid barrel files
 
 ## Recent Session Summary
 
 Fixed sign-up flow issues:
+
 - Fixed infinite loader on profile completion page by removing test code and adding proper loading states
 - Fixed HashRouter path detection in AuthContext - changed from `window.location.pathname` to `window.location.hash.replace('#', '')`
 - Fixed race condition in handleAuthStateChange where currentPath wasn't updating after redirects

@@ -12,7 +12,9 @@ import {
   Calendar,
   DollarSign,
   GripVertical,
-  Search
+  Search,
+  Grid3X3,
+  List
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/toast';
@@ -61,6 +63,27 @@ interface TeamData {
   } | null;
 }
 
+interface ExtendedTeam {
+  id: number;
+  name: string;
+  captain_id: string;
+  roster: string[] | null;
+  created_at: string;
+  skill_level_id: number | null;
+  display_order?: number;
+  users?: { name: string } | null;
+  skills?: { name: string } | null;
+  leagues?: {
+    id: number;
+    name: string;
+    cost: number | null;
+    location: string | null;
+    sports?: {
+      name: string;
+    } | null;
+  } | null;
+}
+
 interface League {
   id: number;
   name: string;
@@ -83,6 +106,7 @@ export function LeagueTeamsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredActiveTeams, setFilteredActiveTeams] = useState<TeamData[]>([]);
   const [filteredWaitlistedTeams, setFilteredWaitlistedTeams] = useState<TeamData[]>([]);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const { showToast } = useToast();
   const { userProfile } = useAuth();
 
@@ -603,7 +627,7 @@ export function LeagueTeamsPage() {
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors inline-flex items-center ${
                   isWaitlisted 
                     ? 'border-gray-300 text-gray-600 hover:text-gray-800' 
-                    : 'border-red-300 text-[#B20000] hover:text-[#8A0000]'
+                    : 'border-blue-300 text-blue-700 hover:text-blue-800'
                 }`}
               >
                 Edit registration
@@ -646,6 +670,144 @@ export function LeagueTeamsPage() {
           </div>
         </CardContent>
       </Card>
+    );
+  };
+
+  // Table view component
+  const TeamTable = ({ teams, isWaitlisted = false }: { teams: TeamData[]; isWaitlisted?: boolean }) => {
+    return (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Team Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Captain
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Skill Level
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Players
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Registration Date
+                </th>
+                {!isWaitlisted && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment Status
+                  </th>
+                )}
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {teams.map((team) => (
+                <tr key={team.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="text-sm font-medium text-gray-900">
+                        {team.name}
+                      </div>
+                      {isWaitlisted && (
+                        <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                          Waitlisted
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Crown className="h-4 w-4 text-blue-600 mr-2" />
+                      <div className="text-sm text-gray-900">
+                        {team.captain_name || 'Unknown'}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {team.skill_name && (
+                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                        {team.skill_name}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center text-sm text-gray-900">
+                      <Users className="h-4 w-4 text-blue-500 mr-1" />
+                      {team.roster.length}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(team.created_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </td>
+                  {!isWaitlisted && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-900">
+                          ${team.amount_paid?.toFixed(2) || '0.00'} / 
+                          ${team.amount_due ? (team.amount_due * 1.13).toFixed(2) : 
+                            (team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00')}
+                        </span>
+                        <PaymentStatusBadge 
+                          status={team.payment_status || 'pending'} 
+                          size="sm"
+                        />
+                      </div>
+                    </td>
+                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link 
+                        to={`/my-account/teams/edit/${team.id}`}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
+                        disabled={movingTeam === team.id}
+                        className={`${
+                          isWaitlisted 
+                            ? 'text-green-600 hover:text-green-700' 
+                            : 'text-yellow-600 hover:text-yellow-700'
+                        } disabled:opacity-50`}
+                      >
+                        {movingTeam === team.id ? (
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></div>
+                        ) : isWaitlisted ? (
+                          'Activate'
+                        ) : (
+                          'Waitlist'
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTeam(team.id, team.name)}
+                        disabled={deleting === team.id}
+                        className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {deleting === team.id ? (
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     );
   };
 
@@ -728,6 +890,7 @@ export function LeagueTeamsPage() {
                   className="pl-10 w-full"
                 />
               </div>
+              
               <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
                 {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} teams
               </div>
@@ -755,24 +918,54 @@ export function LeagueTeamsPage() {
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-[#6F6F6F]">Registered Teams</h2>
-                  <div className="text-sm text-[#6F6F6F]">
-                    {searchTerm ? `${filteredActiveTeams.length} of ${activeTeams.length}` : `${activeTeams.length}`} Active Teams
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewMode('card')}
+                        className={`p-2 rounded-md transition-all ${
+                          viewMode === 'card' 
+                            ? 'bg-white text-[#B20000] shadow-sm' 
+                            : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                        title="Card view"
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('table')}
+                        className={`p-2 rounded-md transition-all ${
+                          viewMode === 'table' 
+                            ? 'bg-white text-[#B20000] shadow-sm' 
+                            : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                        title="Table view"
+                      >
+                        <List className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="text-sm text-[#6F6F6F]">
+                      {searchTerm ? `${filteredActiveTeams.length} of ${activeTeams.length}` : `${activeTeams.length}`} Active Teams
+                    </div>
                   </div>
                 </div>
 
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleActiveTeamDragEnd}
-                >
-                  <SortableContext items={filteredActiveTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-4">
-                      {filteredActiveTeams.map((team) => (
-                        <SortableTeamCard key={team.id} team={team} isWaitlisted={false} />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
+                {viewMode === 'card' ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleActiveTeamDragEnd}
+                  >
+                    <SortableContext items={filteredActiveTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-4">
+                        {filteredActiveTeams.map((team) => (
+                          <SortableTeamCard key={team.id} team={team} isWaitlisted={false} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <TeamTable teams={filteredActiveTeams} isWaitlisted={false} />
+                )}
               </div>
             )}
 
@@ -781,24 +974,56 @@ export function LeagueTeamsPage() {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-500">Waitlist</h2>
-                  <div className="text-sm text-gray-500">
-                    {searchTerm ? `${filteredWaitlistedTeams.length} of ${waitlistedTeams.length}` : `${waitlistedTeams.length}`} Waitlisted Teams
+                  <div className="flex items-center gap-4">
+                    {filteredActiveTeams.length === 0 && (
+                      <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                        <button
+                          onClick={() => setViewMode('card')}
+                          className={`p-2 rounded-md transition-all ${
+                            viewMode === 'card' 
+                              ? 'bg-white text-[#B20000] shadow-sm' 
+                              : 'text-gray-600 hover:text-gray-800'
+                          }`}
+                          title="Card view"
+                        >
+                          <Grid3X3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setViewMode('table')}
+                          className={`p-2 rounded-md transition-all ${
+                            viewMode === 'table' 
+                              ? 'bg-white text-[#B20000] shadow-sm' 
+                              : 'text-gray-600 hover:text-gray-800'
+                          }`}
+                          title="Table view"
+                        >
+                          <List className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="text-sm text-gray-500">
+                      {searchTerm ? `${filteredWaitlistedTeams.length} of ${waitlistedTeams.length}` : `${waitlistedTeams.length}`} Waitlisted Teams
+                    </div>
                   </div>
                 </div>
 
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleWaitlistTeamDragEnd}
-                >
-                  <SortableContext items={filteredWaitlistedTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-4">
-                      {filteredWaitlistedTeams.map((team) => (
-                        <SortableTeamCard key={team.id} team={team} isWaitlisted={true} />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
+                {viewMode === 'card' ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleWaitlistTeamDragEnd}
+                  >
+                    <SortableContext items={filteredWaitlistedTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-4">
+                        {filteredWaitlistedTeams.map((team) => (
+                          <SortableTeamCard key={team.id} team={team} isWaitlisted={true} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <TeamTable teams={filteredWaitlistedTeams} isWaitlisted={true} />
+                )}
               </div>
             )}
 

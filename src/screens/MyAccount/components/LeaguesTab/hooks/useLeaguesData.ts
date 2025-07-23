@@ -80,10 +80,23 @@ export function useLeaguesData() {
               .map((gymId: string | number) => gymsMap.get(Number(gymId)))
               .filter(gym => gym !== undefined);
 
+            // Get skill names array if skill_ids exist
+            let skill_names: string[] | null = null;
+            if (league.skill_ids && league.skill_ids.length > 0) {
+              skill_names = league.skill_ids
+                .map((id: number) => {
+                  const skill = skillsData.find(s => s.id === id);
+                  return skill?.name;
+                })
+                .filter((name): name is string => name !== undefined);
+            }
+
             return {
               ...league,
               sport_name: league.sports?.name || null,
               skill_name: league.skills?.name || null,
+              skill_ids: league.skill_ids || [],
+              skill_names: skill_names,
               gyms: leagueGyms,
               team_count: teamCount,
               spots_remaining: spotsRemaining
