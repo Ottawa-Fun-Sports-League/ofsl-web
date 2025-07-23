@@ -31,14 +31,50 @@ export function ResetPasswordPage() {
       try {
         setValidatingToken(true);
         
-        // Get token from URL hash or query params
-        const hash = window.location.hash;
-        const type = searchParams.get('type');
+        // Get the full URL to check for Supabase auth fragments
+        const fullHash = window.location.hash;
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(fullHash.includes('?') ? fullHash.split('?')[1] : '');
         
+        // Check for type=recovery in various places
+        const typeFromSearch = urlParams.get('type');
+        const typeFromHash = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+        
+        logger.info('Password reset validation', {
+          fullHash,
+          typeFromSearch,
+          typeFromHash,
+          hasAccessToken: !!accessToken
+        });
         
         // Check if this is a password reset flow
-        if (type === 'recovery' || hash.includes('type=recovery')) {
-          setTokenValid(true);
+        if (typeFromSearch === 'recovery' || typeFromHash === 'recovery' || accessToken) {
+          // If we have an access token in the URL, Supabase needs to process it
+          if (accessToken) {
+            // Let Supabase handle the token exchange
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) {
+              throw error;
+            }
+            if (session) {
+              setTokenValid(true);
+            } else {
+              // Wait a moment for Supabase to process the token
+              setTimeout(async () => {
+                const { data: { session: retrySession } } = await supabase.auth.getSession();
+                if (retrySession) {
+                  setTokenValid(true);
+                } else {
+                  logger.error("Failed to establish session from recovery token");
+                  setError("Invalid or expired password reset link. Please request a new password reset link.");
+                  setTokenValid(false);
+                }
+              }, 1000);
+            }
+          } else {
+            setTokenValid(true);
+          }
         } else {
           // Check if user is already authenticated
           const { data } = await supabase.auth.getSession();
