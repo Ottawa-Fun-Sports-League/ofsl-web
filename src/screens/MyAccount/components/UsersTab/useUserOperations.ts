@@ -3,6 +3,18 @@ import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
 import { User, EditUserForm, UserRegistration } from './types';
 
+interface TeamWithLeague {
+  id: number;
+  captain_id: string;
+  leagues: {
+    id: number;
+    name: string;
+    sports: {
+      name: string;
+    } | null;
+  } | null;
+}
+
 export function useUserOperations(loadUsers: () => Promise<void>) {
   const { showToast } = useToast();
   
@@ -50,21 +62,21 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
 
       const leagueMap = new Map();
       
-      teamsData?.forEach(team => {
+      (teamsData as TeamWithLeague[] | null)?.forEach(team => {
         if (team.leagues) {
           const league = team.leagues;
           const isCaptain = editingUser ? team.captain_id === editingUser : false;
-          const sportName = (league as any).sports?.name;
+          const sportName = league.sports?.name;
           
-          if (leagueMap.has((league as any).id)) {
-            const existing = leagueMap.get((league as any).id);
+          if (leagueMap.has(league.id)) {
+            const existing = leagueMap.get(league.id);
             if (isCaptain) {
               existing.role = 'captain';
             }
           } else {
-            leagueMap.set((league as any).id, {
-              id: (league as any).id,
-              name: (league as any).name,
+            leagueMap.set(league.id, {
+              id: league.id,
+              name: league.name,
               sport_name: sportName,
               role: isCaptain ? 'captain' : 'player'
             });
@@ -165,9 +177,10 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
       if (error) throw error;
 
       showToast('Password reset email sent successfully!', 'success');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error resetting password:', error);
-      showToast(error.message || 'Failed to reset password', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
+      showToast(errorMessage, 'error');
     } finally {
       setResettingPassword(false);
     }

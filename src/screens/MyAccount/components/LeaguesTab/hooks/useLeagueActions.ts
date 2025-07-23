@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../../../../lib/supabase';
 import { NewLeague, LeagueWithTeamCount } from '../types';
-import { updateStripeProductLeagueId } from '../../../../../lib/stripe';
 
 interface UseLeagueActionsProps {
   loadData: () => Promise<void>;

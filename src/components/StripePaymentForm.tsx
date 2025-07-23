@@ -9,6 +9,7 @@ import {
 import { Button } from './ui/button';
 import { Loader2, CreditCard, CheckCircle } from 'lucide-react';
 import { useToast } from './ui/toast';
+import { logger } from '../lib/logger';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -64,9 +65,10 @@ function CheckoutForm({ amount, onSuccess, onCancel }: {
         // Handle other statuses or redirect the customer
         showToast('Payment processing. Please wait...', 'info');
       }
-    } catch (error: any) {
-      console.error('Payment error:', error);
-      showToast(error.message || 'Payment failed', 'error');
+    } catch (error) {
+      logger.error('Payment error', error);
+      const errorMessage = error instanceof Error ? error.message : 'Payment failed';
+      showToast(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }

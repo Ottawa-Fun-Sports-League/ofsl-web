@@ -1,14 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Button } from '../../../../../components/ui/button';
-import { Calendar, Crown, Users, DollarSign, MapPin, User } from 'lucide-react';
-import { getDayName } from '../../../../../lib/leagues';
-import { SkillBadges } from './SkillBadges';
-import { StatusBadge } from './StatusBadge';
+import { MapPin } from 'lucide-react';
 import { TeamActions } from './TeamActions';
 import { TeamInfo } from './TeamInfo';
 
-interface TeamCardProps {
-  team: {
+type Team = {
     id: number;
     name: string;
     captain_id: string;
@@ -34,12 +29,15 @@ interface TeamCardProps {
       status: string;
     };
     roster: string[];
-  };
+};
+
+interface TeamCardProps {
+  team: Team;
   currentUserId: string;
-  onManageTeam: (team: any) => void;
+  onManageTeam: (team: Team) => void;
   onPayNow?: (paymentId: number) => void;
-  showDeleteTeamConfirmation: (team: any) => void;
-  showLeaveTeamConfirmation: (team: any) => void;
+  showDeleteTeamConfirmation: (team: Team) => void;
+  showLeaveTeamConfirmation: (team: Team) => void;
   deletingTeam: number | null;
   unregisteringPayment: number | null;
 }

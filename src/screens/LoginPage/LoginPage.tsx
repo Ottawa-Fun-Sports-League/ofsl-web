@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { logger } from "../../lib/logger";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -63,7 +64,7 @@ export function LoginPage() {
       const { error } = await signIn(email.trim(), password);
       
       if (error) {
-        console.error('Sign in error:', error.message);
+        logger.error('Sign in error', error);
         setError(error.message);
         setLoading(false);
       } else {
@@ -77,7 +78,7 @@ export function LoginPage() {
       }
     } catch (err) {
       setError("An unexpected error occurred");
-      console.error(err);
+      logger.error('Unexpected error during sign in', err);
       setLoading(false);
     }
   };
@@ -91,7 +92,7 @@ export function LoginPage() {
       const { error } = await signInWithGoogle();
       
       if (error) {
-        console.error('Google sign in error:', error.message);
+        logger.error('Google sign in error', error);
         setError(error.message);
         setGoogleLoading(false);
       } else {
@@ -100,7 +101,7 @@ export function LoginPage() {
       }
     } catch (err) {
       setError("An unexpected error occurred");
-      console.error(err);
+      logger.error('Unexpected error during Google sign in', err);
       setGoogleLoading(false);
     }
   };
@@ -228,7 +229,7 @@ export function LoginPage() {
           )}
           
           <div className="mt-6 text-center">
-            <span className="text-[#6F6F6F]">Don't have an account? </span>
+            <span className="text-[#6F6F6F]">Don&apos;t have an account? </span>
             <Link to="/signup" className="text-[#B20000] hover:underline font-bold">
               Sign up
             </Link>

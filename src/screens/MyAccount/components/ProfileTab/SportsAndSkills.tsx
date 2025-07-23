@@ -1,4 +1,4 @@
-import { Trash2, X, Plus } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import {
   Tooltip,
@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "../../../../components/ui/tooltip";
 import { SportSkill, Sport, Skill, Profile } from "./types";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface SportsAndSkillsProps {
   profile: Profile;
@@ -24,7 +24,7 @@ export function SportsAndSkills({
   sports,
   skills,
   loadingSportsSkills,
-  saving = false,
+  saving: _saving = false,
   onSave,
   onProfileChange,
 }: SportsAndSkillsProps) {
@@ -261,7 +261,7 @@ export function SportsAndSkills({
       ) : (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <p className="text-[#6F6F6F] mb-4">
-            You haven't selected any sports or skill levels yet.
+            You haven&apos;t selected any sports or skill levels yet.
           </p>
           {!showAddInterface && getAvailableSports().length > 0 && (
             <Button

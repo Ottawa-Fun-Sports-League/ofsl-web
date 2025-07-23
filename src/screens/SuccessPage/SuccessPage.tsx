@@ -4,12 +4,38 @@ import { CheckCircle, ArrowRight, CreditCard } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { getUserSubscription, getUserOrders } from '../../lib/stripe';
 import { formatPrice } from '../../stripe-config';
+import { logger } from '../../lib/logger';
+
+interface StripeUserSubscription {
+  customer_id: string;
+  subscription_id: string;
+  subscription_status: string;
+  price_id: string;
+  current_period_start: number;
+  current_period_end: number;
+  cancel_at_period_end: boolean;
+  payment_method_brand: string | null;
+  payment_method_last4: string | null;
+}
+
+interface StripeUserOrder {
+  customer_id: string;
+  order_id: number;
+  checkout_session_id: string;
+  payment_intent_id: string | null;
+  amount_subtotal: number;
+  amount_total: number;
+  currency: string;
+  payment_status: string;
+  order_status: string;
+  order_date: string;
+}
 
 export function SuccessPage() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [subscription, setSubscription] = useState<any>(null);
-  const [recentOrder, setRecentOrder] = useState<any>(null);
+  const [subscription, setSubscription] = useState<StripeUserSubscription | null>(null);
+  const [recentOrder, setRecentOrder] = useState<StripeUserOrder | null>(null);
   const [paymentProcessed, setPaymentProcessed] = useState(false);
   
   const productName = searchParams.get('product') || 'Your purchase';
@@ -32,7 +58,7 @@ export function SuccessPage() {
         }
         setPaymentProcessed(true);
       } catch (error) {
-        console.error('Error loading payment data:', error);
+        logger.error('Error loading payment data', error);
       } finally {
         setLoading(false);
       }

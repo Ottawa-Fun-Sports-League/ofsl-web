@@ -5,7 +5,7 @@ interface NavigationTabsProps {
   isAdmin?: boolean;
 }
 
-export function NavigationTabs({ activeView, setActiveView, sport, isAdmin = false }: NavigationTabsProps) {
+export function NavigationTabs({ activeView, setActiveView, sport }: NavigationTabsProps) {
   return (
     <div className="flex flex-nowrap overflow-x-auto scrollbar-thin border-b border-gray-200 mb-8">
       <div className="flex flex-grow">

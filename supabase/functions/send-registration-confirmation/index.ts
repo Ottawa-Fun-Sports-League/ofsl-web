@@ -66,7 +66,7 @@ serve(async (req: Request) => {
     // Initialize Supabase client with service role for database operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const _supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the user is authenticated by checking their token
     const token = authHeader.replace("Bearer ", "");
@@ -307,6 +307,7 @@ serve(async (req: Request) => {
     // Send email using Resend API
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
+      // eslint-disable-next-line no-console
       console.error("RESEND_API_KEY not found");
       return new Response(
         JSON.stringify({ error: "Email service not configured" }),
@@ -331,6 +332,7 @@ serve(async (req: Request) => {
 
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
+      // eslint-disable-next-line no-console
       console.error("Resend API error:", errorText);
       return new Response(
         JSON.stringify({
@@ -344,6 +346,7 @@ serve(async (req: Request) => {
     }
 
     const emailResult = await emailResponse.json();
+    // eslint-disable-next-line no-console
     console.log("Email sent successfully:", emailResult);
 
     return new Response(
@@ -358,6 +361,7 @@ serve(async (req: Request) => {
       },
     );
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Error in send-registration-confirmation function:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,

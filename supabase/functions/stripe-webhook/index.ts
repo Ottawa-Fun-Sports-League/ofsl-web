@@ -43,17 +43,19 @@ Deno.serve(async (req) => {
 
     try {
       event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
-    } catch (error: any) {
-      console.error(`Webhook signature verification failed: ${error.message}`);
-      return new Response(`Webhook signature verification failed: ${error.message}`, { status: 400 });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`Webhook signature verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return new Response(`Webhook signature verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { status: 400 });
     }
 
     EdgeRuntime.waitUntil(handleEvent(event));
 
     return Response.json({ received: true });
-  } catch (error: any) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error processing webhook:', error);
-    return new Response(JSON.stringify({ error: error.message }), { 
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -64,11 +66,13 @@ async function handleEvent(event: Stripe.Event) {
   const stripeData = event?.data?.object ?? {};
 
   if (!stripeData) {
+    // eslint-disable-next-line no-console
     console.error('No data object in Stripe event');
     return;
   }
 
   if (!('customer' in stripeData)) {
+    // eslint-disable-next-line no-console
     console.error('No customer in Stripe event data object');
     return;
   }
@@ -81,6 +85,7 @@ async function handleEvent(event: Stripe.Event) {
   const { customer: customerId } = stripeData;
 
   if (!customerId || typeof customerId !== 'string') {
+    // eslint-disable-next-line no-console
     console.error(`No customer received on event: ${JSON.stringify(event)}`);
   } else {
     let isSubscription = true;
@@ -90,12 +95,14 @@ async function handleEvent(event: Stripe.Event) {
 
       isSubscription = mode === 'subscription';
 
+      // eslint-disable-next-line no-console
       console.info(`Processing ${isSubscription ? 'subscription' : 'one-time payment'} checkout session`);
     }
 
     const { mode, payment_status } = stripeData as Stripe.Checkout.Session;
 
     if (isSubscription) {
+      // eslint-disable-next-line no-console
       console.info(`Starting subscription sync for customer: ${customerId}`);
       await syncCustomerFromStripe(customerId);
     } else if (mode === 'payment' && payment_status === 'paid') {
@@ -127,23 +134,26 @@ async function handleEvent(event: Stripe.Event) {
         }).select().single();
 
         if (orderError) {
+          // eslint-disable-next-line no-console
           console.error('Error inserting order:', orderError);
           return;
         }
 
+        // eslint-disable-next-line no-console
         console.info(`Successfully processed one-time payment for session: ${checkout_session_id}`);
 
         // Now process league payments
         await processLeaguePayments(customerId, orderData, amount_total, leagueId);
 
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error processing one-time payment:', error);
       }
     }
   }
 }
 
-async function processLeaguePayments(customerId: string, orderData: any, amountTotal: number, leagueId: number | null = null) {
+async function processLeaguePayments(customerId: string, orderData: { teamId?: string; metadata?: { team_id?: string } }, amountTotal: number, leagueId: number | null = null) {
   try {
     // Get the user ID from the stripe_customers table
     const { data: customerData, error: customerError } = await supabase
@@ -153,11 +163,13 @@ async function processLeaguePayments(customerId: string, orderData: any, amountT
       .single();
 
     if (customerError || !customerData) {
+      // eslint-disable-next-line no-console
       console.error('Error finding user for customer:', customerError);
       return;
     }
 
     const userId = customerData.user_id;
+    // eslint-disable-next-line no-console
     console.log(`Processing payments for user ${userId} with amount ${amountTotal/100}`);
 
     let pendingPayments;
@@ -173,6 +185,7 @@ async function processLeaguePayments(customerId: string, orderData: any, amountT
         .order('due_date', { ascending: true });
         
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Error fetching league-specific payments:', error);
         return;
       }
@@ -188,6 +201,7 @@ async function processLeaguePayments(customerId: string, orderData: any, amountT
         .order('due_date', { ascending: true });
 
       if (error) {
+        // eslint-disable-next-line no-console
         console.error('Error fetching pending payments:', error);
         return;
       }
@@ -197,9 +211,11 @@ async function processLeaguePayments(customerId: string, orderData: any, amountT
 
     const paymentCount = pendingPayments?.length || 0;
     if (!pendingPayments || paymentCount === 0) {
+      // eslint-disable-next-line no-console
       console.info('No pending payments found for user');
       return;
     }
+    // eslint-disable-next-line no-console
     console.log(`Found ${paymentCount} pending payments to process`);
 
     // Convert cents to dollars
@@ -229,8 +245,10 @@ async function processLeaguePayments(customerId: string, orderData: any, amountT
           .eq('id', payment.id);
 
         if (updateError) {
+          // eslint-disable-next-line no-console
           console.error('Error updating league payment:', updateError);
         } else {
+          // eslint-disable-next-line no-console
           console.info(`Applied $${paymentToApply.toFixed(2)} to league payment ${payment.id}, new status: ${newStatus}`);
           remainingAmount -= paymentToApply;
         }
@@ -239,11 +257,13 @@ async function processLeaguePayments(customerId: string, orderData: any, amountT
 
     // If there's still remaining amount, create a credit/prepayment record
     if (remainingAmount > 0) {
+      // eslint-disable-next-line no-console
       console.info(`Creating credit record for remaining amount: $${remainingAmount.toFixed(2)}`);
       // You could create a credit record here if needed
     }
 
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error processing league payments:', error);
   }
 }
@@ -262,6 +282,7 @@ async function syncCustomerFromStripe(customerId: string) {
     // TODO verify if needed
     const hasSubscriptions = subscriptions.data.length > 0;
     if (!hasSubscriptions) {
+      // eslint-disable-next-line no-console
       console.info(`No active subscriptions found for customer: ${customerId}`);
       const { error: noSubError } = await supabase.from('stripe_subscriptions').upsert(
         {
@@ -274,6 +295,7 @@ async function syncCustomerFromStripe(customerId: string) {
       );
 
       if (noSubError) {
+        // eslint-disable-next-line no-console
         console.error('Error updating subscription status:', noSubError);
         throw new Error('Failed to update subscription status in database');
       }
@@ -306,12 +328,15 @@ async function syncCustomerFromStripe(customerId: string) {
       );
 
       if (subError) {
+        // eslint-disable-next-line no-console
         console.error('Error syncing subscription:', subError);
         throw new Error('Failed to sync subscription in database');
       }
+      // eslint-disable-next-line no-console
       console.info(`Successfully synced subscription for customer: ${customerId}`);
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error(`Failed to sync subscription for customer ${customerId}:`, error);
     throw error;
   }

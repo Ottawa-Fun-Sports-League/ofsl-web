@@ -160,7 +160,7 @@ export function SportSkillSelector({ value, onChange, error }: SportSkillSelecto
       {value.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
           <p className="text-[#6F6F6F] text-sm">
-            Please select at least one sport you're interested in and your skill level.
+            Please select at least one sport you&apos;re interested in and your skill level.
           </p>
           <Button
             type="button"

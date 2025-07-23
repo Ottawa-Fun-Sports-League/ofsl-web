@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
-import { createCheckoutSession, getUserSubscription, getStripeProductByLeagueId } from '../lib/stripe';
+import { createCheckoutSession, getStripeProductByLeagueId, getStripeProductByPriceId } from '../lib/stripe';
+import { logger } from '../lib/logger';
 import { useToast } from './ui/toast';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { formatPrice } from '../stripe-config';
@@ -32,8 +33,6 @@ export function PaymentButton({
   const { showToast } = useToast();
 
   const handlePayment = async () => {
-    let productName = productName;
-    let productPrice = price;
     try {
       setLoading(true);
       
@@ -66,9 +65,10 @@ export function PaymentButton({
 
       // Redirect to Stripe Checkout
       window.location.href = url;
-    } catch (error: any) {
-      console.error('Payment error:', error);
-      showToast(error.message || 'Failed to start payment process', 'error');
+    } catch (error) {
+      logger.error('Payment error', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start payment process';
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

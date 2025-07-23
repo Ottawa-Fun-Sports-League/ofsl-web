@@ -40,6 +40,7 @@ serve(async (req: Request) => {
       .limit(10); // Process 10 at a time
 
     if (fetchError) {
+      // eslint-disable-next-line no-console
       console.error('Error fetching notifications:', fetchError);
       return new Response(
         JSON.stringify({ error: "Failed to fetch notifications" }),
@@ -69,6 +70,7 @@ serve(async (req: Request) => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     if (!resendApiKey) {
+      // eslint-disable-next-line no-console
       console.error("RESEND_API_KEY not found");
       return new Response(
         JSON.stringify({ error: "Email service not configured" }),
@@ -292,6 +294,7 @@ serve(async (req: Request) => {
           });
         } else {
           const errorText = await emailResponse.text();
+          // eslint-disable-next-line no-console
           console.error(`Failed to send notification ${notification.id}:`, errorText);
           
           // Mark with error
@@ -309,6 +312,7 @@ serve(async (req: Request) => {
           });
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error(`Error processing notification ${notification.id}:`, error);
         
         // Mark with error
@@ -345,6 +349,7 @@ serve(async (req: Request) => {
       },
     );
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Error in process-notification-queue function:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,

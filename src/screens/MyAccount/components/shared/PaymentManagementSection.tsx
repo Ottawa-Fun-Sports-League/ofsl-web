@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { PaymentStatusBadge } from '../../../../components/ui/payment-status-badge';
-import { Clock, DollarSign, Trash2, CreditCard, Plus, Calendar, User } from 'lucide-react';
+import { Clock, DollarSign, Trash2, CreditCard, Plus } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { useToast } from '../../../../components/ui/toast';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -69,6 +69,7 @@ export function PaymentManagementSection({
     if (allowCreate && userProfile?.is_admin) {
       loadFormData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId, teamId, userId, allowCreate, userProfile?.is_admin]);
 
   const loadFormData = async () => {
@@ -406,7 +407,7 @@ export function PaymentManagementSection({
               <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
               <select
                 value={newPayment.status}
-                onChange={(e) => setNewPayment(prev => ({ ...prev, status: e.target.value as any }))}
+                onChange={(e) => setNewPayment(prev => ({ ...prev, status: e.target.value as 'pending' | 'partial' | 'paid' | 'cancelled' }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="pending">Pending</option>

@@ -6,9 +6,7 @@ import { LeagueWithTeamCount } from "../types";
 import {
   getDayName,
   formatLeagueDates,
-  getGymNames,
   getGymNamesByLocation,
-  getLocationDisplay,
   getPrimaryLocation,
 } from "../../../../../lib/leagues";
 import { LocationPopover } from "../../../../../components/ui/LocationPopover";

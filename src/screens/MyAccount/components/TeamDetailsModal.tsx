@@ -128,7 +128,7 @@ export function TeamDetailsModal({
                   <div className="text-center py-8 text-[#6F6F6F]">
                     <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                     <p>No players added yet</p>
-                    {isCaptain && <p className="text-sm">Click "Add Players" to get started</p>}
+                    {isCaptain && <p className="text-sm">Click &ldquo;Add Players&rdquo; to get started</p>}
                   </div>
                 ) : (
                   team.roster_details.map((player) => (

@@ -6,8 +6,16 @@ export function LeagueEditPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sports, setSports] = useState<any[]>([]);
-  const [skills, setSkills] = useState<any[]>([]);
+  const [sports, setSports] = useState<{
+    id: number;
+    name: string;
+    active: boolean;
+  }[]>([]);
+  const [skills, setSkills] = useState<{
+    id: number;
+    name: string;
+    order_index: number;
+  }[]>([]);
   const [editLeague, setEditLeague] = useState<{
     name: string;
     description: string;

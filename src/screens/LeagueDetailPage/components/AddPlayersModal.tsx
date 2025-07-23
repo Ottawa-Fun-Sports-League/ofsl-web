@@ -119,7 +119,7 @@ export function AddPlayersModal({
 
       setPlayerEmails(newEmails);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error checking email:', error);
       const newEmails = [...playerEmails];
       newEmails[index] = {
@@ -303,9 +303,10 @@ export function AddPlayersModal({
         closeModal();
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding players:', error);
-      showToast(error.message || 'Failed to add players', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add players';
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

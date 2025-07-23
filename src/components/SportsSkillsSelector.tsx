@@ -1,4 +1,4 @@
-import { Trash2, X, Plus } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Tooltip,
@@ -8,6 +8,7 @@ import {
 } from "./ui/tooltip";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { logger } from "../lib/logger";
 
 export interface SportSkill {
   sport_id: number;
@@ -42,7 +43,6 @@ export function SportsSkillsSelector({
   onChange,
   error,
   onSave,
-  saving = false,
   showTitle = true,
   className = "",
 }: SportsSkillsSelectorProps) {
@@ -74,7 +74,7 @@ export function SportsSkillsSelector({
       setSports(sportsResponse.data || []);
       setSkills(skillsResponse.data || []);
     } catch (error) {
-      console.error('Error loading sports and skills:', error);
+      logger.error('Error loading sports and skills', error);
       setLoadError('Failed to load sports and skills. Please try again.');
     } finally {
       setLoadingSportsSkills(false);
@@ -227,7 +227,7 @@ export function SportsSkillsSelector({
             )}
           </div>
           <p className="text-xs text-gray-500">
-            Select the sports you're interested in playing and your skill level for each one.
+            Select the sports you&apos;re interested in playing and your skill level for each one.
           </p>
         </div>
       )}
@@ -355,8 +355,8 @@ export function SportsSkillsSelector({
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <p className="text-[#6F6F6F] mb-4">
             {showTitle 
-              ? "You haven't selected any sports or skill levels yet."
-              : "Please select at least one sport you're interested in and your skill level."
+              ? "You haven&apos;t selected any sports or skill levels yet."
+              : "Please select at least one sport you&apos;re interested in and your skill level."
             }
           </p>
           {!showAddInterface && getAvailableSports().length > 0 && (

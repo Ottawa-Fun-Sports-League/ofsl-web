@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (paymentError) {
+      // eslint-disable-next-line no-console
       console.error('Error fetching payment:', paymentError);
       return corsResponse({ error: 'Payment not found' }, 404);
     }
@@ -121,6 +122,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (getCustomerError) {
+      // eslint-disable-next-line no-console
       console.error('Failed to fetch customer information from the database', getCustomerError);
       return corsResponse({ error: 'Failed to fetch customer information' }, 500);
     }
@@ -134,6 +136,7 @@ Deno.serve(async (req) => {
         },
       });
 
+      // eslint-disable-next-line no-console
       console.log(`Created new Stripe customer ${newCustomer.id} for user ${user.id}`);
 
       const { error: createCustomerError } = await supabase.from('stripe_customers').insert({
@@ -142,6 +145,7 @@ Deno.serve(async (req) => {
       });
 
       if (createCustomerError) {
+        // eslint-disable-next-line no-console
         console.error('Failed to save customer information in the database', createCustomerError);
         return corsResponse({ error: 'Failed to create customer mapping' }, 500);
       }
@@ -172,10 +176,11 @@ Deno.serve(async (req) => {
       paymentIntentId: paymentIntent.id,
     });
 
-  } catch (error: any) {
-    console.error(`Payment intent error: ${error.message}`);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`Payment intent error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return corsResponse({ 
-      error: `Failed to create payment intent: ${error.message}` 
+      error: `Failed to create payment intent: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, 500);
   }
 });

@@ -1,10 +1,11 @@
 import { Button } from '../../../components/ui/button';
+import type { Schedule, Tier } from '../utils/leagueUtils';
 
 interface ScoreSubmissionModalProps {
   showModal: boolean;
   selectedTier: number | null;
-  mockSchedule: any[];
-  getTeamNameFromPosition: (tier: any, position: string) => string;
+  mockSchedule: Schedule[];
+  getTeamNameFromPosition: (tier: Tier, position: string) => string;
   closeModal: () => void;
 }
 
@@ -40,7 +41,7 @@ export function ScoreSubmissionModal({
             <h3 className="font-bold text-[#6F6F6F] mb-2">Teams</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {['A', 'B', 'C'].map((position) => {
-                const tier = mockSchedule[0].tiers.find((t: any) => t.tierNumber === selectedTier);
+                const tier = mockSchedule[0].tiers.find((t) => t.tierNumber === selectedTier);
                 const teamName = tier ? getTeamNameFromPosition(tier, position) : '';
                 
                 return (
@@ -244,7 +245,7 @@ export function ScoreSubmissionModal({
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {['A', 'B', 'C'].map((teamPosition) => {
-                  const tier = mockSchedule[0].tiers.find((t: any) => t.tierNumber === selectedTier);
+                  const tier = mockSchedule[0].tiers.find((t) => t.tierNumber === selectedTier);
                   const teamName = tier ? getTeamNameFromPosition(tier, teamPosition) : '';
                   
                   return (

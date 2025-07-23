@@ -93,9 +93,10 @@ export function useTeamOperations(
       showToast('Team deleted successfully', 'success');
       navigate('/my-account/teams');
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting team:', error);
-      showToast(error.message || 'Failed to delete team', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete team';
+      showToast(errorMessage, 'error');
     } finally {
       setDeleting(false);
     }

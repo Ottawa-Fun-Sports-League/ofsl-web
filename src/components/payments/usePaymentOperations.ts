@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { logger } from '../../lib/logger';
 import { useToast } from '../ui/toast';
 import { PaymentInfo, PaymentHistoryEntry, EditPaymentForm } from './types';
 import { formatPaymentMethod } from './utils';
@@ -88,7 +89,7 @@ export function usePaymentOperations(
       setPaymentMethod('e_transfer');
 
     } catch (error) {
-      console.error('Error processing payment:', error);
+      logger.error('Error processing payment', error);
       showToast('Failed to process payment', 'error');
     } finally {
       setProcessingPayment(false);
@@ -140,7 +141,7 @@ export function usePaymentOperations(
       showToast('Payment entry deleted successfully!', 'success');
 
     } catch (error) {
-      console.error('Error deleting payment entry:', error);
+      logger.error('Error deleting payment entry', error);
       showToast('Failed to delete payment entry', 'error');
     } finally {
       setProcessingPayment(false);
@@ -226,7 +227,7 @@ export function usePaymentOperations(
       });
 
     } catch (error) {
-      console.error('Error updating payment record:', error);
+      logger.error('Error updating payment record', error);
       showToast('Failed to update payment record', 'error');
     } finally {
       setProcessingPayment(false);

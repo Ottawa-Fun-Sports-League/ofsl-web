@@ -15,7 +15,7 @@ export const PickleballPage = (): JSX.Element => {
               Coming Soon
             </p>
             <p className="text-xl max-w-2xl mx-auto">
-              We're working on bringing pickleball leagues to OFSL. Stay tuned for updates!
+              We&apos;re working on bringing pickleball leagues to OFSL. Stay tuned for updates!
             </p>
           </div>
         </HeroBanner>

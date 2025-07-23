@@ -3,11 +3,14 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { getStripeProductByPriceId } from '../../../../../lib/stripe';
 
 interface SubscriptionBannerProps {
-  subscription: any;
+  subscription: {
+    price_id?: string;
+    subscription_status?: string;
+  } | null;
 }
 
 export function SubscriptionBanner({ subscription }: SubscriptionBannerProps) {
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<{ name?: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

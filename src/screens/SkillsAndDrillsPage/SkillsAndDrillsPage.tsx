@@ -2,7 +2,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
-import { User, MapPin, Calendar, DollarSign, Clock, Users, Star, Trophy, Target } from "lucide-react";
+import { Users, Star, Trophy, Target } from "lucide-react";
 
 export const SkillsAndDrillsPage = (): JSX.Element => {
   // Session types data
@@ -180,7 +180,7 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
                       </li>
                       <li className="flex items-start">
                         <span className="mr-2">•</span>
-                        <span>Maximizing success of team's first contact</span>
+                        <span>Maximizing success of team&apos;s first contact</span>
                       </li>
                     </ul>
                   </div>

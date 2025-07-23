@@ -21,10 +21,12 @@ export function useSchoolsData() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     filterGyms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gyms, searchTerm, filters]);
 
   const loadData = async () => {

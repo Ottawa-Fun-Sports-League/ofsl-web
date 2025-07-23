@@ -12,7 +12,7 @@ interface SearchAndFiltersProps {
   gymCount: number;
   filteredGymCount: number;
   onSearchChange: (term: string) => void;
-  onFilterChange: (filterType: keyof SchoolFilters, value: any) => void;
+  onFilterChange: (filterType: keyof SchoolFilters, value: string) => void;
   onDayFilterToggle: (dayId: number) => void;
   onSportFilterToggle: (sportId: number) => void;
   onClearFilters: () => void;

@@ -122,7 +122,7 @@ export function ManageTeamsTab() {
   if (!userProfile?.is_admin) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">You don't have permission to view this page.</p>
+        <p className="text-gray-500">You don&apos;t have permission to view this page.</p>
       </div>
     );
   }

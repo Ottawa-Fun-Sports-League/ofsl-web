@@ -86,6 +86,7 @@ serve(async (req: Request) => {
         .in('id', currentRoster)
 
       if (usersError) {
+        // eslint-disable-next-line no-console
         console.error('Database error loading teammates:', usersError)
         return new Response(
           JSON.stringify({ error: "Failed to load teammates from database" }),
@@ -113,6 +114,7 @@ serve(async (req: Request) => {
       .eq('status', 'pending')
 
     if (invitesError) {
+      // eslint-disable-next-line no-console
       console.error('Database error loading pending invites:', invitesError)
       // Don't fail for invites error, just continue without them
     } else if (pendingInvites) {
@@ -146,6 +148,7 @@ serve(async (req: Request) => {
     )
 
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Error in get-team-members function:", error)
     return new Response(
       JSON.stringify({ error: "Internal server error" }),

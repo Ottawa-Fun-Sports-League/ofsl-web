@@ -1,8 +1,9 @@
 import { Card, CardContent } from '../../../components/ui/card';
 import { MapPin, Clock, Home } from 'lucide-react';
+import type { Schedule, Tier } from '../utils/leagueUtils';
 
 interface LeagueScheduleProps {
-  mockSchedule: any[];
+  mockSchedule: Schedule[];
   openScoreSubmissionModal: (tierNumber: number) => void;
 }
 
@@ -20,7 +21,7 @@ export function LeagueSchedule({ mockSchedule, openScoreSubmissionModal }: Leagu
       
       {/* Display tiers for the current week */}
       <div className="space-y-6">
-        {mockSchedule[0].tiers.map((tier: any, tierIndex: number) => (
+        {mockSchedule[0].tiers.map((tier: Tier, tierIndex: number) => (
           <Card key={tierIndex} className="shadow-md overflow-hidden rounded-lg">
             <CardContent className="p-0 overflow-hidden">
               {/* Tier Header - Updated with right-justified info and icons */}

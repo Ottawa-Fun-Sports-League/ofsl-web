@@ -62,7 +62,7 @@ export const getSpotsText = (spots: number) => {
 };
 
 // Get team name from position
-export const getTeamNameFromPosition = (tier: any, position: string) => {
+export const getTeamNameFromPosition = (tier: Tier, position: string) => {
   return tier.teams[position]?.name || "";
 };
 

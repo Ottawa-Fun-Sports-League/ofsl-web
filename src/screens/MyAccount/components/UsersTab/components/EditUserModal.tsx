@@ -142,7 +142,7 @@ export function EditUserModal({
                   {resettingPassword ? 'Sending Reset Email...' : 'Reset Password'}
                 </Button>
                 <p className="text-xs text-[#6F6F6F] mt-2">
-                  This will send a password reset email to the user's email address.
+                  This will send a password reset email to the user&apos;s email address.
                 </p>
               </div>
             )}

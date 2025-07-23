@@ -47,7 +47,7 @@ export function SignupConfirmation() {
               <div>
                 <h2 className="text-xl font-bold text-blue-800 mb-2">Verify Your Email</h2>
                 <p className="text-blue-700 mb-3">
-                  We've sent a verification email to:
+                  We&apos;ve sent a verification email to:
                 </p>
                 <p className="text-blue-900 font-medium text-lg mb-4 break-all">
                   {email}
@@ -56,7 +56,7 @@ export function SignupConfirmation() {
                   Please check your inbox and click the verification link to complete your profile setup.
                 </p>
                 <p className="text-blue-700 mt-4 text-sm">
-                  <strong>Note:</strong> If you don't see the email in your inbox, please check your spam or junk folder.
+                  <strong>Note:</strong> If you don&apos;t see the email in your inbox, please check your spam or junk folder.
                 </p>
               </div>
             </div>
@@ -64,7 +64,7 @@ export function SignupConfirmation() {
 
           <div className="text-center">
             <p className="text-[#6F6F6F] mb-6">
-              Once your email is verified, you'll be able to complete your profile and access your account.
+              Once your email is verified, you&apos;ll be able to complete your profile and access your account.
             </p>
             <Button
               onClick={() => navigate('/')}

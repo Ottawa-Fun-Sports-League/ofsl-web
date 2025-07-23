@@ -5,7 +5,7 @@ import { Input } from '../../../../components/ui/input';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { RichTextEditor } from '../../../../components/ui/rich-text-editor';
 import { useToast } from '../../../../components/ui/toast';
-import { Save, Edit, Plus, FileText, Users, Calendar } from 'lucide-react';
+import { Save, Edit, Plus, FileText, Users } from 'lucide-react';
 
 interface Waiver {
   id: number;
@@ -50,6 +50,7 @@ export function WaiversTab() {
 
   useEffect(() => {
     loadWaivers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadWaivers = async () => {

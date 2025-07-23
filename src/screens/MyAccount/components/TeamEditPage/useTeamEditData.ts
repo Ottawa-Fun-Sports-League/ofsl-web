@@ -26,6 +26,7 @@ export function useTeamEditData(teamId: string | undefined) {
       return;
     }
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId, userProfile]);
 
   const loadData = async () => {
@@ -149,7 +150,7 @@ export function useTeamEditData(teamId: string | undefined) {
           method = 'stripe';
         }
       
-        const dateMatch = note.match(/(\d{1,2})[-\/](\d{1,2})/);
+        const dateMatch = note.match(/(\d{1,2})[-/](\d{1,2})/);
         let date = new Date().toISOString();
         if (dateMatch) {
           const month = parseInt(dateMatch[1]) - 1;

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../../lib/supabase';
+import { logger } from '../../../../lib/logger';
 import { Profile, Sport, Skill, SportSkill } from './types';
 import { INITIAL_PROFILE, INITIAL_NOTIFICATIONS } from './constants';
 
-export function useProfileData(userProfile: any) {
+export function useProfileData(userProfile: { id: string; name?: string; phone?: string; email?: string; user_sports_skills?: SportSkill[] } | null) {
   const [profile, setProfile] = useState<Profile>(INITIAL_PROFILE);
   const lastSavedProfile = useRef<Profile | null>(null);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
@@ -58,7 +59,7 @@ export function useProfileData(userProfile: any) {
           });
         }
       } catch (error) {
-        console.error('Error loading sports and skills:', error);
+        logger.error('Error loading sports and skills', error);
       } finally {
         setLoadingSportsSkills(false);
       }

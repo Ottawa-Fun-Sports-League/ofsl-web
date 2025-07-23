@@ -44,7 +44,7 @@ export function usePasswordOperations() {
     }
     
     // Check for at least one special character
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       setPasswordValidation(prev => ({ ...prev, newPasswordError: "Password must contain at least one special character" }));
       return false;
     }
@@ -121,9 +121,9 @@ export function usePasswordOperations() {
       setShowPasswordSection(false);
       showToast('Password updated successfully!', 'success');
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating password:', error);
-      setPasswordValidation(prev => ({ ...prev, passwordError: error.message || 'Failed to update password' }));
+      setPasswordValidation(prev => ({ ...prev, passwordError: (error as Error).message || 'Failed to update password' }));
     } finally {
       setPasswordValidation(prev => ({ ...prev, changingPassword: false }));
     }

@@ -80,6 +80,7 @@ serve(async (req) => {
     );
 
     if (authDeleteError) {
+      // eslint-disable-next-line no-console
       console.error('Error deleting auth user:', authDeleteError);
       return new Response(
         JSON.stringify({ error: `Failed to delete auth user: ${authDeleteError.message}` }),
@@ -103,6 +104,7 @@ serve(async (req) => {
         .eq('id', userId);
 
       if (publicDeleteError) {
+        // eslint-disable-next-line no-console
         console.error('Error deleting public user:', publicDeleteError);
         return new Response(
           JSON.stringify({ error: 'User deleted from auth but failed to delete from public users table' }),
@@ -116,6 +118,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error in delete-user function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

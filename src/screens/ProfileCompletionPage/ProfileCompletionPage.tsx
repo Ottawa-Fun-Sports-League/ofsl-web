@@ -9,6 +9,7 @@ import { getUserIpAddress } from "../../lib/ipUtils";
 import { Loader2, CheckCircle, FileText } from "lucide-react";
 import { SportsSkillsSelector, SportSkill } from "../../components/SportsSkillsSelector";
 import { useToast } from "../../components/ui/toast";
+import { logger } from "../../lib/logger";
 
 // SportSkill is now imported from SportsSkillsSelector
 
@@ -16,7 +17,7 @@ export function ProfileCompletionPage() {
   // Use auth hook but manage loading states more carefully
   const { user, userProfile, loading, refreshUserProfile, setIsNewUser } =
     useAuth();
-  const [searchParams] = useSearchParams();
+  const [_searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -31,8 +32,18 @@ export function ProfileCompletionPage() {
   const [sportSkillError, setSportSkillError] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
-  const [activeWaiver, setActiveWaiver] = useState<any>(null);
-  const [waiverLoading, setWaiverLoading] = useState(true);
+  const [activeWaiver, setActiveWaiver] = useState<{
+    id: number;
+    title: string;
+    content: string;
+    version: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    created_by: string;
+    updated_by: string | null;
+  } | null>(null);
+  const [_waiverLoading, setWaiverLoading] = useState(true);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverError, setWaiverError] = useState<string | null>(null);
 
@@ -84,13 +95,13 @@ export function ProfileCompletionPage() {
           .single();
 
         if (error) {
-          console.error('Error loading active waiver:', error);
+          logger.error('Error loading active waiver', error);
           // If no active waiver, that's okay - just continue without it
         } else {
           setActiveWaiver(data);
         }
       } catch (err) {
-        console.error('Error loading waiver:', err);
+        logger.error('Error loading waiver', err);
       } finally {
         setWaiverLoading(false);
       }
@@ -127,7 +138,7 @@ export function ProfileCompletionPage() {
   }, [userProfile, loading, initialLoading, navigate]);
 
   // Process pending team invites for the newly registered user
-  const processPendingInvites = async () => {
+  const _processPendingInvites = async () => {
     if (!user?.email) return;
     
     try {
@@ -142,7 +153,7 @@ export function ProfileCompletionPage() {
         .gt('expires_at', new Date().toISOString());
 
       if (invitesError) {
-        console.error('Error fetching pending invites:', invitesError);
+        logger.error('Error fetching pending invites', invitesError);
         return;
       }
 
@@ -159,7 +170,7 @@ export function ProfileCompletionPage() {
         .single();
 
       if (userError || !userData) {
-        console.error('Error getting user ID:', userError);
+        logger.error('Error getting user ID', userError);
         return;
       }
 
@@ -175,13 +186,13 @@ export function ProfileCompletionPage() {
             .single();
 
           if (teamError || !team) {
-            console.error(`Error fetching team ${invite.team_id}:`, teamError);
+            logger.error(`Error fetching team ${invite.team_id}`, teamError);
             continue;
           }
 
           // Skip if team is not active
           if (!team.active) {
-            console.warn(`Team ${invite.team_id} is not active, skipping invite ${invite.id}`);
+            logger.warn(`Team ${invite.team_id} is not active, skipping invite ${invite.id}`);
             // Mark invite as declined since team is inactive
             await supabase
               .from('team_invites')
@@ -204,7 +215,7 @@ export function ProfileCompletionPage() {
               .eq('id', invite.team_id);
 
             if (updateError) {
-              console.error(`Error updating team roster for team ${invite.team_id}:`, updateError);
+              logger.error(`Error updating team roster for team ${invite.team_id}`, updateError);
               continue;
             }
 
@@ -220,7 +231,7 @@ export function ProfileCompletionPage() {
             processed.push(invite);
           }
         } catch (error) {
-          console.error(`Error processing invite ${invite.id}:`, error);
+          logger.error(`Error processing invite ${invite.id}`, error);
         }
       }
 
@@ -229,7 +240,7 @@ export function ProfileCompletionPage() {
         showToast(`Welcome! You've been automatically added to: ${teams}`, "success");
       }
     } catch (error) {
-      console.error('Error processing pending invites:', error);
+      logger.error('Error processing pending invites', error);
     }
   };
 
@@ -334,16 +345,13 @@ export function ProfileCompletionPage() {
           return;
         }
         
-        console.log('Processing invites for user:', {
-          userId: currentUserData.id,
-          email: user?.email
-        });
+        // Processing invites for user
         
         // First try using the database function
         const { data: inviteResult, error: inviteError } = await supabase
           .rpc('process_user_team_invites', { p_user_id: currentUserData.id });
         
-        console.log('Database function result:', inviteResult, 'error:', inviteError);
+        // Database function result processed
         
         if (!inviteError && inviteResult?.success && inviteResult.processed_count > 0) {
           const teams = inviteResult.teams.join(', ');
@@ -397,9 +405,10 @@ export function ProfileCompletionPage() {
         localStorage.getItem("redirectAfterLogin") || "/my-account/teams";
       localStorage.removeItem("redirectAfterLogin");
       window.location.href = "#" + redirectPath;
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error completing profile:", err);
-      setError(err.message || "Failed to complete profile");
+      const errorMessage = err instanceof Error ? err.message : "Failed to complete profile";
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }

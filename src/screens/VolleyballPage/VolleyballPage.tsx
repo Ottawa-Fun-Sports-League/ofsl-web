@@ -63,7 +63,7 @@ export const VolleyballPage = (): JSX.Element => {
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Volleyball Leagues</h1>
             <p className="text-xl max-w-2xl mx-auto mb-8">
-              OFSL's volleyball leagues are organized to provide participants with a structured environment that encourages sportsmanship, physical activity and healthy competition.
+              OFSL&apos;s volleyball leagues are organized to provide participants with a structured environment that encourages sportsmanship, physical activity and healthy competition.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
               <Link to="/leagues?sport=Volleyball" className="w-full sm:w-auto">

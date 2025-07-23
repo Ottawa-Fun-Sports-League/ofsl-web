@@ -57,9 +57,10 @@ export function useLeagueStandings(leagueId: string | undefined) {
       }));
 
       setTeams(standingsData);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading teams for standings:', err);
-      setError(err.message || 'Failed to load teams');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load teams';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -67,6 +68,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
 
   useEffect(() => {
     loadTeams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
 
   return {

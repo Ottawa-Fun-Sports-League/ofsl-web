@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../../components/ui/button';
-import { Calendar, Crown, CreditCard, Users, DollarSign, MapPin, User } from 'lucide-react';
+import { Calendar, Crown, DollarSign, MapPin, User } from 'lucide-react';
 import { getDayName } from '../../../../../lib/leagues';
 
 interface Team {

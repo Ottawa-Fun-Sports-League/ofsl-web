@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 /**
  * Attempts to get the user's actual IP address using various methods
  * Falls back to localhost if unable to determine
@@ -45,7 +47,7 @@ export const getUserIpAddress = async (): Promise<string> => {
     }
 
   } catch (error) {
-    console.error('Error getting IP address:', error);
+    logger.error('Error getting IP address', error);
   }
 
   // Fallback to localhost

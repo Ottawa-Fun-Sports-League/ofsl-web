@@ -8,11 +8,13 @@ import {
 } from "react";
 import { Session, User, AuthError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { UserProfile } from "../types/auth";
+import { logger } from "../lib/logger";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  userProfile: any | null;
+  userProfile: UserProfile | null;
   loading: boolean;
   profileComplete: boolean;
   signIn: (
@@ -40,7 +42,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileComplete, setProfileComplete] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -51,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const redirectingRef = useRef<string | null>(null);
 
   // Helper function to check if profile is complete
-  const checkProfileCompletion = (profile?: any) => {
+  const checkProfileCompletion = (profile?: UserProfile | null) => {
     const profileToCheck = profile || userProfile;
     if (!profileToCheck) return false;
 
@@ -84,14 +86,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return null;
         } else {
           // Unexpected error - log and return null to prevent data leaks
-          console.error("Error fetching user profile:", error);
+          logger.error("Error fetching user profile", error, { userId: authUser.id });
           return null;
         }
       }
 
       // Verify the profile belongs to the current user to prevent data leaks
       if (profile && profile.auth_id !== authUser.id) {
-        console.error("Security violation: Profile auth_id mismatch", {
+        logger.error("Security violation: Profile auth_id mismatch", undefined, {
           profile_auth_id: profile.auth_id,
           user_auth_id: authUser.id,
         });
@@ -100,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return profile;
     } catch (error) {
-      console.error("Error in fetchUserProfile:", error);
+      logger.error("Error in fetchUserProfile", error, { userId: authUser.id });
       return null;
     }
   };
@@ -116,10 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Helper function to create user profile if it doesn't exist
   const handleUserProfileCreation = async (user: User) => {
     try {
-      const provider = user.app_metadata?.provider || "email";
-
       // Use the v4 function for better Google OAuth support
-      let { data: existingProfile, error: fetchError } = await supabase.rpc(
+      const { error: fetchError } = await supabase.rpc(
         "check_and_fix_user_profile_v4",
         {
           p_auth_id: user.id.toString(),
@@ -131,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       );
 
       if (fetchError && fetchError.code !== "PGRST116") {
-        console.error("Error checking existing user:", fetchError);
+        logger.error("Error checking existing user", fetchError);
         return null;
       }
 
@@ -143,21 +143,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (profileError) {
-        console.error(
-          "Error fetching user profile after fix attempt:",
-          profileError,
+        logger.error(
+          "Error fetching user profile after fix attempt",
+          profileError
         );
         return null;
       }
 
       // Verify the profile belongs to the current user to prevent data leaks
       if (profile && profile.auth_id !== user.id) {
-        console.error(
+        logger.error(
           "Security violation: Profile auth_id mismatch in handleUserProfileCreation",
+          undefined,
           {
             profile_auth_id: profile.auth_id,
             user_auth_id: user.id,
-          },
+          }
         );
         return null;
       }
@@ -188,13 +189,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (error) {
           // Don't fail the profile creation if invite processing fails
-          console.error('Error processing signup invites:', error);
+          logger.error('Error processing signup invites', error);
         }
       }
 
       return profile;
     } catch (error) {
-      console.error("Error in handleUserProfileCreation:", error);
+      logger.error("Error in handleUserProfileCreation", error);
       return null;
     }
   };
@@ -237,7 +238,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             })
             .catch((err) => {
-              console.error("Error handling user profile during redirect:", err);
+              logger.error("Error handling user profile during redirect", err);
             });
         }
       } else {
@@ -369,10 +370,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // This handles both new users and cases where profile creation failed
 
           // For Google users, we can't rely on SIGNED_UP event, so check if user is recent
-          const isGoogleUser = session.user.app_metadata?.provider === "google";
-          const userCreatedAt = new Date(session.user.created_at);
-          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-          const isRecentUser = userCreatedAt > fiveMinutesAgo;
 
           // Always redirect to profile completion if no profile exists
           const currentPathNow = getCurrentPath();
@@ -441,7 +438,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const session = data?.session;
 
         if (error) {
-          console.error("Error getting session:", error);
+          logger.error("Error getting session", error);
           if (mounted) {
             setLoading(false);
             setInitializing(false);
@@ -454,7 +451,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await handleAuthStateChange("INITIAL_SESSION", session);
         }
       } catch (error) {
-        console.error("Error in getInitialSession:", error);
+        logger.error("Error in getInitialSession", error);
         if (mounted) {
           setLoading(false);
           setInitializing(false);
@@ -477,6 +474,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -488,7 +486,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        console.error("Sign in error:", error.message);
+        logger.error("Sign in error", error);
         setLoading(false);
         return { error };
       }
@@ -502,7 +500,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error: null };
     } catch (error) {
-      console.error("Error in signIn:", error);
+      logger.error("Error in signIn", error);
       setLoading(false);
       return { error: error as AuthError };
     }
@@ -542,7 +540,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error };
     } catch (error) {
-      console.error("Error in signInWithGoogle:", error);
+      logger.error("Error in signInWithGoogle", error);
       setLoading(false);
       return { error: error as AuthError };
     }
@@ -577,12 +575,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (data) {
         if (data.url) {
+          // URL is handled by Supabase SDK
         }
       }
 
       return { error };
     } catch (error) {
-      console.error("Error in signInWithGoogle:", error);
+      logger.error("Error in signInWithGoogle", error);
       setLoading(false);
       return { error: error as AuthError };
     }
@@ -608,7 +607,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { user: data?.user || null, error };
     } catch (error) {
-      console.error("Error in signUp:", error);
+      logger.error("Error in signUp", error);
       return { user: null, error: error as AuthError };
     } finally {
       setLoading(false);
@@ -624,7 +623,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
-        console.error("Error signing out:", error);
+        logger.error("Error signing out", error);
         throw error;
       }
 
@@ -634,7 +633,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Force page reload to ensure clean state
       window.location.href = "/";
     } catch (error) {
-      console.error("Error in signOut:", error);
+      logger.error("Error in signOut", error);
       // Even if there's an error, clear the local state
       setSession(null);
       setUser(null);

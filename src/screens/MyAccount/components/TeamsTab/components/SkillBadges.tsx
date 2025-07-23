@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface SkillBadgesProps {
   skillNames: string[] | null | undefined;

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { logger } from './logger';
 
 // Interface for league payment records
 export interface LeaguePayment {
@@ -98,7 +99,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
       .contains('roster', [currentUserId]);
 
     if (teamsError) {
-      console.error('Error fetching user teams:', teamsError);
+      logger.error('Error fetching user teams', teamsError);
       return actualPayments;
     }
 
@@ -149,7 +150,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
     // Combine actual and virtual payments
     return [...actualPayments, ...virtualPayments];
   } catch (error) {
-    console.error('Error fetching user league payments:', error);
+    logger.error('Error fetching user league payments', error);
     return [];
   }
 };
@@ -174,7 +175,7 @@ export const getUserPaymentSummary = async (): Promise<PaymentSummary> => {
       .select('amount_outstanding, amount_paid, status');
     
     if (error) {
-      console.error('Error fetching payment summary:', error);
+      logger.error('Error fetching payment summary', error);
       return {
         total_outstanding: 0,
         total_paid: 0,
@@ -213,7 +214,7 @@ export const getUserPaymentSummary = async (): Promise<PaymentSummary> => {
 
     return summary;
   } catch (error) {
-    console.error('Error fetching user payment summary:', error);
+    logger.error('Error fetching user payment summary', error);
     return {
       total_outstanding: 0,
       total_paid: 0,
@@ -271,7 +272,7 @@ export const _getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
 
     return transformedData;
   } catch (error) {
-    console.error('Error fetching user league payments:', error);
+    logger.error('Error fetching user league payments', error);
     return [];
   }
 };
@@ -314,7 +315,7 @@ export const _getUserPaymentSummary = async (): Promise<PaymentSummary> => {
 
     return summary;
   } catch (error) {
-    console.error('Error fetching user payment summary:', error);
+    logger.error('Error fetching user payment summary', error);
     return {
       total_outstanding: 0,
       total_paid: 0,
@@ -352,7 +353,7 @@ export const createLeaguePayment = async (params: {
 
     return data;
   } catch (error) {
-    console.error('Error creating league payment:', error);
+    logger.error('Error creating league payment', error);
     throw error;
   }
 };
@@ -378,7 +379,7 @@ export const updateLeaguePayment = async (
 
     return data;
   } catch (error) {
-    console.error('Error updating league payment:', error);
+    logger.error('Error updating league payment', error);
     throw error;
   }
 };
@@ -402,7 +403,7 @@ export const getUserOutstandingBalance = async (userId?: string): Promise<number
       return data || 0;
     }
   } catch (error) {
-    console.error('Error calculating outstanding balance:', error);
+    logger.error('Error calculating outstanding balance', error);
     return 0;
   }
 };

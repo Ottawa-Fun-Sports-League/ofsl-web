@@ -5,6 +5,7 @@ import { Input } from "../../components/ui/input";
 import { Mail, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { logger } from "../../lib/logger";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -35,9 +36,10 @@ export function ForgotPasswordPage() {
       
       setSuccessMessage("Password reset instructions have been sent to your email");
       setEmail("");
-    } catch (err: any) {
-      console.error("Error in password reset:", err);
-      setError(err.message || "Failed to send password reset email");
+    } catch (err) {
+      logger.error("Error in password reset", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to send password reset email";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -56,7 +58,7 @@ export function ForgotPasswordPage() {
               <p>{successMessage}</p>
               <p className="text-sm mt-2">
                 Please check your email inbox and follow the instructions to reset your password.
-                <strong> If you don't see the email, please check your spam folder.</strong>
+                <strong> If you don&apos;t see the email, please check your spam folder.</strong>
               </p>
             </div>
           )}
@@ -88,7 +90,7 @@ export function ForgotPasswordPage() {
                 />
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                We'll send you an email with instructions to reset your password.
+                We&apos;ll send you an email with instructions to reset your password.
               </p>
             </div>
             

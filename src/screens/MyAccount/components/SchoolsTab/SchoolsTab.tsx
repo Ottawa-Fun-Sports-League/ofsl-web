@@ -47,7 +47,7 @@ export function SchoolsTab() {
     handleLocationToggle
   } = useGymOperations(newGym, editGym, setNewGym, setEditGym, loadData);
 
-  const handleFilterChange = (filterType: keyof SchoolFilters, value: any) => {
+  const handleFilterChange = (filterType: keyof SchoolFilters, value: string) => {
     setFilters(prev => ({
       ...prev,
       [filterType]: value

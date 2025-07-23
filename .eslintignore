@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+build/
+
+# Environment files
+.env
+.env.*
+
+# Test coverage
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+.cache/
+
+# Supabase
+supabase/functions/**/deno.json
+supabase/functions/**/deno.lock
+supabase/.temp/
+
+# Build scripts
+*.js
+*.cjs
+*.mjs
+!src/**/*.js
+!src/**/*.cjs
+!src/**/*.mjs

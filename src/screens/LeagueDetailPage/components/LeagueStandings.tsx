@@ -38,7 +38,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
         <Card className="shadow-md">
           <CardContent className="p-8 text-center">
             <h3 className="text-lg font-medium text-[#6F6F6F] mb-2">No Teams Registered</h3>
-            <p className="text-[#6F6F6F]">This league doesn't have any registered teams yet.</p>
+            <p className="text-[#6F6F6F]">This league doesn&apos;t have any registered teams yet.</p>
           </CardContent>
         </Card>
       </div>

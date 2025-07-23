@@ -41,7 +41,7 @@ export function RegistrationSuccessModal({
             <CheckCircle className="h-10 w-10 text-green-500 flex-shrink-0" />
             <div>
               <p className="text-[#6F6F6F] text-lg font-medium">
-                Your team "{teamName}" has been successfully registered for {leagueName}!
+                Your team &ldquo;{teamName}&rdquo; has been successfully registered for {leagueName}!
               </p>
             </div>
           </div>
@@ -59,7 +59,7 @@ export function RegistrationSuccessModal({
           <div className="text-sm text-[#6F6F6F] mb-6">
             <p>You can make your payment through:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>The "My Teams" section in your account</li>
+              <li>The &ldquo;My Teams&rdquo; section in your account</li>
               <li>E-transfer to <span className="font-medium text-[#B20000]">ofslpayments@gmail.com</span></li>
             </ul>
           </div>

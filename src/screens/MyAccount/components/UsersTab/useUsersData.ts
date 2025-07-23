@@ -19,10 +19,12 @@ export function useUsersData() {
 
   useEffect(() => {
     loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     filterAndSortUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users, searchTerm, filters, sortField, sortDirection]);
 
   const loadUsers = async () => {
@@ -78,8 +80,8 @@ export function useUsersData() {
     
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number | Date;
+      let bValue: string | number | Date;
       
       switch (sortField) {
         case 'name':

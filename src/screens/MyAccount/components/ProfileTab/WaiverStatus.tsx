@@ -37,6 +37,7 @@ export function WaiverStatus() {
 
   useEffect(() => {
     loadWaiverData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   const loadWaiverData = async () => {
@@ -135,7 +136,7 @@ export function WaiverStatus() {
       (acceptance) => acceptance.waiver_id === activeWaiver.id,
     );
 
-  const mostRecentAcceptance = userAcceptances[0];
+  const _mostRecentAcceptance = userAcceptances[0];
 
   if (loading) {
     return (

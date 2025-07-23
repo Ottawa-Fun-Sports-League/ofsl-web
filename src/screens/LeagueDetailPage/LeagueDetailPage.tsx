@@ -13,6 +13,7 @@ import {
   formatLeagueDates,
   type League,
 } from "../../lib/leagues";
+import { logger } from "../../lib/logger";
 import {
   useActiveView,
   type ActiveView,
@@ -38,6 +39,7 @@ export function LeagueDetailPage() {
 
   useEffect(() => {
     loadLeague();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadLeague = async () => {
@@ -57,7 +59,7 @@ export function LeagueDetailPage() {
         setLeague(leagueData);
       }
     } catch (err) {
-      console.error("Error loading league:", err);
+      logger.error("Error loading league", err);
       setError("Failed to load league data");
     } finally {
       setLoading(false);
@@ -84,7 +86,7 @@ export function LeagueDetailPage() {
         </h1>
         <p className="text-lg text-[#6F6F6F] mb-8">
           {error ||
-            "The league you're looking for doesn't exist or has been removed."}
+            "The league you&apos;re looking for doesn&apos;t exist or has been removed."}
         </p>
         <Link to="/leagues">
           <Button className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-3">
@@ -108,7 +110,7 @@ export function LeagueDetailPage() {
     ),
     skillLevel: league.skill_names?.[0] || league.skill_name || "Not specified",
     price: league.cost || 0,
-    spotsRemaining: league.max_teams ? Math.max(0, league.max_teams - 0) : 0, // TODO: Calculate from actual team count
+    spotsRemaining: spotsRemaining
   };
 
   const handleSpotsUpdate = (spots: number) => {

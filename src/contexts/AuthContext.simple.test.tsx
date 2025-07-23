@@ -41,8 +41,8 @@ const TestComponent = () => {
 };
 
 describe('AuthContext Basic Flow', () => {
-  let mockLocationReplace: any;
-  let mockSupabase: any;
+  let mockLocationReplace: jest.Mock;
+  let mockSupabase: ReturnType<typeof createMockSupabase>;
   
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -99,7 +99,6 @@ describe('AuthContext Basic Flow', () => {
   });
 
   it('should redirect to complete-profile for incomplete profile', async () => {
-    console.log('Starting test...');
     
     const mockUser = {
       id: 'test-user-id',
@@ -138,7 +137,6 @@ describe('AuthContext Basic Flow', () => {
     mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
       // Simulate initial session
       setTimeout(() => {
-        console.log('Calling auth state change callback...');
         callback('INITIAL_SESSION', mockSession);
       }, 10);
       
@@ -173,14 +171,11 @@ describe('AuthContext Basic Flow', () => {
       </AuthProvider>
     );
 
-    console.log('Waiting for redirect...');
     
     // Wait for redirect to happen
     await waitFor(() => {
-      console.log('Checking if redirect happened...');
       expect(mockLocationReplace).toHaveBeenCalledWith('/#/complete-profile');
     }, { timeout: 5000 });
 
-    console.log('Test completed!');
   });
 });

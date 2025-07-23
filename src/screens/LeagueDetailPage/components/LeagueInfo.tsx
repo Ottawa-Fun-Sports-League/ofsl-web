@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
-import { MapPin, Calendar, Clock, DollarSign, Users, Tag } from "lucide-react";
+import { MapPin, Calendar, Clock, DollarSign, Users } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { TeamRegistrationModal } from "./TeamRegistrationModal";
@@ -10,7 +10,8 @@ import { supabase } from "../../../lib/supabase";
 import { useEffect } from "react";
 import { getStripeProductByLeagueId } from "../../../lib/stripe";
 import { LocationPopover } from "../../../components/ui/LocationPopover";
-import { getGymNames, getGymNamesByLocation, getLocationDisplay, getPrimaryLocation } from "../../../lib/leagues";
+import { getGymNamesByLocation, getPrimaryLocation } from "../../../lib/leagues";
+import type { League } from "../../../lib/leagues";
 
 // Function to get spots badge color
 const getSpotsBadgeColor = (spots: number) => {
@@ -27,7 +28,7 @@ const getSpotsText = (spots: number) => {
 };
 
 interface LeagueInfoProps {
-  league: any;
+  league: League;
   sport: string;
   skillLevels?: string[];
   onSpotsUpdate?: (spots: number) => void;
@@ -36,10 +37,30 @@ interface LeagueInfoProps {
 export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: LeagueInfoProps) {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [actualSpotsRemaining, setActualSpotsRemaining] = useState(league.spotsRemaining || 0);
-  const [stripeProduct, setStripeProduct] = useState<any>(null);
+  const [stripeProduct, setStripeProduct] = useState<{
+    id: string;
+    price_id: string;
+    name: string;
+    description: string;
+    mode: string;
+    price: number;
+    currency: string;
+    interval: string | null;
+    league_id: number | null;
+  } | null>(null);
   const { user } = useAuth();
   const [isTeamCaptain, setIsTeamCaptain] = useState(false);
-  const [matchingProduct, setMatchingProduct] = useState<any>(null);
+  const [_matchingProduct, setMatchingProduct] = useState<{
+    id: string;
+    price_id: string;
+    name: string;
+    description: string;
+    mode: string;
+    price: number;
+    currency: string;
+    interval: string | null;
+    league_id: number | null;
+  } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,6 +68,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
     checkIfTeamCaptain();
     loadStripeProduct();
     loadProductInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [league.id]);
 
   const loadStripeProduct = async () => {

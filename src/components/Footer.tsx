@@ -1,16 +1,7 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import { Separator } from "./ui/separator";
 import { Mail, Phone } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
-// Data for footer links
-const footerLinks = {
-  leagues: ["Volleyball", "Badminton", "Pickleball"],
-  getInvolved: ["Newsletter", "Registration", "Partner with us"],
-  usefulLinks: ["Leagues", "Schedule & Standings", "Standards of play"],
-  siteInfo: ["About us", "Contact", "FAQs"],
-};
 
 export function Footer() {
   const { user } = useAuth();

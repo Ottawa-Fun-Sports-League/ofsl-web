@@ -12,7 +12,7 @@ interface MobileFilterDrawerProps {
     days: number[];
     sports: number[];
   };
-  handleFilterChange: (filterType: keyof typeof filters, value: any) => void;
+  handleFilterChange: (filterType: keyof typeof filters, value: string) => void;
   handleDayFilterToggle: (dayId: number) => void;
   handleSportFilterToggle: (sportId: number) => void;
   clearFilters: () => void;

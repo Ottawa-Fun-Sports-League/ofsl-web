@@ -1,25 +1,26 @@
-import React from 'react';
 import { Button } from '../../../../../components/ui/button';
-import { DollarSign, Users, Trash2 } from 'lucide-react';
+import { DollarSign, Users } from 'lucide-react';
+
+type Team = {
+  id: number;
+  captain_id: string;
+  payment?: {
+    id: number;
+    amount_due: number;
+    amount_paid: number;
+  };
+  league?: {
+    cost: number | null;
+  };
+};
 
 interface TeamActionsProps {
-  team: {
-    id: number;
-    captain_id: string;
-    payment?: {
-      id: number;
-      amount_due: number;
-      amount_paid: number;
-    };
-    league?: {
-      cost: number | null;
-    };
-  };
+  team: Team;
   isCaptain: boolean;
-  onManageTeam: (team: any) => void;
-  onPayNow?: (team: any) => void;
-  showDeleteTeamConfirmation: (team: any) => void;
-  showLeaveTeamConfirmation: (team: any) => void;
+  onManageTeam: (team: Team) => void;
+  onPayNow?: (team: Team) => void;
+  showDeleteTeamConfirmation: (team: Team) => void;
+  showLeaveTeamConfirmation: (team: Team) => void;
   deletingTeam: number | null;
   unregisteringPayment: number | null;
 }

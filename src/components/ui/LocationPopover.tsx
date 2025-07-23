@@ -2,14 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 interface LocationPopoverProps {
-  location: string;
   locations?: string[];
   children: React.ReactNode;
   className?: string;
 }
 
 export function LocationPopover({
-  location,
   locations = [],
   children,
   className = "",
@@ -30,7 +28,7 @@ export function LocationPopover({
       const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
       
       // Calculate position
-      let top = rect.bottom + scrollTop + 8; // 8px gap
+      const top = rect.bottom + scrollTop + 8; // 8px gap
       let left = rect.left + scrollLeft;
       
       // Adjust if popover would go off the right edge of the screen
@@ -62,6 +60,7 @@ export function LocationPopover({
         window.removeEventListener('resize', updatePosition);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPopover]);
 
   // Close popover when clicking outside

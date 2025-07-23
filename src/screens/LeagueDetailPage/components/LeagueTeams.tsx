@@ -74,6 +74,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
 
   useEffect(() => {
     loadTeams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
 
   useEffect(() => {
@@ -89,7 +90,8 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
       setError(null);
 
       // Try to get teams with display_order first, fall back to created_at if column doesn't exist
-      let activeTeamsData, waitlistedTeamsData;
+      let activeTeamsData: ExtendedTeam[] = [];
+      let waitlistedTeamsData: ExtendedTeam[] = [];
       let dragSupported = true;
 
       // First attempt with display_order
@@ -177,7 +179,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
       setDragEnabled(dragSupported);
 
       // Helper function to process teams with payment data
-      const processTeamsWithPayments = async (teams: any[]) => {
+      const processTeamsWithPayments = async (teams: TeamData[]) => {
         if (!teams) return [];
         
         return Promise.all(
@@ -290,9 +292,10 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
         onTeamsUpdate();
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting team:', error);
-      showToast(error.message || 'Failed to delete team', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete team';
+      showToast(errorMessage, 'error');
     } finally {
       setDeleting(null);
     }
@@ -329,9 +332,10 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
         onTeamsUpdate();
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error moving team:', error);
-      showToast(error.message || 'Failed to move team', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to move team';
+      showToast(errorMessage, 'error');
     } finally {
       setMovingTeam(null);
     }
@@ -619,7 +623,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
   };
 
   // Helper function to render a team card (legacy - keeping for now)
-  const renderTeamCard = (team: TeamData, isWaitlisted: boolean = false) => (
+  const _renderTeamCard = (team: TeamData, isWaitlisted: boolean = false) => (
     <Card key={team.id} className={`shadow-md overflow-hidden rounded-lg ${isWaitlisted ? 'bg-gray-50' : ''}`}>
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4">

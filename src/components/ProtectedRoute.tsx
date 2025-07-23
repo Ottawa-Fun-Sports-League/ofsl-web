@@ -1,8 +1,8 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from './ui/button';
 import { supabase } from '../lib/supabase';
+import { logger } from '../lib/logger';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,8 +10,8 @@ interface ProtectedRouteProps {
   requireCompleteProfile?: boolean;
 }
 
-export function ProtectedRoute({ children, requireAdmin = false, requireCompleteProfile = true }: ProtectedRouteProps) {
-  const { user, userProfile, loading, profileComplete, refreshUserProfile } = useAuth();
+export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+  const { user, userProfile, loading, refreshUserProfile } = useAuth();
   const [fixingProfile, setFixingProfile] = useState(false);
   const [profileFixed, setProfileFixed] = useState(false);
   const location = useLocation();
@@ -65,6 +65,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requireComplete
       
       fixUserProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading, location]);
   
   // Attempt to fix missing user profile if user is authenticated but profile is missing
@@ -75,7 +76,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requireComplete
           setFixingProfile(true);
           
           // Call the RPC function to fix the user profile
-          const { data, error } = await supabase.rpc('check_and_fix_user_profile_v4', {
+          const { error } = await supabase.rpc('check_and_fix_user_profile_v4', {
             p_auth_id: user.id.toString(),
             p_email: user.email || null,
             p_name: user.user_metadata?.name || user.user_metadata?.full_name || null,
@@ -83,11 +84,13 @@ export function ProtectedRoute({ children, requireAdmin = false, requireComplete
           });
           
           if (error) {
+            logger.error("Failed to fix user profile via RPC", error);
           } else {
             // Refresh the user profile in AuthContext instead of forcing a page reload
             await refreshUserProfile();
           }
         } catch (err) {
+          logger.error("Failed to fix user profile", err);
         } finally {
           setFixingProfile(false);
           setProfileFixed(true);
@@ -96,6 +99,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requireComplete
     };
     
     attemptProfileFix();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userProfile, loading, fixingProfile, profileFixed]);
 
   if (loading || fixingProfile) {
