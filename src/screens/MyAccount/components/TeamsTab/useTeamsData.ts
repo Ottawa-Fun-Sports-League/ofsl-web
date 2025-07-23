@@ -130,11 +130,12 @@ export function useTeamsData(userId?: string) {
     if (!userId) return;
 
     try {
-      const payments = await getUserLeaguePayments();
+      const payments = await getUserLeaguePayments(userId);
       
       // Transform to match our local interface
       const transformedData = payments.map(payment => ({
         id: payment.id,
+        team_id: payment.team_id,
         league_name: payment.league_name,
         team_name: payment.team_name || '',
         amount_due: payment.amount_due,

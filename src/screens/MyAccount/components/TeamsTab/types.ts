@@ -1,5 +1,6 @@
 export interface LeaguePayment {
   id: number;
+  team_id: number | null;
   league_name: string;
   team_name: string;
   amount_due: number;
