@@ -170,7 +170,7 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
         type: 'recovery',
         email: userEmail,
         options: {
-          redirectTo: `${window.location.origin}/reset-password`
+          redirectTo: `${window.location.origin}/#/reset-password`
         }
       });
 
