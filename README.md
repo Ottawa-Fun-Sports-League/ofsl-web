@@ -30,7 +30,7 @@ npm run build
 Create a `.env` file in the root directory with the following variables:
 
 ```
-VITE_SUPABASE_URL=https://api.ofsl.ca  # Use your custom domain
+VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_STRIPE_PUBLISHABLE_KEY=your-publishable-key
 ```
