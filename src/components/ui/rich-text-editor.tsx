@@ -16,6 +16,9 @@ export function RichTextEditor({ value, onChange, placeholder, rows = 6 }: RichT
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
 
+  // Calculate initial height based on rows (moved before useEffect)
+  const initialHeight = `${Math.max(150, rows * 24)}px`;
+
   useEffect(() => {
     setEditorValue(value);
   }, [value]);
@@ -122,9 +125,6 @@ export function RichTextEditor({ value, onChange, placeholder, rows = 6 }: RichT
       }
     };
   }, []);
-
-  // Calculate initial height based on rows
-  const initialHeight = `${Math.max(150, rows * 24)}px`;
 
   const modules = {
     toolbar: [

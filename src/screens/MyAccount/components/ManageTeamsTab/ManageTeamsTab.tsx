@@ -4,8 +4,9 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Card, CardContent } from '../../../../components/ui/card';
-import { Search, Edit, Users, Calendar, User } from 'lucide-react';
+import { Search, Edit, Users, Calendar, User, LayoutGrid, Table } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ManageTeamsTableView } from './ManageTeamsTableView';
 
 interface Team {
   id: number;
@@ -27,6 +28,11 @@ export function ManageTeamsTab() {
   const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
+    // Get saved preference from localStorage
+    const saved = localStorage.getItem('manage_teams_view_mode');
+    return (saved as 'card' | 'table') || 'card';
+  });
 
   useEffect(() => {
     if (userProfile?.is_admin) {
@@ -146,20 +152,50 @@ export function ManageTeamsTab() {
         </p>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <Input
-            type="text"
-            placeholder="Search by team name or captain email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Search Bar and View Toggle */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Input
+              type="text"
+              placeholder="Search by team name or captain email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="text-sm text-gray-600">
+            {filteredTeams.length} of {teams.length} teams
+          </div>
         </div>
-        <div className="text-sm text-gray-600">
-          {filteredTeams.length} of {teams.length} teams
+        
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'card' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setViewMode('card');
+              localStorage.setItem('manage_teams_view_mode', 'card');
+            }}
+            className={viewMode === 'card' ? 'bg-[#B20000] hover:bg-[#8A0000]' : ''}
+          >
+            <LayoutGrid className="h-4 w-4 mr-1" />
+            Card
+          </Button>
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setViewMode('table');
+              localStorage.setItem('manage_teams_view_mode', 'table');
+            }}
+            className={viewMode === 'table' ? 'bg-[#B20000] hover:bg-[#8A0000]' : ''}
+          >
+            <Table className="h-4 w-4 mr-1" />
+            Table
+          </Button>
         </div>
       </div>
 
@@ -172,7 +208,7 @@ export function ManageTeamsTab() {
             </p>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === 'card' ? (
         <div className="space-y-4">
           {filteredTeams.map((team) => (
             <Card key={team.id} className={!team.active ? 'opacity-60' : ''}>
@@ -230,6 +266,11 @@ export function ManageTeamsTab() {
             </Card>
           ))}
         </div>
+      ) : (
+        <ManageTeamsTableView
+          teams={filteredTeams}
+          onEditTeam={handleEditTeam}
+        />
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import { ToastProvider } from '../components/ui/toast';
 import userEvent from '@testing-library/user-event';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '../types/auth';
+import { globalMockSupabase } from './mocks/setup-supabase';
 
 // Mock data for testing
 export const mockUser = {
@@ -146,11 +147,8 @@ export const customRender = (
     ...renderOptions
   }: CustomRenderOptions = {}
 ) => {
-  // Import global mock
-  /* eslint-disable @typescript-eslint/no-var-requires */
-  // @ts-expect-error - Dynamic import for test setup
-  const { globalMockSupabase: mockSupabase } = require('./mocks/setup-supabase');
-  /* eslint-enable @typescript-eslint/no-var-requires */
+  // Use the imported global mock
+  const mockSupabase = globalMockSupabase;
   
   // Clear any existing mocks
   vi.clearAllMocks();

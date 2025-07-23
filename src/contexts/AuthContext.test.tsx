@@ -39,14 +39,14 @@ const TestComponent = () => {
   
   if (loading) return <div>Loading...</div>;
   if (!user) return <div>Not authenticated</div>;
-  if (!profileComplete) return <div>Profile incomplete</div>;
+  // Don't render anything special for incomplete profile - let AuthContext handle redirect
   
-  return <div>Profile complete</div>;
+  return <div>Profile {profileComplete ? 'complete' : 'incomplete'}</div>;
 };
 
 describe('AuthContext Profile Completion Redirect', () => {
   let mockLocationReplace: jest.Mock;
-  let mockSupabase: ReturnType<typeof createMockSupabase>;
+  let mockSupabase: any;
   
   beforeEach(async () => {
     // Reset all mocks

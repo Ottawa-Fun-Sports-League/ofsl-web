@@ -33,7 +33,12 @@ vi.mock('react-router-dom', () => ({
 const TestComponent = () => {
   const { user, loading, profileComplete } = useAuth();
   
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#B20000]"></div>
+      <p className="mt-4 text-[#6F6F6F]">Initializing authentication...</p>
+    </div>
+  );
   if (!user) return <div>Not authenticated</div>;
   if (!profileComplete) return <div>Profile incomplete</div>;
   
@@ -95,7 +100,7 @@ describe('AuthContext Basic Flow', () => {
       </AuthProvider>
     );
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByText('Initializing authentication...')).toBeInTheDocument();
   });
 
   it('should redirect to complete-profile for incomplete profile', async () => {
