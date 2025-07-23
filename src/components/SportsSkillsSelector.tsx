@@ -1,4 +1,4 @@
-import { X, Plus } from "lucide-react";
+import { X, Plus, Edit2 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Tooltip,
@@ -43,6 +43,7 @@ export function SportsSkillsSelector({
   onChange,
   error,
   onSave,
+  saving = false,
   showTitle = true,
   className = "",
 }: SportsSkillsSelectorProps) {
@@ -52,10 +53,41 @@ export function SportsSkillsSelector({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showAddInterface, setShowAddInterface] = useState(false);
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingSportSkill, setEditingSportSkill] = useState<SportSkill | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [originalValue, setOriginalValue] = useState<SportSkill[]>(value);
+  const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
     loadSportsAndSkills();
   }, []);
+
+  // Initialize originalValue when component first receives a non-empty value
+  useEffect(() => {
+    if (!hasUnsavedChanges && JSON.stringify(originalValue) === '[]' && value.length > 0) {
+      setOriginalValue(value);
+    }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track when value prop changes to detect successful saves
+  useEffect(() => {
+    // Only reset if the value actually changed (not just a re-render)
+    const valueStr = JSON.stringify(value);
+    const originalStr = JSON.stringify(originalValue);
+    
+    if (valueStr !== originalStr) {
+      if (justSaved) {
+        // This was a save operation, reset the flags
+        setOriginalValue(value);
+        setHasUnsavedChanges(false);
+        setJustSaved(false);
+      } else {
+        // This is either initial load or parent updated without save
+        // Don't reset hasUnsavedChanges here
+      }
+    }
+  }, [value, justSaved]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadSportsAndSkills = async () => {
     try {
@@ -85,13 +117,7 @@ export function SportsSkillsSelector({
     const newSportsSkills = [...value];
     newSportsSkills.splice(index, 1);
     onChange(newSportsSkills);
-
-    // Save immediately if onSave is provided
-    if (onSave) {
-      setTimeout(() => {
-        onSave();
-      }, 0);
-    }
+    setHasUnsavedChanges(true);
   };
 
   const handleAddSportSkill = async (sport: Sport, skill: Skill) => {
@@ -108,11 +134,37 @@ export function SportsSkillsSelector({
     onChange(newSportsSkills);
     setShowAddInterface(false);
     setSelectedSport(null);
+    setHasUnsavedChanges(true);
+  };
 
-    // Save immediately if onSave is provided
-    if (onSave) {
-      await onSave();
+  const handleEditSportSkill = (index: number) => {
+    const sportSkill = value[index];
+    setEditingIndex(index);
+    setEditingSportSkill(sportSkill);
+    const sport = sports.find(s => s.id === sportSkill.sport_id);
+    if (sport) {
+      setSelectedSport(sport);
     }
+    setShowAddInterface(true);
+  };
+
+  const handleUpdateSportSkill = async (sport: Sport, skill: Skill) => {
+    if (editingIndex === null) return;
+
+    const newSportsSkills = [...value];
+    newSportsSkills[editingIndex] = {
+      sport_id: sport.id,
+      skill_id: skill.id,
+      sport_name: sport.name,
+      skill_name: skill.name,
+    };
+
+    onChange(newSportsSkills);
+    setShowAddInterface(false);
+    setSelectedSport(null);
+    setEditingIndex(null);
+    setEditingSportSkill(null);
+    setHasUnsavedChanges(true);
   };
 
   const handleShowAddInterface = () => {
@@ -122,10 +174,35 @@ export function SportsSkillsSelector({
   const handleCancelAdd = () => {
     setShowAddInterface(false);
     setSelectedSport(null);
+    setEditingIndex(null);
+    setEditingSportSkill(null);
+  };
+
+  const handleSaveChanges = async () => {
+    if (onSave) {
+      setJustSaved(true);
+      const success = await onSave();
+      if (success) {
+        // The useEffect will handle resetting hasUnsavedChanges when value updates
+      } else {
+        setJustSaved(false);
+      }
+    }
+  };
+
+  const handleCancelChanges = () => {
+    onChange(originalValue);
+    setHasUnsavedChanges(false);
   };
 
   const getAvailableSports = () => {
     const selectedSportIds = value.map((item: SportSkill) => item.sport_id);
+    // When editing, include the currently edited sport in available sports
+    if (editingIndex !== null && editingSportSkill) {
+      return sports.filter((sport) => 
+        sport.id === editingSportSkill.sport_id || !selectedSportIds.includes(sport.id)
+      );
+    }
     return sports.filter((sport) => !selectedSportIds.includes(sport.id));
   };
 
@@ -197,15 +274,34 @@ export function SportsSkillsSelector({
               Sports & Skill Levels
             </h2>
           </div>
-          {getAvailableSports().length > 0 && (
-            <Button
-              onClick={handleShowAddInterface}
-              className="border border-[#B20000] text-[#B20000] bg-white hover:bg-[#B20000] hover:text-white rounded-lg px-4 py-2 flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {hasUnsavedChanges && (
+              <>
+                <Button
+                  onClick={handleCancelChanges}
+                  className="border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 rounded-lg px-4 py-2"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveChanges}
+                  disabled={saving}
+                  className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-4 py-2 flex items-center gap-2"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </>
+            )}
+            {getAvailableSports().length > 0 && !hasUnsavedChanges && (
+              <Button
+                onClick={handleShowAddInterface}
+                className="border border-[#B20000] text-[#B20000] bg-white hover:bg-[#B20000] hover:text-white rounded-lg px-4 py-2 flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -213,18 +309,39 @@ export function SportsSkillsSelector({
         <div className="space-y-2 mb-4">
           <div className="flex justify-between items-center">
             <label className="block text-sm font-medium text-[#6F6F6F]">
-              Sports & Skill Levels *
+              Sports & Skill Levels * {hasUnsavedChanges && <span className="text-amber-600 text-xs ml-2">(unsaved changes)</span>}
             </label>
-            {getAvailableSports().length > 0 && (
-              <Button
-                type="button"
-                onClick={handleShowAddInterface}
-                className="border border-[#B20000] text-[#B20000] bg-white hover:bg-[#B20000] hover:text-white rounded-lg px-3 py-1 h-8 flex items-center gap-1 text-sm"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {hasUnsavedChanges && (
+                <>
+                  <Button
+                    type="button"
+                    onClick={handleCancelChanges}
+                    className="border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 rounded-lg px-3 py-1 h-8 text-sm"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSaveChanges}
+                    disabled={saving}
+                    className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-3 py-1 h-8 text-sm"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </Button>
+                </>
+              )}
+              {getAvailableSports().length > 0 && !hasUnsavedChanges && (
+                <Button
+                  type="button"
+                  onClick={handleShowAddInterface}
+                  className="border border-[#B20000] text-[#B20000] bg-white hover:bg-[#B20000] hover:text-white rounded-lg px-3 py-1 h-8 flex items-center gap-1 text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              )}
+            </div>
           </div>
           <p className="text-xs text-gray-500">
             Select the sports you&apos;re interested in playing and your skill level for each one.
@@ -259,17 +376,32 @@ export function SportsSkillsSelector({
                 >
                   {sportSkill.skill_name || `Skill ${sportSkill.skill_id}`}
                 </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleRemoveSportSkill(index);
-                  }}
-                  className="bg-transparent hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full p-0.5 h-4 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleEditSportSkill(index);
+                    }}
+                    className="bg-transparent hover:bg-gray-100 text-gray-400 hover:text-blue-600 rounded-full p-0.5 h-4 w-4 flex items-center justify-center flex-shrink-0"
+                    title="Edit"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleRemoveSportSkill(index);
+                    }}
+                    className="bg-transparent hover:bg-gray-100 text-gray-400 hover:text-red-600 rounded-full p-0.5 h-4 w-4 flex items-center justify-center flex-shrink-0"
+                    title="Remove"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -278,7 +410,7 @@ export function SportsSkillsSelector({
             <div className="bg-white border-2 border-[#B20000] rounded-md p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-[#6F6F6F]">
-                  Add Sport & Skill Level
+                  {editingIndex !== null ? 'Edit' : 'Add'} Sport & Skill Level
                 </h3>
                 <Button
                   type="button"
@@ -330,7 +462,9 @@ export function SportsSkillsSelector({
                             <Button
                               type="button"
                               onClick={() =>
-                                handleAddSportSkill(selectedSport, skill)
+                                editingIndex !== null 
+                                  ? handleUpdateSportSkill(selectedSport, skill)
+                                  : handleAddSportSkill(selectedSport, skill)
                               }
                               className={`text-left border-2 rounded-lg p-4 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:shadow-sm ${getSkillLevelColor(skill.name)} ${getSkillLevelHoverColor(skill.name)}`}
                             >
@@ -373,7 +507,7 @@ export function SportsSkillsSelector({
             <div className="bg-white border-2 border-[#B20000] rounded-md p-4 max-w-md mx-auto">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-[#6F6F6F]">
-                  Add Sport & Skill Level
+                  {editingIndex !== null ? 'Edit' : 'Add'} Sport & Skill Level
                 </h3>
                 <Button
                   type="button"
@@ -425,7 +559,9 @@ export function SportsSkillsSelector({
                             <Button
                               type="button"
                               onClick={() =>
-                                handleAddSportSkill(selectedSport, skill)
+                                editingIndex !== null 
+                                  ? handleUpdateSportSkill(selectedSport, skill)
+                                  : handleAddSportSkill(selectedSport, skill)
                               }
                               className={`text-left border-2 rounded-lg p-4 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:shadow-sm ${getSkillLevelColor(skill.name)} ${getSkillLevelHoverColor(skill.name)}`}
                             >

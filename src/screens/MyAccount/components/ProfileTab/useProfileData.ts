@@ -29,35 +29,6 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
         
         setSports(sportsResponse.data || []);
         setSkills(skillsResponse.data || []);
-        
-        // If we have user_sports_skills, enrich them with names
-        // Only update if this is meaningful data (not just a temporary state)
-        if (userProfile?.user_sports_skills && userProfile.user_sports_skills.length > 0) {
-          const enrichedSportsSkills = userProfile.user_sports_skills.map((item: SportSkill) => {
-            const sport = sportsResponse.data?.find(s => s.id === item.sport_id);
-            const skill = skillsResponse.data?.find(s => s.id === item.skill_id);
-            
-            return {
-              ...item,
-              sport_name: sport?.name,
-              skill_name: skill?.name
-            };
-          });
-          
-          setProfile(prev => {
-            // Only update if the enriched skills are different from current
-            const currentSkillsStr = JSON.stringify(prev.user_sports_skills);
-            const newSkillsStr = JSON.stringify(enrichedSportsSkills);
-            
-            if (currentSkillsStr !== newSkillsStr) {
-              return {
-                ...prev,
-                user_sports_skills: enrichedSportsSkills
-              };
-            }
-            return prev;
-          });
-        }
       } catch (error) {
         logger.error('Error loading sports and skills', error);
       } finally {
@@ -66,16 +37,28 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
     };
     
     loadSportsAndSkills();
-  }, [userProfile?.user_sports_skills]);
+  }, []); // Only load once on mount
 
   // Update profile when userProfile changes, but only if it's a meaningful change
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile && sports.length > 0 && skills.length > 0) {
+      // Enrich sports skills with names
+      const enrichedSportsSkills = (userProfile.user_sports_skills || []).map((item: SportSkill) => {
+        const sport = sports.find(s => s.id === item.sport_id);
+        const skill = skills.find(s => s.id === item.skill_id);
+        
+        return {
+          ...item,
+          sport_name: sport?.name,
+          skill_name: skill?.name
+        };
+      });
+      
       const newProfile = {
         name: userProfile.name || '',
         phone: userProfile.phone || '',
         email: userProfile.email || '',
-        user_sports_skills: userProfile.user_sports_skills || []
+        user_sports_skills: enrichedSportsSkills
       };
       
       // Only update if this is the first load or if the changes are different from what we last saved
@@ -87,8 +70,19 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
         setProfile(newProfile);
         lastSavedProfile.current = newProfile;
       }
+    } else if (userProfile && (sports.length === 0 || skills.length === 0)) {
+      // If sports/skills haven't loaded yet, just set basic profile without enrichment
+      const newProfile = {
+        name: userProfile.name || '',
+        phone: userProfile.phone || '',
+        email: userProfile.email || '',
+        user_sports_skills: userProfile.user_sports_skills || []
+      };
+      
+      setProfile(newProfile);
+      lastSavedProfile.current = newProfile;
     }
-  }, [userProfile]);
+  }, [userProfile, sports, skills]);
 
   const handleNotificationToggle = (key: keyof typeof notifications) => {
     setNotifications(prev => ({

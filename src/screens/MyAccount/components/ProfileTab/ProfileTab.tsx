@@ -56,8 +56,8 @@ export function ProfileTab() {
   };
 
   const handleSaveSports = async () => {
-    // Skip refresh for sports saves to prevent race condition - use optimistic updates instead
-    const success = await handleProfileSave(profile, true);
+    // Save the profile and refresh to ensure data consistency
+    const success = await handleProfileSave(profile);
     if (success) {
       markProfileAsSaved(profile);
     }
