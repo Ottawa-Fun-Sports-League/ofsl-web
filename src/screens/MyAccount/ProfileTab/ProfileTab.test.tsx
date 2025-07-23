@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ProfileTab } from './ProfileTab';
+import { ProfileTab } from '../components/ProfileTab/ProfileTab';
 import { render, mockUser, mockUserProfile } from '../../../test/test-utils';
 import { mockSupabase } from '../../../test/mocks/supabase-enhanced';
 

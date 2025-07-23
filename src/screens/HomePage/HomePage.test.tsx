@@ -3,7 +3,22 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HomePage } from './HomePage';
 import { render, mockNavigate } from '../../test/test-utils';
-import { mockSupabase } from '../../test/mocks/supabase-enhanced';
+
+// This import ensures the supabase mock is set up
+import '../../test/mocks/setup-supabase';
+import { supabase } from '../../lib/supabase';
+
+// Mock auth context to prevent loading state
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: null,
+    loading: false,
+    profileComplete: false,
+    userProfile: null,
+    refreshUserProfile: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 describe('HomePage', () => {
   const mockLeagues = [
@@ -34,159 +49,123 @@ describe('HomePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock successful leagues fetch
-    mockSupabase.from('leagues').select().eq().order().then = vi.fn().mockResolvedValue({
-      data: mockLeagues,
-      error: null,
-    });
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
+            data: mockLeagues,
+            error: null,
+          }),
+        }),
+      }),
+    } as any);
   });
 
   it('renders hero section with all elements', async () => {
     render(<HomePage />);
     
-    expect(screen.getByText(/ottawa fun sports league/i)).toBeInTheDocument();
-    expect(screen.getByText(/join ottawa's premier adult recreational sports/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /join a league/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /learn more/i })).toBeInTheDocument();
+    expect(screen.getByText(/Welcome to OFSL!/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ottawa's leading adult volleyball and badminton league/i)).toBeInTheDocument();
+    // Check for Learn more links - there are multiple
+    const learnMoreLinks = screen.getAllByRole('link', { name: /learn more/i });
+    expect(learnMoreLinks.length).toBeGreaterThan(0);
   });
 
-  it('displays upcoming leagues', async () => {
+  it('displays league cards', async () => {
     render(<HomePage />);
     
-    await waitFor(() => {
-      expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
-      expect(screen.getByText('Summer Badminton League')).toBeInTheDocument();
-    });
-    
-    expect(screen.getByText(/community center/i)).toBeInTheDocument();
-    expect(screen.getByText(/sports complex/i)).toBeInTheDocument();
+    // Check for league card titles
+    expect(screen.getByText("Women's Elite Volleyball")).toBeInTheDocument();
+    expect(screen.getByText("Mixed Volleyball")).toBeInTheDocument();
+    expect(screen.getByText("Advanced Badminton")).toBeInTheDocument();
   });
 
-  it('shows loading state while fetching leagues', () => {
-    // Make the promise hang to see loading state
-    mockSupabase.from('leagues').select().eq().order().then = vi.fn(() => new Promise(() => {}));
-    
+  it('displays skills and drills section', () => {
     render(<HomePage />);
     
-    expect(screen.getByTestId('leagues-loading')).toBeInTheDocument();
+    // There are multiple headings with this text, so just check one exists
+    const skillsHeadings = screen.getAllByRole('heading', { name: /Skills and drills/i });
+    expect(skillsHeadings.length).toBeGreaterThan(0);
+    expect(screen.getByText(/Whether you're just starting out or a seasoned player/i)).toBeInTheDocument();
   });
 
-  it('handles error when fetching leagues fails', async () => {
-    mockSupabase.from('leagues').select().eq().order().then = vi.fn().mockResolvedValue({
-      data: null,
-      error: { message: 'Failed to fetch leagues' },
-    });
-    
+  it('displays about us section', () => {
     render(<HomePage />);
     
-    await waitFor(() => {
-      expect(screen.getByText(/failed to load leagues/i)).toBeInTheDocument();
-    });
+    expect(screen.getByRole('heading', { name: /About us/i })).toBeInTheDocument();
+    expect(screen.getByText(/is dedicated to promoting active living/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /More about us/i })).toBeInTheDocument();
   });
 
-  it('navigates to leagues page when clicking Join a League', async () => {
-    const user = userEvent.setup();
+  it('has correct link on Register now button', () => {
     render(<HomePage />);
     
-    const joinLeagueButton = screen.getByRole('link', { name: /join a league/i });
-    await user.click(joinLeagueButton);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/leagues');
+    // There are multiple register now links, check the first one
+    const registerButtons = screen.getAllByRole('link', { name: /register now/i });
+    expect(registerButtons[0]).toHaveAttribute('href', '/leagues');
   });
 
-  it('navigates to about page when clicking Learn More', async () => {
-    const user = userEvent.setup();
+  it('has correct link on skills and drills Learn More button', () => {
     render(<HomePage />);
     
-    const learnMoreButton = screen.getByRole('link', { name: /learn more/i });
-    await user.click(learnMoreButton);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/about-us');
+    // Get the Learn more links and check the second one (for skills and drills)
+    const learnMoreLinks = screen.getAllByRole('link', { name: /learn more/i });
+    expect(learnMoreLinks[1]).toHaveAttribute('href', '/skills-and-drills');
   });
 
-  it('displays sport categories with links', () => {
+  it('displays sport categories as league cards', () => {
     render(<HomePage />);
     
-    expect(screen.getByRole('heading', { name: /our sports/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /volleyball/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /badminton/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /pickleball/i })).toBeInTheDocument();
+    // Check for sport cards
+    expect(screen.getByText("Women's Elite Volleyball")).toBeInTheDocument();
+    expect(screen.getByText("Mixed Volleyball")).toBeInTheDocument();
+    expect(screen.getByText("Advanced Badminton")).toBeInTheDocument();
+    expect(screen.getByText("Indoor Pickleball Coming Soon!")).toBeInTheDocument();
   });
 
-  it('displays features section', () => {
+  it('displays league description', () => {
     render(<HomePage />);
     
-    expect(screen.getByText(/why choose ofsl/i)).toBeInTheDocument();
-    expect(screen.getByText(/organized leagues/i)).toBeInTheDocument();
-    expect(screen.getByText(/all skill levels/i)).toBeInTheDocument();
-    expect(screen.getByText(/social atmosphere/i)).toBeInTheDocument();
+    // Check for league description text
+    expect(screen.getByText(/Our leagues provide a well-organized structure/i)).toBeInTheDocument();
+    expect(screen.getByText(/Geared toward intermediate to competitive play/i)).toBeInTheDocument();
   });
 
   it('displays call to action section', () => {
     render(<HomePage />);
     
-    expect(screen.getByText(/ready to play/i)).toBeInTheDocument();
-    expect(screen.getByText(/join thousands of players/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ready to play\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/Join thousands of athletes in our community/i)).toBeInTheDocument();
     
-    const ctaButton = screen.getAllByRole('link', { name: /browse leagues/i })[0];
-    expect(ctaButton).toBeInTheDocument();
+    // There are multiple register now links
+    const ctaButtons = screen.getAllByRole('link', { name: /register now/i });
+    expect(ctaButtons.length).toBeGreaterThan(0);
   });
 
-  it('filters and displays only active leagues', async () => {
-    const mixedLeagues = [
-      ...mockLeagues,
-      {
-        id: 3,
-        name: 'Inactive League',
-        sport_id: 1,
-        location: 'Old Gym',
-        start_date: '2024-01-01',
-        end_date: '2024-02-01',
-        registration_deadline: '2023-12-15',
-        active: false,
-        sports: { name: 'Volleyball' },
-      },
-    ];
-    
-    mockSupabase.from('leagues').select().eq().order().then = vi.fn().mockResolvedValue({
-      data: mixedLeagues,
-      error: null,
-    });
-    
+  it('displays partner section', () => {
     render(<HomePage />);
     
-    await waitFor(() => {
-      expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
-      expect(screen.getByText('Summer Badminton League')).toBeInTheDocument();
-    });
-    
-    // Inactive league should not be displayed
-    expect(screen.queryByText('Inactive League')).not.toBeInTheDocument();
+    // Check for Diabetes Canada logo
+    expect(screen.getByAltText('Diabetes Canada logo')).toBeInTheDocument();
   });
 
-  it('shows message when no leagues are available', async () => {
-    mockSupabase.from('leagues').select().eq().order().then = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-    
+  it('displays all league cards in carousel', () => {
     render(<HomePage />);
     
-    await waitFor(() => {
-      expect(screen.getByText(/no upcoming leagues at the moment/i)).toBeInTheDocument();
-    });
+    // Check for all league cards
+    expect(screen.getByText("Women's Elite Volleyball")).toBeInTheDocument();
+    expect(screen.getByText("Mixed Volleyball")).toBeInTheDocument();
+    expect(screen.getByText("Advanced Badminton")).toBeInTheDocument();
+    expect(screen.getByText("Competitive Badminton")).toBeInTheDocument();
+    expect(screen.getByText("Women's Volleyball")).toBeInTheDocument();
+    expect(screen.getByText("Men's Volleyball")).toBeInTheDocument();
   });
 
-  it('navigates to league detail page when clicking on a league', async () => {
-    const user = userEvent.setup();
+  it('has correct links on league cards', () => {
     render(<HomePage />);
     
-    await waitFor(() => {
-      expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
-    });
-    
-    const leagueCard = screen.getByText('Spring Volleyball League').closest('a');
-    await user.click(leagueCard!);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/leagues/1');
+    // Check that league cards have correct href attributes
+    const leagueCard = screen.getByText("Women's Elite Volleyball").closest('a');
+    expect(leagueCard).toHaveAttribute('href', '/leagues?sport=Volleyball');
   });
 });

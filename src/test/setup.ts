@@ -1,8 +1,6 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
-
-// Mock supabase
-vi.mock('../lib/supabase');
+import './mocks/setup-supabase';
 
 // Mock window.location methods
 Object.defineProperty(window, 'location', {
