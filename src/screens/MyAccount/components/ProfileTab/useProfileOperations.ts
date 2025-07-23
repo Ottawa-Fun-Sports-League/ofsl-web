@@ -3,7 +3,7 @@ import { supabase } from '../../../../lib/supabase';
 import { useToast } from '../../../../components/ui/toast';
 import { Profile } from './types';
 
-export function useProfileOperations(userProfile: any, refreshUserProfile: () => Promise<void>) {
+export function useProfileOperations(userProfile: { id: string } | null, refreshUserProfile: () => Promise<void>) {
   const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
 

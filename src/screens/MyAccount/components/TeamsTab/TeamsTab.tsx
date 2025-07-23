@@ -12,7 +12,7 @@ import { CheckCircle } from 'lucide-react';
 
 export function TeamsTab() {
   const { user, userProfile } = useAuth();
-  const { leaguePayments, teams, loading, setLeaguePayments, setTeams, refetchTeams, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
+  const { leaguePayments, teams, loading, setLeaguePayments, refetchTeams, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
   const { unregisteringPayment, handleUnregister } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
@@ -196,7 +196,7 @@ export function TeamsTab() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-1">Welcome to OFSL!</h3>
                 <p className="text-gray-700">
-                  You've been automatically added to the following team{welcomeTeams.length > 1 ? 's' : ''}:
+                  You&apos;ve been automatically added to the following team{welcomeTeams.length > 1 ? 's' : ''}:
                 </p>
                 <ul className="mt-2 space-y-1">
                   {welcomeTeams.map((team, index) => (

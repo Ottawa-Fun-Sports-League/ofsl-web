@@ -149,7 +149,10 @@ export function CompleteProfilePage() {
     setSaving(true);
     try {
       // Remove sport_name and skill_name before saving (they're not stored in DB)
-      const sportsSkillsToSave = userSportsSkills.map(({ sport_name, skill_name, ...rest }) => rest);
+      const sportsSkillsToSave = userSportsSkills.map((item) => {
+        const { sport_name: _sport_name, skill_name: _skill_name, ...rest } = item;
+        return rest;
+      });
       
       const { error } = await supabase
         .from('users')

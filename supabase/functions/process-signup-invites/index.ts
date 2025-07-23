@@ -114,6 +114,7 @@ serve(async (req) => {
           }
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error(`Error processing invite ${invite.id}:`, error);
       }
     }
@@ -131,6 +132,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error processing signup invites:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

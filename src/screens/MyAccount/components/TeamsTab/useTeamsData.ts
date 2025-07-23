@@ -12,9 +12,10 @@ export function useTeamsData(userId?: string) {
     if (userId) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const fetchLeaguePayments = async () => {
+  const _fetchLeaguePayments = async () => {
     if (!userId) return;
 
     try {
@@ -109,7 +110,8 @@ export function useTeamsData(userId?: string) {
       }));
       
       // Debug: show the roster for each team to verify user is not in it
-      teamsData.forEach(team => {
+      teamsData.forEach(_team => {
+        // Debug logging removed
       });
       setTeams(teamsData);
       return teamsData;

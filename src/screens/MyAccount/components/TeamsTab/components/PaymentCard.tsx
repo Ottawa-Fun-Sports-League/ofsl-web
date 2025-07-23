@@ -38,7 +38,7 @@ export function PaymentCard({ payment, onUnregister, unregisteringPayment }: Pay
         
         <div className="flex items-center gap-2">
           <PaymentStatusBadge 
-            status={payment.status as any} 
+            status={payment.status} 
             size="sm"
           />
           

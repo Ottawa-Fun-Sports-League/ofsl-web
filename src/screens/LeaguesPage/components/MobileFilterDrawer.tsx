@@ -1,4 +1,4 @@
-import { X, Filter } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 
 interface MobileFilterDrawerProps {
@@ -38,7 +38,7 @@ export function MobileFilterDrawer({
   isAnyFilterActive,
   clearSkillLevels
 }: MobileFilterDrawerProps) {
-  const sportFilterOptions = ["All Sports", ...sports.map(sport => sport.name)];
+  const _sportFilterOptions = ["All Sports", ...sports.map(sport => sport.name)];
   const skillFilterOptions = ["All Skill Levels", ...skills.map(skill => skill.name)];
 
   // Function to get sport icon based on sport type

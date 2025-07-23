@@ -47,7 +47,7 @@ export function CopyLeagueDialog({
               <h3 className="text-lg font-medium text-gray-900">Copy League</h3>
               <div className="mt-2">
                 <p className="text-sm text-gray-500">
-                  Create a new league with the same settings as "{league?.name}"
+                  Create a new league with the same settings as &ldquo;{league?.name}&rdquo;
                 </p>
               </div>
             </div>

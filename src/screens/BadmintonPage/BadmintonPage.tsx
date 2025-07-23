@@ -36,7 +36,7 @@ export const BadmintonPage = (): JSX.Element => {
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Badminton Leagues</h1>
             <p className="text-xl max-w-2xl mx-auto mb-8">
-              OFSL's badminton leagues offer high-caliber play for a range of skill levels, from competitive to advanced. Enjoy fast-paced action and elevate your game in a supportive and inclusive community.
+              OFSL&apos;s badminton leagues offer high-caliber play for a range of skill levels, from competitive to advanced. Enjoy fast-paced action and elevate your game in a supportive and inclusive community.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
               <Link to="/leagues?sport=Badminton" className="w-full sm:w-auto">
@@ -63,7 +63,7 @@ export const BadmintonPage = (): JSX.Element => {
           {/* About badminton leagues text */}
           <div className="text-center mb-12">
             <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-              OFSL’s badminton leagues feature doubles play across competitive and advanced skill levels. Designed to deliver exciting matchups in a fun and inclusive environment, our leagues offer the perfect balance of challenge and community. Whether you're looking to sharpen your skills or compete at a higher level, there's a spot for you.
+              OFSL&apos;s badminton leagues feature doubles play across competitive and advanced skill levels. Designed to deliver exciting matchups in a fun and inclusive environment, our leagues offer the perfect balance of challenge and community. Whether you&apos;re looking to sharpen your skills or compete at a higher level, there&apos;s a spot for you.
 
             </p>
           </div>
@@ -151,7 +151,7 @@ export const BadmintonPage = (): JSX.Element => {
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Individual registration available — we’ll recommend an evening that matches your skill level
+                  <span>Individual registration available — we&apos;ll recommend an evening that matches your skill level
 .</span>
                 </li>
               </ul>

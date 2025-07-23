@@ -4,7 +4,7 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { useToast } from '../../../../components/ui/toast';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { X, UserPlus, Trash2, Mail, Phone, User, Send, Crown } from 'lucide-react';
+import { X, UserPlus, Trash2, Mail, Phone, User, Send } from 'lucide-react';
 
 interface User {
   id: string;
@@ -66,6 +66,7 @@ export function TeammateManagementModal({
       }, 100);
       return () => clearTimeout(timeoutId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, teamId]); // Use teamId instead of currentRoster to avoid stale data
 
   // Force reload teammates when currentRoster changes (after Edge Function updates)
@@ -73,6 +74,7 @@ export function TeammateManagementModal({
     if (isOpen) {
       loadTeammates();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]); // Only reload if teamId changes while modal is open
 
   const loadTeammates = async () => {
@@ -80,7 +82,7 @@ export function TeammateManagementModal({
       setLoading(true);
       
       // Try refreshing the session first
-      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      const { data: { session } } = await supabase.auth.refreshSession();
       
       if (!session) {
         throw new Error('No authentication session found after refresh');

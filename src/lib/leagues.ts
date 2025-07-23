@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { logger } from "./logger";
 
 export interface League {
   id: number;
@@ -179,7 +180,7 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
       .order("created_at", { ascending: false });
 
     if (leaguesError) {
-      console.error("Error fetching leagues:", leaguesError);
+      logger.error("Error fetching leagues", leaguesError);
       return [];
     }
 
@@ -192,7 +193,7 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
       .eq("active", true);
 
     if (teamCountsError) {
-      console.error("Error fetching team counts:", teamCountsError);
+      logger.error("Error fetching team counts", teamCountsError);
     }
 
     // Get all unique gym IDs
@@ -214,7 +215,7 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
       .in("id", Array.from(allGymIds));
 
     if (gymsError) {
-      console.error("Error fetching gyms:", gymsError);
+      logger.error("Error fetching gyms", gymsError);
     }
 
     const gymsMap = new Map(gymsData?.map((gym) => [gym.id, gym]) || []);
@@ -225,7 +226,7 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
       .select("id, name");
 
     if (skillsError) {
-      console.error("Error fetching skills:", skillsError);
+      logger.error("Error fetching skills", skillsError);
     }
 
     const skillsMap = new Map(
@@ -273,7 +274,7 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
 
     return leagues;
   } catch (error) {
-    console.error("Error in fetchLeagues:", error);
+    logger.error("Error in fetchLeagues", error);
     return [];
   }
 };
@@ -294,7 +295,7 @@ export const fetchLeagueById = async (id: number): Promise<League | null> => {
       .single();
 
     if (error) {
-      console.error("Error fetching league:", error);
+      logger.error("Error fetching league", error);
       return null;
     }
 
@@ -329,7 +330,7 @@ export const fetchLeagueById = async (id: number): Promise<League | null> => {
         .in("id", gymIds);
 
       if (gymsError) {
-        console.error("Error fetching gyms:", gymsError);
+        logger.error("Error fetching gyms", gymsError);
       } else {
         gyms = gymsData || [];
       }
@@ -343,7 +344,7 @@ export const fetchLeagueById = async (id: number): Promise<League | null> => {
       gyms: gyms || [],
     };
   } catch (error) {
-    console.error("Error in fetchLeagueById:", error);
+    logger.error("Error in fetchLeagueById", error);
     return null;
   }
 };
@@ -357,7 +358,7 @@ export const fetchSports = async () => {
     .order("name");
 
   if (error) {
-    console.error("Error fetching sports:", error);
+    logger.error("Error fetching sports", error);
     return [];
   }
 
@@ -372,7 +373,7 @@ export const fetchSkills = async () => {
     .order("order_index");
 
   if (error) {
-    console.error("Error fetching skills:", error);
+    logger.error("Error fetching skills", error);
     return [];
   }
 

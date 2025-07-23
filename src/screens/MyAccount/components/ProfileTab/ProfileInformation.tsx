@@ -7,7 +7,7 @@ interface ProfileInformationProps {
   profile: Profile;
   isEditing: boolean;
   saving: boolean;
-  userProfile: any;
+  userProfile: Profile;
   onEdit: () => void;
   onSave: () => void;
   onCancel: () => void;
@@ -18,7 +18,6 @@ export function ProfileInformation({
   profile,
   isEditing,
   saving,
-  userProfile,
   onEdit,
   onSave,
   onCancel,

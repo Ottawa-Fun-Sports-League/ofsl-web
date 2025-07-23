@@ -26,7 +26,7 @@ export function ComingSoonPage() {
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Coming Soon</h1>
             <p className="text-lg text-gray-600 mb-6">
-              We're working hard to bring you something amazing!
+              We&apos;re working hard to bring you something amazing!
             </p>
             <p className="text-sm text-gray-500 mb-8">
               The Ottawa Fun Sports League website is currently under construction. 
@@ -43,7 +43,7 @@ export function ComingSoonPage() {
             </Button>
             
             <p className="text-xs text-gray-400">
-              If you're an administrator, please contact support for access.
+              If you&apos;re an administrator, please contact support for access.
             </p>
           </div>
         </div>

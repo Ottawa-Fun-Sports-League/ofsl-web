@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { ChevronDown, X, MapPin, Calendar, Clock, Users, DollarSign, Filter } from "lucide-react";
@@ -10,15 +10,28 @@ import {
   getDayName,
   formatLeagueDates,
   getPrimaryLocation,
-  getGymNames,
   getGymNamesByLocation,
   LeagueWithTeamCount 
 } from "../../lib/leagues";
-import { formatPrice } from '../../stripe-config';
 import { getStripeProductByLeagueId } from '../../lib/stripe';
 import { useAuth } from "../../contexts/AuthContext";
 import { MobileFilterDrawer } from "./components/MobileFilterDrawer";
+
+interface StripeProductDB {
+  id: string;
+  price_id: string;
+  name: string;
+  description: string;
+  mode: string;
+  price: number;
+  currency: string;
+  interval: string | null;
+  league_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
 import { LocationPopover } from "../../components/ui/LocationPopover";
+import { logger } from "../../lib/logger";
 
 // Filter options data
 const filterOptions = {
@@ -30,7 +43,7 @@ const filterOptions = {
 
 export const LeaguesPage = (): JSX.Element => {
   const [searchParams] = useSearchParams();
-  const { userProfile } = useAuth();
+  const { _userProfile } = useAuth();
   
   // Data state
   const [leagues, setLeagues] = useState<LeagueWithTeamCount[]>([]);
@@ -40,7 +53,7 @@ export const LeaguesPage = (): JSX.Element => {
   const [error, setError] = useState<string | null>(null);
 
   // State for Stripe products
-  const [leagueProducts, setLeagueProducts] = useState<Record<number, any>>({});
+  const [_leagueProducts, setLeagueProducts] = useState<Record<number, StripeProductDB>>({});
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -71,6 +84,7 @@ export const LeaguesPage = (): JSX.Element => {
     if (leagues.length > 0) {
       loadStripeProducts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagues]);
 
   // Initialize filters from URL parameters
@@ -95,7 +109,7 @@ export const LeaguesPage = (): JSX.Element => {
 
   const loadStripeProducts = async () => {
     try {
-      const productMap: Record<number, any> = {};
+      const productMap: Record<number, StripeProductDB> = {};
       
       // Load products for each league in parallel
       await Promise.all(leagues.map(async (league) => {
@@ -107,7 +121,7 @@ export const LeaguesPage = (): JSX.Element => {
       
       setLeagueProducts(productMap);
     } catch (error) {
-      console.error('Error loading Stripe products:', error);
+      logger.error('Error loading Stripe products', error);
     }
   };
 
@@ -124,7 +138,7 @@ export const LeaguesPage = (): JSX.Element => {
       setSports(sportsData);
       setSkills(skillsData);
     } catch (err) {
-      console.error('Error loading data:', err);
+      logger.error('Error loading data', err);
       setError('Failed to load leagues data');
     } finally {
       setLoading(false);
@@ -312,7 +326,7 @@ export const LeaguesPage = (): JSX.Element => {
   };
 
   // Create sport filter options from database
-  const sportFilterOptions = ["All Sports", ...sports.map(sport => sport.name)];
+  const _sportFilterOptions = ["All Sports", ...sports.map(sport => sport.name)];
   const skillFilterOptions = ["All Skill Levels", ...skills.map(skill => skill.name)];
 
   if (loading) {

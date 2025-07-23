@@ -25,6 +25,34 @@ export function RichTextEditor({ value, onChange, placeholder, rows = 6 }: RichT
     onChange(content);
   };
 
+  // Set up styles
+  useEffect(() => {
+    const styleId = 'rich-text-editor-styles';
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
+    }
+    
+    styleElement.textContent = `
+      .ql-editor {
+        min-height: ${initialHeight};
+        max-height: 800px;
+        overflow-y: auto;
+        resize: none;
+      }
+    `;
+    
+    return () => {
+      // Clean up styles when component unmounts
+      if (styleElement && document.head.contains(styleElement)) {
+        document.head.removeChild(styleElement);
+      }
+    };
+  }, [initialHeight]);
+
   // Set up resize functionality
   useEffect(() => {
     const editorContainer = editorRef.current;
@@ -121,14 +149,6 @@ export function RichTextEditor({ value, onChange, placeholder, rows = 6 }: RichT
           marginBottom: '2.5rem' // Add space for toolbar
         }}
       />
-      <style jsx global>{`
-        .ql-editor {
-          min-height: ${initialHeight};
-          max-height: 800px;
-          overflow-y: auto;
-          resize: none; /* Disable default resize since we're implementing custom resize */
-        }
-      `}</style>
     </div>
   );
 }

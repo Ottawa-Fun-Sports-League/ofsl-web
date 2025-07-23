@@ -1,4 +1,3 @@
-import React from "react";
 import { HeroBanner } from "../../components/HeroBanner";
 
 export const StandardsOfPlayPage = (): JSX.Element => {
@@ -38,7 +37,7 @@ export const StandardsOfPlayPage = (): JSX.Element => {
             </section>
 
             <section>
-              <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Players' responsibilities</h3>
+              <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Players&apos; responsibilities</h3>
               <p className="text-lg text-[#6F6F6F] mb-4">
                 Team <strong>A & C</strong> are responsible for <strong>net & pole set up</strong> and Team <strong>B & C</strong> for take down. OFSL facilitators will notify players to begin activities 10 minutes after schedule time and to stop activities at 10 minutes before the schedule time ie. For games scheduled for 8:00-10:00 pm, start time will be at 8:10 pm & end time at 9:50 pm. Note if a team is late, the order of play can be changed without penalty as long as the teams present agree to play, All 6 sets must be played within the time permitted. The team who is not sitting off, must score keep for the duration of the matches.
               </p>
@@ -53,7 +52,7 @@ export const StandardsOfPlayPage = (): JSX.Element => {
             <section>
               <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Tiering system</h3>
               <p className="text-lg text-[#6F6F6F]">
-                Each tier has 3 teams who all play a total of 4 sets (2 each against opposing teams). The team with the most wins moves up a tier, team with second best record stays and team with third best record moves down a tier. Tiebreakers will be determined by head-to-head result, points for/against, then total points between the 2 teams. If still tied, previous week's standings will determine team's positioning. In case of a three-way tie, we use points for/against, then total points of all 3 teams. If still tied, previous week's standing will come into effect. When a team forfeits in a 3 tier, points will be scored as 0 pts and the other two teams will receive 21 pts per set. The remaining two teams will play their two sets as per the original schedule.
+                Each tier has 3 teams who all play a total of 4 sets (2 each against opposing teams). The team with the most wins moves up a tier, team with second best record stays and team with third best record moves down a tier. Tiebreakers will be determined by head-to-head result, points for/against, then total points between the 2 teams. If still tied, previous week&apos;s standings will determine team&apos;s positioning. In case of a three-way tie, we use points for/against, then total points of all 3 teams. If still tied, previous week&apos;s standing will come into effect. When a team forfeits in a 3 tier, points will be scored as 0 pts and the other two teams will receive 21 pts per set. The remaining two teams will play their two sets as per the original schedule.
               </p>
             </section>
 
@@ -102,7 +101,7 @@ export const StandardsOfPlayPage = (): JSX.Element => {
             <section>
               <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Two strike rule</h3>
               <p className="text-lg text-[#6F6F6F]">
-                OFSL will not tolerate abusive or aggressive behavior. The league's mission is to offer a safe environment that promotes sportsmanship, healthy competition and social interactions with all participants. If the OFSL committee receives a complaint about an individual and /or team displaying an unsportsmanlike conduct such as verbal or physical abuse towards another player, an initial warning will be given. If a second offense is reported, that player/team will be banned from the league permanently. Note that No refund will be provided. OFSL recognizes that situations may get intense at times. If this occurs, captains will be asked to call a <strong>timeout immediately & request a re-serve.</strong>
+                OFSL will not tolerate abusive or aggressive behavior. The league&apos;s mission is to offer a safe environment that promotes sportsmanship, healthy competition and social interactions with all participants. If the OFSL committee receives a complaint about an individual and /or team displaying an unsportsmanlike conduct such as verbal or physical abuse towards another player, an initial warning will be given. If a second offense is reported, that player/team will be banned from the league permanently. Note that No refund will be provided. OFSL recognizes that situations may get intense at times. If this occurs, captains will be asked to call a <strong>timeout immediately & request a re-serve.</strong>
               </p>
             </section>
 
@@ -137,19 +136,19 @@ export const StandardsOfPlayPage = (): JSX.Element => {
               
               <li>Substitute players are allowed. Names must be recorded on the score sheet provided by facilitators to be admissible for playoffs (needs to have subbed twice). Note that substitute players should be a similar caliber to the tier that evening.Teams can ask players who are sitting off but can not have a substitute from a higher tier. Maximum of 3 subs can be used at one time.</li>
               
-              <li>Each team must play within its own playing area and space (except Rule 10.1. 2). However, if the first hit had passed outside the antenna, then this would be a legal play, although for indoor volleyball, the player passing under the net may not touch the opponent's court.A rotation must occur after the receiving team wins their first rally point.</li>
+              <li>Each team must play within its own playing area and space (except Rule 10.1. 2). However, if the first hit had passed outside the antenna, then this would be a legal play, although for indoor volleyball, the player passing under the net may not touch the opponent&apos;s court.A rotation must occur after the receiving team wins their first rally point.</li>
               
-              <li>A ball is considered out of bounds when it touches any surface, objects or ground outside the court. <strong>Clarification:</strong> The ball is considered "out" and can not be played if it touches the ceiling.</li>
+              <li>A ball is considered out of bounds when it touches any surface, objects or ground outside the court. <strong>Clarification:</strong> The ball is considered &ldquo;out&rdquo; and can not be played if it touches the ceiling.</li>
               
               <li>A ball can be played when the it passing over on a first and second touch but must pass over or between the side boundary lines (outside of the court) as it crosses the net. A player may run outside the court to play the ball, but cannot cross over the playing surface of the opposing courts or the out of bounds lines between courts.</li>
               
               <li>Rally point system: Team winning a rally scores a point.When receiving team wins the rally, it gains a point and the right to serve and its players rotate one position clockwise.</li>
               
-              <li>The ball is not allowed to cross the net with a "throwing" action.The ball must be hit cleanly.No scooping or carrying the ball is allowed.Only off of a driven ball may a ball be a double hit (ie off the arm and head in one continuous motion)</li>
+              <li>The ball is not allowed to cross the net with a &ldquo;throwing&rdquo; action.The ball must be hit cleanly.No scooping or carrying the ball is allowed.Only off of a driven ball may a ball be a double hit (ie off the arm and head in one continuous motion)</li>
               
               <li>When 2 or 3 players touch the ball simultaneously, it is counted as 2 or 3 hits with the exception of blocking which does not count as a hit.</li>
               
-              <li>If first contact of receiving team during service receive of first dig/touch is a "double" touch and deemed simultaneous, the play continues.</li>
+              <li>If first contact of receiving team during service receive of first dig/touch is a &ldquo;double&rdquo; touch and deemed simultaneous, the play continues.</li>
               
               <li>A served ball my not be blocked, spiked or volleyed directly back over the net if the attack is above the net.</li>
               
@@ -157,7 +156,7 @@ export const StandardsOfPlayPage = (): JSX.Element => {
               
               <li>In facilities where the back-court line is within 3 feet of the wall, servers may step into the court to complete their serve.</li>
               
-              <li>It is considered a "double" touch when the ball has 4 or more complete full rotations or when the hands of the setter touch the ball unevenly.</li>
+              <li>It is considered a &ldquo;double&rdquo; touch when the ball has 4 or more complete full rotations or when the hands of the setter touch the ball unevenly.</li>
               
               <li>A fault occurs when the ball hits the antenna.</li>
               
@@ -169,7 +168,7 @@ export const StandardsOfPlayPage = (): JSX.Element => {
               <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-4">
                 <li>Teams must communicate to the opposition and identify which player will adhere to the libero position throughout the match. OFSL highly recommends the libero wear a distinguishable T-shirt colour.</li>
                 
-                <li>If a team designates a female libero, the team must follow the Standard of Rules of always having 2 females on the court at all times not including the libero. Female libero can only replace a female player in the back row. Back row positions are 5,6 and 1 (same applies for male libero). A team cannot replace a female libero with a male player (or vice versa) when the libero's next rotation is towards the front court (position 4).</li>
+                <li>If a team designates a female libero, the team must follow the Standard of Rules of always having 2 females on the court at all times not including the libero. Female libero can only replace a female player in the back row. Back row positions are 5,6 and 1 (same applies for male libero). A team cannot replace a female libero with a male player (or vice versa) when the libero&apos;s next rotation is towards the front court (position 4).</li>
                 
                 <li>Teams cannot use a libero while short-handed. An eligible team must have a minimum of 7 players to use the libero.</li>
                 

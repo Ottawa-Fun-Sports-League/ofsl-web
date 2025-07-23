@@ -6,7 +6,6 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { useNavigate } from 'react-router-dom';
-import { createLeaguePayment } from '../../../lib/payments';
 import { getDayName, formatLeagueDates, getPrimaryLocation } from '../../../lib/leagues';
 import { RegistrationSuccessModal } from './RegistrationSuccessModal';
 
@@ -21,7 +20,13 @@ interface TeamRegistrationModalProps {
   closeModal: () => void;
   leagueId: number;
   leagueName: string;
-  league?: any; // Add league prop to get additional details
+  league?: {
+    id: number;
+    name: string;
+    cost: number | null;
+    sport_name: string | null;
+    skill_name: string | null;
+  }; // Add league prop to get additional details
   isWaitlist?: boolean; // Add prop to indicate if this is a waitlist registration
 }
 
@@ -57,6 +62,7 @@ export function TeamRegistrationModal({
       loadSkills();
       setError(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal]);
 
   const loadSkills = async () => {
@@ -139,7 +145,14 @@ export function TeamRegistrationModal({
       const nextDisplayOrder = (maxOrderData?.[0]?.display_order || 0) + 1;
 
       // Create the team
-      const teamInsertData: any = {
+      const teamInsertData: {
+        name: string;
+        league_id: number;
+        captain_id: string;
+        roster: string[];
+        display_order?: number;
+        skill_level_id?: number;
+      } = {
         name: isWaitlist ? `Waitlist - ${userProfile.name || 'Team'}` : teamName.trim(),
         league_id: leagueId,
         captain_id: userProfile.id,
@@ -243,9 +256,10 @@ export function TeamRegistrationModal({
         closeModal();
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error registering team:', error);
-      showToast(error.message || 'Failed to register team', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to register team';
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -356,9 +370,9 @@ export function TeamRegistrationModal({
                       <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3 mb-6">
                         <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-sm text-amber-800 font-medium mb-2">League's Full (For Now!)</p>
+                          <p className="text-sm text-amber-800 font-medium mb-2">League&apos;s Full (For Now!)</p>
                           <p className="text-sm text-amber-700">
-                            Thanks for your interest—we love the enthusiasm. The league's currently full, but sometimes people bail (life happens) and spots open up. Want us to add you to the waitlist? No promises, but we'll reach out if a spot frees up.
+                            Thanks for your interest—we love the enthusiasm. The league&apos;s currently full, but sometimes people bail (life happens) and spots open up. Want us to add you to the waitlist? No promises, but we&apos;ll reach out if a spot frees up.
                           </p>
                         </div>
                       </div>
@@ -465,7 +479,7 @@ export function TeamRegistrationModal({
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <p className="text-sm text-blue-800">
                           <strong>Note:</strong> You will be automatically added as the team captain and first player. 
-                          After registration, you can add more players to your team from the "My Teams\" page.
+                          After registration, you can add more players to your team from the &ldquo;My Teams&rdquo; page.
                           Registration fees will be tracked and due within 30 days.
                         </p>
                       </div>

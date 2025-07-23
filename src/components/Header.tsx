@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "./ui/button";
 import { Menu, X, ChevronDown, User, LogOut } from "lucide-react";
-import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "./ui/navigation-menu";
+import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from "./ui/navigation-menu";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "./ui/toast";
 

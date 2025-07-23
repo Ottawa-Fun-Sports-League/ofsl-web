@@ -165,11 +165,13 @@ serve(async (req: Request) => {
             });
 
           if (inviteError) {
+            // eslint-disable-next-line no-console
             console.error("Error storing invite:", inviteError);
             // Continue with email sending even if database storage fails
           }
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error("Error checking/storing invite:", error);
         // Continue with email sending even if database operation fails
       }
@@ -306,6 +308,7 @@ serve(async (req: Request) => {
     // Send email using Resend API
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
+      // eslint-disable-next-line no-console
       console.error("RESEND_API_KEY not found");
       return new Response(
         JSON.stringify({ error: "Email service not configured" }),
@@ -330,6 +333,7 @@ serve(async (req: Request) => {
 
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
+      // eslint-disable-next-line no-console
       console.error("Resend API error:", errorText);
       return new Response(
         JSON.stringify({ error: "Failed to send invite email" }),
@@ -341,6 +345,7 @@ serve(async (req: Request) => {
     }
 
     const emailResult = await emailResponse.json();
+    // eslint-disable-next-line no-console
     console.log("Email sent successfully:", emailResult);
 
     return new Response(
@@ -355,6 +360,7 @@ serve(async (req: Request) => {
       },
     );
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Error in send-invite function:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,

@@ -1,5 +1,4 @@
 import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
 import { Calendar, Users, Trophy, Clock } from "lucide-react";
@@ -16,7 +15,7 @@ export const TournamentsPage = (): JSX.Element => {
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Tournaments</h1>
             <p className="text-xl max-w-2xl mx-auto mb-8">
-              OFSL's volleyball tournaments are designed to offer players a fun, competitive, and well-organized experience that promotes teamwork, sportsmanship, and a positive atmosphere.
+              OFSL&apos;s volleyball tournaments are designed to offer players a fun, competitive, and well-organized experience that promotes teamwork, sportsmanship, and a positive atmosphere.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
               <Link to="/leagues?type=Tournament" className="w-full sm:w-auto">
@@ -42,7 +41,7 @@ export const TournamentsPage = (): JSX.Element => {
           {/* About tournaments text */}
           <div className="text-center mb-12">
             <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-              Our tournaments are thoughtfully organized to accommodate a variety of skill levels, including Competitive, Advanced, and Intermediate divisions, ensuring there's a place for every team to compete. With events sometimes scheduled across multiple locations, we aim to maximize participation and provide teams with greater access to play.
+              Our tournaments are thoughtfully organized to accommodate a variety of skill levels, including Competitive, Advanced, and Intermediate divisions, ensuring there&apos;s a place for every team to compete. With events sometimes scheduled across multiple locations, we aim to maximize participation and provide teams with greater access to play.
             </p>
           </div>
           
@@ -116,7 +115,7 @@ export const TournamentsPage = (): JSX.Element => {
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Teams can expect a tournament that's neck and neck, ensuring competitive play throughout the day</span>
+                  <span>Teams can expect a tournament that&apos;s neck and neck, ensuring competitive play throughout the day</span>
                 </li>
               </ul>
               <Link to="/leagues?type=Tournament" className="self-start">
@@ -157,7 +156,7 @@ export const TournamentsPage = (): JSX.Element => {
           <div className="max-w-[1280px] mx-auto px-4 text-center text-white">
             <h2 className="text-3xl font-bold mb-4">Ready to compete?</h2>
             <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Whether you're striving for high-level competition or simply looking to enjoy a well-run event with friends, our tournaments offer a dynamic and inclusive experience for all.
+              Whether you&apos;re striving for high-level competition or simply looking to enjoy a well-run event with friends, our tournaments offer a dynamic and inclusive experience for all.
             </p>
             <Link to="/leagues?type=Tournament">
               <Button

@@ -4,7 +4,8 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '../../../../../components/ui/toast';
 import { Button } from '../../../../../components/ui/button';
 
-interface Product {
+// Unused interface - keeping for future use
+interface _Product {
   id: string;
   priceId: string;
   name: string;
@@ -29,7 +30,17 @@ export function StripeProductSelector({
   className = '',
   leagueId
 }: StripeProductSelectorProps) {
-  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<Array<{
+    id: string;
+    price_id: string;
+    name: string;
+    description: string;
+    mode: string;
+    price: number;
+    currency: string;
+    interval: string | null;
+    league_id: number | null;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const { showToast } = useToast();
@@ -56,7 +67,7 @@ export function StripeProductSelector({
       const result = await syncStripeProducts();
       showToast(result.message || 'Products synced successfully', 'success');
       await loadProducts();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error syncing Stripe products:', error);
       showToast(error.message || 'Failed to sync products', 'error');
     } finally {

@@ -54,6 +54,7 @@ export function GoogleSignupRedirect() {
       // If no user and not loading, redirect to login
       navigate('/login');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userProfile, loading]);
 
   // If user already has a complete profile, redirect to teams page
@@ -75,6 +76,7 @@ export function GoogleSignupRedirect() {
         navigate(redirectPath);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile, loading, initialLoading]);
 
   const handleStep1Submit = (e: React.FormEvent) => {
@@ -143,9 +145,10 @@ export function GoogleSignupRedirect() {
         navigate('/my-account/teams');
       }
       
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating profile:', err);
-      setError(err.message || 'Failed to update profile');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -330,7 +333,7 @@ export function GoogleSignupRedirect() {
                   <span className="font-medium">Tell us about your sports interests</span>
                 </p>
                 <p className="text-[#6F6F6F]">
-                  Select the sports you're interested in playing and your skill level for each one.
+                  Select the sports you&apos;re interested in playing and your skill level for each one.
                 </p>
               </div>
               

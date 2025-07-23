@@ -7,12 +7,67 @@ import { Input } from '../../../components/ui/input';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { supabase } from '../../../lib/supabase';
-import { fetchSports, fetchSkills, fetchLeagueById, getPrimaryLocation } from '../../../lib/leagues';
+import { fetchSports, fetchSkills, fetchLeagueById } from '../../../lib/leagues';
 import { ArrowLeft, Save, Copy, Eye } from 'lucide-react';
 import { RichTextEditor } from '../../../components/ui/rich-text-editor';
 import { StripeProductSelector } from './LeaguesTab/components/StripeProductSelector';
 import { CopyLeagueDialog } from './LeaguesTab/components/CopyLeagueDialog';
 import { useLeagueActions } from './LeaguesTab/hooks/useLeagueActions';
+
+interface League {
+  id: number;
+  name: string;
+  description: string;
+  sport_id: number;
+  skill_id: number | null;
+  day_of_week: number;
+  start_date: string;
+  end_date: string;
+  cost: number;
+  max_teams: number;
+  gym_ids: number[];
+  active: boolean;
+  created_at: string;
+  year: string;
+  hide_day: boolean;
+  league_type: 'regular_season' | 'tournament' | 'skills_drills' | null;
+  gender: 'mens' | 'womens' | 'co-ed' | null;
+  registration_start: string | null;
+  registration_end: string | null;
+  early_bird_end: string | null;
+  early_bird_discount: number | null;
+  skill_ids: number[] | null;
+  level_restriction: string | null;
+  schedule: Record<string, unknown> | null;
+}
+
+interface Sport {
+  id: number;
+  created_at: string;
+  name: string;
+  active: boolean;
+  description: string | null;
+}
+
+interface Skill {
+  id: number;
+  name: string;
+  description: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+interface Gym {
+  id: number;
+  created_at: string;
+  gym: string;
+  address: string;
+  instructions: string | null;
+  active: boolean;
+  available_days: number[];
+  available_sports: number[];
+  locations: string[];
+}
 
 export function LeagueEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,10 +75,10 @@ export function LeagueEditPage() {
   const { userProfile } = useAuth();
   const { showToast } = useToast();
   
-  const [league, setLeague] = useState<any>(null);
-  const [sports, setSports] = useState<any[]>([]);
-  const [skills, setSkills] = useState<any[]>([]);
-  const [gyms, setGyms] = useState<any[]>([]);
+  const [league, setLeague] = useState<League | null>(null);
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [gyms, setGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
@@ -80,6 +135,7 @@ export function LeagueEditPage() {
     if (id) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, userProfile]);
 
 

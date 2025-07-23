@@ -110,6 +110,7 @@ serve(async (req: Request) => {
     )
 
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Error in search-users function:", error)
     return new Response(
       JSON.stringify({ error: "Internal server error" }),

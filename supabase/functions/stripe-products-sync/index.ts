@@ -116,6 +116,7 @@ Deno.serve(async (req) => {
       .select();
 
     if (error) {
+      // eslint-disable-next-line no-console
       console.error('Error upserting products:', error);
       return corsResponse({ error: 'Failed to update products in database' }, 500);
     }
@@ -126,10 +127,11 @@ Deno.serve(async (req) => {
       products: data,
     });
 
-  } catch (error: any) {
-    console.error(`Stripe products sync error: ${error.message}`);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`Stripe products sync error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return corsResponse({ 
-      error: `Failed to sync products: ${error.message}` 
+      error: `Failed to sync products: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, 500);
   }
 });

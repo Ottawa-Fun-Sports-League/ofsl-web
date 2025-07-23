@@ -17,9 +17,9 @@ export function ProfileTab() {
   const {
     profile,
     notifications,
-    sports,
-    skills,
-    loadingSportsSkills,
+    sports: _sports,
+    skills: _skills,
+    loadingSportsSkills: _loadingSportsSkills,
     setProfile,
     handleNotificationToggle,
     markProfileAsSaved

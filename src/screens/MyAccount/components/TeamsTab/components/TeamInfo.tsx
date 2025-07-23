@@ -1,4 +1,3 @@
-import React from 'react';
 import { Crown, Users, Calendar, DollarSign } from 'lucide-react';
 import { getDayName } from '../../../../../lib/leagues';
 import { StatusBadge } from './StatusBadge';
@@ -25,7 +24,7 @@ interface TeamInfoProps {
   currentUserId: string;
 }
 
-export function TeamInfo({ team, isCaptain, currentUserId }: TeamInfoProps) {
+export function TeamInfo({ team, currentUserId }: TeamInfoProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mt-4">
       {/* Team Size */}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -37,7 +37,7 @@ export function TeamEditPage() {
     deleting,
     handleUpdateTeam,
     handleDeleteTeam,
-    handleRemoveMember
+    handleRemoveMember: _handleRemoveMember
   } = useTeamOperations(id, team, teamMembers, loadData);
 
   const {
@@ -188,11 +188,11 @@ export function TeamEditPage() {
           teamName={team.name}
           currentRoster={team.roster || []}
           captainId={team.captain_id}
-          onRosterUpdate={async (newRoster: string[]) => {
+          onRosterUpdate={async (_newRoster: string[]) => {
             // Update the roster and reload data
             await loadData();
           }}
-          onCaptainUpdate={async (newCaptainId: string) => {
+          onCaptainUpdate={async (_newCaptainId: string) => {
             // Update captain and reload data
             await loadData();
           }}

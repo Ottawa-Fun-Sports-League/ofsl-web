@@ -7,19 +7,47 @@ import { Input } from '../../../components/ui/input';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { supabase } from '../../../lib/supabase';
-import { fetchSports, fetchSkills, getPrimaryLocation } from '../../../lib/leagues';
+import { fetchSports, fetchSkills } from '../../../lib/leagues';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { RichTextEditor } from '../../../components/ui/rich-text-editor';
 import { StripeProductSelector } from './LeaguesTab/components/StripeProductSelector';
+
+interface Sport {
+  id: number;
+  created_at: string;
+  name: string;
+  active: boolean;
+  description: string | null;
+}
+
+interface Skill {
+  id: number;
+  name: string;
+  description: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+interface Gym {
+  id: number;
+  created_at: string;
+  gym: string;
+  address: string;
+  instructions: string | null;
+  active: boolean;
+  available_days: number[];
+  available_sports: number[];
+  locations: string[];
+}
 
 export function LeagueNewPage() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
   const { showToast } = useToast();
   
-  const [sports, setSports] = useState<any[]>([]);
-  const [skills, setSkills] = useState<any[]>([]);
-  const [gyms, setGyms] = useState<any[]>([]);
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [gyms, setGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -68,6 +96,7 @@ export function LeagueNewPage() {
     }
     
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
 

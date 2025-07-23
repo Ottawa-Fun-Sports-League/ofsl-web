@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabase';
-import { LeaguePayment } from './types';
 
 export function useTeamOperations() {
   const [unregisteringPayment, setUnregisteringPayment] = useState<number | null>(null);

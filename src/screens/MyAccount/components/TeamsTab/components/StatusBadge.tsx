@@ -1,4 +1,3 @@
-import React from 'react';
 import { PaymentStatusBadge, PaymentStatus } from '../../../../ui/payment-status-badge';
 
 interface StatusBadgeProps {

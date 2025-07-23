@@ -4,20 +4,18 @@ import { HeroBanner } from "../../components/HeroBanner";
 import { Separator } from "../../components/ui/separator";
 import { Input } from "../../components/ui/input";
 import { Card, CardContent } from "../../components/ui/card";
-import { Mail, ChevronDown, ChevronUp } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
+import { Mail } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
+// Stats final values - moved outside component to avoid dependency warnings
+const statsData = [
+  { value: 1800, label: "Weekly players", suffix: "+" },
+  { value: 15, label: "Years of operation", suffix: "+" },
+  { value: 260, label: "Volleyball teams", suffix: "+" },
+  { value: 85, label: "Raised for charities", suffix: "K+" },
+];
+
 export const AboutUsPage = (): JSX.Element => {
-  const { session } = useAuth();
-  
-  // Stats final values
-  const statsData = [
-    { value: 1800, label: "Weekly players", suffix: "+" },
-    { value: 15, label: "Years of operation", suffix: "+" },
-    { value: 260, label: "Volleyball teams", suffix: "+" },
-    { value: 85, label: "Raised for charities", suffix: "K+" },
-  ];
 
   // Newsletter form state
   const [email, setEmail] = useState("");
@@ -38,45 +36,45 @@ export const AboutUsPage = (): JSX.Element => {
   });
   const [submitStatus, setSubmitStatus] = useState<null | "success" | "error">(null);
 
-  // FAQ accordion state
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  // FAQ accordion state - commented out section
+  // const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  // FAQ data
-  const faqItems = [
-    {
-      question: "How do I register for a league?",
-      answer: "To register for a league, create an account on our website and navigate to the 'Leagues' page. Select the league you're interested in and follow the registration steps. Team captains must register their teams, while individual players can sign up as free agents to be placed on a team."
-    },
-    {
-      question: "What skill levels are available?",
-      answer: "We offer leagues at various skill levels including Elite, Competitive, Advanced, Intermediate, and Recreational. Each level has specific skill requirements to ensure fair and enjoyable gameplay for all participants. Check the specific league descriptions for detailed skill level expectations."
-    },
-    {
-      question: "What is the refund policy?",
-      answer: "Full refunds are available up to 14 days before the season starts. Within 14 days of the season start, a 50% refund is offered. Once the season begins, no refunds will be issued. In case of injury with medical documentation, prorated refunds may be considered on a case-by-case basis."
-    },
-    {
-      question: "How long does a typical season run?",
-      answer: "Most of our leagues run for 10-12 weeks per season. We typically offer three seasons throughout the year: Fall (September-December), Winter (January-April), and Summer (May-August). Check the specific league page for exact dates and duration."
-    },
-    {
-      question: "What happens if I need to miss a game?",
-      answer: "If you know in advance that you'll miss a game, please notify your team captain and the league coordinator. For team sports, we encourage finding a substitute player of similar skill level. Some leagues have specific attendance policies that may affect playoff eligibility."
-    },
-    {
-      question: "Are there playoffs at the end of the season?",
-      answer: "Yes, most leagues conclude with playoffs for teams that qualify. Playoff formats vary by league, but typically the top 4-8 teams make the playoffs based on regular season standings. Some leagues may have attendance requirements to be eligible for playoffs."
-    },
-    {
-      question: "What COVID-19 protocols are in place?",
-      answer: "We follow all local health guidelines regarding COVID-19. Our protocols are updated regularly based on the latest public health recommendations. Currently, we encourage proper hygiene and ask participants to stay home if feeling unwell. Please check our website or contact us for the most up-to-date information."
-    }
-  ];
+  // FAQ data - commented out section
+  // const faqItems = [
+  //   {
+  //     question: "How do I register for a league?",
+  //     answer: "To register for a league, create an account on our website and navigate to the 'Leagues' page. Select the league you're interested in and follow the registration steps. Team captains must register their teams, while individual players can sign up as free agents to be placed on a team."
+  //   },
+  //   {
+  //     question: "What skill levels are available?",
+  //     answer: "We offer leagues at various skill levels including Elite, Competitive, Advanced, Intermediate, and Recreational. Each level has specific skill requirements to ensure fair and enjoyable gameplay for all participants. Check the specific league descriptions for detailed skill level expectations."
+  //   },
+  //   {
+  //     question: "What is the refund policy?",
+  //     answer: "Full refunds are available up to 14 days before the season starts. Within 14 days of the season start, a 50% refund is offered. Once the season begins, no refunds will be issued. In case of injury with medical documentation, prorated refunds may be considered on a case-by-case basis."
+  //   },
+  //   {
+  //     question: "How long does a typical season run?",
+  //     answer: "Most of our leagues run for 10-12 weeks per season. We typically offer three seasons throughout the year: Fall (September-December), Winter (January-April), and Summer (May-August). Check the specific league page for exact dates and duration."
+  //   },
+  //   {
+  //     question: "What happens if I need to miss a game?",
+  //     answer: "If you know in advance that you'll miss a game, please notify your team captain and the league coordinator. For team sports, we encourage finding a substitute player of similar skill level. Some leagues have specific attendance policies that may affect playoff eligibility."
+  //   },
+  //   {
+  //     question: "Are there playoffs at the end of the season?",
+  //     answer: "Yes, most leagues conclude with playoffs for teams that qualify. Playoff formats vary by league, but typically the top 4-8 teams make the playoffs based on regular season standings. Some leagues may have attendance requirements to be eligible for playoffs."
+  //   },
+  //   {
+  //     question: "What COVID-19 protocols are in place?",
+  //     answer: "We follow all local health guidelines regarding COVID-19. Our protocols are updated regularly based on the latest public health recommendations. Currently, we encourage proper hygiene and ask participants to stay home if feeling unwell. Please check our website or contact us for the most up-to-date information."
+  //   }
+  // ];
 
-  // Handle toggling FAQ items
-  const toggleFaq = (index: number) => {
-    setOpenFaq(openFaq === index ? null : index);
-  };
+  // Handle toggling FAQ items - commented out section
+  // const toggleFaq = (index: number) => {
+  //   setOpenFaq(openFaq === index ? null : index);
+  // };
 
   // Handle contact form input changes
   const handleContactInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -92,7 +90,7 @@ export const AboutUsPage = (): JSX.Element => {
     e.preventDefault();
     
     try {
-      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+      const { error } = await supabase.functions.invoke('send-contact-email', {
         body: contactForm,
       });
 
@@ -105,9 +103,8 @@ export const AboutUsPage = (): JSX.Element => {
         return;
       }
 
-      const response = { ok: true };
-
-      if (response.ok) {
+      // If no error, consider it successful
+      if (!error) {
         setSubmitStatus("success");
         // Reset form after successful submission
         setTimeout(() => {
@@ -182,13 +179,14 @@ export const AboutUsPage = (): JSX.Element => {
       }
     }, options);
 
-    if (statsRef.current) {
-      observerRef.current.observe(statsRef.current);
+    const currentStatsRef = statsRef.current;
+    if (currentStatsRef) {
+      observerRef.current.observe(currentStatsRef);
     }
 
     return () => {
-      if (observerRef.current && statsRef.current) {
-        observerRef.current.unobserve(statsRef.current);
+      if (observerRef.current && currentStatsRef) {
+        observerRef.current.unobserve(currentStatsRef);
         observerRef.current.disconnect();
       }
     };
@@ -302,7 +300,7 @@ export const AboutUsPage = (): JSX.Element => {
               48 players.
             </p>
             <p className="text-lg text-[#6F6F6F]">
-              Today, we've grown to serve over 2,000 participants across multiple sports including 
+              Today, we&apos;ve grown to serve over 2,000 participants across multiple sports including 
               volleyball, badminton, pickleball, and basketball. Our focus has always been on creating 
               a balance of competitive play and inclusive fun that welcomes players of all backgrounds.
             </p>
@@ -400,7 +398,7 @@ export const AboutUsPage = (): JSX.Element => {
                   
                   {submitStatus === "success" && (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                      Thank you for your message! We'll get back to you soon.
+                      Thank you for your message! We&apos;ll get back to you soon.
                     </div>
                   )}
                   
@@ -574,7 +572,7 @@ export const AboutUsPage = (): JSX.Element => {
               </div>
               
               <div>
-                <p className="text-[#6F6F6F] mb-3">I'm interested in:</p>
+                <p className="text-[#6F6F6F] mb-3">I&apos;m interested in:</p>
                 <div className="flex flex-row flex-wrap gap-6">
                   <div className="flex items-center">
                     <input 

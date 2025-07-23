@@ -145,6 +145,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error processing team invite:', error);
     return new Response(
       JSON.stringify({ error: error.message }),

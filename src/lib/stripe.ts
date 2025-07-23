@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { logger } from './logger';
 
 /**
  * Interface for a Stripe product
@@ -92,7 +93,7 @@ export async function getUserSubscription() {
     .maybeSingle();
 
   if (error) {
-    console.error('Error fetching subscription:', error);
+    logger.error('Error fetching subscription', error);
     return null;
   }
 
@@ -110,7 +111,7 @@ export async function getUserOrders() {
     .order('order_date', { ascending: false });
 
   if (error) {
-    console.error('Error fetching orders:', error);
+    logger.error('Error fetching orders', error);
     return [];
   }
 
@@ -128,7 +129,7 @@ export async function getStripeProducts() {
     .order('name');
 
   if (error) {
-    console.error('Error fetching Stripe products:', error);
+    logger.error('Error fetching Stripe products', error);
     return [];
   }
 
@@ -148,7 +149,7 @@ export async function getStripeProductByLeagueId(leagueId: number) {
     .maybeSingle();
 
   if (error) {
-    console.error('Error fetching Stripe product by league ID:', error);
+    logger.error('Error fetching Stripe product by league ID', error);
     return null;
   }
 
@@ -204,7 +205,7 @@ export async function updateStripeProductLeagueId(productId: string, leagueId: n
     .single();
 
   if (error) {
-    console.error('Error updating Stripe product league ID:', error);
+    logger.error('Error updating Stripe product league ID', error);
     throw error;
   }
 
@@ -266,7 +267,7 @@ export async function getStripeProductByPriceId(priceId: string) {
     .maybeSingle();
 
   if (error) {
-    console.error('Error fetching Stripe product by price ID:', error);
+    logger.error('Error fetching Stripe product by price ID', error);
     return null;
   }
 

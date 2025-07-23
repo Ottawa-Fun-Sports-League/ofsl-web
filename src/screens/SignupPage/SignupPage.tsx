@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
+import { logger } from "../../lib/logger";
 
 export function SignupPage() {
   const [name, setName] = useState("");
@@ -62,7 +63,7 @@ export function SignupPage() {
       return;
     }
     
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       setError("Password must contain at least one special character");
       return;
     }
@@ -124,11 +125,11 @@ export function SignupPage() {
           });
           
         if (profileError && !profileError.message.includes('duplicate key')) {
-          console.error('Error creating user profile:', profileError);
+          logger.error('Error creating user profile', profileError);
         } else if (!profileError) {
           // Profile created successfully, now process any pending team invites
           try {
-            console.log('Processing team invites for new user:', {
+            logger.info('Processing team invites for new user', {
               profileId,
               email: email.toLowerCase(),
               authId: authData.user.id
@@ -147,11 +148,11 @@ export function SignupPage() {
                 },
               });
 
-              console.log('Edge Function response status:', response.status);
+              logger.info('Edge Function response status', { status: response.status });
               
               if (response.ok) {
                 const result = await response.json();
-                console.log('Edge Function result:', result);
+                logger.info('Edge Function result', result);
                 
                 if (result.processedCount > 0) {
                   // Store a flag to show notification later
@@ -159,18 +160,18 @@ export function SignupPage() {
                 }
               } else {
                 const errorText = await response.text();
-                console.error('Edge Function error response:', errorText);
+                logger.error('Edge Function error response', undefined, { response: errorText });
               }
             } else {
-              console.warn('No session available for processing invites');
+              logger.warn('No session available for processing invites');
             }
           } catch (inviteError) {
-            console.error('Error processing team invites:', inviteError);
+            logger.error('Error processing team invites', inviteError);
             // Don't fail signup if invite processing fails
           }
         }
       } catch (profileError) {
-        console.error('Error creating user profile:', profileError);
+        logger.error('Error creating user profile', profileError);
         // Continue anyway, profile creation can be handled later
       }
       
@@ -185,7 +186,7 @@ export function SignupPage() {
       });
       
     } catch (err) {
-      console.error("Unexpected error during signup:", err);
+      logger.error("Unexpected error during signup", err);
       setError("An unexpected error occurred. Please try again later.");
     } finally {
       setLoading(false);
@@ -209,7 +210,7 @@ export function SignupPage() {
       // The redirect will happen automatically via the Google OAuth flow
     } catch (err) {
       setError("An unexpected error occurred");
-      console.error(err);
+      logger.error('Error during Google sign up', err);
       setGoogleLoading(false);
     }
   };
@@ -230,7 +231,7 @@ export function SignupPage() {
         .limit(1);
         
       if (publicError) {
-        console.error('Error checking public users:', publicError);
+        logger.error('Error checking public users', publicError);
       }
       
       if (publicUsers && publicUsers.length > 0) {
@@ -238,7 +239,7 @@ export function SignupPage() {
       }
       
     } catch (error) {
-      console.error('Error checking email:', error);
+      logger.error('Error checking email', error);
     } finally {
       setEmailChecking(false);
     }

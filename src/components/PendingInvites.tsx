@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { logger } from "../lib/logger";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -20,25 +21,12 @@ interface PendingInvitesProps {
   onInviteAccepted?: () => void;
 }
 
-export function PendingInvites({ onInviteAccepted }: PendingInvitesProps = {}) {
+export function PendingInvites({ onInviteAccepted }: PendingInvitesProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [invites, setInvites] = useState<TeamInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user?.email) {
-      fetchPendingInvites();
-      
-      // Also check if teams were just added during signup
-      const teamsAdded = sessionStorage.getItem('signup_teams_added');
-      if (teamsAdded && onInviteAccepted) {
-        // Trigger a refresh of the teams list
-        onInviteAccepted();
-      }
-    }
-  }, [user, onInviteAccepted]);
 
   const fetchPendingInvites = async () => {
     if (!user?.email) return;
@@ -54,17 +42,31 @@ export function PendingInvites({ onInviteAccepted }: PendingInvitesProps = {}) {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching invites:', error);
+        logger.error('Error fetching invites', error);
         showToast('Failed to load team invites', 'error');
       } else {
         setInvites(data || []);
       }
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error in fetchPendingInvites', error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchPendingInvites();
+      
+      // Also check if teams were just added during signup
+      const teamsAdded = sessionStorage.getItem('signup_teams_added');
+      if (teamsAdded && onInviteAccepted) {
+        // Trigger a refresh of the teams list
+        onInviteAccepted();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, onInviteAccepted]);
 
   const acceptInvite = async (invite: TeamInvite) => {
     setProcessing(invite.id);
@@ -105,7 +107,7 @@ export function PendingInvites({ onInviteAccepted }: PendingInvitesProps = {}) {
         onInviteAccepted();
       }
     } catch (error) {
-      console.error('Error accepting invite:', error);
+      logger.error('Error accepting invite', error);
       showToast(error.message || 'Failed to accept invite', 'error');
     } finally {
       setProcessing(null);
@@ -131,7 +133,7 @@ export function PendingInvites({ onInviteAccepted }: PendingInvitesProps = {}) {
       showToast('Invite declined', 'success');
       fetchPendingInvites(); // Refresh the list
     } catch (error) {
-      console.error('Error declining invite:', error);
+      logger.error('Error declining invite', error);
       showToast('Failed to decline invite', 'error');
     } finally {
       setProcessing(null);

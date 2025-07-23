@@ -5,6 +5,7 @@ import { Input } from "../../components/ui/input";
 import { Eye, EyeOff, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { logger } from "../../lib/logger";
 
 export function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -45,13 +46,13 @@ export function ResetPasswordPage() {
           if (data.session) {
             setTokenValid(true);
           } else {
-            console.error("No active session and not a recovery flow");
+            logger.error("No active session and not a recovery flow");
             setError("Invalid or expired password reset link. Please request a new password reset link.");
             setTokenValid(false);
           }
         }
       } catch (error) {
-        console.error('Error validating token:', error);
+        logger.error('Error validating token', error);
         setError("Failed to validate reset token. Please request a new password reset link.");
         setTokenValid(false);
       } finally {
@@ -164,7 +165,7 @@ export function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password });
       
       if (error) {
-        console.error('Error updating password:', error);
+        logger.error('Error updating password', error);
         throw error;
       }
       
@@ -179,9 +180,10 @@ export function ResetPasswordPage() {
         });
       }, 3000);
       
-    } catch (err: any) {
-      console.error("Error resetting password:", err);
-      setError(err.message || "Failed to reset password. Please try again or request a new reset link.");
+    } catch (err) {
+      logger.error("Error resetting password", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to reset password. Please try again or request a new reset link.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

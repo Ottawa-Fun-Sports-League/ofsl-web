@@ -11,12 +11,12 @@ interface GymsListProps {
   locations: string[];
   loading: boolean;
   editingGym: number | null;
-  editGym: any;
+  editGym: Gym;
   saving: boolean;
   deleting: number | null;
   isAnyFilterActive: boolean;
   onEditGym: (gym: Gym) => void;
-  onEditGymChange: (gym: any) => void;
+  onEditGymChange: (gym: Gym) => void;
   onDayToggle: (dayId: number, isNewGym?: boolean) => void;
   onSportToggle: (sportId: number, isNewGym?: boolean) => void;
   onLocationToggle: (location: string, isNewGym?: boolean) => void;

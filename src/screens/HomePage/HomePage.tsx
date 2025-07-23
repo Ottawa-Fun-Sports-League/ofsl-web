@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
 import { HeroBanner } from "../../components/HeroBanner";
 
 // Data for leagues
@@ -214,7 +213,7 @@ export const HomePage = (): JSX.Element => {
         <div className="text-center text-white max-w-[860px] px-4">
           <h1 className="text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 font-heading font-bold">Welcome to OFSL!</h1>
           <p className="text-base md:text-lg lg:text-xl">
-            Ottawa's leading adult volleyball and badminton league—where
+            Ottawa&apos;s leading adult volleyball and badminton league—where
             sportsmanship meets healthy competition from competitive to intermediate levels.
           </p>
           {/* Hero buttons */}
@@ -286,7 +285,7 @@ export const HomePage = (): JSX.Element => {
               </div>
               <div className="text-center md:text-left flex-1">
                 <h3 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[28px] leading-7 md:leading-8 mb-3">
-                  LoveGive's Charity Tournament 
+                  LoveGive&apos;s Charity Tournament 
                 </h3>
                 <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
                   Come out and experience a day of fun on Aug 17, 2025 at Britannia Beach, for a 6v6 and 4v4 tournament. 
@@ -299,7 +298,7 @@ export const HomePage = (): JSX.Element => {
         {/* League description */}
         <div className="text-center mb-16 md:mb-24">
           <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-            Our leagues provide a well-organized structure and experience for those who take their play seriously—but still want to have a good time. Geared toward intermediate to competitive play, it's a great way to stay active, maintain your fitness, and connect with others who share your passion for the games. 
+            Our leagues provide a well-organized structure and experience for those who take their play seriously—but still want to have a good time. Geared toward intermediate to competitive play, it&apos;s a great way to stay active, maintain your fitness, and connect with others who share your passion for the games. 
           </p>
         </div>
       </div>
@@ -427,7 +426,7 @@ export const HomePage = (): JSX.Element => {
                 Skills and drills
               </h2>
               <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-6 md:mb-8">
-              Whether you're just starting out or a seasoned player aiming to refine your fundamentals, elevate your skills with <strong>OFSL’s Skills & Drills Program</strong>, led by <strong>James Battiston</strong>, former professional volleyball player and Canadian Beach National Team member. Learn from one of the best and take your game to the next level!
+              Whether you&apos;re just starting out or a seasoned player aiming to refine your fundamentals, elevate your skills with <strong>OFSL&apos;s Skills & Drills Program</strong>, led by <strong>James Battiston</strong>, former professional volleyball player and Canadian Beach National Team member. Learn from one of the best and take your game to the next level!
               </p>
               <Link 
                 to="/skills-and-drills" 

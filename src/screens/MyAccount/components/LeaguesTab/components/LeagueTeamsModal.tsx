@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
-import { Users, X, Trash2, Search, UserPlus, CreditCard, ChevronDown, ChevronUp, Crown } from 'lucide-react';
+import { Users, X, Trash2, Search, UserPlus, CreditCard, Crown } from 'lucide-react';
 import { LeagueWithTeamCount } from '../types';
 import { supabase } from '../../../../../lib/supabase';
 import { useToast } from '../../../../../components/ui/toast';
@@ -48,6 +48,7 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
     if (isOpen && league) {
       loadTeams();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, league]);
 
   const loadTeams = async () => {
@@ -290,7 +291,7 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
             <div className="text-center py-12">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No teams registered</h3>
-              <p className="text-gray-500">This league doesn't have any teams registered yet.</p>
+              <p className="text-gray-500">This league doesn&apos;t have any teams registered yet.</p>
             </div>
           ) : (
             <div className="space-y-4">
