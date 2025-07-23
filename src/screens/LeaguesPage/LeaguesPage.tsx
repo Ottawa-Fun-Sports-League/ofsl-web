@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
-import { ChevronDown, X, MapPin, Calendar, Clock, Users, DollarSign, Filter } from "lucide-react";
+import { MapPin, Calendar, Clock, Users, DollarSign } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { 
   fetchLeagues,
@@ -32,13 +32,13 @@ interface StripeProductDB {
 }
 import { LocationPopover } from "../../components/ui/LocationPopover";
 import { logger } from "../../lib/logger";
+import { getSportIcon } from "../LeagueDetailPage/utils/leagueUtils";
+import { LeagueFilters, useLeagueFilters, filterLeagues, DEFAULT_FILTER_OPTIONS } from "../../components/leagues/filters";
 
-// Filter options data
+// Customize filter options for this page
 const filterOptions = {
-  location: ["All Locations", "Central", "East", "West", "South", "Gatineau"],
-  day: ["All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-  type: ["All Types", "Regular Season", "Tournament", "Skills and Drills"],
-  gender: ["All Genders", "Mixed", "Female", "Male"]
+  ...DEFAULT_FILTER_OPTIONS,
+  location: ["All Locations", "Central", "East", "West", "South", "Gatineau"]
 };
 
 export const LeaguesPage = (): JSX.Element => {
@@ -55,24 +55,20 @@ export const LeaguesPage = (): JSX.Element => {
   // State for Stripe products
   const [_leagueProducts, setLeagueProducts] = useState<Record<number, StripeProductDB>>({});
 
-  // Filter state
-  const [filters, setFilters] = useState({
-    sport: "All Sports",
-    location: "All Locations",
-    skillLevels: [] as string[],
-    day: "All Days",
-    type: "All Types",
-    gender: "All Genders"
-  });
-
-  // Open/close state for dropdowns
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  
-  // State for mobile filter drawer
-  const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
-  
-  // Refs for dropdown components
-  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Use the shared filter hook
+  const {
+    filters,
+    setFilters,
+    openDropdown,
+    showMobileFilterDrawer,
+    setShowMobileFilterDrawer,
+    dropdownRefs,
+    toggleDropdown,
+    handleFilterChange,
+    clearFilters,
+    clearSkillLevels,
+    isAnyFilterActive
+  } = useLeagueFilters();
 
   // Load data on component mount
   useEffect(() => {
@@ -105,7 +101,7 @@ export const LeaguesPage = (): JSX.Element => {
       ...(locationParam && { location: locationParam }),
       ...(typeParam && { type: typeParam })
     }));
-  }, [searchParams, sports]);
+  }, [searchParams, sports, setFilters]);
 
   const loadStripeProducts = async () => {
     try {
@@ -145,154 +141,9 @@ export const LeaguesPage = (): JSX.Element => {
     }
   };
 
-  // Effect to close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (openDropdown && dropdownRefs.current[openDropdown]) {
-        const dropdown = dropdownRefs.current[openDropdown];
-        if (dropdown && !dropdown.contains(event.target as Node)) {
-          setOpenDropdown(null);
-        }
-      }
-    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [openDropdown]);
-
-  // Toggle dropdown
-  const toggleDropdown = (dropdown: string) => {
-    if (openDropdown === dropdown) {
-      setOpenDropdown(null);
-    } else {
-      setOpenDropdown(dropdown);
-    }
-  };
-
-  // Handle filter change with toggle functionality for sport
-  const handleFilterChange = (filterType: string, value: string) => {
-    if (filterType === 'sport' && filters.sport === value) {
-      setFilters(prev => ({
-        ...prev,
-        [filterType]: "All Sports"
-      }));
-    } else if (filterType === 'skillLevel') {
-      // Toggle skill level in the array
-      setFilters(prev => {
-        const currentSkillLevels = [...prev.skillLevels];
-        if (currentSkillLevels.includes(value)) {
-          return {
-            ...prev,
-            skillLevels: currentSkillLevels.filter(skill => skill !== value)
-          };
-        } else {
-          return {
-            ...prev,
-            skillLevels: [...currentSkillLevels, value]
-          };
-        }
-      });
-    } else {
-      setFilters(prev => ({
-        ...prev,
-        [filterType]: value
-      }));
-    }
-    setOpenDropdown(null);
-  };
-
-  // Clear all filters
-  const clearFilters = () => {
-    setFilters({
-      sport: "All Sports",
-      location: "All Locations",
-      skillLevels: [],
-      day: "All Days",
-      type: "All Types",
-      gender: "All Genders"
-    });
-  };
-
-  // Clear skill levels only
-  const clearSkillLevels = () => {
-    setFilters(prev => ({ ...prev, skillLevels: [] }));
-  };
-
-  // Check if any filters are active
-  const isAnyFilterActive = () => {
-    return filters.sport !== "All Sports" ||
-           filters.location !== "All Locations" ||
-           filters.skillLevels.length > 0 ||
-           filters.day !== "All Days" ||
-           filters.type !== "All Types" ||
-           filters.gender !== "All Genders";
-  };
-
-  // Filter leagues based on selected filters
-  const filteredLeagues = leagues.filter(league => {
-    const dayName = getDayName(league.day_of_week);
-    const leagueLocations = getPrimaryLocation(league.gyms);
-    
-    // Helper function to check if league matches skill level filters
-    const matchesSkillLevels = () => {
-      // If no skill levels are selected, show all leagues
-      if (filters.skillLevels.length === 0) return true;
-      
-      // Check if any of the league's skill_ids match selected skill levels
-      if (league.skill_ids && league.skill_ids.length > 0) {
-        // Get the skill IDs that correspond to the selected skill names
-        const selectedSkillIds = skills
-          .filter(skill => filters.skillLevels.includes(skill.name))
-          .map(skill => skill.id);
-        
-        // Check if any of the league's skill_ids are in the selected skill IDs
-        return league.skill_ids.some(id => selectedSkillIds.includes(id));
-      } else if (league.skill_name && filters.skillLevels.includes(league.skill_name)) {
-        // For backward compatibility, check if the league's skill_name is in the selected skill levels
-        return true;
-      }
-      
-      return false;
-    };
-    
-    // Helper function to check if league matches location filter
-    const matchesLocation = () => {
-      if (filters.location === "All Locations") return true;
-      // Check if any of the league's gym locations match the selected location
-      return leagueLocations.includes(filters.location);
-    };
-
-    // Helper function to check if league matches type filter
-    const matchesType = () => {
-      if (filters.type === "All Types") return true;
-      if (!league.league_type) return false;
-      
-      const typeMapping: Record<string, string> = {
-        'regular_season': 'Regular Season',
-        'tournament': 'Tournament',
-        'skills_drills': 'Skills and Drills'
-      };
-      
-      return typeMapping[league.league_type] === filters.type;
-    };
-
-    // Helper function to check if league matches gender filter
-    const matchesGender = () => {
-      if (filters.gender === "All Genders") return true;
-      return league.gender === filters.gender;
-    };
-    
-    return (
-      (filters.sport === "All Sports" || league.sport_name === filters.sport) &&
-      matchesLocation() &&
-      matchesSkillLevels() &&
-      (filters.day === "All Days" || dayName === filters.day) &&
-      matchesType() &&
-      matchesGender()
-    );
-  });
+  // Filter leagues using the shared filter function
+  const filteredLeagues = filterLeagues(leagues, filters, skills);
 
   // Function to get badge color based on spots remaining
   const getSpotsBadgeColor = (spots: number) => {
@@ -308,26 +159,7 @@ export const LeaguesPage = (): JSX.Element => {
     return `${spots} spots left`;
   };
 
-  // Function to get sport icon based on sport type
-  const getSportIcon = (sport: string | null) => {
-    if (!sport) return "";
-    switch (sport) {
-      case 'Volleyball':
-        return "/Volleyball.png";
-      case 'Badminton':
-        return "/Badminton.png";
-      case 'Basketball':
-        return "/Basketball.png";
-      case 'Pickleball':
-        return "/pickleball.png";
-      default:
-        return "";
-    }
-  };
 
-  // Create sport filter options from database
-  const _sportFilterOptions = ["All Sports", ...sports.map(sport => sport.name)];
-  const skillFilterOptions = ["All Skill Levels", ...skills.map(skill => skill.name)];
 
   if (loading) {
     return (
@@ -373,249 +205,23 @@ export const LeaguesPage = (): JSX.Element => {
           Find a league
         </h1>
 
-        {/* Mobile Filter Button */}
-        <div className="flex justify-center mb-8 md:hidden">
-          <Button
-            onClick={() => setShowMobileFilterDrawer(true)}
-            className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-2 flex items-center gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            Filters {isAnyFilterActive() && <span className="ml-1 bg-white text-[#B20000] text-xs rounded-full w-5 h-5 flex items-center justify-center">!</span>}
-          </Button>
-        </div>
-
-        {/* Filters Section (Hidden on mobile, shown on desktop) */}
-        <div className="mb-16 hidden md:block">
-          {/* First row - Sport Filter Buttons */}
-          <div className="flex flex-wrap justify-center gap-3 mb-4">
-            {/* Order sports as: Volleyball, Badminton, Pickleball */}
-            {['Volleyball', 'Badminton', 'Pickleball'].map((sportName) => {
-              const sport = sports.find(s => s.name === sportName);
-              if (!sport) return null;
-              
-              return (
-                <Button
-                  key={sport.id}
-                  onClick={() => handleFilterChange('sport', sport.name)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg border ${
-                    filters.sport === sport.name 
-                      ? 'border-[#B20000] bg-[#ffeae5] text-[#B20000] hover:border-[#B20000] hover:bg-[#ffeae5] hover:text-[#B20000]' 
-                      : 'border-gray-300 bg-white text-[#6F6F6F] hover:border-[#B20000] hover:bg-[#ffeae5] hover:text-[#B20000]'
-                  }`}
-                >
-                  <img 
-                    src={getSportIcon(sport.name)} 
-                    alt={`${sport.name} icon`}
-                    className="w-6 h-6" 
-                  />
-                  <span className="font-medium">{sport.name}</span>
-                </Button>
-              );
-            })}
-          </div>
-          
-          {/* Second row - Dropdown Filters */}
-          <div className="flex flex-wrap justify-center gap-3 mb-6">
-            {/* Location Filter */}
-            <div className="relative" ref={el => dropdownRefs.current['location'] = el}>
-              <button
-                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
-                  filters.location !== "All Locations"
-                    ? 'border-b-[#B20000] text-[#B20000]'
-                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
-                }`}
-                onClick={() => toggleDropdown('location')}
-              >
-                <span>{filters.location}</span>
-                <ChevronDown className={`h-4 w-4 ml-2 ${
-                  filters.location !== "All Locations" ? 'text-[#B20000]' : 'text-gray-400'
-                }`} />
-              </button>
-              {openDropdown === 'location' && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
-                  {filterOptions.location.map((option) => (
-                    <button
-                      key={option}
-                      className={`block w-full text-left px-4 py-2 transition-colors duration-200 hover:bg-[#ffeae5] hover:text-[#B20000] ${
-                        filters.location === option ? 'bg-[#ffeae5] text-[#B20000] font-medium' : ''
-                      }`}
-                      onClick={() => handleFilterChange('location', option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Skill Level Filter */}
-            <div className="relative" ref={el => dropdownRefs.current['skillLevel'] = el}>
-              <button
-                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
-                  filters.skillLevels.length > 0
-                    ? 'border-b-[#B20000] text-[#B20000]'
-                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
-                }`}
-                onClick={() => toggleDropdown('skillLevel')}
-              >
-                <span>
-                  {filters.skillLevels.length === 0 
-                    ? "All Skill Levels" 
-                    : filters.skillLevels.length === 1 
-                      ? filters.skillLevels[0] 
-                      : `${filters.skillLevels.length} Skill Levels`}
-                </span>
-                <ChevronDown className={`h-4 w-4 ml-2 ${
-                  filters.skillLevels.length > 0 ? 'text-[#B20000]' : 'text-gray-400'
-                }`} />
-              </button>
-              {openDropdown === 'skillLevel' && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
-                  {skillFilterOptions.map((option) => (
-                    option === "All Skill Levels" ? (
-                      <button
-                        key={option}
-                        className={`block w-full text-left px-4 py-2 transition-colors duration-200 hover:bg-[#ffeae5] hover:text-[#B20000] ${
-                          filters.skillLevels.length === 0 ? 'bg-[#ffeae5] text-[#B20000] font-medium' : ''
-                        }`}
-                        onClick={clearSkillLevels}
-                      >
-                        {option}
-                      </button>
-                    ) : (
-                      <div key={option} className="flex items-center px-4 py-2 hover:bg-[#ffeae5]">
-                        <input
-                          type="checkbox"
-                          id={`skill-${option}`}
-                          checked={filters.skillLevels.includes(option)}
-                          onChange={() => handleFilterChange('skillLevel', option)}
-                          className="mr-2 h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
-                        />
-                        <label
-                          htmlFor={`skill-${option}`}
-                          className={`flex-1 cursor-pointer ${
-                            filters.skillLevels.includes(option) ? 'text-[#B20000] font-medium' : 'text-[#6F6F6F]'
-                          }`}
-                        >
-                          {option}
-                        </label>
-                      </div>
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Type Filter */}
-            <div className="relative" ref={el => dropdownRefs.current['type'] = el}>
-              <button
-                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
-                  filters.type !== "All Types"
-                    ? 'border-b-[#B20000] text-[#B20000]'
-                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
-                }`}
-                onClick={() => toggleDropdown('type')}
-              >
-                <span>{filters.type}</span>
-                <ChevronDown className={`h-4 w-4 ml-2 ${
-                  filters.type !== "All Types" ? 'text-[#B20000]' : 'text-gray-400'
-                }`} />
-              </button>
-              {openDropdown === 'type' && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
-                  {filterOptions.type.map((option) => (
-                    <button
-                      key={option}
-                      className={`block w-full text-left px-4 py-2 transition-colors duration-200 hover:bg-[#ffeae5] hover:text-[#B20000] ${
-                        filters.type === option ? 'bg-[#ffeae5] text-[#B20000] font-medium' : ''
-                      }`}
-                      onClick={() => handleFilterChange('type', option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Gender Filter */}
-            <div className="relative" ref={el => dropdownRefs.current['gender'] = el}>
-              <button
-                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
-                  filters.gender !== "All Genders"
-                    ? 'border-b-[#B20000] text-[#B20000]'
-                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
-                }`}
-                onClick={() => toggleDropdown('gender')}
-              >
-                <span>{filters.gender}</span>
-                <ChevronDown className={`h-4 w-4 ml-2 ${
-                  filters.gender !== "All Genders" ? 'text-[#B20000]' : 'text-gray-400'
-                }`} />
-              </button>
-              {openDropdown === 'gender' && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
-                  {filterOptions.gender.map((option) => (
-                    <button
-                      key={option}
-                      className={`block w-full text-left px-4 py-2 transition-colors duration-200 hover:bg-[#ffeae5] hover:text-[#B20000] ${
-                        filters.gender === option ? 'bg-[#ffeae5] text-[#B20000] font-medium' : ''
-                      }`}
-                      onClick={() => handleFilterChange('gender', option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Day Filter */}
-            <div className="relative" ref={el => dropdownRefs.current['day'] = el}>
-              <button
-                className={`flex items-center justify-between w-full md:w-auto min-w-[180px] border-b-2 px-3 py-2 text-sm transition-colors duration-200 ${
-                  filters.day !== "All Days"
-                    ? 'border-b-[#B20000] text-[#B20000]'
-                    : 'border-b-gray-200 text-gray-600 hover:border-b-gray-300'
-                }`}
-                onClick={() => toggleDropdown('day')}
-              >
-                <span>{filters.day}</span>
-                <ChevronDown className={`h-4 w-4 ml-2 ${
-                  filters.day !== "All Days" ? 'text-[#B20000]' : 'text-gray-400'
-                }`} />
-              </button>
-              {openDropdown === 'day' && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-[#D4D4D4] rounded-lg shadow-lg">
-                  {filterOptions.day.map((option) => (
-                    <button
-                      key={option}
-                      className={`block w-full text-left px-4 py-2 transition-colors duration-200 hover:bg-[#ffeae5] hover:text-[#B20000] ${
-                        filters.day === option ? 'bg-[#ffeae5] text-[#B20000] font-medium' : ''
-                      }`}
-                      onClick={() => handleFilterChange('day', option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Clear Filters Button */}
-          {isAnyFilterActive() && (
-            <div className="flex justify-center">
-              <button
-                className="flex items-center text-[#B20000] hover:text-[#8A0000] font-medium"
-                onClick={clearFilters}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Clear filters
-              </button>
-            </div>
-          )}
-        </div>
+        {/* League Filters Component */}
+        <LeagueFilters
+          filters={filters}
+          filterOptions={filterOptions}
+          sports={sports}
+          skills={skills}
+          openDropdown={openDropdown}
+          dropdownRefs={dropdownRefs}
+          onFilterChange={handleFilterChange}
+          onToggleDropdown={toggleDropdown}
+          onClearFilters={clearFilters}
+          onClearSkillLevels={clearSkillLevels}
+          isAnyFilterActive={isAnyFilterActive}
+          onShowMobileFilters={() => setShowMobileFilterDrawer(true)}
+          getSportIcon={getSportIcon}
+          hideOnMobile={true}
+        />
 
         {/* League Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

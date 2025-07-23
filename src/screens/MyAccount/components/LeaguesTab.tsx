@@ -10,6 +10,9 @@ import { LeagueTeamsModal } from './LeaguesTab/components/LeagueTeamsModal';
 import { useLeaguesData } from './LeaguesTab/hooks/useLeaguesData';
 import { useLeagueActions } from './LeaguesTab/hooks/useLeagueActions';
 import { LeagueWithTeamCount } from './LeaguesTab/types';
+import { LeagueFilters, useLeagueFilters, filterLeagues, DEFAULT_FILTER_OPTIONS } from '../../../components/leagues/filters';
+import { getSportIcon } from '../../LeagueDetailPage/utils/leagueUtils';
+import { fetchSports, fetchSkills } from '../../../lib/leagues';
 
 export function LeaguesTab() {
   const { userProfile } = useAuth();
@@ -19,12 +22,26 @@ export function LeaguesTab() {
   const [leagueToCopy, setLeagueToCopy] = useState<LeagueWithTeamCount | null>(null);
   const [teamsModalOpen, setTeamsModalOpen] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<LeagueWithTeamCount | null>(null);
+  const [sports, setSports] = useState<Array<{ id: number; name: string }>>([]);
+  const [skills, setSkills] = useState<Array<{ id: number; name: string }>>([]);
 
   const {
     leagues,
     loading,
     loadData
   } = useLeaguesData();
+  
+  // Use the shared filter hook
+  const {
+    filters,
+    openDropdown,
+    dropdownRefs,
+    toggleDropdown,
+    handleFilterChange,
+    clearFilters,
+    clearSkillLevels,
+    isAnyFilterActive
+  } = useLeagueFilters();
 
   const {
     saving,
@@ -33,7 +50,20 @@ export function LeaguesTab() {
   } = useLeagueActions({ loadData, showToast });
 
   useEffect(() => {
-    loadData();
+    const loadAllData = async () => {
+      loadData();
+      try {
+        const [sportsData, skillsData] = await Promise.all([
+          fetchSports(),
+          fetchSkills()
+        ]);
+        setSports(sportsData);
+        setSkills(skillsData);
+      } catch (error) {
+        console.error('Error loading sports/skills:', error);
+      }
+    };
+    loadAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -68,6 +98,15 @@ export function LeaguesTab() {
     setTeamsModalOpen(false);
     setSelectedLeague(null);
   };
+  
+  // Filter leagues using the shared filter function
+  const filteredLeagues = filterLeagues(leagues, filters, skills);
+  
+  // Customize filter options for admin page
+  const filterOptions = {
+    ...DEFAULT_FILTER_OPTIONS,
+    location: ["All Locations", "Central", "East", "West", "South", "Gatineau"]
+  };
 
   if (!userProfile?.is_admin) {
     return (
@@ -91,8 +130,25 @@ export function LeaguesTab() {
     <div className="space-y-6">
       <LeaguesHeader onCreateNew={handleCreateNewLeague} />
 
+      {/* League Filters */}
+      <LeagueFilters
+        filters={filters}
+        filterOptions={filterOptions}
+        sports={sports}
+        skills={skills}
+        openDropdown={openDropdown}
+        dropdownRefs={dropdownRefs}
+        onFilterChange={handleFilterChange}
+        onToggleDropdown={toggleDropdown}
+        onClearFilters={clearFilters}
+        onClearSkillLevels={clearSkillLevels}
+        isAnyFilterActive={isAnyFilterActive}
+        getSportIcon={getSportIcon}
+        hideOnMobile={false}
+      />
+
       <LeaguesList
-        leagues={leagues}
+        leagues={filteredLeagues}
         onDelete={handleDeleteLeague}
         onCopy={handleCopyClick}
         onShowTeams={handleShowTeams}
