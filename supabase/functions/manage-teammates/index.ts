@@ -177,6 +177,85 @@ serve(async (req: Request) => {
         throw error
       }
 
+      // Send notification email to the added user
+      try {
+        // Get team details for the email
+        const { data: fullTeamData, error: teamFetchError } = await supabase
+          .from('teams')
+          .select(`
+            name,
+            league_id,
+            captain_id,
+            registrations!inner (
+              leagues!inner (
+                name
+              )
+            )
+          `)
+          .eq('id', teamId)
+          .single()
+
+        if (!teamFetchError && fullTeamData) {
+          // Get captain's name
+          const { data: captainData } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', fullTeamData.captain_id)
+            .single()
+
+          if (captainData) {
+            const leagueName = fullTeamData.registrations?.[0]?.leagues?.name || 'OFSL League'
+            
+            // Call the notification Edge Function internally
+            const notificationPayload = {
+              userId: userId,
+              teamId: parseInt(teamId),
+              teamName: fullTeamData.name,
+              leagueName: leagueName,
+              captainName: captainData.name
+            }
+
+            // Get service account token for internal Edge Function call
+            const { data: { session: serviceSession } } = await supabase.auth.signInWithPassword({
+              email: Deno.env.get('SERVICE_ACCOUNT_EMAIL') || '',
+              password: Deno.env.get('SERVICE_ACCOUNT_PASSWORD') || ''
+            })
+
+            if (serviceSession) {
+              const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-team-addition-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${serviceSession.access_token}`,
+                },
+                body: JSON.stringify(notificationPayload),
+              })
+
+              if (!notificationResponse.ok) {
+                console.error('Failed to send notification email:', await notificationResponse.text())
+              }
+            } else {
+              // If service account auth fails, try with current token
+              const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-team-addition-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': authHeader,
+                },
+                body: JSON.stringify(notificationPayload),
+              })
+
+              if (!notificationResponse.ok) {
+                console.error('Failed to send notification email:', await notificationResponse.text())
+              }
+            }
+          }
+        }
+      } catch (notificationError) {
+        // Log error but don't fail the main operation
+        console.error('Error sending team addition notification:', notificationError)
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true,

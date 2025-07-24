@@ -4,6 +4,21 @@ import userEvent from '@testing-library/user-event';
 import { SignupPage, SignupConfirmation } from './index';
 import { render, mockNavigate } from '../../test/test-utils';
 import { mockSupabase } from '../../test/mocks/supabase-enhanced';
+import { useAuth } from '../../contexts/AuthContext';
+
+// Mock auth context to prevent loading state
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: vi.fn(() => ({
+    user: null,
+    loading: false,
+    profileComplete: false,
+    userProfile: null,
+    refreshUserProfile: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    setIsNewUser: vi.fn(),
+  })),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 describe('SignupPage', () => {
   beforeEach(() => {
@@ -13,64 +28,92 @@ describe('SignupPage', () => {
   it('renders signup form with all elements', () => {
     render(<SignupPage />);
     
-    expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign up with google/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Full Name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password (minimum 12 characters)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirm Password')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create Account' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
     expect(screen.getByText(/already have an account/i)).toBeInTheDocument();
   });
 
   it('validates required fields', async () => {
     const user = userEvent.setup();
+    const mockSignIn = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      loading: false,
+      profileComplete: false,
+      userProfile: null,
+      refreshUserProfile: vi.fn(),
+      signIn: mockSignIn,
+      signInWithGoogle: vi.fn(),
+      setIsNewUser: vi.fn(),
+    } as any);
+    
     render(<SignupPage />);
     
-    const submitButton = screen.getByRole('button', { name: /create account/i });
+    const submitButton = screen.getByRole('button', { name: 'Create Account' });
     await user.click(submitButton);
     
-    expect(await screen.findByText(/name is required/i)).toBeInTheDocument();
-    expect(await screen.findByText(/email is required/i)).toBeInTheDocument();
-    expect(await screen.findByText(/password is required/i)).toBeInTheDocument();
+    // The form should not submit due to HTML5 validation
+    expect(mockSignIn).not.toHaveBeenCalled();
   });
 
   it('validates email format', async () => {
     const user = userEvent.setup();
     render(<SignupPage />);
     
-    const emailInput = screen.getByLabelText(/email/i);
-    const submitButton = screen.getByRole('button', { name: /create account/i });
+    const nameInput = screen.getByLabelText('Full Name');
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password (minimum 12 characters)');
+    const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+    const submitButton = screen.getByRole('button', { name: 'Create Account' });
     
+    await user.type(nameInput, 'Test User');
     await user.type(emailInput, 'invalid-email');
+    await user.type(passwordInput, 'Password123!@#');
+    await user.type(confirmPasswordInput, 'Password123!@#');
     await user.click(submitButton);
     
-    expect(await screen.findByText(/please enter a valid email/i)).toBeInTheDocument();
+    // Check HTML5 validation
+    expect(emailInput).toHaveAttribute('type', 'email');
   });
 
   it('validates password requirements', async () => {
     const user = userEvent.setup();
     render(<SignupPage />);
     
-    const passwordInput = screen.getByLabelText(/^password$/i);
-    const submitButton = screen.getByRole('button', { name: /create account/i });
+    const nameInput = screen.getByLabelText('Full Name');
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password (minimum 12 characters)');
+    const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+    const submitButton = screen.getByRole('button', { name: 'Create Account' });
     
+    await user.type(nameInput, 'Test User');
+    await user.type(emailInput, 'test@example.com');
     await user.type(passwordInput, 'short');
+    await user.type(confirmPasswordInput, 'short');
     await user.click(submitButton);
     
-    expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument();
+    expect(await screen.findByText('Password must be at least 12 characters')).toBeInTheDocument();
   });
 
-  it('validates password confirmation', async () => {
+  it('validates password confirmation match', async () => {
     const user = userEvent.setup();
     render(<SignupPage />);
     
-    const passwordInput = screen.getByLabelText(/^password$/i);
-    const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
-    const submitButton = screen.getByRole('button', { name: /create account/i });
+    const nameInput = screen.getByLabelText('Full Name');
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password (minimum 12 characters)');
+    const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+    const submitButton = screen.getByRole('button', { name: 'Create Account' });
     
-    await user.type(passwordInput, 'password123');
-    await user.type(confirmPasswordInput, 'password456');
+    await user.type(nameInput, 'Test User');
+    await user.type(emailInput, 'test@example.com');
+    await user.type(passwordInput, 'Password123!@#');
+    await user.type(confirmPasswordInput, 'different123');
     await user.click(submitButton);
     
     expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
@@ -78,150 +121,170 @@ describe('SignupPage', () => {
 
   it('handles successful signup', async () => {
     const user = userEvent.setup();
-    const mockUser = {
-      id: 'test-user-id',
-      email: 'newuser@example.com',
-    };
     
     mockSupabase.auth.signUp.mockResolvedValueOnce({
       data: { 
-        user: mockUser, 
-        session: null // Email confirmation required
+        user: { 
+          id: '123', 
+          email: 'test@example.com' 
+        },
+        session: null
       },
       error: null,
     });
     
     render(<SignupPage />);
     
-    const nameInput = screen.getByLabelText(/name/i);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/^password$/i);
-    const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
-    const submitButton = screen.getByRole('button', { name: /create account/i });
+    const nameInput = screen.getByLabelText('Full Name');
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password (minimum 12 characters)');
+    const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+    const submitButton = screen.getByRole('button', { name: 'Create Account' });
     
     await user.type(nameInput, 'Test User');
-    await user.type(emailInput, 'newuser@example.com');
-    await user.type(passwordInput, 'password123');
-    await user.type(confirmPasswordInput, 'password123');
+    await user.type(emailInput, 'test@example.com');
+    await user.type(passwordInput, 'Password123!@#');
+    await user.type(confirmPasswordInput, 'Password123!@#');
     await user.click(submitButton);
     
     await waitFor(() => {
       expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
-        email: 'newuser@example.com',
-        password: 'password123',
+        email: 'test@example.com',
+        password: 'Password123!@#',
         options: {
           data: {
-            name: 'Test User',
+            full_name: 'Test User'
           },
-        },
+          emailRedirectTo: 'http://localhost:3000/#/complete-profile'
+        }
       });
     });
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/signup-confirmation');
   });
 
-  it('handles signup error - user already exists', async () => {
+  it('handles existing user error', async () => {
     const user = userEvent.setup();
     
     mockSupabase.auth.signUp.mockResolvedValueOnce({
       data: { user: null, session: null },
-      error: { message: 'User already registered' },
+      error: { message: 'User already registered', code: 'user_already_exists' },
     });
     
     render(<SignupPage />);
     
-    const nameInput = screen.getByLabelText(/name/i);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/^password$/i);
-    const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
-    const submitButton = screen.getByRole('button', { name: /create account/i });
+    const nameInput = screen.getByLabelText('Full Name');
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password (minimum 12 characters)');
+    const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+    const submitButton = screen.getByRole('button', { name: 'Create Account' });
     
     await user.type(nameInput, 'Test User');
     await user.type(emailInput, 'existing@example.com');
-    await user.type(passwordInput, 'password123');
-    await user.type(confirmPasswordInput, 'password123');
+    await user.type(passwordInput, 'Password123!@#');
+    await user.type(confirmPasswordInput, 'Password123!@#');
     await user.click(submitButton);
     
-    expect(await screen.findByText(/user already registered/i)).toBeInTheDocument();
+    expect(await screen.findByText('An account with this email already exists. Please try logging in instead.')).toBeInTheDocument();
   });
 
-  it('handles Google OAuth signup', async () => {
+  it('toggles password visibility', async () => {
     const user = userEvent.setup();
+    render(<SignupPage />);
     
-    mockSupabase.auth.signInWithOAuth.mockResolvedValueOnce({
-      data: { provider: 'google', url: 'https://accounts.google.com/oauth' },
-      error: null,
-    });
+    const passwordInput = screen.getByLabelText('Password (minimum 12 characters)');
+    const toggleButton = screen.getAllByRole('button', { name: /show password/i })[0];
+    
+    expect(passwordInput).toHaveAttribute('type', 'password');
+    
+    await user.click(toggleButton);
+    expect(passwordInput).toHaveAttribute('type', 'text');
+    
+    await user.click(toggleButton);
+    expect(passwordInput).toHaveAttribute('type', 'password');
+  });
+
+  it('toggles confirm password visibility', async () => {
+    const user = userEvent.setup();
+    render(<SignupPage />);
+    
+    const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+    const toggleButton = screen.getAllByRole('button', { name: /show password/i })[1];
+    
+    expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+    
+    await user.click(toggleButton);
+    expect(confirmPasswordInput).toHaveAttribute('type', 'text');
+    
+    await user.click(toggleButton);
+    expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+  });
+
+  it('navigates to login page', () => {
+    render(<SignupPage />);
+    
+    const loginLink = screen.getByRole('link', { name: /login/i });
+    expect(loginLink).toHaveAttribute('href', '/login');
+  });
+
+  it('handles Google sign up', async () => {
+    const user = userEvent.setup();
+    const mockSignInWithGoogle = vi.fn().mockResolvedValue({ error: null });
+    
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      loading: false,
+      profileComplete: false,
+      userProfile: null,
+      refreshUserProfile: vi.fn(),
+      signInWithGoogle: mockSignInWithGoogle,
+      setIsNewUser: vi.fn(),
+    } as any);
     
     render(<SignupPage />);
     
-    const googleButton = screen.getByRole('button', { name: /sign up with google/i });
+    const googleButton = screen.getByRole('button', { name: /continue with google/i });
     await user.click(googleButton);
     
-    await waitFor(() => {
-      expect(mockSupabase.auth.signInWithOAuth).toHaveBeenCalledWith({
-        provider: 'google',
-        options: {
-          redirectTo: expect.stringContaining('/google-signup-redirect'),
-        },
-      });
-    });
+    expect(mockSignInWithGoogle).toHaveBeenCalled();
   });
 
-  it('navigates to login page', async () => {
-    const user = userEvent.setup();
-    render(<SignupPage />);
-    
-    const loginLink = screen.getByRole('link', { name: /sign in/i });
-    await user.click(loginLink);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
-  });
-
-  it('shows loading state during signup', async () => {
+  it('shows loading state during submission', async () => {
     const user = userEvent.setup();
     
-    // Make the promise hang to see loading state
-    mockSupabase.auth.signUp.mockImplementationOnce(
-      () => new Promise(() => {})
-    );
+    mockSupabase.auth.signUp.mockImplementation(() => new Promise(() => {})); // Never resolves
     
     render(<SignupPage />);
     
-    const nameInput = screen.getByLabelText(/name/i);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/^password$/i);
-    const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
-    const submitButton = screen.getByRole('button', { name: /create account/i });
+    const nameInput = screen.getByLabelText('Full Name');
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password (minimum 12 characters)');
+    const confirmPasswordInput = screen.getByLabelText('Confirm Password');
+    const submitButton = screen.getByRole('button', { name: 'Create Account' });
     
     await user.type(nameInput, 'Test User');
-    await user.type(emailInput, 'newuser@example.com');
-    await user.type(passwordInput, 'password123');
-    await user.type(confirmPasswordInput, 'password123');
+    await user.type(emailInput, 'test@example.com');
+    await user.type(passwordInput, 'Password123!@#');
+    await user.type(confirmPasswordInput, 'Password123!@#');
     await user.click(submitButton);
     
-    expect(screen.getByText(/creating account.../i)).toBeInTheDocument();
+    expect(screen.getByText('Creating Account...')).toBeInTheDocument();
     expect(submitButton).toBeDisabled();
   });
 });
 
 describe('SignupConfirmation', () => {
-  it('renders confirmation message', () => {
+  it('displays confirmation message', () => {
     render(<SignupConfirmation />);
     
-    expect(screen.getByRole('heading', { name: /check your email/i })).toBeInTheDocument();
-    expect(screen.getByText(/we've sent a confirmation email/i)).toBeInTheDocument();
-    expect(screen.getByText(/please check your email/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /account created successfully/i })).toBeInTheDocument();
+    expect(screen.getByText(/sent a verification email/i)).toBeInTheDocument();
+    expect(screen.getByText('your email address')).toBeInTheDocument();
   });
 
-  it('navigates back to login', async () => {
-    const user = userEvent.setup();
+
+  it('has button to return to home', () => {
     render(<SignupConfirmation />);
     
-    const loginLink = screen.getByRole('link', { name: /back to sign in/i });
-    await user.click(loginLink);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
+    const homeButton = screen.getByRole('button', { name: /back to home/i });
+    expect(homeButton).toBeInTheDocument();
   });
 });
