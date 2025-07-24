@@ -179,77 +179,75 @@ serve(async (req: Request) => {
 
       // Send notification email to the added user
       try {
+        console.log('Attempting to send notification email for user:', userId, 'team:', teamId)
+        
         // Get team details for the email
         const { data: fullTeamData, error: teamFetchError } = await supabase
           .from('teams')
           .select(`
             name,
             league_id,
-            captain_id,
-            registrations!inner (
-              leagues!inner (
-                name
-              )
-            )
+            captain_id
           `)
           .eq('id', teamId)
           .single()
 
-        if (!teamFetchError && fullTeamData) {
-          // Get captain's name
-          const { data: captainData } = await supabase
-            .from('users')
+        if (teamFetchError || !fullTeamData) {
+          console.error('Error fetching team data:', teamFetchError || 'No team data found')
+        } else {
+
+        // Get league name separately to avoid join issues
+        let leagueName = 'OFSL League'
+        if (fullTeamData.league_id) {
+          const { data: leagueData } = await supabase
+            .from('leagues')
             .select('name')
-            .eq('id', fullTeamData.captain_id)
+            .eq('id', fullTeamData.league_id)
             .single()
-
-          if (captainData) {
-            const leagueName = fullTeamData.registrations?.[0]?.leagues?.name || 'OFSL League'
-            
-            // Call the notification Edge Function internally
-            const notificationPayload = {
-              userId: userId,
-              teamId: parseInt(teamId),
-              teamName: fullTeamData.name,
-              leagueName: leagueName,
-              captainName: captainData.name
-            }
-
-            // Get service account token for internal Edge Function call
-            const { data: { session: serviceSession } } = await supabase.auth.signInWithPassword({
-              email: Deno.env.get('SERVICE_ACCOUNT_EMAIL') || '',
-              password: Deno.env.get('SERVICE_ACCOUNT_PASSWORD') || ''
-            })
-
-            if (serviceSession) {
-              const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-team-addition-notification`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${serviceSession.access_token}`,
-                },
-                body: JSON.stringify(notificationPayload),
-              })
-
-              if (!notificationResponse.ok) {
-                console.error('Failed to send notification email:', await notificationResponse.text())
-              }
-            } else {
-              // If service account auth fails, try with current token
-              const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-team-addition-notification`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': authHeader,
-                },
-                body: JSON.stringify(notificationPayload),
-              })
-
-              if (!notificationResponse.ok) {
-                console.error('Failed to send notification email:', await notificationResponse.text())
-              }
-            }
+          
+          if (leagueData) {
+            leagueName = leagueData.name
           }
+        }
+
+        // Get captain's name
+        const { data: captainData, error: captainError } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', fullTeamData.captain_id)
+          .single()
+
+        if (captainError || !captainData) {
+          console.error('Error fetching captain data:', captainError)
+        } else {
+          // Call the notification Edge Function with the same token
+          const notificationPayload = {
+            userId: userId,
+            teamId: parseInt(teamId),
+            teamName: fullTeamData.name,
+            leagueName: leagueName,
+            captainName: captainData.name
+          }
+
+          console.log('Sending notification with payload:', notificationPayload)
+
+          const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-team-addition-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader,
+            },
+            body: JSON.stringify(notificationPayload),
+          })
+
+          if (!notificationResponse.ok) {
+            const errorText = await notificationResponse.text()
+            console.error('Failed to send notification email:', notificationResponse.status, errorText)
+          } else {
+            const result = await notificationResponse.json()
+            console.log('Notification sent successfully:', result)
+          }
+        }
         }
       } catch (notificationError) {
         // Log error but don't fail the main operation

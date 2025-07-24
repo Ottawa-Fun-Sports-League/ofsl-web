@@ -2,10 +2,9 @@ import { Link } from "react-router-dom";
 import { Mail, Phone } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
-
 export function Footer() {
   const { user } = useAuth();
-  
+
   return (
     <footer className="w-full bg-black text-white">
       <div className="max-w-[1280px] mx-auto px-4 pt-16 md:pt-24 pb-8 md:pb-12">
@@ -25,17 +24,26 @@ export function Footer() {
             </h3>
             <ul className="text-base md:text-lg space-y-2">
               <li>
-                <Link to="/volleyball" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/volleyball"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Volleyball
                 </Link>
               </li>
               <li>
-                <Link to="/badminton" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/badminton"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Badminton
                 </Link>
               </li>
               <li>
-                <Link to="/pickleball" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/pickleball"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Pickleball
                 </Link>
               </li>
@@ -48,17 +56,26 @@ export function Footer() {
             </h3>
             <ul className="text-base md:text-lg space-y-2">
               <li>
-                <Link to="/about-us#newsletter-section" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/about-us#newsletter-section"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Newsletter
                 </Link>
               </li>
               <li>
-                <Link to="/skills-and-drills" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/skills-and-drills"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Skills and Drills
                 </Link>
               </li>
               <li>
-                <Link to="/about-us#partners-section" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/about-us#partners-section"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Partner with us
                 </Link>
               </li>
@@ -71,20 +88,30 @@ export function Footer() {
             </h3>
             <ul className="text-base md:text-lg space-y-2">
               <li>
-                <Link to="/leagues" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/leagues"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Leagues
                 </Link>
               </li>
               <li>
-                <Link 
-                  to={user ? "/my-account/teams" : "/login?redirect=/my-account/teams"} 
+                <Link
+                  to={
+                    user
+                      ? "/my-account/teams"
+                      : "/login?redirect=/my-account/teams"
+                  }
                   className="footer-link hover:text-[#ffeae5]"
                 >
                   Schedule & Standings
                 </Link>
               </li>
               <li>
-                <Link to="/standards-of-play" className="footer-link hover:text-[#ffeae5]">
+                <Link
+                  to="/standards-of-play"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
                   Standards of play
                 </Link>
               </li>
@@ -96,9 +123,30 @@ export function Footer() {
               Site info
             </h3>
             <ul className="text-base md:text-lg space-y-2">
-              <li><Link to="/about-us" className="footer-link hover:text-[#ffeae5]">About us</Link></li>
-              <li><Link to="/about-us#contact-section" className="footer-link hover:text-[#ffeae5]">Contact</Link></li>
-              <li><Link to="/about-us#faq-section" className="footer-link hover:text-[#ffeae5]">FAQs</Link></li>
+              <li>
+                <Link
+                  to="/about-us"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
+                  About us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/about-us#contact-section"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/about-us#faq-section"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
+                  FAQs
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -107,14 +155,14 @@ export function Footer() {
               Contact
             </h3>
             <div className="text-base md:text-lg mb-6 md:mb-8 text-white">
-              <a 
-                href="mailto:ottawafunsports@gmail.com"
+              <a
+                href="mailto:info@ofsl.ca"
                 className="flex items-center gap-2 footer-link hover:text-[#ffeae5] mb-4"
               >
                 <Mail size={18} className="text-white" />
                 <span>Email</span>
               </a>
-              <a 
+              <a
                 href="tel:6137986375"
                 className="flex items-center gap-2 footer-link hover:text-[#ffeae5]"
               >
@@ -123,9 +171,9 @@ export function Footer() {
               </a>
             </div>
             <div className="flex gap-3">
-              <a 
-                href="https://www.facebook.com/OttawaFunSportsLeague" 
-                target="_blank" 
+              <a
+                href="https://www.facebook.com/OttawaFunSportsLeague"
+                target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
                 className="bg-white rounded-lg p-1 flex items-center justify-center"
@@ -136,9 +184,9 @@ export function Footer() {
                   src="/social-icons.svg"
                 />
               </a>
-              <a 
-                href="https://www.instagram.com/ottawafunsports/" 
-                target="_blank" 
+              <a
+                href="https://www.instagram.com/ottawafunsports/"
+                target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
                 className="bg-white rounded-lg p-1 flex items-center justify-center"
@@ -149,9 +197,9 @@ export function Footer() {
                   src="/social-icons-2.svg"
                 />
               </a>
-              <a 
-                href="https://www.instagram.com/ottawafunsports/" 
-                target="_blank" 
+              <a
+                href="https://www.tiktok.com/@ottawafunsports"
+                target="_blank"
                 rel="noopener noreferrer"
                 aria-label="TikTok"
                 className="bg-white rounded-lg p-1 flex items-center justify-center"
@@ -178,3 +226,4 @@ export function Footer() {
     </footer>
   );
 }
+

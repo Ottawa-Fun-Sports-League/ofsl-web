@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .env
 .mcp.json
+
+# Test files
+test-email-*.js
