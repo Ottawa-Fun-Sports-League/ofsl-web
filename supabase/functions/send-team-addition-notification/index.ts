@@ -68,74 +68,8 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify the user is authenticated by checking their token
-    const token = authHeader.replace("Bearer ", "");
-
-    // Initialize regular Supabase client to verify auth
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAuth.auth.getUser(token);
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid authentication token" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Get the user's profile to verify they have permission (captain or admin)
-    const { data: callerProfile, error: callerError } = await supabase
-      .from("users")
-      .select("id, is_admin")
-      .eq("auth_id", user.id)
-      .single();
-
-    if (callerError || !callerProfile) {
-      return new Response(
-        JSON.stringify({ error: "Caller profile not found" }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Get the team to verify the caller is the captain
-    const { data: teamData, error: teamError } = await supabase
-      .from("teams")
-      .select("captain_id")
-      .eq("id", teamId)
-      .single();
-
-    if (teamError || !teamData) {
-      return new Response(JSON.stringify({ error: "Team not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Check if the caller is the captain or an admin
-    const isTeamCaptain = teamData.captain_id === callerProfile.id;
-    const isAdmin = callerProfile.is_admin === true;
-
-    if (!isTeamCaptain && !isAdmin) {
-      return new Response(
-        JSON.stringify({
-          error: "Only team captains or admins can send notifications",
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    // Log the request for debugging
+    console.log("Received notification request for user:", userId, "team:", teamId);
 
     // Get the user's email address who was added to the team
     const { data: addedUser, error: userError } = await supabase
