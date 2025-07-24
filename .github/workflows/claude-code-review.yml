@@ -19,13 +19,23 @@ jobs:
     #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
     
     runs-on: ubuntu-latest
+    # Skip if it's a PR from a fork (they don't have access to secrets)
+    if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
     
     steps:
+      - name: Debug environment
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "Is fork: ${{ github.event.pull_request.head.repo.full_name != github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+          
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -34,6 +44,10 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@beta
+        env:
+          # Set environment variables that might be needed
+          ACTIONS_RUNTIME_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
