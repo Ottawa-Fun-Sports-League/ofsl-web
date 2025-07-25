@@ -242,7 +242,7 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', true)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }) as any;
 
         waitlistResult = await supabase
           .from('teams')
@@ -259,19 +259,19 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', false)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }) as any;
       }
 
       if (activeResult.error) throw activeResult.error;
       if (waitlistResult.error) throw waitlistResult.error;
 
-      const activeData = (activeResult as { data: ExtendedTeam[] | null }).data || [];
-      activeTeamsData = activeData.map((team: ExtendedTeam) => ({
+      const activeData = (activeResult as { data: any[] | null }).data || [];
+      activeTeamsData = activeData.map((team: any) => ({
         ...team,
         display_order: team.display_order || 0
       }));
-      const waitlistData = (waitlistResult as { data: ExtendedTeam[] | null }).data || [];
-      waitlistedTeamsData = waitlistData.map((team: ExtendedTeam) => ({
+      const waitlistData = (waitlistResult as { data: any[] | null }).data || [];
+      waitlistedTeamsData = waitlistData.map((team: any) => ({
         ...team,
         display_order: team.display_order || 0
       }));

@@ -105,7 +105,7 @@ export function LeagueGyms({ gyms, gymDetails }: LeagueGymsProps) {
                         Access Instructions
                       </h4>
                       <p className="text-sm text-amber-700 whitespace-pre-wrap">
-                        {gymInfo.instructions}
+                        {gymInfo.instructions || ''}
                       </p>
                     </div>
                   </div>

@@ -75,15 +75,15 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
       amount_due: payment.amount_due,
       amount_paid: payment.amount_paid,
       amount_outstanding: payment.amount_due - payment.amount_paid,
-      status: payment.status,
+      status: payment.status as 'pending' | 'partial' | 'paid' | 'overdue',
       due_date: payment.due_date,
       payment_method: payment.payment_method,
       stripe_order_id: payment.stripe_order_id,
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: (payment.leagues as { name: string } | null)?.name || '',
-      team_name: (payment.teams as { name: string } | null)?.name || null
+      league_name: ((payment as any).leagues as { name: string })?.name || '',
+      team_name: ((payment as any).teams as { name: string } | null)?.name || null
     }));
 
     // Get user's teams that might not have payment records
@@ -115,10 +115,11 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
     
     for (const team of userTeams || []) {
       // Skip if team already has a payment record or if league has no cost
-      const league = team.leagues as { id: number; name: string; cost: number | null } | null;
+      const league = (team as any).leagues as { id: number; name: string; cost: number | null };
       if (
         teamsWithPayments.has(team.id) || 
-        !league?.cost || 
+        !league || 
+        !league.cost || 
         league.cost <= 0
       ) {
         continue;
@@ -260,15 +261,15 @@ export const _getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
       amount_due: payment.amount_due,
       amount_paid: payment.amount_paid,
       amount_outstanding: payment.amount_due - payment.amount_paid,
-      status: payment.status,
+      status: payment.status as 'pending' | 'partial' | 'paid' | 'overdue',
       due_date: payment.due_date,
       payment_method: payment.payment_method,
       stripe_order_id: payment.stripe_order_id,
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: (payment.leagues as { name: string } | null)?.name || '',
-      team_name: (payment.teams as { name: string } | null)?.name || null
+      league_name: ((payment as any).leagues as { name: string })?.name || '',
+      team_name: ((payment as any).teams as { name: string } | null)?.name || null
     }));
 
     return transformedData;

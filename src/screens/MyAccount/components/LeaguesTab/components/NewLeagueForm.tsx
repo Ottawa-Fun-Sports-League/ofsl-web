@@ -476,7 +476,6 @@ export function NewLeagueForm({
         {/* Stripe Product Selector */}
         <div className="mt-6">
           <StripeProductSelector
-            leagueId={null}
             selectedProductId={selectedProductId}
             onChange={setSelectedProductId}
           />

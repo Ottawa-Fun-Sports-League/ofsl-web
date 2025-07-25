@@ -88,7 +88,7 @@ export function useLeaguesData() {
                   const skill = skillsData.find(s => s.id === id);
                   return skill?.name;
                 })
-                .filter((name): name is string => name !== undefined);
+                .filter((name: string | undefined): name is string => name !== undefined);
             }
 
             return {
