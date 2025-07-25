@@ -51,7 +51,7 @@ export function useTeamOperations() {
       onSuccess(paymentId);
     } catch (error) {
       console.error('Error unregistering:', error);
-      alert(`Failed to delete registration: ${error.message || 'Please try again.'}`);
+      alert(`Failed to delete registration: ${(error as Error).message || 'Please try again.'}`);
     } finally {
       setUnregisteringPayment(null);
     }

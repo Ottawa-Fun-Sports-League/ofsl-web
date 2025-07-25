@@ -89,10 +89,6 @@ export function LeaguesTab() {
     setLeagueToCopy(null);
   };
 
-  const handleShowTeams = (league: LeagueWithTeamCount) => {
-    setSelectedLeague(league);
-    setTeamsModalOpen(true);
-  };
 
   const handleTeamsModalClose = () => {
     setTeamsModalOpen(false);
@@ -151,7 +147,6 @@ export function LeaguesTab() {
         leagues={filteredLeagues}
         onDelete={handleDeleteLeague}
         onCopy={handleCopyClick}
-        onShowTeams={handleShowTeams}
       />
 
       <CopyLeagueDialog

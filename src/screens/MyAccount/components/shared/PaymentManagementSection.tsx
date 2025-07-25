@@ -144,8 +144,8 @@ export function PaymentManagementSection({
 
       const formattedPayments = data?.map(payment => ({
         id: payment.id,
-        league_name: payment.leagues?.name || 'Unknown League',
-        team_name: payment.teams?.name || 'Unknown Team',
+        league_name: (payment.leagues as any)?.name || 'Unknown League',
+        team_name: (payment.teams as any)?.name || 'Unknown Team',
         amount_due: payment.amount_due || 0,
         amount_paid: payment.amount_paid || 0,
         status: payment.status as 'pending' | 'partial' | 'paid' | 'overdue',
@@ -407,7 +407,7 @@ export function PaymentManagementSection({
               <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
               <select
                 value={newPayment.status}
-                onChange={(e) => setNewPayment(prev => ({ ...prev, status: e.target.value as 'pending' | 'partial' | 'paid' | 'cancelled' }))}
+                onChange={(e) => setNewPayment(prev => ({ ...prev, status: e.target.value as 'pending' | 'partial' | 'paid' | 'overdue' }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="pending">Pending</option>

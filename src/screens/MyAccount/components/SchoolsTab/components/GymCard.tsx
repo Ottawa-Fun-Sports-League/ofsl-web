@@ -36,7 +36,7 @@ export function GymCard({ gym, sports, daysOfWeek, deleting, onEdit, onDelete }:
           
           <div className="text-[#6F6F6F] mb-3">{gym.address}</div>
           
-          {gym.active && (gym.available_days?.length > 0 || gym.available_sports?.length > 0) && (
+          {gym.active && ((gym.available_days && gym.available_days.length > 0) || (gym.available_sports && gym.available_sports.length > 0)) && (
             <div className="mb-3">
               {gym.available_days && gym.available_days.length > 0 && (
                 <div className="inline-flex flex-wrap gap-1 mr-3">

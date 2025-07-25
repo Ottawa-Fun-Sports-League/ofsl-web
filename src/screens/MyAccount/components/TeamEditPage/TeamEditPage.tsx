@@ -8,7 +8,8 @@ import { TeamDetails } from './TeamDetails';
 import { TeamMembers } from './TeamMembers';
 import { useTeamEditData } from './useTeamEditData';
 import { useTeamOperations } from './useTeamOperations';
-import { UnifiedPaymentSection, usePaymentOperations } from '../../../../components/payments';
+import { usePaymentOperations } from './usePaymentOperations';
+import { UnifiedPaymentSection } from '../../../../components/payments';
 import { TeammateManagementModal } from '../TeamsTab/TeammateManagementModal';
 
 export function TeamEditPage() {
@@ -49,6 +50,7 @@ export function TeamEditPage() {
     editingPayment,
     showDeleteConfirmation: showPaymentDeleteConfirmation,
     paymentToDelete,
+    setPaymentToDelete,
     setDepositAmount,
     setPaymentMethod,
     setPaymentNotes,

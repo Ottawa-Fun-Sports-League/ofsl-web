@@ -2,9 +2,18 @@ declare global {
   interface Window {
     google?: {
       maps: {
-        Map: new (element: HTMLElement, options: google.maps.MapOptions) => google.maps.Map;
-        Marker: new (options: google.maps.MarkerOptions) => google.maps.Marker;
-        Geocoder: new () => google.maps.Geocoder;
+        Map: new (element: HTMLElement, options: any) => any;
+        Marker: new (options: any) => any;
+        Geocoder: new () => any;
+        Animation: {
+          DROP: any;
+          BOUNCE: any;
+        };
+        event: {
+          clearInstanceListeners: (instance: any) => void;
+          addListener: (instance: any, event: string, handler: () => void) => void;
+          removeListener: (listener: any) => void;
+        };
       };
     };
   }

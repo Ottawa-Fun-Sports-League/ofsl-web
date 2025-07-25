@@ -107,7 +107,7 @@ export function TeamsTab() {
         
       } catch (error) {
         console.error('Error leaving team:', error);
-        alert(`Failed to leave team: ${error.message}`);
+        alert(`Failed to leave team: ${(error as Error).message}`);
       } finally {
         setLeavingTeam(null);
       }

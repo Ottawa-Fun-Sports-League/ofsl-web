@@ -45,7 +45,7 @@ export function TeamInfo({ team, currentUserId }: TeamInfoProps) {
       {/* Day */}
       <div className="flex items-center gap-2" title="Day">
         <Calendar className="h-5 w-5 text-green-500" />
-        <p className="text-[#6F6F6F]">{getDayName(team.league?.day_of_week) || 'Day TBD'}</p>
+        <p className="text-[#6F6F6F]">{getDayName(team.league?.day_of_week ?? null) || 'Day TBD'}</p>
       </div>
 
       {/* Payment Info */}

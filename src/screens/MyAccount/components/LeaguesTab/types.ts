@@ -21,6 +21,7 @@ export interface Gym {
 export interface LeagueWithTeamCount extends League {
   team_count: number;
   spots_remaining: number;
+  skill_names: string[] | null;
 }
 
 export interface NewLeague {

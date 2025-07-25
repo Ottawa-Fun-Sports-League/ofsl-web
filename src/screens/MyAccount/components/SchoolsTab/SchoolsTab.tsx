@@ -142,7 +142,7 @@ export function SchoolsTab() {
           gym={newGym}
           sports={sports}
           daysOfWeek={DAYS_OF_WEEK}
-          locations={GYM_LOCATIONS}
+          locations={[...GYM_LOCATIONS]}
           saving={saving}
           onGymChange={setNewGym}
           onDayToggle={(dayId) => handleDayToggle(dayId, true)}
@@ -157,15 +157,15 @@ export function SchoolsTab() {
         filteredGyms={filteredGyms}
         sports={sports}
         daysOfWeek={DAYS_OF_WEEK}
-        locations={GYM_LOCATIONS}
+        locations={[...GYM_LOCATIONS]}
         loading={loading}
         editingGym={editingGym}
-        editGym={editGym}
+        editGym={editGym as any}
         saving={saving}
         deleting={deleting}
         isAnyFilterActive={isAnyFilterActive()}
         onEditGym={handleEditGym}
-        onEditGymChange={setEditGym}
+        onEditGymChange={setEditGym as any}
         onDayToggle={handleDayToggle}
         onSportToggle={handleSportToggle}
         onLocationToggle={handleLocationToggle}

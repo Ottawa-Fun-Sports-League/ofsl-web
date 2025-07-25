@@ -1,6 +1,6 @@
 import { Button } from '../../../../../components/ui/button';
 import { MapPin } from 'lucide-react';
-import { Gym, Sport, DayOfWeek } from '../types';
+import { Gym, Sport, DayOfWeek, NewGymForm, EditGymForm } from '../types';
 import { GymCard } from './GymCard';
 import { GymForm } from './GymForm';
 
@@ -74,12 +74,12 @@ export function GymsList({
             <GymForm
               isEdit={true}
               title="Edit School/Gym"
-              gym={editGym}
+              gym={editGym as unknown as (NewGymForm | EditGymForm)}
               sports={sports}
               daysOfWeek={daysOfWeek}
               locations={locations}
               saving={saving}
-              onGymChange={onEditGymChange}
+              onGymChange={onEditGymChange as unknown as (gym: NewGymForm | EditGymForm) => void}
               onDayToggle={(dayId) => onDayToggle(dayId, false)}
               onSportToggle={(sportId) => onSportToggle(sportId, false)}
               onLocationToggle={(location) => onLocationToggle(location, false)}

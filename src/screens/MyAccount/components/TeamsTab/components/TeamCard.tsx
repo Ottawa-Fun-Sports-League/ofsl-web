@@ -89,14 +89,14 @@ export function TeamCard({
         
         {/* Action Buttons */}
         <TeamActions
-          team={team}
+          team={team as any}
           isCaptain={isCaptain}
-          onManageTeam={onManageTeam}
+          onManageTeam={onManageTeam as any}
           onPayNow={team.payment ? 
             () => onPayNow && onPayNow(team.payment!.id) : 
-            () => onPayNow && onPayNow(team)}
-          showDeleteTeamConfirmation={showDeleteTeamConfirmation}
-          showLeaveTeamConfirmation={showLeaveTeamConfirmation}
+            undefined}
+          showDeleteTeamConfirmation={showDeleteTeamConfirmation as any}
+          showLeaveTeamConfirmation={showLeaveTeamConfirmation as any}
           deletingTeam={deletingTeam}
           unregisteringPayment={unregisteringPayment}
         />

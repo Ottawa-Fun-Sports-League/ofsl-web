@@ -136,7 +136,6 @@ export function WaiverStatus() {
       (acceptance) => acceptance.waiver_id === activeWaiver.id,
     );
 
-  const _mostRecentAcceptance = userAcceptances[0];
 
   if (loading) {
     return (

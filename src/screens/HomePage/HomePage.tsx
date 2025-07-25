@@ -59,6 +59,7 @@ export const HomePage = (): React.ReactElement => {
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [showLeftButton, setShowLeftButton] = useState(false);
+  const [showRightButton, setShowRightButton] = useState(true);
 
   // Mouse event handlers for draggable scrolling
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -183,21 +184,31 @@ export const HomePage = (): React.ReactElement => {
       behavior: "smooth",
     });
 
-    // Update showLeftButton based on scroll position
-    setShowLeftButton(container.scrollLeft + scrollAmount > 0);
+    // Update button visibility after scroll
+    setTimeout(() => {
+      handleScroll();
+    }, 300);
   };
 
-  // Update left button visibility on scroll
+  // Update navigation button visibility on scroll
   const handleScroll = () => {
     if (scrollContainerRef.current) {
-      setShowLeftButton(scrollContainerRef.current.scrollLeft > 0);
+      const container = scrollContainerRef.current;
+      const isAtStart = container.scrollLeft <= 0;
+      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+      
+      setShowLeftButton(!isAtStart);
+      setShowRightButton(!isAtEnd);
     }
   };
 
-  // Add scroll event listener
+  // Add scroll event listener and initial button state
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
+      // Set initial button visibility
+      handleScroll();
+      
       container.addEventListener("scroll", handleScroll);
       return () => container.removeEventListener("scroll", handleScroll);
     }
@@ -376,7 +387,7 @@ export const HomePage = (): React.ReactElement => {
             {showLeftButton && (
               <div
                 onClick={() => scrollCarousel("left")}
-                className="hidden md:block absolute -left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-50 rounded-full p-1.5 shadow-sm cursor-pointer hover:bg-opacity-70 z-10"
+                className="hidden md:block absolute -left-12 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 z-20 transition-all hover:scale-110 border border-gray-200"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
                   <svg
@@ -386,7 +397,7 @@ export const HomePage = (): React.ReactElement => {
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="3"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className="text-[#B20000]"
@@ -397,11 +408,12 @@ export const HomePage = (): React.ReactElement => {
               </div>
             )}
 
-            <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-50 rounded-full p-1.5 shadow-sm">
+            {showRightButton && (
               <div
-                className="w-6 h-6 flex items-center justify-center cursor-pointer hover:bg-opacity-70"
                 onClick={() => scrollCarousel("right")}
+                className="hidden md:block absolute -right-12 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 z-20 transition-all hover:scale-110 border border-gray-200"
               >
+              <div className="w-6 h-6 flex items-center justify-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -409,7 +421,7 @@ export const HomePage = (): React.ReactElement => {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="text-[#B20000]"
@@ -418,6 +430,7 @@ export const HomePage = (): React.ReactElement => {
                 </svg>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

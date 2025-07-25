@@ -297,7 +297,7 @@ export function TeammateManagementModal({
       showToast('Teammate added successfully', 'success');
     } catch (error) {
       console.error('Error adding teammate:', error);
-      showToast(error.message || 'Failed to add teammate. Please try again.', 'error');
+      showToast((error as Error).message || 'Failed to add teammate. Please try again.', 'error');
     } finally {
       setAddingTeammate(false);
     }
@@ -404,7 +404,7 @@ export function TeammateManagementModal({
       showToast('Teammate removed successfully', 'success');
     } catch (error) {
       console.error('Error removing teammate:', error);
-      showToast(error.message || 'Failed to remove teammate. Please try again.', 'error');
+      showToast((error as Error).message || 'Failed to remove teammate. Please try again.', 'error');
     } finally {
       setRemovingTeammate(null);
     }
@@ -512,7 +512,7 @@ export function TeammateManagementModal({
                   </div>
                   <Button
                     onClick={() => addTeammate(searchResult.id)}
-                    size="xs"
+                    size="sm"
                     disabled={addingTeammate}
                     className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto text-xs px-2 py-1"
                   >
@@ -548,7 +548,7 @@ export function TeammateManagementModal({
                       <Button
                         onClick={sendInvite}
                         disabled={sendingInvite}
-                        size="xs"
+                        size="sm"
                         className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto text-xs px-2 py-1"
                       >
                         {sendingInvite ? (
@@ -568,7 +568,7 @@ export function TeammateManagementModal({
                           setUserNotFound(false);
                           setSearchEmail('');
                         }}
-                        size="xs"
+                        size="sm"
                         variant="outline"
                         className="w-full sm:w-auto text-xs px-2 py-1"
                       >
@@ -658,7 +658,7 @@ export function TeammateManagementModal({
                         {!isCaptain && !isPending && (userProfile?.is_admin || captainId === userProfile?.id) && teammates.filter(t => !t.isPending).length > 1 && (
                           <Button
                             onClick={() => reassignCaptain(teammate.id)}
-                            size="xs"
+                            size="sm"
                             variant="outline"
                             disabled={reassigningCaptain === teammate.id}
                             className="w-full sm:w-auto border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-800 text-xs px-2 py-1"
@@ -681,7 +681,7 @@ export function TeammateManagementModal({
                         {!isCaptain && !readOnly && (
                           <Button
                             onClick={() => removeTeammate(teammate.id)}
-                            size="xs"
+                            size="sm"
                             disabled={removingTeammate === teammate.id}
                             className="text-white w-8 h-8 p-0 bg-red-600 hover:bg-red-700"
                             title={isPending ? "Cancel invite" : "Remove teammate"}
