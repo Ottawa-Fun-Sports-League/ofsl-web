@@ -2,16 +2,49 @@ import { useEffect, useState } from 'react';
 
 let isLoading = false;
 let isLoaded = false;
+let loadError: Error | null = null;
 
 export function useGoogleMaps() {
-  const [mapsLoaded, setMapsLoaded] = useState(isLoaded);
+  const [state, setState] = useState<{
+    loaded: boolean;
+    error: Error | null;
+  }>({ loaded: isLoaded, error: loadError });
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
-    if (!apiKey || isLoaded || isLoading) {
-      setMapsLoaded(isLoaded);
+    if (!apiKey) {
+      setState({ loaded: false, error: new Error('Google Maps API key not configured') });
       return;
+    }
+
+    if (isLoaded) {
+      setState({ loaded: true, error: null });
+      return;
+    }
+
+    if (loadError) {
+      setState({ loaded: false, error: loadError });
+      return;
+    }
+
+    if (isLoading) {
+      // Wait for the existing load attempt
+      const checkInterval = setInterval(() => {
+        if (isLoaded) {
+          clearInterval(checkInterval);
+          setState({ loaded: true, error: null });
+        } else if (loadError) {
+          clearInterval(checkInterval);
+          setState({ loaded: false, error: loadError });
+        } else if (!isLoading) {
+          // Loading finished but neither loaded nor error
+          clearInterval(checkInterval);
+          setState({ loaded: false, error: new Error('Google Maps loading interrupted') });
+        }
+      }, 100);
+
+      return () => clearInterval(checkInterval);
     }
 
     isLoading = true;
@@ -24,20 +57,17 @@ export function useGoogleMaps() {
     script.onload = () => {
       isLoaded = true;
       isLoading = false;
-      setMapsLoaded(true);
+      setState({ loaded: true, error: null });
     };
     
     script.onerror = () => {
       isLoading = false;
-      console.error('Failed to load Google Maps');
+      loadError = new Error('Failed to load Google Maps script');
+      setState({ loaded: false, error: loadError });
     };
 
     document.head.appendChild(script);
-
-    return () => {
-      // Cleanup is handled by the browser
-    };
   }, []);
 
-  return mapsLoaded;
+  return state;
 }

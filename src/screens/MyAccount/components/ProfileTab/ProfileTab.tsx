@@ -23,7 +23,13 @@ export function ProfileTab() {
     setProfile,
     handleNotificationToggle,
     markProfileAsSaved
-  } = useProfileData(userProfile);
+  } = useProfileData(userProfile ? {
+    id: userProfile.id,
+    name: userProfile.name || undefined,
+    phone: userProfile.phone || undefined,
+    email: userProfile.email || undefined,
+    user_sports_skills: userProfile.user_sports_skills
+  } : null);
 
   const { saving, handleProfileSave } = useProfileOperations(userProfile, refreshUserProfile);
 
@@ -61,7 +67,7 @@ export function ProfileTab() {
     if (success) {
       markProfileAsSaved(profile);
     }
-    return success;
+    return success || false;
   };
 
   const handleCancel = () => {
@@ -82,7 +88,7 @@ export function ProfileTab() {
         profile={profile}
         isEditing={isEditing}
         saving={saving}
-        userProfile={userProfile}
+        userProfile={profile}
         onEdit={handleEdit}
         onSave={handleSave}
         onCancel={handleCancel}

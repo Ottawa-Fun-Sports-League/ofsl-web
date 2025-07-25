@@ -7,7 +7,7 @@ import { formatPaymentMethod } from './utils';
 export function usePaymentOperations(
   paymentInfo: PaymentInfo | null,
   paymentHistory: PaymentHistoryEntry[],
-  setPaymentInfo: (info: PaymentInfo) => void,
+  setPaymentInfo: (info: PaymentInfo | null) => void,
   setPaymentHistory: (history: PaymentHistoryEntry[]) => void
 ) {
   const { showToast } = useToast();
@@ -251,6 +251,7 @@ export function usePaymentOperations(
     editingPayment,
     showDeleteConfirmation,
     paymentToDelete,
+    setPaymentToDelete,
     setDepositAmount,
     setPaymentMethod,
     setPaymentNotes,

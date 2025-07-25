@@ -15,76 +15,7 @@ export function useTeamsData(userId?: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const _fetchLeaguePayments = async () => {
-    if (!userId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('league_payments')
-        .select(`
-          id,
-          user_id,
-          team_id,
-          league_id,
-          amount_due,
-          amount_paid,
-          status,
-          due_date,
-          payment_method,
-          notes,
-          created_at,
-          updated_at,
-          league:leagues!inner(name, location, cost),
-          team:teams(name)
-        `)
-        .eq('user_id', userId)
-        .order('due_date', { ascending: true });
-
-      if (error) throw error;
-      
-      // Transform the data to match the expected format
-      const transformedData = data?.map(payment => {
-        // Calculate amount paid from payment history if available
-        let calculatedAmountPaid = payment.amount_paid;
-        
-        if (payment.notes) {
-          try {
-            const paymentHistory = JSON.parse(payment.notes);
-            if (Array.isArray(paymentHistory)) {
-              calculatedAmountPaid = paymentHistory.reduce((total, entry) => {
-                const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(entry.amount.toString()) || 0;
-                return total + amount;
-              }, 0);
-            }
-          } catch (error) {
-            // If JSON parsing fails, use the database amount_paid value
-            calculatedAmountPaid = payment.amount_paid;
-          }
-        }
-        
-        
-        return {
-          user_id: payment.user_id,
-          league_name: payment.league?.name || '',
-          team_name: payment.team?.name || `Unknown Team (ID: ${payment.team_id})`,
-          amount_due: payment.amount_due,
-          amount_paid: calculatedAmountPaid,
-          league_cost: payment.league?.cost || null,
-          amount_outstanding: payment.amount_due - calculatedAmountPaid,
-          status: payment.status,
-          due_date: payment.due_date,
-          payment_method: payment.payment_method,
-          created_at: payment.created_at,
-          updated_at: payment.updated_at,
-          id: payment.id
-        };
-      }) || [];
-      
-      setLeaguePayments(transformedData);
-    } catch (error) {
-      console.error('Error fetching league payments:', error);
-    }
-  };
+  // Removed unused fetchLeaguePayments function - using fetchLeaguePaymentsSimple instead
 
   const fetchTeams = async () => {
     if (!userId) return [];

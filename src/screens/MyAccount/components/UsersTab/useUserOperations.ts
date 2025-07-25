@@ -27,12 +27,12 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
   const handleEditUser = async (user: User) => {
     setEditingUser(user.id);
     setEditForm({
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      preferred_position: user.preferred_position,
-      is_admin: user.is_admin,
-      is_facilitator: user.is_facilitator
+      name: user.name || undefined,
+      email: user.email || undefined,
+      phone: user.phone || undefined,
+      preferred_position: user.preferred_position || undefined,
+      is_admin: user.is_admin || undefined,
+      is_facilitator: user.is_facilitator || undefined
     });
     
     await loadUserRegistrations(user.team_ids || []);
@@ -62,7 +62,7 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
 
       const leagueMap = new Map();
       
-      (teamsData as TeamWithLeague[] | null)?.forEach(team => {
+      (teamsData as unknown as TeamWithLeague[] | null)?.forEach(team => {
         if (team.leagues) {
           const league = team.leagues;
           const isCaptain = editingUser ? team.captain_id === editingUser : false;

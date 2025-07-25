@@ -96,7 +96,7 @@ export function TeamDetailsModal({
                 <div className="flex items-center gap-1">
                   <span className="font-medium">Cost:</span>
                   <DollarSign className="h-4 w-4" />
-                  <span>{formatCost(team.league?.cost)}</span>
+                  <span>{formatCost(team.league?.cost ?? null)}</span>
                 </div>
                 <div className="md:col-span-2">
                   <span className="font-medium">Total Players:</span> {team.roster_details.length}
