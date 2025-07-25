@@ -82,8 +82,8 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: payment.leagues?.name || '',
-      team_name: payment.teams?.name || null
+      league_name: (payment.leagues as any)?.name || '',
+      team_name: (payment.teams as any)?.name || null
     }));
 
     // Get user's teams that might not have payment records
@@ -93,7 +93,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
         id,
         name,
         league_id,
-        leagues:league_id(id, name, cost)
+        leagues!inner(id, name, cost)
       `)
       .eq('active', true)
       .contains('roster', [currentUserId]);
@@ -115,10 +115,11 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
     
     for (const team of userTeams || []) {
       // Skip if team already has a payment record or if league has no cost
+      const league = team.leagues as any;
       if (
         teamsWithPayments.has(team.id) || 
-        !team.leagues?.cost || 
-        team.leagues.cost <= 0
+        !league?.cost || 
+        league.cost <= 0
       ) {
         continue;
       }
@@ -132,9 +133,9 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
         user_id: currentUserId, // Use the current user's ID
         team_id: team.id,
         league_id: team.league_id,
-        amount_due: team.leagues.cost,
+        amount_due: league.cost,
         amount_paid: 0,
-        amount_outstanding: team.leagues.cost,
+        amount_outstanding: league.cost,
         status: 'pending',
         due_date: dueDate.toISOString(),
         payment_method: null,
@@ -142,7 +143,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
         notes: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        league_name: team.leagues.name,
+        league_name: league.name,
         team_name: team.name
       });
     }
@@ -266,8 +267,8 @@ export const _getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: payment.leagues?.name || '',
-      team_name: payment.teams?.name || null
+      league_name: (payment.leagues as any)?.name || '',
+      team_name: (payment.teams as any)?.name || null
     }));
 
     return transformedData;

@@ -27,6 +27,33 @@ interface Team {
   payment_due_date: string | null;
 }
 
+interface TeamQueryResult {
+  id: number;
+  name: string;
+  captain_id: string;
+  roster: string[] | null;
+  created_at: string;
+  league_id: number;
+  leagues: {
+    id: number;
+    name: string;
+    sports: {
+      name: string;
+    } | null;
+  } | null;
+  captain: {
+    name: string;
+    email: string;
+    phone: string | null;
+  } | null;
+  league_payments: Array<{
+    status: 'pending' | 'paid' | 'failed';
+    amount_due: number;
+    amount_paid: number;
+    due_date: string;
+  }> | null;
+}
+
 interface LeagueTeamsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -65,12 +92,13 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
           captain_id,
           roster,
           created_at,
+          league_id,
           leagues!inner(
             id,
             name,
-            sport:sports(name)
+            sports(name)
           ),
-          captain:captain_id(
+          captain:users!captain_id(
             name,
             email,
             phone
@@ -87,7 +115,7 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
 
       if (error) throw error;
 
-      const teamsWithPayments = data?.map(team => ({
+      const teamsWithPayments = (data as unknown as TeamQueryResult[] | null)?.map((team) => ({
         id: team.id,
         name: team.name,
         captain_id: team.captain_id,
@@ -97,9 +125,9 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
         roster: team.roster || [],
         team_size: team.roster?.length || 0,
         created_at: team.created_at,
-        league_id: team.leagues.id,
-        league_name: team.leagues.name,
-        sport_name: team.leagues.sport?.name || '',
+        league_id: team.league_id,
+        league_name: team.leagues?.name || '',
+        sport_name: team.leagues?.sports?.name || '',
         payment_status: team.league_payments?.[0]?.status || null,
         payment_amount: team.league_payments?.[0]?.amount_due || null,
         payment_due_date: team.league_payments?.[0]?.due_date || null,

@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ForgotPasswordPage } from './ForgotPasswordPage';
-import { render, mockNavigate } from '../../test/test-utils';
+import { render } from '../../test/test-utils';
 import { supabase } from '../../lib/supabase';
+import type { AuthError } from '@supabase/supabase-js';
 
 // Mock auth context
 vi.mock('../../contexts/AuthContext', () => ({
@@ -94,8 +95,8 @@ describe('ForgotPasswordPage', () => {
     const user = userEvent.setup();
     
     vi.mocked(supabase.auth.resetPasswordForEmail).mockResolvedValueOnce({
-      data: {},
-      error: { message: 'User not found' },
+      data: null,
+      error: { message: 'User not found', name: 'AuthError', status: 400 } as AuthError,
     });
     
     render(<ForgotPasswordPage />);

@@ -15,7 +15,7 @@ const statsData = [
   { value: 85, label: "Raised for charities", suffix: "K+" },
 ];
 
-export const AboutUsPage = (): JSX.Element => {
+export const AboutUsPage = (): React.ReactElement => {
 
   // Newsletter form state
   const [email, setEmail] = useState("");
@@ -232,7 +232,7 @@ export const AboutUsPage = (): JSX.Element => {
       <HeroBanner
         image="/AdobeStock_252945543_50.jpeg"
         imageAlt="Volleyball court with ball"
-        height="250px"
+        containerClassName="h-[250px]"
       >
         <div className="text-center text-white">
           <h1 className="text-5xl mb-4 font-heading">About Us</h1>

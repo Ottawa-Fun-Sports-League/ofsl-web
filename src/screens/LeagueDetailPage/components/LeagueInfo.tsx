@@ -10,7 +10,7 @@ import { supabase } from "../../../lib/supabase";
 import { useEffect } from "react";
 import { getStripeProductByLeagueId } from "../../../lib/stripe";
 import { LocationPopover } from "../../../components/ui/LocationPopover";
-import { getGymNamesByLocation, getPrimaryLocation } from "../../../lib/leagues";
+import { getGymNamesByLocation, getPrimaryLocation, getDayName, formatLeagueDates } from "../../../lib/leagues";
 import type { League } from "../../../lib/leagues";
 
 // Function to get spots badge color
@@ -36,7 +36,7 @@ interface LeagueInfoProps {
 
 export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: LeagueInfoProps) {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
-  const [actualSpotsRemaining, setActualSpotsRemaining] = useState(league.spotsRemaining || 0);
+  const [actualSpotsRemaining, setActualSpotsRemaining] = useState(0);
   const [stripeProduct, setStripeProduct] = useState<{
     id: string;
     price_id: string;
@@ -158,7 +158,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
           <div className="flex items-start">
             <Clock className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" />
             <div>
-              <p className="font-medium text-[#6F6F6F]">{league.day}</p>
+              <p className="font-medium text-[#6F6F6F]">{getDayName(league.day_of_week)}</p>
             </div>
           </div>
 
@@ -177,7 +177,6 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
                 return gymLocations.map((location, index) => (
                   <LocationPopover
                     key={index}
-                    location={location}
                     locations={getGymNamesByLocation(league.gyms || [], location)}
                   >
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
@@ -194,7 +193,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
             <Calendar className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" />
             <div>
               <p className="font-medium text-[#6F6F6F]">Season Dates</p>
-              <p className="text-sm text-[#6F6F6F]">{league.dates}</p>
+              <p className="text-sm text-[#6F6F6F]">{formatLeagueDates(league.start_date, league.end_date, league.hide_day || false)}</p>
             </div>
           </div>
 
@@ -218,14 +217,14 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
                 </div>
               </div>
             </div>
-          ) : league.skillLevel && (
+          ) : league.skill_name && (
             <div className="flex items-start">
               <svg className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M3,5H9V11H3V5M5,7V9H7V7H5M11,7H21V9H11V7M11,15H21V17H11V15M5,13V15H7V13H5M3,13H9V19H3V13Z" />
               </svg>
               <div>
                 <p className="font-medium text-[#6F6F6F]">Skill Level</p>
-                <p className="text-sm text-[#6F6F6F]">{league.skillLevel}</p>
+                <p className="text-sm text-[#6F6F6F]">{league.skill_name}</p>
               </div>
             </div>
           )}
@@ -240,9 +239,9 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
                   {formatPrice(stripeProduct.price)} + HST{" "}
                   {sport === "Volleyball" ? "per team" : "per player"}
                 </p>
-              ) : league.price ? (
+              ) : league.cost ? (
                 <p className="text-sm text-[#6F6F6F]">
-                  ${league.price.toFixed(2)} + HST{" "}
+                  ${league.cost.toFixed(2)} + HST{" "}
                   {sport === "Volleyball" ? "per team" : "per player"}
                 </p>
               ) : (
@@ -271,7 +270,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
             priceId={stripeProduct.price_id} 
             productName={stripeProduct.name}
             price={stripeProduct.price}
-            mode={stripeProduct.mode}
+            mode={stripeProduct.mode as 'payment' | 'subscription'}
             metadata={{ leagueId: league.id.toString() }}
             className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] w-full py-3"
             variant="default"

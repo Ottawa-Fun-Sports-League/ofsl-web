@@ -218,6 +218,7 @@ export { customRender as render };
 // Utility to wait for loading states to resolve
 export const waitForLoadingToFinish = async () => {
   const { waitFor } = await import('@testing-library/react');
+  const { expect } = await import('vitest');
   await waitFor(() => {
     const loaders = document.querySelectorAll('[class*="animate-spin"]');
     expect(loaders.length).toBe(0);

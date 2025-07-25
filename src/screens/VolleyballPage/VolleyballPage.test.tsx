@@ -1,9 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { VolleyballPage } from './VolleyballPage';
 import { render } from '../../test/test-utils';
-import { useAuth } from '../../contexts/AuthContext';
 
 // Mock auth context to prevent loading state
 vi.mock('../../contexts/AuthContext', () => ({
@@ -72,7 +70,6 @@ describe('VolleyballPage', () => {
   });
 
   it('navigates to correct league when clicking league card', async () => {
-    const user = userEvent.setup();
     render(<VolleyballPage />);
     
     const eliteCard = screen.getByRole('link', { name: /tuesday women's elite/i });

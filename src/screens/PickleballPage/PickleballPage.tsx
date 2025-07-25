@@ -1,13 +1,14 @@
+import React from "react";
 import { HeroBanner } from "../../components/HeroBanner";
 
-export const PickleballPage = (): JSX.Element => {
+export const PickleballPage = (): React.ReactElement => {
   return (
     <div className="bg-white flex flex-row justify-center w-full">
       <div className="bg-white w-full relative">
         <HeroBanner
           image="/pickleball-card.jpg"
           imageAlt="Pickleball coming soon"
-          height="500px"
+          containerClassName="h-[500px]"
         >
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Pickleball</h1>

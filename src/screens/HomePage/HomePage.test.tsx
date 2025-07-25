@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen } from '@testing-library/react';
 import { HomePage } from './HomePage';
-import { render, mockNavigate } from '../../test/test-utils';
+import { render } from '../../test/test-utils';
 
 // This import ensures the supabase mock is set up
 import '../../test/mocks/setup-supabase';

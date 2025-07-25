@@ -26,6 +26,7 @@ export interface League {
   // Joined data
   sport_name: string | null;
   skill_name: string | null;
+  skill_names?: string[] | null;
   gyms: Array<{
     id: number;
     gym: string | null;
@@ -251,14 +252,14 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
       let skillNames: string[] | null = null;
       if (league.skill_ids && league.skill_ids.length > 0) {
         skillNames = league.skill_ids
-          .map((id) => skillsMap.get(id)?.name)
-          .filter((name) => name !== undefined) as string[];
+          .map((id: number) => skillsMap.get(id)?.name)
+          .filter((name: string | undefined) => name !== undefined) as string[];
       }
 
       // Get gyms for this league
       const leagueGyms = (league.gym_ids || [])
         .map((gymId: string | number) => gymsMap.get(Number(gymId)))
-        .filter((gym) => gym !== undefined);
+        .filter((gym: { id: number; gym: string | null; address: string | null; locations: string[] | null } | undefined) => gym !== undefined);
 
       return {
         ...league,

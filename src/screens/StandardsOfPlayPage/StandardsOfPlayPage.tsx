@@ -1,13 +1,14 @@
+import React from "react";
 import { HeroBanner } from "../../components/HeroBanner";
 
-export const StandardsOfPlayPage = (): JSX.Element => {
+export const StandardsOfPlayPage = (): React.ReactElement => {
   return (
     <div className="bg-white w-full">
       {/* Hero Banner */}
       <HeroBanner
         image="/571North-CR3_0335-Indoor-VB-Header-Featured.jpg"
         imageAlt="Volleyball court"
-        height="250px"
+        containerClassName="h-[250px]"
       >
         <div className="text-center text-white">
           <h1 className="text-5xl mb-4 font-heading">Standards of Play</h1>

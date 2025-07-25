@@ -9,7 +9,7 @@ interface Skill {
 // Generic league interface that works with any league type that has these properties
 interface FilterableLeague {
   sport_name: string | null;
-  gyms: Array<{ gym: string | null; locations: string[] | null }> | null;
+  gyms: Array<{ gym: string | null; address: string | null; locations: string[] | null }> | null;
   skill_ids: number[] | null;
   skill_names: string[] | null;
   day_of_week: number | null;
@@ -24,7 +24,7 @@ export function filterLeagues<T extends FilterableLeague>(
 ): T[] {
   return leagues.filter(league => {
     const dayName = getDayName(league.day_of_week);
-    const leagueLocations = getPrimaryLocation(league.gyms);
+    const leagueLocations = getPrimaryLocation(league.gyms || []);
     
     // Helper function to check if league matches skill level filters
     const matchesSkillLevels = () => {

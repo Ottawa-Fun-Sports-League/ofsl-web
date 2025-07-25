@@ -1,10 +1,11 @@
+import React from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
 import { BookOpen, Star } from "lucide-react";
 
-export const BadmintonPage = (): JSX.Element => {
+export const BadmintonPage = (): React.ReactElement => {
   // League card data for badminton
   const leagueCards = [
     {
@@ -31,7 +32,7 @@ export const BadmintonPage = (): JSX.Element => {
         <HeroBanner
           image="/AdobeStock_283705208.jpeg"
           imageAlt="Badminton players"
-          height="500px"
+          containerClassName="h-[500px]"
         >
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Badminton Leagues</h1>

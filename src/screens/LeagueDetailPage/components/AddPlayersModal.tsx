@@ -145,9 +145,18 @@ export function AddPlayersModal({
           users:captain_id(name)
         `)
         .eq('id', teamId)
-        .single();
+        .single() as {
+          data: {
+            name: string;
+            captain_id: string;
+            leagues: { name: string } | null;
+            users: { name: string } | null;
+          } | null;
+          error: any;
+        };
 
       if (teamError) throw teamError;
+      if (!teamData) throw new Error('Team data not found');
 
       const inviteData = {
         email: email,
@@ -172,7 +181,7 @@ export function AddPlayersModal({
         body: JSON.stringify({
           ...inviteData,
           teamId: teamId,
-          captainId: teamData.captain_id
+          captainId: teamData?.captain_id || ''
         })
       });
 

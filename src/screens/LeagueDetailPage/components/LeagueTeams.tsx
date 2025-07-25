@@ -26,6 +26,27 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+interface ExtendedTeam {
+  id: number;
+  name: string;
+  captain_id: string;
+  roster: string[] | null;
+  created_at: string;
+  skill_level_id: number | null;
+  display_order?: number;
+  users?: { name: string } | null;
+  skills?: { name: string } | null;
+  leagues?: {
+    id: number;
+    name: string;
+    cost: number | null;
+    location: string | null;
+    sports?: {
+      name: string;
+    } | null;
+  } | null;
+}
+
 interface TeamData {
   id: number;
   name: string;
@@ -136,7 +157,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
         dragSupported = false;
         
         // Fallback to created_at ordering
-        activeResult = await supabase
+        const activeResultFallback = await supabase
           .from('teams')
           .select(`
             id,
@@ -153,7 +174,7 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
           .eq('active', true)
           .order('created_at', { ascending: false });
 
-        waitlistResult = await supabase
+        const waitlistResultFallback = await supabase
           .from('teams')
           .select(`
             id,
@@ -169,17 +190,20 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
           .eq('league_id', leagueId)
           .eq('active', false)
           .order('created_at', { ascending: false });
+          
+        activeResult = activeResultFallback as any;
+        waitlistResult = waitlistResultFallback as any;
       }
 
       if (activeResult.error) throw activeResult.error;
       if (waitlistResult.error) throw waitlistResult.error;
 
-      activeTeamsData = activeResult.data;
-      waitlistedTeamsData = waitlistResult.data;
+      activeTeamsData = activeResult.data as unknown as ExtendedTeam[];
+      waitlistedTeamsData = waitlistResult.data as unknown as ExtendedTeam[];
       setDragEnabled(dragSupported);
 
       // Helper function to process teams with payment data
-      const processTeamsWithPayments = async (teams: TeamData[]) => {
+      const processTeamsWithPayments = async (teams: ExtendedTeam[]): Promise<TeamData[]> => {
         if (!teams) return [];
         
         return Promise.all(
@@ -622,137 +646,6 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
     );
   };
 
-  // Helper function to render a team card (legacy - keeping for now)
-  const _renderTeamCard = (team: TeamData, isWaitlisted: boolean = false) => (
-    <Card key={team.id} className={`shadow-md overflow-hidden rounded-lg ${isWaitlisted ? 'bg-gray-50' : ''}`}>
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-lg font-bold text-[#6F6F6F]">
-                {team.name}
-              </h3>
-              {isWaitlisted && (
-                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">
-                  Waitlisted
-                </span>
-              )}
-              {team.skill_name && (
-                <span className={`px-3 py-1 text-sm rounded-full ${isWaitlisted ? 'bg-gray-300 text-gray-700' : 'bg-blue-100 text-blue-800'}`}>
-                  {team.skill_name}
-                </span>
-              )}
-              <div className="flex items-center gap-2 ml-auto">
-                <Link 
-                  to={`/my-account/teams/edit/${team.id}`}
-                  className={`text-sm hover:underline ${isWaitlisted ? 'text-gray-600 hover:text-gray-800' : 'text-[#B20000] hover:text-[#8A0000]'}`}
-                >
-                  Edit registration
-                </Link>
-                
-                {/* Move team buttons */}
-                <Button
-                  onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
-                  disabled={movingTeam === team.id}
-                  size="sm"
-                  variant="outline"
-                  className={`h-8 px-3 text-xs ${isWaitlisted 
-                    ? 'border-green-300 text-green-700 hover:bg-green-50' 
-                    : 'border-yellow-300 text-yellow-700 hover:bg-yellow-50'
-                  }`}
-                  title={isWaitlisted ? 'Move team to active registration' : 'Move team to waitlist'}
-                >
-                  {movingTeam === team.id ? (
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                  ) : isWaitlisted ? (
-                    'Move to Active'
-                  ) : (
-                    'Move to Waitlist'
-                  )}
-                </Button>
-                
-                {/* Delete team button */}
-                <Button
-                  onClick={() => handleDeleteTeam(team.id, team.name)}
-                  disabled={deleting === team.id}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-2 border-red-300 text-red-700 hover:bg-red-50"
-                  title="Delete team"
-                >
-                  {deleting === team.id ? (
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                  ) : (
-                    <Trash2 className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
-            </div>
-            <p className={`text-sm ${isWaitlisted ? 'text-gray-600' : 'text-gray-600'}`}>
-              {team.league?.name}
-            </p>
-          </div>
-        </div>
-        
-        <div className="mt-2 text-sm">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <div className="flex items-center gap-2" title="Captain">
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${isWaitlisted ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'} text-sm`}>
-                <Crown className="h-4 w-4" />
-                <span>Captain</span>
-              </div>
-              <span className={isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}>
-                {team.captain_name || 'Unknown'}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Users className={`h-5 w-5 ${isWaitlisted ? 'text-blue-600' : 'text-blue-500'}`} />
-              <span className={isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}>
-                {team.roster.length} players
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2" title="Registration Date">
-              <Calendar className={`h-5 w-5 ${isWaitlisted ? 'text-green-600' : 'text-green-500'}`} />
-              <span className={isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}>
-                {formatDate(team.created_at)}
-              </span>
-            </div>
-            
-            {!isWaitlisted && (
-              <div className="flex items-center gap-2" title="Payment">
-                <DollarSign className="h-5 w-5 text-purple-500" />
-                {team.amount_due && team.amount_paid !== null ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#6F6F6F] whitespace-nowrap">
-                      ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
-                    </span>
-                    {team.payment_status && (
-                      <PaymentStatusBadge 
-                        status={team.payment_status} 
-                        size="sm"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#6F6F6F] whitespace-nowrap">
-                      $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
-                    </span>
-                    <PaymentStatusBadge 
-                      status="pending" 
-                      size="sm"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div>

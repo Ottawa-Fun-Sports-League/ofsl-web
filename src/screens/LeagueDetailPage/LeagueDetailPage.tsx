@@ -14,6 +14,7 @@ import {
   type League,
 } from "../../lib/leagues";
 import { logger } from "../../lib/logger";
+import { supabase } from "../../lib/supabase";
 import {
   useActiveView,
   type ActiveView,
@@ -21,6 +22,7 @@ import {
 import { NavigationTabs } from "./components/NavigationTabs";
 import { LeagueInfo } from "./components/LeagueInfo";
 import { LeagueStandings } from "./components/LeagueStandings";
+import { LeagueGyms } from "./components/LeagueGyms";
 
 export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,10 +32,17 @@ export function LeagueDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [spotsRemaining, setSpotsRemaining] = useState(0);
+  const [gymDetails, setGymDetails] = useState<Array<{
+    id: number;
+    gym: string | null;
+    address: string | null;
+    instructions: string | null;
+    locations: string[] | null;
+  }> | null>(null);
 
   // Get initial view from URL search params
   const tabParam = searchParams.get('tab');
-  const initialView: ActiveView = tabParam === 'standings' ? 'standings' : 'info';
+  const initialView: ActiveView = tabParam === 'standings' ? 'standings' : tabParam === 'gyms' ? 'gyms' : 'info';
   
   const { activeView, setActiveView } = useActiveView(initialView);
 
@@ -57,6 +66,20 @@ export function LeagueDetailPage() {
         setError("League not found");
       } else {
         setLeague(leagueData);
+        
+        // Load gym details if we have gym IDs
+        if (leagueData.gym_ids && leagueData.gym_ids.length > 0) {
+          const { data: gymsData, error: gymsError } = await supabase
+            .from('gyms')
+            .select('id, gym, address, instructions, locations')
+            .in('id', leagueData.gym_ids);
+            
+          if (gymsError) {
+            logger.error("Error loading gym details", gymsError);
+          } else if (gymsData) {
+            setGymDetails(gymsData);
+          }
+        }
       }
     } catch (err) {
       logger.error("Error loading league", err);
@@ -186,6 +209,11 @@ export function LeagueDetailPage() {
             {/* Standings View */}
             {activeView === "standings" && (
               <LeagueStandings leagueId={id} />
+            )}
+
+            {/* Gyms View */}
+            {activeView === "gyms" && (
+              <LeagueGyms gyms={league.gyms || []} gymDetails={gymDetails || undefined} />
             )}
 
           </div>

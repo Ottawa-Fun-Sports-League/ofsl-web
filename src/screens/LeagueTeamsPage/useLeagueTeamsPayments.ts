@@ -143,7 +143,7 @@ export function useLeagueTeamsPayments(teamId: number | null) {
           id: index + 1,
           amount,
           payment_id: paymentData.id,
-          payment_method: method,
+          payment_method: method || 'unknown',
           date,
           notes: note.trim()
         });

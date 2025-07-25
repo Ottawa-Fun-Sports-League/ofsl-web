@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { MapPin, Calendar, Clock, Users, DollarSign } from "lucide-react";
@@ -14,7 +14,6 @@ import {
   LeagueWithTeamCount 
 } from "../../lib/leagues";
 import { getStripeProductByLeagueId } from '../../lib/stripe';
-import { useAuth } from "../../contexts/AuthContext";
 import { MobileFilterDrawer } from "./components/MobileFilterDrawer";
 
 interface StripeProductDB {
@@ -41,9 +40,8 @@ const filterOptions = {
   location: ["All Locations", "Central", "East", "West", "South", "Gatineau"]
 };
 
-export const LeaguesPage = (): JSX.Element => {
+export const LeaguesPage = (): React.ReactElement => {
   const [searchParams] = useSearchParams();
-  const { _userProfile } = useAuth();
   
   // Data state
   const [leagues, setLeagues] = useState<LeagueWithTeamCount[]>([]);
@@ -261,7 +259,7 @@ export const LeaguesPage = (): JSX.Element => {
                     <div className="space-y-1">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <p className="text-sm font-medium text-[#6F6F6F]">{formatLeagueDates(league.start_date, league.end_date, league.hide_day)}</p>
+                        <p className="text-sm font-medium text-[#6F6F6F]">{formatLeagueDates(league.start_date, league.end_date, league.hide_day || false)}</p>
                       </div>
                     </div>
                     
@@ -280,7 +278,6 @@ export const LeaguesPage = (): JSX.Element => {
                           return gymLocations.map((location, index) => (
                             <LocationPopover
                               key={index}
-                              location={location}
                               locations={getGymNamesByLocation(league.gyms || [], location)}
                             >
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
@@ -339,7 +336,7 @@ export const LeaguesPage = (): JSX.Element => {
         isOpen={showMobileFilterDrawer}
         onClose={() => setShowMobileFilterDrawer(false)}
         filters={filters}
-        handleFilterChange={handleFilterChange}
+        handleFilterChange={(filterType: string, value: string) => handleFilterChange(filterType as keyof typeof filters, value)}
         clearFilters={clearFilters}
         sports={sports}
         skills={skills}

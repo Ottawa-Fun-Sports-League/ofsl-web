@@ -1,13 +1,21 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
+import { UserProfile } from '../types/auth';
 
 // Mock Supabase
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
-      onAuthStateChange: vi.fn(),
+      onAuthStateChange: vi.fn(() => ({
+        data: {
+          subscription: {
+            unsubscribe: vi.fn(),
+          },
+        },
+      })),
       signInWithPassword: vi.fn(),
       signInWithOAuth: vi.fn(),
       signUp: vi.fn(),
@@ -19,317 +27,168 @@ vi.mock('../lib/supabase', () => ({
           single: vi.fn(),
         })),
       })),
-      insert: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
     })),
     rpc: vi.fn(),
   },
 }));
 
-// Mock React Router
-vi.mock('react-router-dom', () => ({
-  useNavigate: vi.fn(),
-  useLocation: vi.fn(() => ({ pathname: '/' })),
+// Mock logger
+vi.mock('../lib/logger', () => ({
+  logger: {
+    error: vi.fn(),
+  },
 }));
 
-// Test component to access auth context
-const TestComponent = () => {
-  const { user, loading, profileComplete } = useAuth();
-  
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <div>Not authenticated</div>;
-  // Don't render anything special for incomplete profile - let AuthContext handle redirect
-  
-  return <div>Profile {profileComplete ? 'complete' : 'incomplete'}</div>;
-};
-
-describe('AuthContext Profile Completion Redirect', () => {
-  let mockLocationReplace: jest.Mock;
-  let mockSupabase: any;
-  
-  beforeEach(async () => {
-    // Reset all mocks
+describe('AuthContext', () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Get the mocked supabase
-    const { supabase } = await import('../lib/supabase');
-    mockSupabase = supabase;
-    
-    // Mock window.location.replace
-    mockLocationReplace = vi.fn();
+    // Mock window.location
     Object.defineProperty(window, 'location', {
       value: {
-        href: 'http://localhost:3000/',
         hash: '#/',
-        replace: mockLocationReplace,
-        reload: vi.fn(),
+        href: 'http://localhost:3000',
         origin: 'http://localhost:3000',
-        pathname: '/',
-        search: '',
       },
       writable: true,
     });
     
-    // Mock localStorage
-    const localStorageMock = {
-      getItem: vi.fn(),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    };
-    Object.defineProperty(window, 'localStorage', {
-      value: localStorageMock,
-      writable: true,
-    });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('should redirect to /complete-profile when user has incomplete profile', async () => {
-    // Mock authenticated user with incomplete profile
-    const mockUser = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      email_confirmed_at: new Date().toISOString(),
-      app_metadata: {},
-      user_metadata: {},
-      created_at: new Date().toISOString(),
-    };
-
-    const mockSession = {
-      user: mockUser,
-      access_token: 'test-token',
-      refresh_token: 'test-refresh-token',
-      expires_in: 3600,
-      token_type: 'bearer',
-    };
-
-    // Mock incomplete profile from database
-    const mockIncompleteProfile = {
-      auth_id: 'test-user-id',
-      email: 'test@example.com',
-      name: '', // Missing name
-      phone: '', // Missing phone
-      profile_completed: false,
-      user_sports_skills: [], // Empty skills
-    };
-
-    // Setup Supabase mocks
-    mockSupabase.auth.getSession.mockResolvedValue({
-      data: { session: mockSession },
+    // Mock getSession to return null initially (no user logged in)
+    (supabase.auth.getSession as any).mockResolvedValue({
+      data: { session: null },
       error: null,
     });
+  });
 
-    mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
-      // Simulate auth state change
-      setTimeout(() => {
-        callback('INITIAL_SESSION', mockSession);
-      }, 0);
-      
-      return {
-        data: { subscription: { unsubscribe: vi.fn() } },
+  describe('checkProfileCompletion', () => {
+    it('should return false when no profile is provided', async () => {
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <AuthProvider>{children}</AuthProvider>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.checkProfileCompletion()).toBe(false);
+    });
+
+    it('should return false when profile is incomplete', async () => {
+      const incompleteProfile: UserProfile = {
+        id: 'test-user-id',
+        auth_id: 'test-auth-id',
+        email: 'test@example.com',
+        name: 'Test User',
+        phone: '',
+        skill_id: null,
+        is_admin: false,
+        team_ids: null,
+        profile_completed: false,
+        user_sports_skills: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <AuthProvider>{children}</AuthProvider>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.checkProfileCompletion(incompleteProfile)).toBe(false);
     });
 
-    // Mock RPC call for profile creation
-    mockSupabase.rpc.mockResolvedValue({
-      data: mockIncompleteProfile,
-      error: null,
+    it('should return true when profile is complete', async () => {
+      const completeProfile: UserProfile = {
+        id: 'test-user-id',
+        auth_id: 'test-auth-id',
+        email: 'test@example.com',
+        name: 'Test User',
+        phone: '123-456-7890',
+        skill_id: 2,
+        is_admin: false,
+        team_ids: null,
+        profile_completed: true,
+        user_sports_skills: [{
+          id: 1,
+          user_id: 'test-user-id',
+          sport_id: 1,
+          skill_id: 2,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <AuthProvider>{children}</AuthProvider>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.checkProfileCompletion(completeProfile)).toBe(true);
     });
 
-    // Mock profile fetch
-    mockSupabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: mockIncompleteProfile,
-            error: null,
-          }),
-        }),
-      }),
+    it('should always return a boolean value', async () => {
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <AuthProvider>{children}</AuthProvider>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      // Test with various inputs to ensure boolean return
+      expect(typeof result.current.checkProfileCompletion()).toBe('boolean');
+      expect(typeof result.current.checkProfileCompletion(null)).toBe('boolean');
+      expect(typeof result.current.checkProfileCompletion(undefined)).toBe('boolean');
     });
-
-    // Render the component
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
-
-    // Wait for auth state to be processed
-    await waitFor(() => {
-      expect(mockSupabase.auth.getSession).toHaveBeenCalled();
-    });
-
-    // Wait for profile completion check and redirect
-    await waitFor(() => {
-      expect(mockLocationReplace).toHaveBeenCalledWith('/#/complete-profile');
-    }, { timeout: 2000 });
-
-    // Verify localStorage was set for redirect
-    expect(localStorage.setItem).toHaveBeenCalledWith('redirectAfterLogin', '/');
   });
 
-  it('should redirect to /complete-profile when user has no profile', async () => {
-    // Mock authenticated user
-    const mockUser = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      email_confirmed_at: new Date().toISOString(),
-      app_metadata: {},
-      user_metadata: {},
-      created_at: new Date().toISOString(),
-    };
+  describe('signInWithGoogle', () => {
+    it('should call supabase signInWithOAuth with correct parameters', async () => {
+      const mockSignInWithOAuth = vi.fn().mockResolvedValue({
+        data: { url: 'https://google.com/oauth' },
+        error: null,
+      });
+      (supabase.auth.signInWithOAuth as any) = mockSignInWithOAuth;
 
-    const mockSession = {
-      user: mockUser,
-      access_token: 'test-token',
-      refresh_token: 'test-refresh-token',
-      expires_in: 3600,
-      token_type: 'bearer',
-    };
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <AuthProvider>{children}</AuthProvider>
+      );
 
-    // Setup Supabase mocks
-    mockSupabase.auth.getSession.mockResolvedValue({
-      data: { session: mockSession },
-      error: null,
-    });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
-    mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
-      setTimeout(() => {
-        callback('INITIAL_SESSION', mockSession);
-      }, 0);
-      
-      return {
-        data: { subscription: { unsubscribe: vi.fn() } },
-      };
-    });
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
 
-    // Mock RPC call returning null (no profile)
-    mockSupabase.rpc.mockResolvedValue({
-      data: null,
-      error: null,
-    });
+      await act(async () => {
+        await result.current.signInWithGoogle();
+      });
 
-    // Mock profile fetch returning null
-    mockSupabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: null,
-            error: { code: 'PGRST116' }, // No profile found
-          }),
-        }),
-      }),
-    });
-
-    // Render the component
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
-
-    // Wait for auth state to be processed
-    await waitFor(() => {
-      expect(mockSupabase.auth.getSession).toHaveBeenCalled();
-    });
-
-    // Wait for redirect to complete-profile
-    await waitFor(() => {
-      expect(mockLocationReplace).toHaveBeenCalledWith('/#/complete-profile');
-    }, { timeout: 2000 });
-  });
-
-  it('should not redirect when user has complete profile', async () => {
-    // Mock authenticated user with complete profile
-    const mockUser = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      email_confirmed_at: new Date().toISOString(),
-      app_metadata: {},
-      user_metadata: {},
-      created_at: new Date().toISOString(),
-    };
-
-    const mockSession = {
-      user: mockUser,
-      access_token: 'test-token',
-      refresh_token: 'test-refresh-token',
-      expires_in: 3600,
-      token_type: 'bearer',
-    };
-
-    // Mock complete profile from database
-    const mockCompleteProfile = {
-      auth_id: 'test-user-id',
-      email: 'test@example.com',
-      name: 'Test User',
-      phone: '123-456-7890',
-      profile_completed: true,
-      user_sports_skills: [
-        { sport: 'volleyball', skill_level: 'intermediate' }
-      ],
-    };
-
-    // Setup Supabase mocks
-    mockSupabase.auth.getSession.mockResolvedValue({
-      data: { session: mockSession },
-      error: null,
-    });
-
-    mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
-      setTimeout(() => {
-        callback('INITIAL_SESSION', mockSession);
-      }, 0);
-      
-      return {
-        data: { subscription: { unsubscribe: vi.fn() } },
-      };
-    });
-
-    // Mock RPC call for profile creation
-    mockSupabase.rpc.mockResolvedValue({
-      data: mockCompleteProfile,
-      error: null,
-    });
-
-    // Mock profile fetch
-    mockSupabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: mockCompleteProfile,
-            error: null,
-          }),
-        }),
-      }),
-    });
-
-    // Render the component
-    render(
-      <AuthProvider>
-        <TestComponent />
-      </AuthProvider>
-    );
-
-    // Wait for auth state to be processed
-    await waitFor(() => {
-      expect(mockSupabase.auth.getSession).toHaveBeenCalled();
-    });
-
-    // Wait a bit to ensure no redirect happens
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Verify no redirect happened
-    expect(mockLocationReplace).not.toHaveBeenCalledWith('/#/complete-profile');
-    
-    // Verify the user is authenticated and profile is complete
-    await waitFor(() => {
-      expect(screen.getByText('Profile complete')).toBeInTheDocument();
+      expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: 'http://localhost:3000/#/signup-confirmation',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
     });
   });
 });

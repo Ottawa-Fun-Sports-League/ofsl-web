@@ -4,7 +4,7 @@ import { LoginPage } from './LoginPage';
 import { supabase } from '../../lib/supabase';
 
 // Get the mocked supabase
-const mockSupabase = supabase as ReturnType<typeof vi.mocked>;
+const mockSupabase = supabase as any;
 
 describe('LoginPage Simple Test', () => {
   beforeEach(() => {
