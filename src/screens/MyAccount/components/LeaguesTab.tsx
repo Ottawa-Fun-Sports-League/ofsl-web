@@ -100,7 +100,7 @@ export function LeaguesTab() {
   };
   
   // Filter leagues using the shared filter function
-  const filteredLeagues = filterLeagues(leagues, filters, skills);
+  const filteredLeagues = filterLeagues(leagues, filters, skills) as LeagueWithTeamCount[];
   
   // Customize filter options for admin page
   const filterOptions = {

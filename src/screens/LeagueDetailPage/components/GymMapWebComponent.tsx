@@ -8,6 +8,7 @@ interface GymMapWebComponentProps {
 
 // Declare the custom element type
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
       'gmp-map': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
@@ -33,12 +34,12 @@ export function GymMapWebComponent({ address, gymName }: GymMapWebComponentProps
         // Use the traditional Maps JavaScript API approach
         const geocoder = new window.google.maps.Geocoder();
         
-        geocoder.geocode({ address }, (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => {
+        geocoder.geocode({ address }, (results: any[], status: any) => {
           if (status === 'OK' && results[0] && mapRef.current) {
             const location = results[0].geometry.location;
             
             // Create a traditional Google Map
-            const map = new window.google.maps.Map(mapRef.current, {
+            const map = new window.google!.maps.Map(mapRef.current!, {
               center: location,
               zoom: 15,
               mapTypeControl: false,
@@ -47,7 +48,7 @@ export function GymMapWebComponent({ address, gymName }: GymMapWebComponentProps
             });
 
             // Add a marker
-            new window.google.maps.Marker({
+            new window.google!.maps.Marker({
               position: location,
               map: map,
               title: gymName,
