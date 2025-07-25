@@ -161,7 +161,11 @@ export function LeagueTeamsPage() {
       setLeague({
         id: data.id,
         name: data.name,
-        sport_name: data.sports ? (data.sports as { name: string }).name : '',
+        sport_name: data.sports && Array.isArray(data.sports) && data.sports.length > 0 
+          ? data.sports[0].name 
+          : (data.sports && typeof data.sports === 'object' && 'name' in data.sports 
+            ? (data.sports as { name: string }).name 
+            : ''),
         location: data.location || '',
         cost: data.cost || 0
       });
@@ -182,7 +186,7 @@ export function LeagueTeamsPage() {
       let dragSupported = true;
 
       // First attempt with display_order
-      let activeResult: unknown = await supabase
+      let activeResult = await supabase
         .from('teams')
         .select(`
           id,
@@ -200,7 +204,7 @@ export function LeagueTeamsPage() {
         .eq('active', true)
         .order('display_order', { ascending: true });
 
-      let waitlistResult: unknown = await supabase
+      let waitlistResult = await supabase
         .from('teams')
         .select(`
           id,

@@ -32,7 +32,6 @@ export function NewLeagueForm({
     league_type: null,
     gender: null,
     sport_id: null,
-    skill_id: null,
     skill_ids: [],
     day_of_week: null,
     year: "2025",
@@ -73,7 +72,6 @@ export function NewLeagueForm({
       gender: null,
       year: "2025",
       sport_id: null,
-      skill_id: null,
       skill_ids: [],
       day_of_week: null,
       start_date: "",
@@ -308,8 +306,6 @@ export function NewLeagueForm({
                         setNewLeague({
                           ...newLeague,
                           skill_ids: [...newLeague.skill_ids, skill.id],
-                          // Also update the primary skill_id if it's not set yet
-                          skill_id: newLeague.skill_id || skill.id,
                         });
                       } else {
                         const updatedSkillIds = newLeague.skill_ids.filter(
@@ -318,13 +314,6 @@ export function NewLeagueForm({
                         setNewLeague({
                           ...newLeague,
                           skill_ids: updatedSkillIds,
-                          // If we're removing the primary skill, set it to the first remaining skill or null
-                          skill_id:
-                            skill.id === newLeague.skill_id
-                              ? updatedSkillIds.length > 0
-                                ? updatedSkillIds[0]
-                                : null
-                              : newLeague.skill_id,
                         });
                       }
                     }}

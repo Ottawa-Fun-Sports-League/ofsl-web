@@ -10,6 +10,7 @@ import { Session, User, AuthError } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { UserProfile } from "../types/auth";
 import { logger } from "../lib/logger";
+import { LoadingSpinner } from "../components/ui/loading-spinner";
 
 interface AuthContextType {
   session: Session | null;
@@ -607,7 +608,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   if (initializing) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#B20000]"></div>
+        <LoadingSpinner size="lg" />
         <p className="mt-4 text-[#6F6F6F]">Initializing authentication...</p>
       </div>
     );

@@ -15,6 +15,7 @@ import {
 } from "../../lib/leagues";
 import { getStripeProductByLeagueId } from '../../lib/stripe';
 import { MobileFilterDrawer } from "./components/MobileFilterDrawer";
+import { LoadingSpinner } from "../../components/ui/loading-spinner";
 
 interface StripeProductDB {
   id: string;
@@ -166,9 +167,7 @@ export const LeaguesPage = (): React.ReactElement => {
           <h1 className="text-4xl md:text-5xl text-[#6F6F6F] font-bold mb-8 md:mb-12 text-center">
             Find a league
           </h1>
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#B20000]"></div>
-          </div>
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     );

@@ -152,7 +152,7 @@ export function AddPlayersModal({
             leagues: { name: string } | null;
             users: { name: string } | null;
           } | null;
-          error: any;
+          error: Error | null;
         };
 
       if (teamError) throw teamError;
