@@ -1,10 +1,11 @@
+import React from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
 import { Users, Star, Trophy, Target } from "lucide-react";
 
-export const SkillsAndDrillsPage = (): JSX.Element => {
+export const SkillsAndDrillsPage = (): React.ReactElement => {
   // Session types data
   const sessionTypes = [
     {
@@ -51,7 +52,7 @@ export const SkillsAndDrillsPage = (): JSX.Element => {
       <HeroBanner
         image="/AdobeStock_84066897.jpeg"
         imageAlt="Skills and drills training"
-        height="500px"
+        containerClassName="h-[500px]"
       >
         <div className="text-center text-white">
           <h1 className="text-5xl mb-4 font-heading">Skills & Drills</h1>

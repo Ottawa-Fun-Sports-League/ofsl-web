@@ -1,6 +1,6 @@
-import { Button } from '../../../../../components/ui/button';
-import { Input } from '../../../../../components/ui/input';
-import { SlidersHorizontal, Search } from 'lucide-react';
+import { Button } from "../../../../../components/ui/button";
+import { Input } from "../../../../../components/ui/input";
+import { SlidersHorizontal, Search } from "lucide-react";
 
 interface MobileHeaderProps {
   searchTerm: string;
@@ -17,14 +17,14 @@ export function MobileHeader({
   onSearchChange,
   onOpenFilterDrawer,
   onClearFilters,
-  onAddSchool
+  onAddSchool,
 }: MobileHeaderProps) {
   return (
     <>
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Schools</h2>
+            <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Gyms</h2>
           </div>
           <Button
             onClick={onOpenFilterDrawer}
@@ -67,3 +67,4 @@ export function MobileHeader({
     </>
   );
 }
+

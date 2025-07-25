@@ -16,6 +16,7 @@ export function LocationPopover({
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLSpanElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Show popover if there are gym names to display
   const hasGymNames = locations && locations.length > 0;
@@ -63,25 +64,29 @@ export function LocationPopover({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPopover]);
 
-  // Close popover when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        triggerRef.current &&
-        !triggerRef.current.contains(event.target as Node) &&
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
-      ) {
-        setShowPopover(false);
-      }
+  // Handle mouse enter/leave for hover functionality
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
     }
+    setShowPopover(true);
+  };
 
-    if (showPopover) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showPopover]);
+  const handleMouseLeave = () => {
+    // Add a small delay before closing to allow moving to the popover
+    hoverTimeoutRef.current = setTimeout(() => {
+      setShowPopover(false);
+    }, 100);
+  };
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!hasGymNames) {
     return <>{children}</>;
@@ -89,14 +94,15 @@ export function LocationPopover({
 
   return (
     <>
-      <span className={`inline-block ${className}`} ref={triggerRef}>
-        <button
-          onClick={() => setShowPopover(!showPopover)}
-          className="text-left focus:outline-none"
-          type="button"
-        >
+      <span 
+        className={`inline-block ${className}`} 
+        ref={triggerRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <span className="cursor-pointer">
           {children}
-        </button>
+        </span>
       </span>
 
       {showPopover && createPortal(
@@ -107,6 +113,8 @@ export function LocationPopover({
             top: `${popoverPosition.top}px`,
             left: `${popoverPosition.left}px`,
           }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <div className="p-4">
             <div className="font-medium text-gray-900 mb-2">League Gyms:</div>

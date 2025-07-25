@@ -110,8 +110,7 @@ export function usePaymentOperations(
       const updatedHistory = paymentHistory.filter(h => h.id !== entry.id);
       const updatedNotes = JSON.stringify(updatedHistory);
       const newAmountPaid = updatedHistory.reduce((total, entry) => {
-        const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(entry.amount.toString()) || 0;
-        return total + amount;
+        return total + entry.amount;
       }, 0);
       
       const { data, error } = await supabase
@@ -178,7 +177,7 @@ export function usePaymentOperations(
         updatedHistory[entryIndex] = {
           ...updatedHistory[entryIndex],
           amount: parseFloat(editingPayment.amount) || 0,
-          payment_method: editingPayment.payment_method,
+          payment_method: editingPayment.payment_method || updatedHistory[entryIndex].payment_method,
           date: editingPayment.date ? new Date(editingPayment.date).toISOString() : new Date().toISOString(),
           notes: editingPayment.notes
         };
@@ -186,8 +185,7 @@ export function usePaymentOperations(
       
       const updatedNotes = JSON.stringify(updatedHistory);
       const newAmountPaid = updatedHistory.reduce((total, entry) => {
-        const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(entry.amount.toString()) || 0;
-        return total + amount;
+        return total + entry.amount;
       }, 0);
       
       const { data, error } = await supabase

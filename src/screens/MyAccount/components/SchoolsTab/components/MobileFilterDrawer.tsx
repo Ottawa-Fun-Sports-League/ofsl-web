@@ -1,6 +1,6 @@
-import { X } from 'lucide-react';
-import { Button } from '../../../../../components/ui/button';
-import { Input } from '../../../../../components/ui/input';
+import { X } from "lucide-react";
+import { Button } from "../../../../../components/ui/button";
+import { Input } from "../../../../../components/ui/input";
 
 interface MobileFilterDrawerProps {
   isOpen: boolean;
@@ -8,7 +8,7 @@ interface MobileFilterDrawerProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
   filters: {
-    status: 'all' | 'active' | 'inactive';
+    status: "all" | "active" | "inactive";
     days: number[];
     sports: number[];
   };
@@ -33,7 +33,7 @@ export function MobileFilterDrawer({
   clearFilters,
   daysOfWeek,
   sports,
-  isAnyFilterActive
+  isAnyFilterActive,
 }: MobileFilterDrawerProps) {
   return (
     <>
@@ -48,7 +48,7 @@ export function MobileFilterDrawer({
       {/* Drawer */}
       <div
         className={`fixed top-0 right-0 h-full w-full max-w-xs bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto
-          ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold text-[#6F6F6F]">School Filters</h2>
@@ -81,12 +81,12 @@ export function MobileFilterDrawer({
                   type="radio"
                   id="mobile-status-all"
                   name="mobile-status"
-                  checked={filters.status === 'all'}
-                  onChange={() => handleFilterChange('status', 'all')}
+                  checked={filters.status === "all"}
+                  onChange={() => handleFilterChange("status", "all")}
                   className="mr-2"
                 />
                 <label htmlFor="mobile-status-all" className="text-[#6F6F6F]">
-                  All Schools
+                  All Gyms
                 </label>
               </div>
               <div className="flex items-center">
@@ -94,11 +94,14 @@ export function MobileFilterDrawer({
                   type="radio"
                   id="mobile-status-active"
                   name="mobile-status"
-                  checked={filters.status === 'active'}
-                  onChange={() => handleFilterChange('status', 'active')}
+                  checked={filters.status === "active"}
+                  onChange={() => handleFilterChange("status", "active")}
                   className="mr-2"
                 />
-                <label htmlFor="mobile-status-active" className="text-[#6F6F6F]">
+                <label
+                  htmlFor="mobile-status-active"
+                  className="text-[#6F6F6F]"
+                >
                   Active Only
                 </label>
               </div>
@@ -107,11 +110,14 @@ export function MobileFilterDrawer({
                   type="radio"
                   id="mobile-status-inactive"
                   name="mobile-status"
-                  checked={filters.status === 'inactive'}
-                  onChange={() => handleFilterChange('status', 'inactive')}
+                  checked={filters.status === "inactive"}
+                  onChange={() => handleFilterChange("status", "inactive")}
                   className="mr-2"
                 />
-                <label htmlFor="mobile-status-inactive" className="text-[#6F6F6F]">
+                <label
+                  htmlFor="mobile-status-inactive"
+                  className="text-[#6F6F6F]"
+                >
                   Inactive Only
                 </label>
               </div>
@@ -120,7 +126,9 @@ export function MobileFilterDrawer({
 
           {/* Days Filter */}
           <div>
-            <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">Available Days</h3>
+            <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">
+              Available Days
+            </h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {daysOfWeek.map((day) => (
                 <div key={day.id} className="flex items-center">
@@ -131,7 +139,10 @@ export function MobileFilterDrawer({
                     onChange={() => handleDayFilterToggle(day.id)}
                     className="mr-2"
                   />
-                  <label htmlFor={`mobile-filter-day-${day.id}`} className="text-[#6F6F6F]">
+                  <label
+                    htmlFor={`mobile-filter-day-${day.id}`}
+                    className="text-[#6F6F6F]"
+                  >
                     {day.name}
                   </label>
                 </div>
@@ -141,7 +152,9 @@ export function MobileFilterDrawer({
 
           {/* Sports Filter */}
           <div>
-            <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">Available Sports</h3>
+            <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">
+              Available Sports
+            </h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {sports.map((sport) => (
                 <div key={sport.id} className="flex items-center">
@@ -152,7 +165,10 @@ export function MobileFilterDrawer({
                     onChange={() => handleSportFilterToggle(sport.id)}
                     className="mr-2"
                   />
-                  <label htmlFor={`mobile-filter-sport-${sport.id}`} className="text-[#6F6F6F]">
+                  <label
+                    htmlFor={`mobile-filter-sport-${sport.id}`}
+                    className="text-[#6F6F6F]"
+                  >
                     {sport.name}
                   </label>
                 </div>
@@ -184,3 +200,4 @@ export function MobileFilterDrawer({
     </>
   );
 }
+

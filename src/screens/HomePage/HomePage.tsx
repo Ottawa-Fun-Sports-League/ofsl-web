@@ -10,19 +10,19 @@ const leagueCards = [
     title: "Women's Elite Volleyball",
     image: "/womens-elite-card.jpg",
     alt: "Elite womens volleyball",
-    link: "/leagues?sport=Volleyball",
+    link: "/leagues?sport=Volleyball&level=Elite&gender=Female",
   },
   {
     title: "Mixed Volleyball",
     image: "/571North-CR3_0335-Indoor-VB-Header-Featured.jpg",
     alt: "Indoor coed volleyball",
-    link: "/leagues?sport=Volleyball",
+    link: "/leagues?sport=Volleyball&gender=Mixed",
   },
   {
     title: "Advanced Badminton",
     image: "/badminton-card.png",
     alt: "Advanced badminton",
-    link: "/leagues?sport=Badminton",
+    link: "/leagues?sport=Badminton&level=Advanced",
   },
   {
     title: "Indoor Pickleball Coming Soon!",
@@ -34,23 +34,23 @@ const leagueCards = [
     title: "Competitive Badminton",
     image: "/competitive badminton.jpg",
     alt: "Competitive badminton players",
-    link: "/leagues?sport=Badminton",
+    link: "/leagues?sport=Badminton&level=Competitive",
   },
   {
     title: "Women's Volleyball",
-    image: "/TRE_7742.jpg",
+    image: "/Monday Wonems.png",
     alt: "Womens volleyball",
-    link: "/leagues?sport=Volleyball",
+    link: "/leagues?sport=Volleyball&gender=Female",
   },
   {
     title: "Men's Volleyball",
     image: "/mens-volleyball.jpg",
     alt: "Mens volleyball",
-    link: "/leagues?sport=Volleyball",
+    link: "/leagues?sport=Volleyball&gender=Male",
   },
 ];
 
-export const HomePage = (): JSX.Element => {
+export const HomePage = (): React.ReactElement => {
   // Refs and state for draggable scrolling
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -63,39 +63,39 @@ export const HomePage = (): JSX.Element => {
   // Mouse event handlers for draggable scrolling
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollContainerRef.current) return;
-    
+
     setIsDragging(true);
     setHasDragged(false);
     setDragDistance(0);
     setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
     setScrollLeft(scrollContainerRef.current.scrollLeft);
-    scrollContainerRef.current.style.cursor = 'grabbing';
-    
+    scrollContainerRef.current.style.cursor = "grabbing";
+
     // Prevent text selection during drag
     e.preventDefault();
   };
 
   const handleMouseLeave = () => {
     if (!isDragging) return;
-    
+
     setIsDragging(false);
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab';
+      scrollContainerRef.current.style.cursor = "grab";
     }
   };
 
   const handleMouseUp = () => {
     if (!isDragging) return;
-    
+
     setIsDragging(false);
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab';
+      scrollContainerRef.current.style.cursor = "grab";
     }
-    
+
     // If we've dragged more than a threshold, prevent the next click from navigating
     if (dragDistance > 5) {
       setHasDragged(true);
-      
+
       // Reset hasDragged after a short delay to allow future navigation
       setTimeout(() => {
         setHasDragged(false);
@@ -105,21 +105,21 @@ export const HomePage = (): JSX.Element => {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !scrollContainerRef.current) return;
-    
+
     e.preventDefault();
     const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX); // Removed multiplier for 1:1 cursor movement
-    
+    const walk = x - startX; // Removed multiplier for 1:1 cursor movement
+
     // Update drag distance for detection
     setDragDistance(Math.abs(walk));
-    
+
     scrollContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
   // Touch events for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!scrollContainerRef.current) return;
-    
+
     setIsDragging(true);
     setHasDragged(false);
     setDragDistance(0);
@@ -129,23 +129,23 @@ export const HomePage = (): JSX.Element => {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging || !scrollContainerRef.current) return;
-    
+
     const x = e.touches[0].clientX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX); // Removed multiplier for 1:1 touch movement
-    
+    const walk = x - startX; // Removed multiplier for 1:1 touch movement
+
     // Update drag distance for detection
     setDragDistance(Math.abs(walk));
-    
+
     scrollContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    
+
     // If we've dragged more than a threshold, prevent the next click from navigating
     if (dragDistance > 5) {
       setHasDragged(true);
-      
+
       // Reset hasDragged after a short delay to allow future navigation
       setTimeout(() => {
         setHasDragged(false);
@@ -159,62 +159,65 @@ export const HomePage = (): JSX.Element => {
       if (isDragging) {
         setIsDragging(false);
         if (scrollContainerRef.current) {
-          scrollContainerRef.current.style.cursor = 'grab';
+          scrollContainerRef.current.style.cursor = "grab";
         }
       }
     };
 
-    window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener("mouseup", handleGlobalMouseUp);
     return () => {
-      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
     };
   }, [isDragging]);
 
   // Function to scroll the carousel by one card width
-  const scrollCarousel = (direction: 'left' | 'right') => {
+  const scrollCarousel = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return;
-    
+
     const container = scrollContainerRef.current;
     const cardWidth = 280 + 24; // card width + gap
-    const scrollAmount = direction === 'left' ? -cardWidth : cardWidth;
-    
+    const scrollAmount = direction === "left" ? -cardWidth : cardWidth;
+
     container.scrollBy({
       left: scrollAmount,
-      behavior: 'smooth'
+      behavior: "smooth",
     });
-    
+
     // Update showLeftButton based on scroll position
     setShowLeftButton(container.scrollLeft + scrollAmount > 0);
   };
-  
+
   // Update left button visibility on scroll
   const handleScroll = () => {
     if (scrollContainerRef.current) {
       setShowLeftButton(scrollContainerRef.current.scrollLeft > 0);
     }
   };
-  
+
   // Add scroll event listener
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
+      container.addEventListener("scroll", handleScroll);
+      return () => container.removeEventListener("scroll", handleScroll);
     }
   }, []);
 
   return (
     <div className="bg-white w-full">
-      <HeroBanner 
-        image="/mask-group.png" 
+      <HeroBanner
+        image="/mask-group.png"
         imageAlt="Volleyball players"
         containerClassName="h-[450px] md:h-[604px]"
       >
         <div className="text-center text-white max-w-[860px] px-4">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 font-heading font-bold">Welcome to OFSL!</h1>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 font-heading font-bold">
+            Welcome to OFSL!
+          </h1>
           <p className="text-base md:text-lg lg:text-xl">
             Ottawa&apos;s leading adult volleyball and badminton league—where
-            sportsmanship meets healthy competition from competitive to intermediate levels.
+            sportsmanship meets healthy competition from competitive to
+            intermediate levels.
           </p>
           {/* Hero buttons */}
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-6 md:mt-12 justify-center">
@@ -267,7 +270,10 @@ export const HomePage = (): JSX.Element => {
                 Proudly partnering with Diabetes Canada to promote healthier
                 lifestyles through sport and community wellness.
               </span>
-              <a href="#" className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold">
+              <a
+                href="#"
+                className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold"
+              >
                 Learn more
               </a>
             </div>
@@ -285,10 +291,11 @@ export const HomePage = (): JSX.Element => {
               </div>
               <div className="text-center md:text-left flex-1">
                 <h3 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[28px] leading-7 md:leading-8 mb-3">
-                  LoveGive&apos;s Charity Tournament 
+                  LoveGive&apos;s Charity Tournament
                 </h3>
                 <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-                  Come out and experience a day of fun on Aug 17, 2025 at Britannia Beach, for a 6v6 and 4v4 tournament. 
+                  Come out and experience a day of fun on Aug 17, 2025 at
+                  Britannia Beach, for a 6v6 and 4v4 tournament.
                 </p>
               </div>
             </CardContent>
@@ -298,7 +305,11 @@ export const HomePage = (): JSX.Element => {
         {/* League description */}
         <div className="text-center mb-16 md:mb-24">
           <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-            Our leagues provide a well-organized structure and experience for those who take their play seriously—but still want to have a good time. Geared toward intermediate to competitive play, it&apos;s a great way to stay active, maintain your fitness, and connect with others who share your passion for the games. 
+            Our leagues provide a well-organized structure and experience for
+            those who take their play seriously—but still want to have a good
+            time. Geared toward intermediate to competitive play, it&apos;s a
+            great way to stay active, maintain your fitness, and connect with
+            others who share your passion for the games.
           </p>
         </div>
       </div>
@@ -306,9 +317,11 @@ export const HomePage = (): JSX.Element => {
       {/* League cards with overflow handling */}
       <div className="w-full mb-8 md:mb-12">
         <div className="max-w-[1280px] mx-auto px-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-[#6F6F6F] mb-8">Popular Leagues</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-[#6F6F6F] mb-8">
+            Popular Leagues
+          </h2>
           <div className="relative">
-            <div 
+            <div
               ref={scrollContainerRef}
               className="flex gap-6 overflow-x-auto pb-8 scrollbar-thin"
               onMouseDown={handleMouseDown}
@@ -319,19 +332,19 @@ export const HomePage = (): JSX.Element => {
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              style={{ 
-                cursor: 'grab', 
-                scrollBehavior: 'auto', // Disable smooth scrolling for immediate stop
-                paddingTop: '10px', // Add padding at top to prevent cutoff during zoom
-                WebkitOverflowScrolling: 'touch' // Smooth scrolling on iOS
+              style={{
+                cursor: "grab",
+                scrollBehavior: "auto", // Disable smooth scrolling for immediate stop
+                paddingTop: "10px", // Add padding at top to prevent cutoff during zoom
+                WebkitOverflowScrolling: "touch", // Smooth scrolling on iOS
               }}
             >
               {leagueCards.map((card, index) => (
-                <Link 
-                  key={index} 
-                  to={card.link} 
+                <Link
+                  key={index}
+                  to={card.link}
                   className="block transition-transform duration-300 hover:scale-105 hover:shadow-lg rounded-lg flex-shrink-0 w-[280px] md:w-[calc((100%-72px)/4)]"
-                  style={{ transformOrigin: 'center center' }}
+                  style={{ transformOrigin: "center center" }}
                   onClick={(e) => {
                     // Prevent navigation if we're dragging or just finished dragging
                     if (isDragging || hasDragged) {
@@ -358,27 +371,49 @@ export const HomePage = (): JSX.Element => {
                 </Link>
               ))}
             </div>
-            
+
             {/* Scroll indicators */}
             {showLeftButton && (
-              <div 
-                onClick={() => scrollCarousel('left')}
+              <div
+                onClick={() => scrollCarousel("left")}
                 className="hidden md:block absolute -left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-50 rounded-full p-1.5 shadow-sm cursor-pointer hover:bg-opacity-70 z-10"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#B20000]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-[#B20000]"
+                  >
                     <polyline points="15 18 9 12 15 6"></polyline>
                   </svg>
                 </div>
               </div>
             )}
-            
+
             <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-50 rounded-full p-1.5 shadow-sm">
-              <div 
+              <div
                 className="w-6 h-6 flex items-center justify-center cursor-pointer hover:bg-opacity-70"
-                onClick={() => scrollCarousel('right')}
+                onClick={() => scrollCarousel("right")}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#B20000]">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-[#B20000]"
+                >
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
               </div>
@@ -397,9 +432,12 @@ export const HomePage = (): JSX.Element => {
               src="/rebase-24dp-000000-fill0-wght300-grad0-opsz24-1.svg"
             />
             <div className="md:ml-6 flex-1 text-center md:text-left">
-              <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Skills and Drills</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-3">
+                Skills and Drills
+              </h2>
               <p className="text-white text-base md:text-lg leading-6 md:leading-7">
-                Led by James Battiston, former member of the Canadian Beach National Team.
+                Led by James Battiston, former member of the Canadian Beach
+                National Team.
               </p>
             </div>
             <Link to="/skills-and-drills">
@@ -426,10 +464,15 @@ export const HomePage = (): JSX.Element => {
                 Skills and drills
               </h2>
               <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-6 md:mb-8">
-              Whether you&apos;re just starting out or a seasoned player aiming to refine your fundamentals, elevate your skills with <strong>OFSL&apos;s Skills & Drills Program</strong>, led by <strong>James Battiston</strong>, former professional volleyball player and Canadian Beach National Team member. Learn from one of the best and take your game to the next level!
+                Whether you&apos;re just starting out or a seasoned player
+                aiming to refine your fundamentals, elevate your skills with{" "}
+                <strong>OFSL&apos;s Skills & Drills Program</strong>, led by{" "}
+                <strong>James Battiston</strong>, former professional volleyball
+                player and Canadian Beach National Team member. Learn from one
+                of the best and take your game to the next level!
               </p>
-              <Link 
-                to="/skills-and-drills" 
+              <Link
+                to="/skills-and-drills"
                 className="text-base md:text-lg text-[#b20000] underline font-bold"
               >
                 Sign me up
@@ -449,27 +492,39 @@ export const HomePage = (): JSX.Element => {
                 About us
               </h2>
               <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-6 md:mb-8">
-                The <strong>Ottawa Fun Sports League (OFSL)</strong> is dedicated to promoting active living and healthy lifestyles for youth and adults—while keeping fun at the heart of it all. Throughout the year, we organize a variety of tournaments and teams, creating opportunities to connect, compete, and celebrate community through sport.
+                The <strong>Ottawa Fun Sports League (OFSL)</strong> is
+                dedicated to promoting active living and healthy lifestyles for
+                youth and adults—while keeping fun at the heart of it all.
+                Throughout the year, we organize a variety of tournaments and
+                teams, creating opportunities to connect, compete, and celebrate
+                community through sport.
               </p>
-              <Link to="/about-us" className="text-base md:text-lg text-[#b20000] underline font-bold">
+              <Link
+                to="/about-us"
+                className="text-base md:text-lg text-[#b20000] underline font-bold"
+              >
                 More about us
               </Link>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Ready to Play CTA - Full width section */}
-      <div className="w-full py-12 md:py-16" style={{ background: 'linear-gradient(90deg, rgba(178,0,0,1) 0%, rgba(120,18,18,1) 100%)' }}>
+      <div
+        className="w-full py-12 md:py-16"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(178,0,0,1) 0%, rgba(120,18,18,1) 100%)",
+        }}
+      >
         <div className="max-w-[1280px] mx-auto px-4 text-center text-white">
           <h2 className="text-3xl font-bold mb-4">Ready to play?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
             Join thousands of athletes in our community.
           </p>
           <Link to="/leagues">
-            <Button
-              className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5"
-            >
+            <Button className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5">
               <span className="text-base md:text-lg text-[#b20000] hover:text-white">
                 Register now
               </span>
@@ -480,3 +535,4 @@ export const HomePage = (): JSX.Element => {
     </div>
   );
 };
+

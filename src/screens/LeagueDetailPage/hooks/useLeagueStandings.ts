@@ -38,7 +38,17 @@ export function useLeagueStandings(leagueId: string | undefined) {
         `)
         .eq('league_id', parseInt(leagueId))
         .eq('active', true)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true }) as {
+          data: Array<{
+            id: number;
+            name: string;
+            captain_id: string;
+            roster: string[] | null;
+            created_at: string;
+            users: { name: string } | null;
+          }> | null;
+          error: any;
+        };
 
       if (error) throw error;
 

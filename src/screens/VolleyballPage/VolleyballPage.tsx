@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
@@ -5,7 +6,7 @@ import { Link } from "react-router-dom";
 import { BookOpen, Star } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
-export const VolleyballPage = (): JSX.Element => {
+export const VolleyballPage = (): React.ReactElement => {
   const { user } = useAuth();
 
   // League card data
@@ -58,7 +59,7 @@ export const VolleyballPage = (): JSX.Element => {
         <HeroBanner
           image="/adult-open-play-1920x963.jpg"
           imageAlt="Volleyball players"
-          height="500px"
+          containerClassName="h-[500px]"
         >
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">Volleyball Leagues</h1>
@@ -109,10 +110,10 @@ export const VolleyballPage = (): JSX.Element => {
           <div className="text-center mb-12">
             <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
               OFSL offers a variety of league nights across four divisions:
-              Women’s, Mixed, Men’s, and Elite Women’s. at the Elite,
-              Competitive, Advanced, and Intermediate levels; with some
-              divisions featuring referees. For the 2025/26 season, all leagues
-              will follow either a tiered or hybrid format. This system ensures
+              Women’s, Mixed, Men’s, and Elite Women’s. Some divisions will
+              feature referees at the Elite, Competitive, Advanced, and
+              Intermediate levels. For the 2025/26 season, all leagues will
+              follow either a tiered or hybrid format. This system ensures
               balanced, competitive play by finding the level that best suits
               their skills and experience.
             </p>
@@ -204,7 +205,7 @@ export const VolleyballPage = (): JSX.Element => {
                 <li className="flex items-start">
                   <span className="mr-2">•</span>
                   <span>
-                    Schools and play times may vary between tiers and leagues.
+                    Gyms and play times may vary between tiers and leagues.
                   </span>
                 </li>
                 <li className="flex items-start">
@@ -435,4 +436,3 @@ export const VolleyballPage = (): JSX.Element => {
     </div>
   );
 };
-

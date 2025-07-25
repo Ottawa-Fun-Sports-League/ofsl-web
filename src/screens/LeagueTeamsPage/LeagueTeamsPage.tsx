@@ -161,7 +161,7 @@ export function LeagueTeamsPage() {
       setLeague({
         id: data.id,
         name: data.name,
-        sport_name: data.sports?.name || '',
+        sport_name: data.sports ? (data.sports as { name: string }).name : '',
         location: data.location || '',
         cost: data.cost || 0
       });
@@ -182,7 +182,7 @@ export function LeagueTeamsPage() {
       let dragSupported = true;
 
       // First attempt with display_order
-      let activeResult = await supabase
+      let activeResult: unknown = await supabase
         .from('teams')
         .select(`
           id,
@@ -200,7 +200,7 @@ export function LeagueTeamsPage() {
         .eq('active', true)
         .order('display_order', { ascending: true });
 
-      let waitlistResult = await supabase
+      let waitlistResult: unknown = await supabase
         .from('teams')
         .select(`
           id,
@@ -261,12 +261,20 @@ export function LeagueTeamsPage() {
       if (activeResult.error) throw activeResult.error;
       if (waitlistResult.error) throw waitlistResult.error;
 
-      activeTeamsData = activeResult.data;
-      waitlistedTeamsData = waitlistResult.data;
+      const activeData = (activeResult as { data: ExtendedTeam[] | null }).data || [];
+      activeTeamsData = activeData.map((team: ExtendedTeam) => ({
+        ...team,
+        display_order: team.display_order || 0
+      }));
+      const waitlistData = (waitlistResult as { data: ExtendedTeam[] | null }).data || [];
+      waitlistedTeamsData = waitlistData.map((team: ExtendedTeam) => ({
+        ...team,
+        display_order: team.display_order || 0
+      }));
       setDragEnabled(dragSupported);
 
       // Helper function to process teams with payment data
-      const processTeamsWithPayments = async (teams: TeamData[]) => {
+      const processTeamsWithPayments = async (teams: ExtendedTeam[]): Promise<TeamData[]> => {
         if (!teams) return [];
         
         return Promise.all(

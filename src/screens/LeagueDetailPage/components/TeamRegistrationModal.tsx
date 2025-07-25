@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { useNavigate } from 'react-router-dom';
-import { getDayName, formatLeagueDates, getPrimaryLocation } from '../../../lib/leagues';
+import { getDayName, formatLeagueDates, getPrimaryLocation, type League } from '../../../lib/leagues';
 import { RegistrationSuccessModal } from './RegistrationSuccessModal';
 
 interface Skill {
@@ -20,13 +20,7 @@ interface TeamRegistrationModalProps {
   closeModal: () => void;
   leagueId: number;
   leagueName: string;
-  league?: {
-    id: number;
-    name: string;
-    cost: number | null;
-    sport_name: string | null;
-    skill_name: string | null;
-  }; // Add league prop to get additional details
+  league?: Partial<League>; // Use the League type from lib/leagues.ts
   isWaitlist?: boolean; // Add prop to indicate if this is a waitlist registration
 }
 
@@ -150,6 +144,7 @@ export function TeamRegistrationModal({
         league_id: number;
         captain_id: string;
         roster: string[];
+        active?: boolean;
         display_order?: number;
         skill_level_id?: number;
       } = {
@@ -337,19 +332,19 @@ export function TeamRegistrationModal({
                     </p>
                     {league && (
                       <>
-                        {league.day_of_week !== null && (
+                        {league.day_of_week !== null && league.day_of_week !== undefined && (
                           <p className="text-sm text-[#6F6F6F] mt-1">
                             <span className="font-medium">Day:</span> {getDayName(league.day_of_week)}
                           </p>
                         )}
                         {league.gyms && league.gyms.length > 0 && (
                           <p className="text-sm text-[#6F6F6F] mt-1">
-                            <span className="font-medium">School:</span> {getPrimaryLocation(league.gyms)}
+                            <span className="font-medium">School:</span> {getPrimaryLocation(league.gyms).join(', ')}
                           </p>
                         )}
                         {(league.start_date || league.end_date) && (
                           <p className="text-sm text-[#6F6F6F] mt-1">
-                            <span className="font-medium">Season:</span> {formatLeagueDates(league.start_date, league.end_date, league.hide_day)}
+                            <span className="font-medium">Season:</span> {formatLeagueDates(league.start_date || null, league.end_date || null, league.hide_day || false)}
                           </p>
                         )}
                         {league.cost && (

@@ -30,7 +30,7 @@ interface AuthContextType {
     error: AuthError | null;
   }>;
   signOut: () => Promise<void>;
-  checkProfileCompletion: () => boolean;
+  checkProfileCompletion: (profile?: UserProfile | null) => boolean;
   refreshUserProfile: () => Promise<void>;
   emailVerified: boolean;
   isNewUser: boolean;
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const redirectingRef = useRef<string | null>(null);
 
   // Helper function to check if profile is complete
-  const checkProfileCompletion = (profile?: UserProfile | null) => {
+  const checkProfileCompletion = (profile?: UserProfile | null): boolean => {
     const profileToCheck = profile || userProfile;
     if (!profileToCheck) return false;
 
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       Array.isArray(profileToCheck.user_sports_skills) &&
       profileToCheck.user_sports_skills.length > 0;
 
-    return hasBasicInfo && hasSportsSkills && profileToCheck.profile_completed;
+    return !!(hasBasicInfo && hasSportsSkills && profileToCheck.profile_completed);
   };
 
   // Function to fetch user profile
@@ -546,46 +546,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Legacy Google sign-in method (kept for backward compatibility)
-  const _signInWithGoogle = async () => {
-    try {
-      setLoading(true);
-
-      // Store the current URL for redirect after login
-      const currentPath = window.location.hash.replace("#", "") || "/";
-      if (
-        currentPath !== "/login" &&
-        currentPath !== "/signup" &&
-        currentPath !== "/google-signup-redirect"
-      ) {
-        localStorage.setItem("redirectAfterLogin", currentPath);
-      }
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          // Redirect to the Google signup redirect page to complete profile
-          redirectTo: `${window.location.origin}/google-signup-redirect`,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
-      });
-
-      if (data) {
-        if (data.url) {
-          // URL is handled by Supabase SDK
-        }
-      }
-
-      return { error };
-    } catch (error) {
-      logger.error("Error in signInWithGoogle", error);
-      setLoading(false);
-      return { error: error as AuthError };
-    }
-  };
 
   const signUp = async (email: string, password: string) => {
     try {

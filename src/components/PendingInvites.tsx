@@ -108,7 +108,8 @@ export function PendingInvites({ onInviteAccepted }: PendingInvitesProps) {
       }
     } catch (error) {
       logger.error('Error accepting invite', error);
-      showToast(error.message || 'Failed to accept invite', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to accept invite';
+      showToast(errorMessage, 'error');
     } finally {
       setProcessing(null);
     }

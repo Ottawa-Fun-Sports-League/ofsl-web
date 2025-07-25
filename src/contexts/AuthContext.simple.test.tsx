@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { AuthProvider, useAuth } from './AuthContext';
 
 vi.mock('../lib/supabase', () => ({
@@ -46,8 +46,8 @@ const TestComponent = () => {
 };
 
 describe('AuthContext Basic Flow', () => {
-  let mockLocationReplace: jest.Mock;
-  let mockSupabase: ReturnType<typeof createMockSupabase>;
+  let mockLocationReplace: Mock;
+  let mockSupabase: any;
   
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -139,7 +139,7 @@ describe('AuthContext Basic Flow', () => {
     });
 
     // Setup auth state change mock
-    mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
+    mockSupabase.auth.onAuthStateChange.mockImplementation((callback: (event: string, session: any) => void) => {
       // Simulate initial session
       setTimeout(() => {
         callback('INITIAL_SESSION', mockSession);

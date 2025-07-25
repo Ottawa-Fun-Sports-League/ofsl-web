@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProfileCompletionPage } from './ProfileCompletionPage';
-import { render, mockUser, mockNavigate } from '../../test/test-utils';
+import { render, mockUser } from '../../test/test-utils';
 import { mockSupabase } from '../../test/mocks/supabase-enhanced';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -25,7 +25,7 @@ describe('ProfileCompletionPage', () => {
     
     // Mock window.location.href
     Object.defineProperty(window, 'location', {
-      value: { href: '/' },
+      value: { href: '/' } as Location,
       writable: true,
     });
     
@@ -218,7 +218,7 @@ describe('ProfileCompletionPage', () => {
     expect(errorElements.length).toBeGreaterThan(0);
     
     // Restore window.location
-    window.location = originalLocation;
+    (window as any).location = originalLocation;
   });
 
   it.skip('handles profile creation error', async () => {
@@ -321,7 +321,7 @@ describe('ProfileCompletionPage', () => {
     }, { timeout: 2000 });
     
     // Restore window.location
-    window.location = originalLocation;
+    (window as any).location = originalLocation;
   });
 
   it('requires authentication to access', async () => {
@@ -346,7 +346,7 @@ describe('ProfileCompletionPage', () => {
     }, { timeout: 2000 });
     
     // Restore window.location
-    window.location = originalLocation;
+    (window as any).location = originalLocation;
   });
 
   it('formats phone number as user types', async () => {
