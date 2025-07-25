@@ -150,7 +150,7 @@ export function MobileFilterDrawer({
                       type="checkbox"
                       id={`mobile-skill-${option}`}
                       checked={filters.skillLevels.includes(option)}
-                      onChange={() => handleFilterChange('skillLevel', option)}
+                      onChange={() => handleFilterChange('skillLevels', option)}
                       className="mr-2 h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
                     />
                     <label

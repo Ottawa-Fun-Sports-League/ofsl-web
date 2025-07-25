@@ -10,8 +10,8 @@ interface GymMapWebComponentProps {
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      'gmp-map': any;
-      'gmp-advanced-marker': any;
+      'gmp-map': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+      'gmp-advanced-marker': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
     }
   }
 }
@@ -33,7 +33,7 @@ export function GymMapWebComponent({ address, gymName }: GymMapWebComponentProps
         // Use the traditional Maps JavaScript API approach
         const geocoder = new window.google.maps.Geocoder();
         
-        geocoder.geocode({ address }, (results: any, status: any) => {
+        geocoder.geocode({ address }, (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => {
           if (status === 'OK' && results[0] && mapRef.current) {
             const location = results[0].geometry.location;
             

@@ -4,19 +4,6 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '../../../../../components/ui/toast';
 import { Button } from '../../../../../components/ui/button';
 
-// Unused interface - keeping for future use
-interface _Product {
-  id: string;
-  priceId: string;
-  name: string;
-  description: string;
-  mode: 'payment' | 'subscription';
-  price?: number;
-  currency?: string;
-  interval?: string | null;
-  leagueId?: number | null;
-}
-
 interface StripeProductSelectorProps {
   selectedProductId: string | null;
   onChange: (productId: string | null) => void;
@@ -69,7 +56,7 @@ export function StripeProductSelector({
       await loadProducts();
     } catch (error) {
       console.error('Error syncing Stripe products:', error);
-      showToast(error.message || 'Failed to sync products', 'error');
+      showToast((error as Error).message || 'Failed to sync products', 'error');
     } finally {
       setSyncing(false);
     }
@@ -107,7 +94,7 @@ export function StripeProductSelector({
             <option 
               key={product.id} 
               value={product.id}
-              disabled={product.league_id && product.league_id !== leagueId}
+              disabled={!!product.league_id && product.league_id !== leagueId}
             >
               {product.name} - {product.mode === 'payment' ? 'One-time' : 'Subscription'} - ${product.price?.toFixed(2) || '0.00'}
               {product.league_id && product.league_id !== leagueId ? ' (Already linked)' : ''}

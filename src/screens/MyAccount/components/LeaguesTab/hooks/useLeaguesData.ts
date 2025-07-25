@@ -78,7 +78,7 @@ export function useLeaguesData() {
             // Get gyms for this league
             const leagueGyms = (league.gym_ids || [])
               .map((gymId: string | number) => gymsMap.get(Number(gymId)))
-              .filter(gym => gym !== undefined);
+              .filter((gym: any) => gym !== undefined);
 
             // Get skill names array if skill_ids exist
             let skill_names: string[] | null = null;

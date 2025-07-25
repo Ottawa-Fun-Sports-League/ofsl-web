@@ -82,8 +82,8 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: (payment.leagues as any)?.name || '',
-      team_name: (payment.teams as any)?.name || null
+      league_name: (payment.leagues as { name: string } | null)?.name || '',
+      team_name: (payment.teams as { name: string } | null)?.name || null
     }));
 
     // Get user's teams that might not have payment records
@@ -115,7 +115,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
     
     for (const team of userTeams || []) {
       // Skip if team already has a payment record or if league has no cost
-      const league = team.leagues as any;
+      const league = team.leagues as { id: number; name: string; cost: number | null } | null;
       if (
         teamsWithPayments.has(team.id) || 
         !league?.cost || 
@@ -267,8 +267,8 @@ export const _getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: (payment.leagues as any)?.name || '',
-      team_name: (payment.teams as any)?.name || null
+      league_name: (payment.leagues as { name: string } | null)?.name || '',
+      team_name: (payment.teams as { name: string } | null)?.name || null
     }));
 
     return transformedData;

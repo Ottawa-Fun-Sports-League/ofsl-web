@@ -10,7 +10,7 @@ declare global {
         page_path?: string;
         page_title?: string;
         page_location?: string;
-        [key: string]: any;
+        [key: string]: string | number | undefined;
       }
     ) => void;
   }

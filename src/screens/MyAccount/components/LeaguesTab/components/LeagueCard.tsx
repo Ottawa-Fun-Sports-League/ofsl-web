@@ -96,7 +96,7 @@ export function LeagueCard({ league, onDelete, onCopy }: LeagueCardProps) {
                 {formatLeagueDates(
                   league.start_date,
                   league.end_date,
-                  league.hide_day,
+                  league.hide_day || undefined,
                 )}
               </p>
             </div>
@@ -124,7 +124,6 @@ export function LeagueCard({ league, onDelete, onCopy }: LeagueCardProps) {
                 return gymLocations.map((location, index) => (
                   <LocationPopover
                     key={index}
-                    location={location}
                     locations={getGymNamesByLocation(league.gyms || [], location)}
                   >
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
