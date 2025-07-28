@@ -5,6 +5,8 @@ import { useToast } from '../../../components/ui/toast';
 import { useNavigate } from 'react-router-dom';
 import { LeaguesHeader } from './LeaguesTab/components/LeaguesHeader';
 import { LeaguesList } from './LeaguesTab/components/LeaguesList';
+import { LeaguesListView } from './LeaguesTab/components/LeaguesListView';
+import { ViewToggle } from './LeaguesTab/components/ViewToggle';
 import { CopyLeagueDialog } from './LeaguesTab/components/CopyLeagueDialog';
 import { LeagueTeamsModal } from './LeaguesTab/components/LeagueTeamsModal';
 import { useLeaguesData } from './LeaguesTab/hooks/useLeaguesData';
@@ -24,6 +26,7 @@ export function LeaguesTab() {
   const [selectedLeague, setSelectedLeague] = useState<LeagueWithTeamCount | null>(null);
   const [sports, setSports] = useState<Array<{ id: number; name: string }>>([]);
   const [skills, setSkills] = useState<Array<{ id: number; name: string }>>([]);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   const {
     leagues,
@@ -143,11 +146,27 @@ export function LeaguesTab() {
         hideOnMobile={false}
       />
 
-      <LeaguesList
-        leagues={filteredLeagues}
-        onDelete={handleDeleteLeague}
-        onCopy={handleCopyClick}
-      />
+      {/* View Toggle */}
+      <div className="flex justify-between items-center">
+        <ViewToggle view={viewMode} onViewChange={setViewMode} />
+        <div className="text-sm text-gray-600">
+          {filteredLeagues.length} {filteredLeagues.length === 1 ? 'league' : 'leagues'} found
+        </div>
+      </div>
+
+      {viewMode === 'card' ? (
+        <LeaguesList
+          leagues={filteredLeagues}
+          onDelete={handleDeleteLeague}
+          onCopy={handleCopyClick}
+        />
+      ) : (
+        <LeaguesListView
+          leagues={filteredLeagues}
+          onDelete={handleDeleteLeague}
+          onCopy={handleCopyClick}
+        />
+      )}
 
       <CopyLeagueDialog
         isOpen={copyDialogOpen}
