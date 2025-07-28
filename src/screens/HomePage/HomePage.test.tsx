@@ -57,7 +57,7 @@ describe('HomePage', () => {
           }),
         }),
       }),
-    } as any);
+    } as ReturnType<typeof supabase.from>);
   });
 
   it('renders hero section with all elements', async () => {

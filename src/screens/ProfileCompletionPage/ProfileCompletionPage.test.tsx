@@ -39,7 +39,7 @@ describe('ProfileCompletionPage', () => {
       profileComplete: false,
       userProfile: null,
       refreshUserProfile: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     // Mock skills fetch
     mockSupabase.from('skills').select().order().then = vi.fn().mockResolvedValue({
@@ -175,8 +175,8 @@ describe('ProfileCompletionPage', () => {
     
     // Mock window.location.href
     const originalLocation = window.location;
-    delete (window as any).location;
-    window.location = { ...originalLocation, href: '' } as any;
+    delete (window as { location?: Location }).location;
+    window.location = { ...originalLocation, href: '' } as Location;
     
     // Mock the refreshUserProfile function
     const mockRefreshUserProfile = vi.fn();
@@ -190,7 +190,7 @@ describe('ProfileCompletionPage', () => {
       userProfile: null,
       refreshUserProfile: mockRefreshUserProfile,
       setIsNewUser: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<ProfileCompletionPage />, {
       user: mockUser,
@@ -218,7 +218,7 @@ describe('ProfileCompletionPage', () => {
     expect(errorElements.length).toBeGreaterThan(0);
     
     // Restore window.location
-    (window as any).location = originalLocation;
+    (window as { location?: Location }).location = originalLocation;
   });
 
   it.skip('handles profile creation error', async () => {
@@ -307,12 +307,12 @@ describe('ProfileCompletionPage', () => {
         profile_completed: true,
       },
       refreshUserProfile: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     // Mock window.location.href
     const originalLocation = window.location;
-    delete (window as any).location;
-    window.location = { ...originalLocation, href: '' } as any;
+    delete (window as { location?: Location }).location;
+    window.location = { ...originalLocation, href: '' } as Location;
     
     render(<ProfileCompletionPage />);
     
@@ -321,7 +321,7 @@ describe('ProfileCompletionPage', () => {
     }, { timeout: 2000 });
     
     // Restore window.location
-    (window as any).location = originalLocation;
+    (window as { location?: Location }).location = originalLocation;
   });
 
   it('requires authentication to access', async () => {
@@ -332,12 +332,12 @@ describe('ProfileCompletionPage', () => {
       profileComplete: false,
       userProfile: null,
       refreshUserProfile: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     // Mock window.location.href
     const originalLocation = window.location;
-    delete (window as any).location;
-    window.location = { ...originalLocation, href: '' } as any;
+    delete (window as { location?: Location }).location;
+    window.location = { ...originalLocation, href: '' } as Location;
     
     render(<ProfileCompletionPage />);
     
@@ -346,7 +346,7 @@ describe('ProfileCompletionPage', () => {
     }, { timeout: 2000 });
     
     // Restore window.location
-    (window as any).location = originalLocation;
+    (window as { location?: Location }).location = originalLocation;
   });
 
   it('formats phone number as user types', async () => {

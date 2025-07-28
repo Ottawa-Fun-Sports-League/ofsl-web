@@ -47,7 +47,24 @@ describe('LeagueTeams', () => {
 
   it('should handle ExtendedTeam type correctly', () => {
     // This test ensures the ExtendedTeam interface is properly defined
-    const extendedTeam: any = {
+    const extendedTeam: {
+      id: number;
+      name: string;
+      captain_id: string;
+      roster: null;
+      created_at: string;
+      skill_level_id: number;
+      display_order: undefined;
+      users: { name: string };
+      skills: { name: string };
+      leagues: {
+        id: number;
+        name: string;
+        cost: number;
+        location: string;
+        sports: { name: string };
+      };
+    } = {
       id: 1,
       name: 'Test Team',
       captain_id: 'user123',
@@ -73,7 +90,7 @@ describe('LeagueTeams', () => {
   });
 
   it('should handle missing display_order gracefully', () => {
-    const teamData: any = {
+    const teamData: { display_order?: number } = {
       display_order: undefined
     };
     

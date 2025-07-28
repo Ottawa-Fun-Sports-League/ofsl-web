@@ -29,7 +29,7 @@ describe('GymMapWebComponent', () => {
         setPosition: vi.fn()
       })),
       Geocoder: vi.fn().mockImplementation(() => ({
-        geocode: vi.fn((request, callback) => {
+        geocode: vi.fn((_request, callback) => {
           callback([mockGeocoderResult], 'OK');
         })
       }))
@@ -39,7 +39,7 @@ describe('GymMapWebComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset window.google
-    delete (window as any).google;
+    delete (window as { google?: typeof window.google }).google;
     // Mock environment variable
     vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'test-api-key');
   });
@@ -48,19 +48,19 @@ describe('GymMapWebComponent', () => {
     vi.unstubAllEnvs();
   });
 
-  it('should not render if API key is not provided', () => {
+  it('should render map not available message if API key is not provided', () => {
     vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', '');
-    mockUseGoogleMaps.mockReturnValue(false);
+    mockUseGoogleMaps.mockReturnValue({ loaded: false, error: null });
     
     const { container } = render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
     );
     
-    expect(container.firstChild).toBeNull();
+    expect(container.textContent).toContain('Map not available');
   });
 
   it('should render loading state when maps are not loaded', () => {
-    mockUseGoogleMaps.mockReturnValue(false);
+    mockUseGoogleMaps.mockReturnValue({ loaded: false, error: null });
     
     const { container } = render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
@@ -71,8 +71,8 @@ describe('GymMapWebComponent', () => {
   });
 
   it('should initialize map when Google Maps is loaded', async () => {
-    mockUseGoogleMaps.mockReturnValue(true);
-    (window as any).google = mockGoogleMaps;
+    mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
+    (window as { google?: typeof window.google }).google = mockGoogleMaps as typeof window.google;
     
     render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
@@ -86,9 +86,9 @@ describe('GymMapWebComponent', () => {
   });
 
   it('should handle delayed Google Maps loading', async () => {
-    mockUseGoogleMaps.mockReturnValue(true);
+    mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     // Initially, Google Maps is not available
-    (window as any).google = undefined;
+    (window as { google?: typeof window.google }).google = undefined;
     
     const { rerender } = render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
@@ -96,7 +96,7 @@ describe('GymMapWebComponent', () => {
     
     // Simulate Google Maps becoming available after 200ms
     await new Promise(resolve => setTimeout(resolve, 200));
-    (window as any).google = mockGoogleMaps;
+    (window as { google?: typeof window.google }).google = mockGoogleMaps;
     
     // Re-render to trigger effect
     rerender(
@@ -109,19 +109,19 @@ describe('GymMapWebComponent', () => {
   });
 
   it('should handle geocoding errors gracefully', async () => {
-    mockUseGoogleMaps.mockReturnValue(true);
+    mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     const mockGeocoderWithError = {
       ...mockGoogleMaps,
       maps: {
         ...mockGoogleMaps.maps,
         Geocoder: vi.fn().mockImplementation(() => ({
-          geocode: vi.fn((request, callback) => {
+          geocode: vi.fn((_request, callback) => {
             callback([], 'ZERO_RESULTS');
           })
         }))
       }
     };
-    (window as any).google = mockGeocoderWithError;
+    (window as { google?: typeof window.google }).google = mockGeocoderWithError as typeof window.google;
     
     render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
@@ -136,9 +136,9 @@ describe('GymMapWebComponent', () => {
   });
 
   it('should cleanup timeout on unmount', async () => {
-    mockUseGoogleMaps.mockReturnValue(true);
+    mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     // Google Maps is not available initially
-    (window as any).google = undefined;
+    (window as { google?: typeof window.google }).google = undefined;
     
     const { unmount } = render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
@@ -149,15 +149,15 @@ describe('GymMapWebComponent', () => {
     
     // Set Google Maps after unmount
     await new Promise(resolve => setTimeout(resolve, 200));
-    (window as any).google = mockGoogleMaps;
+    (window as { google?: typeof window.google }).google = mockGoogleMaps;
     
     // Geocoder should not be called after unmount
     expect(mockGoogleMaps.maps.Geocoder).not.toHaveBeenCalled();
   });
 
   it('should handle race condition when component re-renders quickly', async () => {
-    mockUseGoogleMaps.mockReturnValue(true);
-    (window as any).google = mockGoogleMaps;
+    mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
+    (window as { google?: typeof window.google }).google = mockGoogleMaps as typeof window.google;
     
     const { rerender } = render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
@@ -180,15 +180,15 @@ describe('GymMapWebComponent', () => {
   });
 
   it('should wait for all Google Maps components to be available', async () => {
-    mockUseGoogleMaps.mockReturnValue(true);
+    mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     
     // Simulate partial Google Maps loading
-    (window as any).google = {
+    (window as { google?: typeof window.google }).google = {
       maps: {
         // Only Map is available initially
         Map: mockGoogleMaps.maps.Map
       }
-    };
+    } as typeof window.google;
     
     const { rerender } = render(
       <GymMapWebComponent address="123 Test St" gymName="Test Gym" />
@@ -196,8 +196,11 @@ describe('GymMapWebComponent', () => {
     
     // Add Geocoder after 100ms
     await new Promise(resolve => setTimeout(resolve, 100));
-    (window as any).google.maps.Geocoder = mockGoogleMaps.maps.Geocoder;
-    (window as any).google.maps.Marker = mockGoogleMaps.maps.Marker;
+    const windowWithGoogle = window as { google?: typeof window.google };
+    if (windowWithGoogle.google?.maps) {
+      windowWithGoogle.google.maps.Geocoder = mockGoogleMaps.maps.Geocoder;
+      windowWithGoogle.google.maps.Marker = mockGoogleMaps.maps.Marker;
+    }
     
     // Re-render to trigger effect
     rerender(

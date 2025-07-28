@@ -64,7 +64,7 @@ describe('LoginPage', () => {
       refreshUserProfile: vi.fn(),
       signIn: mockSignIn,
       signInWithGoogle: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<LoginPage />);
     
@@ -87,7 +87,7 @@ describe('LoginPage', () => {
       refreshUserProfile: vi.fn(),
       signIn: mockSignIn,
       signInWithGoogle: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<LoginPage />);
     
@@ -118,7 +118,7 @@ describe('LoginPage', () => {
       refreshUserProfile: vi.fn(),
       signIn: mockSignIn,
       signInWithGoogle: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<LoginPage />);
     
@@ -177,7 +177,7 @@ describe('LoginPage', () => {
       refreshUserProfile: vi.fn(),
       signIn: vi.fn(),
       signInWithGoogle: mockSignInWithGoogle,
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<LoginPage />);
     
@@ -199,7 +199,7 @@ describe('LoginPage', () => {
       refreshUserProfile: vi.fn(),
       signIn: mockSignIn,
       signInWithGoogle: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<LoginPage />);
     

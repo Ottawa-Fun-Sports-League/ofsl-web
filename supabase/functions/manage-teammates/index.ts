@@ -179,7 +179,7 @@ serve(async (req: Request) => {
 
       // Send notification email to the added user
       try {
-        console.log('Attempting to send notification email for user:', userId, 'team:', teamId)
+        // Attempting to send notification email
         
         // Get team details for the email
         const { data: fullTeamData, error: teamFetchError } = await supabase
@@ -229,7 +229,7 @@ serve(async (req: Request) => {
             captainName: captainData.name
           }
 
-          console.log('Sending notification with payload:', notificationPayload)
+          // Sending notification with payload
 
           const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-team-addition-notification`, {
             method: 'POST',
@@ -244,8 +244,8 @@ serve(async (req: Request) => {
             const errorText = await notificationResponse.text()
             console.error('Failed to send notification email:', notificationResponse.status, errorText)
           } else {
-            const result = await notificationResponse.json()
-            console.log('Notification sent successfully:', result)
+            await notificationResponse.json()
+            // Notification sent successfully
           }
         }
         }

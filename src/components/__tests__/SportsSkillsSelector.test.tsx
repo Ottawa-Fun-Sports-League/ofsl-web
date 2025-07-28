@@ -45,7 +45,7 @@ describe('SportsSkillsSelector', () => {
             data: mockSports,
             error: null
           })
-        } as any;
+        } as ReturnType<typeof supabase.from>;
       }
       if (table === 'skills') {
         return {
@@ -54,9 +54,9 @@ describe('SportsSkillsSelector', () => {
             data: mockSkills,
             error: null
           })
-        } as any;
+        } as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as ReturnType<typeof supabase.from>;
     });
   });
 

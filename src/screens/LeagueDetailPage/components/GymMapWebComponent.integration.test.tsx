@@ -14,7 +14,7 @@ vi.stubGlobal('import.meta.env', {
 });
 
 describe('GymMapWebComponent Integration', () => {
-  let mockGoogleMaps: any;
+  let mockGoogleMaps: typeof window.google;
   const mockUseGoogleMaps = vi.mocked(useGoogleMaps);
 
   beforeEach(() => {
@@ -67,7 +67,7 @@ describe('GymMapWebComponent Integration', () => {
   it('shows error when geocoding fails', async () => {
     mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     
-    const mockGeocode = vi.fn((request, callback) => {
+    const mockGeocode = vi.fn((_request, callback) => {
       callback([], 'ZERO_RESULTS');
     });
     
@@ -87,7 +87,7 @@ describe('GymMapWebComponent Integration', () => {
     mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     
     const mockLocation = { lat: 45.4215, lng: -75.6972 };
-    const mockGeocode = vi.fn((request, callback) => {
+    const mockGeocode = vi.fn((_request, callback) => {
       callback([{
         geometry: {
           location: mockLocation
@@ -99,7 +99,7 @@ describe('GymMapWebComponent Integration', () => {
       geocode: mockGeocode
     }));
     
-    const { container } = render(<GymMapWebComponent address="123 Test St, Ottawa" gymName="Test Gym" />);
+    render(<GymMapWebComponent address="123 Test St, Ottawa" gymName="Test Gym" />);
     
     await waitFor(() => {
       expect(mockGeocode).toHaveBeenCalledWith(
@@ -123,8 +123,8 @@ describe('GymMapWebComponent Integration', () => {
   it('handles component unmounting during geocoding', async () => {
     mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     
-    let geocodeCallback: any;
-    const mockGeocode = vi.fn((request, callback) => {
+    let geocodeCallback: (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => void;
+    const mockGeocode = vi.fn((_request, callback) => {
       geocodeCallback = callback;
     });
     
@@ -156,7 +156,7 @@ describe('GymMapWebComponent Integration', () => {
   it('cleans up map instance on unmount', async () => {
     mockUseGoogleMaps.mockReturnValue({ loaded: true, error: null });
     
-    const mockGeocode = vi.fn((request, callback) => {
+    const mockGeocode = vi.fn((_request, callback) => {
       callback([{
         geometry: {
           location: { lat: 45.4215, lng: -75.6972 }
