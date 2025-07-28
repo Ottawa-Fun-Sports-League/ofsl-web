@@ -19,7 +19,12 @@ export function render(
   }: RenderOptions & { initialRoute?: string } = {}
 ) {
   // Set up default mocks
-  const mockSupabase = supabase as any;
+  const mockSupabase = supabase as typeof supabase & {
+    auth: {
+      getSession: ReturnType<typeof vi.fn>;
+      onAuthStateChange: ReturnType<typeof vi.fn>;
+    };
+  };
   
   // Default to no session
   mockSupabase.auth.getSession.mockResolvedValue({

@@ -50,7 +50,7 @@ describe('SignupPage', () => {
       signIn: mockSignIn,
       signInWithGoogle: vi.fn(),
       setIsNewUser: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<SignupPage />);
     
@@ -237,7 +237,7 @@ describe('SignupPage', () => {
       refreshUserProfile: vi.fn(),
       signInWithGoogle: mockSignInWithGoogle,
       setIsNewUser: vi.fn(),
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     render(<SignupPage />);
     

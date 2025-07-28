@@ -69,7 +69,7 @@ serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Log the request for debugging
-    console.log("Received notification request for user:", userId, "team:", teamId);
+    // Received notification request
 
     // Get the user's email address who was added to the team
     const { data: addedUser, error: userError } = await supabase

@@ -42,7 +42,7 @@ describe('SportsSkillsSelector - Integration Test', () => {
             data: mockSports,
             error: null
           })
-        } as any;
+        } as ReturnType<typeof supabase.from>;
       }
       if (table === 'skills') {
         return {
@@ -51,9 +51,9 @@ describe('SportsSkillsSelector - Integration Test', () => {
             data: mockSkills,
             error: null
           })
-        } as any;
+        } as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as ReturnType<typeof supabase.from>;
     });
   });
   it('should complete full workflow: add, edit, remove, and save sports/skills', async () => {

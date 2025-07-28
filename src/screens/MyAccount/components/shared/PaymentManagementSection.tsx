@@ -144,8 +144,8 @@ export function PaymentManagementSection({
 
       const formattedPayments = data?.map(payment => ({
         id: payment.id,
-        league_name: (payment.leagues as any)?.name || 'Unknown League',
-        team_name: (payment.teams as any)?.name || 'Unknown Team',
+        league_name: (payment.leagues as { name: string })?.name || 'Unknown League',
+        team_name: (payment.teams as { name: string })?.name || 'Unknown Team',
         amount_due: payment.amount_due || 0,
         amount_paid: payment.amount_paid || 0,
         status: payment.status as 'pending' | 'partial' | 'paid' | 'overdue',

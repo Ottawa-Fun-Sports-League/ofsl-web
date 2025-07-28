@@ -47,7 +47,7 @@ const TestComponent = () => {
 
 describe('AuthContext Basic Flow', () => {
   let mockLocationReplace: Mock;
-  let mockSupabase: any;
+  let mockSupabase: typeof import('../lib/supabase').supabase;
   
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -139,7 +139,7 @@ describe('AuthContext Basic Flow', () => {
     });
 
     // Setup auth state change mock
-    mockSupabase.auth.onAuthStateChange.mockImplementation((callback: (event: string, session: any) => void) => {
+    mockSupabase.auth.onAuthStateChange.mockImplementation((callback: (event: string, session: typeof mockSession | null) => void) => {
       // Simulate initial session
       setTimeout(() => {
         callback('INITIAL_SESSION', mockSession);

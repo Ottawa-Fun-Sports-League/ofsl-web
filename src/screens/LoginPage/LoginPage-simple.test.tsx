@@ -4,7 +4,12 @@ import { LoginPage } from './LoginPage';
 import { supabase } from '../../lib/supabase';
 
 // Get the mocked supabase
-const mockSupabase = supabase as any;
+const mockSupabase = supabase as typeof supabase & {
+  auth: {
+    getSession: ReturnType<typeof vi.fn>;
+    signInWithPassword: ReturnType<typeof vi.fn>;
+  };
+};
 
 describe('LoginPage Simple Test', () => {
   beforeEach(() => {

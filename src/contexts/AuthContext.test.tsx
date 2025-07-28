@@ -53,7 +53,7 @@ describe('AuthContext', () => {
     });
     
     // Mock getSession to return null initially (no user logged in)
-    (supabase.auth.getSession as any).mockResolvedValue({
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: null },
       error: null,
     });
@@ -163,7 +163,7 @@ describe('AuthContext', () => {
         data: { url: 'https://google.com/oauth' },
         error: null,
       });
-      (supabase.auth.signInWithOAuth as any) = mockSignInWithOAuth;
+      vi.mocked(supabase.auth.signInWithOAuth).mockImplementation(mockSignInWithOAuth);
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <AuthProvider>{children}</AuthProvider>
