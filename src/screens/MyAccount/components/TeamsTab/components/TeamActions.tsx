@@ -64,7 +64,7 @@ export function TeamActions({
           className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-3 py-1.5 text-sm transition-colors flex items-center gap-1 h-auto"
         >
           <DollarSign className="h-3 w-3" />
-          Pay
+          Pay Now
         </Button>
       )}
       

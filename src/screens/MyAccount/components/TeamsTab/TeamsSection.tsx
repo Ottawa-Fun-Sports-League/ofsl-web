@@ -4,8 +4,6 @@ import {
   MapPin,
   Trash2,
   UserPlus,
-  Clock,
-  DollarSign,
   Users,
   Crown,
 } from "lucide-react";
@@ -14,6 +12,7 @@ import { Button } from "../../../../components/ui/button";
 import { PaymentStatusBadge } from "../../../../components/ui/payment-status-badge";
 import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
 import { Team, LeaguePayment } from "./types";
+import { PaymentStatusSection } from "./components/PaymentStatusSection";
 
 interface TeamsSectionProps {
   teams: Team[];
@@ -150,28 +149,22 @@ export function TeamsSection({
                         Team Size: {team.roster?.length || 0} players
                       </span>
                     </div>
-
-                    {isCaptain && teamPayment?.due_date && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                        <span className="text-[#6F6F6F]">
-                          Due:{" "}
-                          {new Date(teamPayment.due_date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-
-                    {isCaptain && (teamPayment || leagueFee > 0) && (
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-purple-500 flex-shrink-0" />
-                        <span className="text-[#6F6F6F]">
-                          ${(teamPayment?.amount_paid || 0).toFixed(2)} / $
-                          {(leagueFee * 1.13).toFixed(2)} ($
-                          {leagueFee.toFixed(2)} + HST)
-                        </span>
-                      </div>
-                    )}
                   </div>
+                  
+                  {/* Enhanced Payment Status Section */}
+                  {(teamPayment || leagueFee > 0) && (
+                    <PaymentStatusSection 
+                      payment={teamPayment ? {
+                        id: teamPayment.id,
+                        amount_due: teamPayment.amount_due,
+                        amount_paid: teamPayment.amount_paid,
+                        status: teamPayment.status,
+                        due_date: teamPayment.due_date
+                      } : undefined}
+                      leagueCost={leagueFee}
+                      isCaptain={isCaptain}
+                    />
+                  )}
                 </div>
 
                 {/* Action Buttons */}
