@@ -28,7 +28,7 @@ export const VolleyballPage = (): React.ReactElement => {
     },
     {
       title: "OFSL Women's League",
-      image: "/Monday Wonems.png",
+      image: "/Thursday womens premier.webp",
       link: "/leagues?sport=Volleyball&gender=Female",
     },
     {
@@ -43,12 +43,12 @@ export const VolleyballPage = (): React.ReactElement => {
     },
     {
       title: "Wednesday Mixed League",
-      image: "/Thursday womens premier.webp",
+      image: "/sunday evening mixed.jpg",
       link: "/leagues?sport=Volleyball&day=Wednesday",
     },
     {
-      title: "Thursday Mixed League",
-      image: "/sunday evening mixed.jpg",
+      title: "Thursday Elite/Comp/Adv League",
+      image: "/Thursday mixed02.png",
       link: "/leagues?sport=Volleyball&day=Thursday",
     },
   ];
