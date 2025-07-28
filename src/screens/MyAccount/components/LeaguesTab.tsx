@@ -15,6 +15,7 @@ import { LeagueWithTeamCount } from './LeaguesTab/types';
 import { LeagueFilters, useLeagueFilters, filterLeagues, DEFAULT_FILTER_OPTIONS } from '../../../components/leagues/filters';
 import { getSportIcon } from '../../LeagueDetailPage/utils/leagueUtils';
 import { fetchSports, fetchSkills } from '../../../lib/leagues';
+import { useViewPreference } from '../../../hooks/useViewPreference';
 
 export function LeaguesTab() {
   const { userProfile } = useAuth();
@@ -26,7 +27,10 @@ export function LeaguesTab() {
   const [selectedLeague, setSelectedLeague] = useState<LeagueWithTeamCount | null>(null);
   const [sports, setSports] = useState<Array<{ id: number; name: string }>>([]);
   const [skills, setSkills] = useState<Array<{ id: number; name: string }>>([]);
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [viewMode, setViewMode] = useViewPreference({ 
+    key: 'myaccount-leagues', 
+    defaultView: 'card' 
+  });
 
   const {
     leagues,

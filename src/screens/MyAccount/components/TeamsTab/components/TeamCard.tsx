@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { TeamActions } from './TeamActions';
 import { TeamInfo } from './TeamInfo';
+import { PaymentStatusSection } from './PaymentStatusSection';
 
 type Team = {
     id: number;
@@ -27,6 +28,7 @@ type Team = {
       amount_due: number;
       amount_paid: number;
       status: string;
+      due_date?: string;
     };
     roster: string[];
 };
@@ -82,8 +84,15 @@ export function TeamCard({
         </div>
       </div>
       
+      {/* Payment Status Section */}
+      <PaymentStatusSection 
+        payment={team.payment}
+        leagueCost={team.league?.cost}
+        isCaptain={isCaptain}
+      />
+      
       {/* Action Buttons */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-4">
         {/* Empty div for layout balance */}
         <div></div>
         

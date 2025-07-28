@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { PaymentStatusBadge } from '../../components/ui/payment-status-badge';
+import { useViewPreference } from '../../hooks/useViewPreference';
 import { 
   Users, 
   Trash2, 
@@ -14,7 +15,9 @@ import {
   GripVertical,
   Search,
   Grid3X3,
-  List
+  List,
+  Edit,
+  Clock
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/toast';
@@ -106,7 +109,10 @@ export function LeagueTeamsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredActiveTeams, setFilteredActiveTeams] = useState<TeamData[]>([]);
   const [filteredWaitlistedTeams, setFilteredWaitlistedTeams] = useState<TeamData[]>([]);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [viewMode, setViewMode] = useViewPreference({ 
+    key: `league-teams-${leagueId}`, 
+    defaultView: 'card' 
+  }) as ['card' | 'table', (view: 'card' | 'table') => void];
   const { showToast } = useToast();
   const { userProfile } = useAuth();
 
@@ -242,7 +248,7 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', true)
-          .order('created_at', { ascending: false }) as any;
+          .order('created_at', { ascending: false }) as unknown as { data: ExtendedTeam[] | null; error: Error | null };
 
         waitlistResult = await supabase
           .from('teams')
@@ -259,19 +265,19 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', false)
-          .order('created_at', { ascending: false }) as any;
+          .order('created_at', { ascending: false }) as unknown as { data: ExtendedTeam[] | null; error: Error | null };
       }
 
       if (activeResult.error) throw activeResult.error;
       if (waitlistResult.error) throw waitlistResult.error;
 
-      const activeData = (activeResult as { data: any[] | null }).data || [];
-      activeTeamsData = activeData.map((team: any) => ({
+      const activeData = (activeResult as { data: ExtendedTeam[] | null }).data || [];
+      activeTeamsData = activeData.map((team: ExtendedTeam) => ({
         ...team,
         display_order: team.display_order || 0
       }));
-      const waitlistData = (waitlistResult as { data: any[] | null }).data || [];
-      waitlistedTeamsData = waitlistData.map((team: any) => ({
+      const waitlistData = (waitlistResult as { data: ExtendedTeam[] | null }).data || [];
+      waitlistedTeamsData = waitlistData.map((team: ExtendedTeam) => ({
         ...team,
         display_order: team.display_order || 0
       }));
@@ -689,133 +695,166 @@ export function LeagueTeamsPage() {
   const TeamTable = ({ teams, isWaitlisted = false }: { teams: TeamData[]; isWaitlisted?: boolean }) => {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto xl:overflow-visible">
+          <table className="w-full xl:table-fixed divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Team Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Captain
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Skill Level
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Skill
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Players
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Registration Date
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                  Registered
                 </th>
                 {!isWaitlisted && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Status
-                  </th>
+                  <>
+                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Payment
+                    </th>
+                  </>
                 )}
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {teams.map((team) => (
-                <tr key={team.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="text-sm font-medium text-gray-900">
-                        {team.name}
-                      </div>
-                      {isWaitlisted && (
-                        <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                          Waitlisted
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Crown className="h-4 w-4 text-blue-600 mr-2" />
-                      <div className="text-sm text-gray-900">
-                        {team.captain_name || 'Unknown'}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {team.skill_name && (
-                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                        {team.skill_name}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Users className="h-4 w-4 text-blue-500 mr-1" />
-                      {team.roster.length}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(team.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </td>
-                  {!isWaitlisted && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-900">
-                          ${team.amount_paid?.toFixed(2) || '0.00'} / 
-                          ${team.amount_due ? (team.amount_due * 1.13).toFixed(2) : 
-                            (team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00')}
-                        </span>
-                        <PaymentStatusBadge 
-                          status={team.payment_status || 'pending'} 
-                          size="sm"
-                        />
+              {teams.map((team) => {
+                // Calculate payment details
+                const totalAmount = team.amount_due 
+                  ? team.amount_due * 1.13 
+                  : (team.league?.cost ? parseFloat(team.league.cost.toString()) * 1.13 : 0);
+                const amountPaid = team.amount_paid || 0;
+                const amountOwing = totalAmount - amountPaid;
+
+                return (
+                  <tr key={team.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
+                          {team.name}
+                        </div>
+                        {isWaitlisted && (
+                          <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                            Waitlisted
+                          </span>
+                        )}
                       </div>
                     </td>
-                  )}
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link 
-                        to={`/my-account/teams/edit/${team.id}`}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
-                        disabled={movingTeam === team.id}
-                        className={`${
-                          isWaitlisted 
-                            ? 'text-green-600 hover:text-green-700' 
-                            : 'text-yellow-600 hover:text-yellow-700'
-                        } disabled:opacity-50`}
-                      >
-                        {movingTeam === team.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></div>
-                        ) : isWaitlisted ? (
-                          'Activate'
-                        ) : (
-                          'Waitlist'
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTeam(team.id, team.name)}
-                        disabled={deleting === team.id}
-                        className="text-red-600 hover:text-red-700 disabled:opacity-50"
-                      >
-                        {deleting === team.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
+                        <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
+                          {team.captain_name || 'Unknown'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      {team.skill_name ? (
+                        <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {team.skill_name}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
+                        <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
+                        <span className="font-medium">{team.roster.length}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
+                      <div className="text-xs text-gray-600">
+                        {new Date(team.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </td>
+                    {!isWaitlisted && (
+                      <>
+                        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                          <PaymentStatusBadge 
+                            status={team.payment_status || 'pending'} 
+                            size="sm"
+                          />
+                        </td>
+                        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P:</span>
+                              <span className="font-medium text-green-700">${amountPaid.toFixed(0)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">O:</span>
+                              <span className={`font-medium ${amountOwing > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                                ${amountOwing.toFixed(0)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
+                              <span className="text-gray-500">T:</span>
+                              ${totalAmount.toFixed(0)}
+                            </div>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <Link 
+                          to={`/my-account/teams/edit/${team.id}`}
+                          className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                          title="Edit team"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Link>
+                        <button
+                          onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
+                          disabled={movingTeam === team.id}
+                          className={`p-1 rounded transition-colors disabled:opacity-50 ${
+                            isWaitlisted 
+                              ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
+                              : 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
+                          }`}
+                          title={isWaitlisted ? 'Move to active' : 'Move to waitlist'}
+                        >
+                          {movingTeam === team.id ? (
+                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                          ) : isWaitlisted ? (
+                            <ArrowLeft className="h-3.5 w-3.5" />
+                          ) : (
+                            <Clock className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTeam(team.id, team.name)}
+                          disabled={deleting === team.id}
+                          className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                          title="Delete team"
+                        >
+                          {deleting === team.id ? (
+                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
