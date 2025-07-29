@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { PostgrestError } from '@supabase/supabase-js';
 
 export interface StandingsTeam {
   id: number;
@@ -47,7 +48,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
             created_at: string;
             users: { name: string } | null;
           }> | null;
-          error: any;
+          error: PostgrestError | null;
         };
 
       if (error) throw error;

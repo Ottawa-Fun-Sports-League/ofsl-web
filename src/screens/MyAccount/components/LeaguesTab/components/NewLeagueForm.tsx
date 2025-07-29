@@ -41,6 +41,7 @@ export function NewLeagueForm({
     max_teams: 20,
     gym_ids: [],
     hide_day: false,
+    payment_due_date: "2025-08-21",
   });
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -80,6 +81,7 @@ export function NewLeagueForm({
       max_teams: 20,
       gym_ids: [],
       hide_day: false,
+      payment_due_date: "2025-08-21",
     });
   };
 
@@ -408,21 +410,39 @@ export function NewLeagueForm({
 
             <div>
               <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                Max Teams
+                Payment Due Date
               </label>
               <Input
-                type="number"
-                value={newLeague.max_teams}
+                type="date"
+                value={newLeague.payment_due_date}
                 onChange={(e) =>
                   setNewLeague({
                     ...newLeague,
-                    max_teams: parseInt(e.target.value) || 20,
+                    payment_due_date: e.target.value,
                   })
                 }
                 className="w-full"
                 required
               />
             </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+              Max Teams
+            </label>
+            <Input
+              type="number"
+              value={newLeague.max_teams}
+              onChange={(e) =>
+                setNewLeague({
+                  ...newLeague,
+                  max_teams: parseInt(e.target.value) || 20,
+                })
+              }
+              className="w-full"
+              required
+            />
           </div>
         </div>
 

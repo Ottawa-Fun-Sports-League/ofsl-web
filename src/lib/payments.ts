@@ -82,8 +82,8 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: (payment.leagues as { name: string })?.name || '',
-      team_name: (payment.teams as { name: string } | null)?.name || null
+      league_name: (payment.leagues as unknown as { name: string })?.name || '',
+      team_name: (payment.teams as unknown as { name: string } | null)?.name || null
     }));
 
     // Get user's teams that might not have payment records
@@ -115,7 +115,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
     
     for (const team of userTeams || []) {
       // Skip if team already has a payment record or if league has no cost
-      const league = team.leagues as { id: number; name: string; cost: number | null };
+      const league = team.leagues as unknown as { id: number; name: string; cost: number | null; payment_due_date: string | null };
       if (
         teamsWithPayments.has(team.id) || 
         !league || 
@@ -126,8 +126,10 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
       }
 
       // Create a virtual payment record
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 30); // Due in 30 days
+      // Use league's payment_due_date if available, otherwise default to 30 days
+      const dueDate = league.payment_due_date 
+        ? new Date(league.payment_due_date + "T00:00:00") 
+        : new Date(new Date().getTime() + (30 * 24 * 60 * 60 * 1000));
 
       virtualPayments.push({
         id: -team.id, // Use negative team ID to ensure uniqueness
@@ -268,8 +270,8 @@ export const _getUserLeaguePayments = async (): Promise<LeaguePayment[]> => {
       notes: payment.notes,
       created_at: payment.created_at,
       updated_at: payment.updated_at,
-      league_name: (payment.leagues as { name: string })?.name || '',
-      team_name: (payment.teams as { name: string } | null)?.name || null
+      league_name: (payment.leagues as unknown as { name: string })?.name || '',
+      team_name: (payment.teams as unknown as { name: string } | null)?.name || null
     }));
 
     return transformedData;

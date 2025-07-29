@@ -34,7 +34,7 @@ describe('payments', () => {
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: mockUser },
         error: null
-      } as ReturnType<typeof supabase.auth.getUser>);
+      } as Awaited<ReturnType<typeof supabase.auth.getUser>>);
 
       // Mock league_payments query
       const mockPaymentData = [{
@@ -62,9 +62,9 @@ describe('payments', () => {
 
       vi.mocked(supabase.from).mockImplementation((table: string) => {
         if (table === 'league_payments') {
-          return fromMock as ReturnType<typeof supabase.from>;
+          return fromMock as unknown as ReturnType<typeof supabase.from>;
         }
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), contains: vi.fn().mockResolvedValue({ data: [], error: null }) } as ReturnType<typeof supabase.from>;
+        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), contains: vi.fn().mockResolvedValue({ data: [], error: null }) } as unknown as ReturnType<typeof supabase.from>;
       });
 
       const result = await getUserLeaguePayments();
@@ -97,7 +97,7 @@ describe('payments', () => {
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: mockUser },
         error: null
-      } as ReturnType<typeof supabase.auth.getUser>);
+      } as Awaited<ReturnType<typeof supabase.auth.getUser>>);
 
       // Mock empty league_payments
       const paymentFromMock = {
@@ -125,12 +125,12 @@ describe('payments', () => {
 
       vi.mocked(supabase.from).mockImplementation((table: string) => {
         if (table === 'league_payments') {
-          return paymentFromMock as ReturnType<typeof supabase.from>;
+          return paymentFromMock as unknown as ReturnType<typeof supabase.from>;
         }
         if (table === 'teams') {
-          return teamsFromMock as ReturnType<typeof supabase.from>;
+          return teamsFromMock as unknown as ReturnType<typeof supabase.from>;
         }
-        return {} as ReturnType<typeof supabase.from>;
+        return {} as unknown as ReturnType<typeof supabase.from>;
       });
 
       const result = await getUserLeaguePayments();
@@ -154,7 +154,7 @@ describe('payments', () => {
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: null },
         error: null
-      } as ReturnType<typeof supabase.auth.getUser>);
+      });
 
       const result = await getUserLeaguePayments();
       
@@ -169,7 +169,7 @@ describe('payments', () => {
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: mockUser },
         error: null
-      } as ReturnType<typeof supabase.auth.getUser>);
+      } as Awaited<ReturnType<typeof supabase.auth.getUser>>);
 
       const mockPayments = [
         { amount_outstanding: 50, amount_paid: 100, status: 'partial' },
@@ -182,7 +182,7 @@ describe('payments', () => {
         select: vi.fn().mockResolvedValue({ data: mockPayments, error: null })
       };
 
-      vi.mocked(supabase.from).mockImplementation(() => fromMock as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockImplementation(() => fromMock as unknown as ReturnType<typeof supabase.from>);
 
       const result = await getUserPaymentSummary();
 
@@ -198,7 +198,7 @@ describe('payments', () => {
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: null },
         error: null
-      } as ReturnType<typeof supabase.auth.getUser>);
+      });
 
       const result = await getUserPaymentSummary();
 

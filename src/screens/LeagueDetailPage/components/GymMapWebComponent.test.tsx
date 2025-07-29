@@ -32,7 +32,10 @@ describe('GymMapWebComponent', () => {
         geocode: vi.fn((_request, callback) => {
           callback([mockGeocoderResult], 'OK');
         })
-      }))
+      })),
+      event: {
+        clearInstanceListeners: vi.fn()
+      }
     }
   };
 
@@ -118,7 +121,10 @@ describe('GymMapWebComponent', () => {
           geocode: vi.fn((_request, callback) => {
             callback([], 'ZERO_RESULTS');
           })
-        }))
+        })),
+        event: {
+          clearInstanceListeners: vi.fn()
+        }
       }
     };
     (window as { google?: typeof window.google }).google = mockGeocoderWithError as typeof window.google;
@@ -186,7 +192,13 @@ describe('GymMapWebComponent', () => {
     (window as { google?: typeof window.google }).google = {
       maps: {
         // Only Map is available initially
-        Map: mockGoogleMaps.maps.Map
+        Map: mockGoogleMaps.maps.Map,
+        event: {
+          clearInstanceListeners: vi.fn()
+        },
+        Animation: {
+          DROP: 2
+        }
       }
     } as typeof window.google;
     

@@ -191,8 +191,8 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
           .eq('active', false)
           .order('created_at', { ascending: false });
           
-        activeResult = activeResultFallback as any;
-        waitlistResult = waitlistResultFallback as any;
+        activeResult = activeResultFallback;
+        waitlistResult = waitlistResultFallback;
       }
 
       if (activeResult.error) throw activeResult.error;

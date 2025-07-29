@@ -78,6 +78,7 @@ export function LeagueEditPage() {
     max_teams: number;
     gym_ids: number[];
     hide_day?: boolean;
+    payment_due_date: string;
   }>({
     name: "",
     description: "",
@@ -94,6 +95,7 @@ export function LeagueEditPage() {
     cost: null,
     max_teams: 20,
     gym_ids: [],
+    payment_due_date: "2025-08-21",
   });
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -170,6 +172,7 @@ export function LeagueEditPage() {
           max_teams: leagueData.max_teams || 20,
           hide_day: leagueData.hide_day || false,
           gym_ids: leagueData.gym_ids || [],
+          payment_due_date: leagueData.payment_due_date || "2025-08-21",
         });
       }
     } catch (error) {
@@ -210,6 +213,7 @@ export function LeagueEditPage() {
           cost: editLeague.cost,
           max_teams: editLeague.max_teams,
           gym_ids: editLeague.gym_ids,
+          payment_due_date: editLeague.payment_due_date,
         })
         .eq("id", id);
 
@@ -674,21 +678,39 @@ export function LeagueEditPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                    Max Teams
+                    Payment Due Date
                   </label>
                   <Input
-                    type="number"
-                    value={editLeague.max_teams}
+                    type="date"
+                    value={editLeague.payment_due_date}
                     onChange={(e) =>
                       setEditLeague({
                         ...editLeague,
-                        max_teams: parseInt(e.target.value) || 20,
+                        payment_due_date: e.target.value,
                       })
                     }
                     className="w-full"
                     required
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                  Max Teams
+                </label>
+                <Input
+                  type="number"
+                  value={editLeague.max_teams}
+                  onChange={(e) =>
+                    setEditLeague({
+                      ...editLeague,
+                      max_teams: parseInt(e.target.value) || 20,
+                    })
+                  }
+                  className="w-full"
+                  required
+                />
               </div>
 
               <div>

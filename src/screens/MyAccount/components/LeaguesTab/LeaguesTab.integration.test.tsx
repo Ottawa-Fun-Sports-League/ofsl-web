@@ -13,7 +13,7 @@ vi.mock('../../../../contexts/AuthContext', () => ({
     loading: false,
   }),
   AuthContext: {
-    Provider: ({ children, value }: any) => children,
+    Provider: ({ children }: { children: React.ReactNode }) => children,
   },
 }));
 
@@ -89,10 +89,10 @@ describe('LeaguesTab - View Toggle Integration', () => {
       error: null,
     });
     
-    (supabase.from as any).mockReturnValue({
+    vi.mocked(supabase.from).mockReturnValue({
       select: mockSelect,
       eq: mockEq,
-    });
+    } as unknown as ReturnType<typeof supabase.from>);
     
     mockSelect.mockReturnValue({
       eq: mockEq,
@@ -185,10 +185,10 @@ describe('LeaguesTab - View Toggle Integration', () => {
       error: null,
     });
     
-    (supabase.from as any).mockReturnValue({
+    vi.mocked(supabase.from).mockReturnValue({
       select: mockSelect,
       eq: mockEq,
-    });
+    } as unknown as ReturnType<typeof supabase.from>);
     
     mockSelect.mockReturnValue({
       eq: mockEq,

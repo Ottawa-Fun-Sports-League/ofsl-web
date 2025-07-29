@@ -14,7 +14,19 @@ vi.stubGlobal('import.meta.env', {
 });
 
 describe('GymMapWebComponent Integration', () => {
-  let mockGoogleMaps: typeof window.google;
+  let mockGoogleMaps: {
+    maps: {
+      Map: ReturnType<typeof vi.fn>;
+      Marker: ReturnType<typeof vi.fn>;
+      Geocoder: ReturnType<typeof vi.fn>;
+      Animation: {
+        DROP: string;
+      };
+      event: {
+        clearInstanceListeners: ReturnType<typeof vi.fn>;
+      };
+    };
+  };
   const mockUseGoogleMaps = vi.mocked(useGoogleMaps);
 
   beforeEach(() => {
