@@ -39,4 +39,5 @@ export interface NewLeague {
   max_teams: number;
   gym_ids: number[];
   hide_day?: boolean;
+  payment_due_date: string;
 }

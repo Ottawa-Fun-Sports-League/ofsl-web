@@ -21,6 +21,7 @@ export interface League {
   gym_ids: number[] | null;
   active: boolean | null;
   hide_day: boolean | null;
+  payment_due_date: string | null;
   created_at: string;
 
   // Joined data

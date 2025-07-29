@@ -20,6 +20,7 @@ export function useLeagueActions({ loadData, showToast }: UseLeagueActionsProps)
           name: newLeague.name,
           description: newLeague.description,
           league_type: newLeague.league_type,
+          gender: newLeague.gender,
           sport_id: newLeague.sport_id,
           skill_ids: newLeague.skill_ids,
           skill_id: newLeague.skill_ids.length > 0 ? newLeague.skill_ids[0] : null,
@@ -31,6 +32,7 @@ export function useLeagueActions({ loadData, showToast }: UseLeagueActionsProps)
           cost: newLeague.cost,
           max_teams: newLeague.max_teams,
           gym_ids: newLeague.gym_ids,
+          payment_due_date: newLeague.payment_due_date,
           active: true
         })
         .select()
@@ -99,6 +101,7 @@ export function useLeagueActions({ loadData, showToast }: UseLeagueActionsProps)
           cost: originalLeague.cost,
           max_teams: originalLeague.max_teams,
           gym_ids: originalLeague.gym_ids,
+          payment_due_date: originalLeague.payment_due_date,
           active: true
         })
         .select()
