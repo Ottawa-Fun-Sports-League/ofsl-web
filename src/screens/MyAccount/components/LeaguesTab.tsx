@@ -9,6 +9,7 @@ import { LeaguesListView } from './LeaguesTab/components/LeaguesListView';
 import { ViewToggle } from './LeaguesTab/components/ViewToggle';
 import { CopyLeagueDialog } from './LeaguesTab/components/CopyLeagueDialog';
 import { LeagueTeamsModal } from './LeaguesTab/components/LeagueTeamsModal';
+import { MobileFilterDrawer } from './LeaguesTab/components/MobileFilterDrawer';
 import { useLeaguesData } from './LeaguesTab/hooks/useLeaguesData';
 import { useLeagueActions } from './LeaguesTab/hooks/useLeagueActions';
 import { LeagueWithTeamCount } from './LeaguesTab/types';
@@ -42,6 +43,8 @@ export function LeaguesTab() {
   const {
     filters,
     openDropdown,
+    showMobileFilterDrawer,
+    setShowMobileFilterDrawer,
     dropdownRefs,
     toggleDropdown,
     handleFilterChange,
@@ -146,8 +149,9 @@ export function LeaguesTab() {
         onClearFilters={clearFilters}
         onClearSkillLevels={clearSkillLevels}
         isAnyFilterActive={isAnyFilterActive}
+        onShowMobileFilters={() => setShowMobileFilterDrawer(true)}
         getSportIcon={getSportIcon}
-        hideOnMobile={false}
+        hideOnMobile={true}
       />
 
       {/* View Toggle */}
@@ -184,6 +188,21 @@ export function LeaguesTab() {
         isOpen={teamsModalOpen}
         onClose={handleTeamsModalClose}
         league={selectedLeague}
+      />
+
+      {/* Mobile Filter Drawer */}
+      <MobileFilterDrawer
+        isOpen={showMobileFilterDrawer}
+        onClose={() => setShowMobileFilterDrawer(false)}
+        filters={filters}
+        handleFilterChange={(filterType: string, value: string) => handleFilterChange(filterType as keyof typeof filters, value)}
+        clearFilters={clearFilters}
+        sports={sports}
+        skills={skills}
+        filterOptions={filterOptions}
+        isAnyFilterActive={isAnyFilterActive}
+        clearSkillLevels={clearSkillLevels}
+        getSportIcon={getSportIcon}
       />
     </div>
   );
