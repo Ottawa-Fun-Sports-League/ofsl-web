@@ -168,26 +168,40 @@ export function usePaymentOperations(
   const handleSavePaymentEdit = async () => {
     if (!paymentInfo || editingNoteId === null) return;
     
+    const editedAmount = parseFloat(editingPayment.amount) || 0;
+    
+    // Calculate what the new total would be with the edited amount
+    const updatedHistory = [...paymentHistory];
+    const entryIndex = updatedHistory.findIndex(h => h.id === editingNoteId);
+    
+    if (entryIndex !== -1) {
+      updatedHistory[entryIndex] = {
+        ...updatedHistory[entryIndex],
+        amount: editedAmount,
+        payment_method: editingPayment.payment_method || updatedHistory[entryIndex].payment_method,
+        date: editingPayment.date ? new Date(editingPayment.date).toISOString() : new Date().toISOString(),
+        notes: editingPayment.notes
+      };
+    }
+    
+    const newAmountPaid = updatedHistory.reduce((total, entry) => {
+      return total + entry.amount;
+    }, 0);
+    
+    // Calculate total amount due including 13% HST
+    const totalAmountDueWithTax = paymentInfo.amount_due * 1.13;
+
+    // Use a tolerance to handle floating point precision issues
+    // Allow payments up to 1 cent over the amount due (including tax) to handle rounding
+    if (newAmountPaid > totalAmountDueWithTax + 0.01) {
+      showToast('Total payment amount cannot exceed the amount owing', 'error');
+      return;
+    }
+    
     try {
       setProcessingPayment(true);
       
-      const updatedHistory = [...paymentHistory];
-      const entryIndex = updatedHistory.findIndex(h => h.id === editingNoteId);
-      
-      if (entryIndex !== -1) {
-        updatedHistory[entryIndex] = {
-          ...updatedHistory[entryIndex],
-          amount: parseFloat(editingPayment.amount) || 0,
-          payment_method: editingPayment.payment_method || updatedHistory[entryIndex].payment_method,
-          date: editingPayment.date ? new Date(editingPayment.date).toISOString() : new Date().toISOString(),
-          notes: editingPayment.notes
-        };
-      }
-      
       const updatedNotes = JSON.stringify(updatedHistory);
-      const newAmountPaid = updatedHistory.reduce((total, entry) => {
-        return total + entry.amount;
-      }, 0);
       
       const { data, error } = await supabase
         .from('league_payments')

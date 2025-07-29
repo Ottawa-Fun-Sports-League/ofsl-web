@@ -8,6 +8,7 @@ import { supabase } from '../../../../../lib/supabase';
 import { useToast } from '../../../../../components/ui/toast';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import { PaymentManagementSection } from '../../shared/PaymentManagementSection';
+import { calculatePaymentStatus } from '../../../../../components/payments/utils';
 
 interface Team {
   id: number;
@@ -22,7 +23,7 @@ interface Team {
   league_id: number;
   league_name: string;
   sport_name: string;
-  payment_status: 'pending' | 'paid' | 'failed' | null;
+  payment_status: 'pending' | 'paid' | 'partial' | 'failed' | 'overdue' | null;
   payment_amount: number | null;
   payment_due_date: string | null;
 }
@@ -115,23 +116,44 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
 
       if (error) throw error;
 
-      const teamsWithPayments = (data as unknown as TeamQueryResult[] | null)?.map((team) => ({
-        id: team.id,
-        name: team.name,
-        captain_id: team.captain_id,
-        captain_name: team.captain?.name || 'Unknown',
-        captain_email: team.captain?.email || '',
-        captain_phone: team.captain?.phone || null,
-        roster: team.roster || [],
-        team_size: team.roster?.length || 0,
-        created_at: team.created_at,
-        league_id: team.league_id,
-        league_name: team.leagues?.name || '',
-        sport_name: team.leagues?.sports?.name || '',
-        payment_status: team.league_payments?.[0]?.status || null,
-        payment_amount: team.league_payments?.[0]?.amount_due || null,
-        payment_due_date: team.league_payments?.[0]?.due_date || null,
-      })) || [];
+      const teamsWithPayments = (data as unknown as TeamQueryResult[] | null)?.map((team) => {
+        const payment = team.league_payments?.[0];
+        const calculatedStatus = payment 
+          ? calculatePaymentStatus(payment.amount_due, payment.amount_paid, payment.due_date)
+          : null;
+
+        // Debug logging for Occasional Aces team
+        if (team.name?.toLowerCase().includes('occasional aces')) {
+          console.log('Admin LeagueTeamsModal - Occasional Aces Debug:', {
+            teamName: team.name,
+            payment: payment,
+            dbStatus: payment?.status,
+            calculatedStatus: calculatedStatus,
+            amountDue: payment?.amount_due,
+            amountPaid: payment?.amount_paid,
+            totalDueWithTax: payment ? payment.amount_due * 1.13 : 0,
+            amountOwing: payment ? (payment.amount_due * 1.13) - payment.amount_paid : 0
+          });
+        }
+
+        return {
+          id: team.id,
+          name: team.name,
+          captain_id: team.captain_id,
+          captain_name: team.captain?.name || 'Unknown',
+          captain_email: team.captain?.email || '',
+          captain_phone: team.captain?.phone || null,
+          roster: team.roster || [],
+          team_size: team.roster?.length || 0,
+          created_at: team.created_at,
+          league_id: team.league_id,
+          league_name: team.leagues?.name || '',
+          sport_name: team.leagues?.sports?.name || '',
+          payment_status: calculatedStatus,
+          payment_amount: payment?.amount_due || null,
+          payment_due_date: payment?.due_date || null,
+        };
+      }) || [];
 
       setTeams(teamsWithPayments);
       setFilteredTeams(teamsWithPayments);
@@ -226,8 +248,12 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
     switch (status) {
       case 'paid':
         return 'Paid';
+      case 'partial':
+        return 'Partial';
       case 'pending':
         return 'Pending';
+      case 'overdue':
+        return 'Overdue';
       case 'failed':
         return 'Failed';
       default:

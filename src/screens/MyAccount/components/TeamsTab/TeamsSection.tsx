@@ -13,6 +13,7 @@ import { PaymentStatusBadge } from "../../../../components/ui/payment-status-bad
 import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
 import { Team, LeaguePayment } from "./types";
 import { PaymentStatusSection } from "./components/PaymentStatusSection";
+import { calculatePaymentStatus } from "../../../../components/payments/utils";
 
 interface TeamsSectionProps {
   teams: Team[];
@@ -59,6 +60,16 @@ export function TeamsSection({
               teamPayment?.league_cost ||
               teamPayment?.amount_due ||
               0;
+
+            // Calculate correct payment status including HST
+            const actualPaymentStatus = teamPayment 
+              ? calculatePaymentStatus(
+                  teamPayment.amount_due, 
+                  teamPayment.amount_paid, 
+                  teamPayment.due_date
+                )
+              : 'pending';
+
 
             return (
               <div
@@ -128,7 +139,7 @@ export function TeamsSection({
 
                       {teamPayment && (
                         <PaymentStatusBadge 
-                          status={teamPayment.status} 
+                          status={actualPaymentStatus} 
                           size="sm"
                         />
                       )}
@@ -198,7 +209,7 @@ export function TeamsSection({
                     )}
                     
                     {/* Make a payment link for captains with partial or pending payments */}
-                    {isCaptain && teamPayment && (teamPayment.status === 'partial' || teamPayment.status === 'pending') && (
+                    {isCaptain && teamPayment && (actualPaymentStatus === 'partial' || actualPaymentStatus === 'pending') && (
                       <button
                         onClick={() => setShowPaymentModal(true)}
                         className="text-sm text-[#B20000] hover:text-[#8A0000] hover:underline transition-colors font-medium"

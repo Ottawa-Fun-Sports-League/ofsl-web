@@ -653,7 +653,7 @@ export function TeammateManagementModal({
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex flex-row gap-2">
                         {/* Make Captain button - for captains and admins, non-captains, registered users, when there are multiple members */}
                         {!isCaptain && !isPending && (userProfile?.is_admin || captainId === userProfile?.id) && teammates.filter(t => !t.isPending).length > 1 && (
                           <Button
@@ -661,7 +661,7 @@ export function TeammateManagementModal({
                             size="sm"
                             variant="outline"
                             disabled={reassigningCaptain === teammate.id}
-                            className="w-full sm:w-auto border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-800 text-xs px-2 py-1"
+                            className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-800 text-xs px-2 py-1"
                           >
                             {reassigningCaptain === teammate.id ? (
                               <>
@@ -671,7 +671,7 @@ export function TeammateManagementModal({
                             ) : (
                               <>
                                 <span className="hidden sm:inline">Make Captain</span>
-                                <span className="sm:hidden">Captain</span>
+                                <span className="sm:hidden">Make Captain</span>
                               </>
                             )}
                           </Button>
@@ -683,7 +683,7 @@ export function TeammateManagementModal({
                             onClick={() => removeTeammate(teammate.id)}
                             size="sm"
                             disabled={removingTeammate === teammate.id}
-                            className="text-white w-8 h-8 p-0 bg-red-600 hover:bg-red-700"
+                            className="text-white w-8 h-8 p-0 bg-red-600 hover:bg-red-700 flex-shrink-0"
                             title={isPending ? "Cancel invite" : "Remove teammate"}
                           >
                             {removingTeammate === teammate.id ? (

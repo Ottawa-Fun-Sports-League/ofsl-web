@@ -13,6 +13,26 @@ export function formatPaymentMethod(method: string | null): string {
   }
 }
 
+export function calculatePaymentStatus(
+  amountDue: number, 
+  amountPaid: number, 
+  dueDate?: string
+): 'paid' | 'partial' | 'pending' | 'overdue' {
+  // Calculate total due including 13% HST
+  const totalDueWithTax = amountDue * 1.13;
+  
+  // Use tolerance to handle floating point precision
+  if (amountPaid >= totalDueWithTax - 0.01) {
+    return 'paid';
+  } else if (amountPaid > 0) {
+    return 'partial';
+  } else if (dueDate && new Date(dueDate) < new Date()) {
+    return 'overdue';
+  } else {
+    return 'pending';
+  }
+}
+
 export function getPaymentStatusColor(status: string): string {
   switch (status) {
     case 'paid':

@@ -26,7 +26,9 @@ export function ProcessPaymentForm({
   onPaymentNotesChange,
   onProcessPayment,
 }: ProcessPaymentFormProps) {
-  const amountOwing = paymentInfo.amount_due - paymentInfo.amount_paid;
+  // Calculate total amount due including 13% HST
+  const totalAmountDueWithTax = paymentInfo.amount_due * 1.13;
+  const amountOwing = totalAmountDueWithTax - paymentInfo.amount_paid;
 
   if (amountOwing <= 0) {
     return (

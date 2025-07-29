@@ -1,6 +1,7 @@
 import { AlertCircle, Calendar, CheckCircle, DollarSign } from 'lucide-react';
 import { cn } from '../../../../../lib/utils';
 import { PaymentStatusBadge } from '../../../../../components/ui/payment-status-badge';
+import { calculatePaymentStatus } from '../../../../../components/payments/utils';
 
 interface PaymentStatusSectionProps {
   payment?: {
@@ -43,122 +44,173 @@ export function PaymentStatusSection({ payment, leagueCost, isCaptain }: Payment
   };
   
   const dueDate = formatDueDate(payment?.due_date);
-  const isPaid = payment?.status === 'paid';
-  const isOverdue = payment?.status === 'overdue' || (dueDate?.isOverdue ?? false);
   
-  // Don't show payment section if there's no cost
-  if (!totalDue || totalDue === 0) {
+  // Calculate correct payment status including HST
+  const actualStatus = payment 
+    ? calculatePaymentStatus(payment.amount_due, payment.amount_paid, payment.due_date)
+    : 'pending';
+  
+  const isPaid = actualStatus === 'paid';
+  const isOverdue = actualStatus === 'overdue' || (dueDate?.isOverdue ?? false);
+  
+  // Don't show payment section if there's no cost or if payment is fully paid
+  if (!totalDue || totalDue === 0 || isPaid) {
     return null;
   }
   
   return (
     <div className={cn(
-      "mt-4 p-4 rounded-lg border-2",
-      isPaid ? "bg-emerald-50 border-emerald-200" : 
-      isOverdue ? "bg-red-50 border-red-300" : 
-      "bg-amber-50 border-amber-200"
+      "mt-4 p-4 rounded-lg border",
+      isPaid ? "bg-emerald-50/30 border-emerald-300" : 
+      isOverdue ? "bg-red-50/30 border-red-300" : 
+      "bg-amber-50/30 border-amber-300"
     )}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
+      {/* Desktop: Header with status on left and fees on right */}
+      <div className="hidden md:flex items-center justify-between mb-3">
+        {/* Left side: Payment Status and badge */}
+        <div className="flex items-center gap-2.5">
           <DollarSign className={cn(
-            "h-5 w-5",
+            "h-4 w-4 flex-shrink-0",
             isPaid ? "text-emerald-600" : 
             isOverdue ? "text-red-600" : 
             "text-amber-600"
           )} />
-          <h4 className="font-semibold text-gray-900">Payment Status</h4>
+          <span className="text-sm font-medium text-gray-900">Payment Status</span>
+          <PaymentStatusBadge 
+            status={actualStatus} 
+            size="sm"
+          />
         </div>
-        <PaymentStatusBadge 
-          status={(payment?.status || 'pending') as 'paid' | 'partial' | 'pending' | 'overdue'} 
-          size="md"
-        />
+        
+        {/* Right side: All fees information */}
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-gray-600">
+            League fees: <span className="font-bold text-gray-900">${totalDue.toFixed(2)} (${payment?.amount_due.toFixed(2)} + HST)</span>
+          </span>
+          <span className="text-gray-600">
+            Paid: <span className="font-bold text-emerald-600">${amountPaid.toFixed(2)}</span>
+          </span>
+          <span className="text-gray-600">
+            Balance: <span className={cn(
+              "font-bold",
+              remainingBalance > 0 ? "text-red-600" : "text-emerald-600"
+            )}>${remainingBalance.toFixed(2)}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Mobile: Stacked layout */}
+      <div className="md:hidden mb-3">
+        {/* Row 1: Payment Status and badge */}
+        <div className="flex items-center gap-2.5 mb-2">
+          <DollarSign className={cn(
+            "h-4 w-4 flex-shrink-0",
+            isPaid ? "text-emerald-600" : 
+            isOverdue ? "text-red-600" : 
+            "text-amber-600"
+          )} />
+          <span className="text-sm font-medium text-gray-900">Payment Status</span>
+          <PaymentStatusBadge 
+            status={actualStatus} 
+            size="sm"
+          />
+        </div>
+        
+        {/* Row 2: League fees */}
+        <div className="text-sm mb-1">
+          <span className="text-gray-600">
+            League fees: <span className="font-bold text-gray-900">${totalDue.toFixed(2)} (${payment?.amount_due.toFixed(2)} + HST)</span>
+          </span>
+        </div>
+        
+        {/* Row 3: Paid and Balance on same line */}
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-gray-600">
+            Paid: <span className="font-bold text-emerald-600">${amountPaid.toFixed(2)}</span>
+          </span>
+          <span className="text-gray-600">
+            Balance: <span className={cn(
+              "font-bold",
+              remainingBalance > 0 ? "text-red-600" : "text-emerald-600"
+            )}>${remainingBalance.toFixed(2)}</span>
+          </span>
+        </div>
       </div>
       
-      {/* Payment amounts */}
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-gray-600 mb-1">Total Due</p>
-            <p className="font-bold text-lg text-gray-900">${totalDue.toFixed(2)}</p>
-          </div>
-          <div>
-            <p className="text-gray-600 mb-1">Paid</p>
-            <p className="font-bold text-lg text-emerald-600">${amountPaid.toFixed(2)}</p>
-          </div>
-          <div>
-            <p className="text-gray-600 mb-1">Balance</p>
-            <p className={cn(
-              "font-bold text-lg",
-              remainingBalance > 0 ? "text-red-600" : "text-emerald-600"
-            )}>
-              ${remainingBalance.toFixed(2)}
-            </p>
-          </div>
+      {/* Progress bar with percentage */}
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-xs text-gray-600">Progress</span>
+          <span className="text-xs text-gray-600 font-medium">{Math.round(progressPercentage)}%</span>
         </div>
-        
-        {/* Progress bar */}
-        <div className="w-full">
-          <div className="flex justify-between text-xs text-gray-600 mb-1">
-            <span>Progress</span>
-            <span>{Math.round(progressPercentage)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div 
-              className={cn(
-                "h-full rounded-full transition-all duration-300",
-                isPaid ? "bg-emerald-500" : 
-                isOverdue ? "bg-red-500" : 
-                progressPercentage > 50 ? "bg-amber-500" : 
-                "bg-amber-400"
-              )}
-              style={{ width: `${progressPercentage}%` }}
-            />
-          </div>
-        </div>
-        
-        {/* Due date */}
-        {dueDate && !isPaid && (
-          <div className={cn(
-            "flex items-center gap-2 p-2 rounded-md",
-            isOverdue ? "bg-red-100" : 
-            dueDate.isUrgent ? "bg-amber-100" : 
-            ""
-          )}>
-            {isOverdue ? (
-              <AlertCircle className="h-4 w-4 text-red-600" />
-            ) : dueDate.isUrgent ? (
-              <Calendar className="h-4 w-4 text-amber-600" />
-            ) : (
-              <Calendar className="h-4 w-4 text-gray-600" />
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div 
+            className={cn(
+              "h-full rounded-full transition-all duration-300",
+              isPaid ? "bg-emerald-500" : 
+              isOverdue ? "bg-red-500" : 
+              progressPercentage > 50 ? "bg-amber-500" : 
+              "bg-amber-400"
             )}
-            <span className={cn(
-              "text-sm font-medium",
-              isOverdue ? "text-red-700" : 
-              dueDate.isUrgent ? "text-amber-700" : 
-              "text-gray-900"
-            )}>
-              {dueDate.text}
-            </span>
-          </div>
-        )}
-        
-        {/* Success message for paid teams */}
-        {isPaid && (
-          <div className="flex items-center gap-2 p-2 bg-emerald-100 rounded-md">
-            <CheckCircle className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm font-medium text-emerald-700">
-              Fully paid - Thank you!
-            </span>
-          </div>
-        )}
-        
-        {/* Captain-only reminder */}
-        {isCaptain && remainingBalance > 0 && (
-          <p className="text-xs text-gray-600 italic">
-            As team captain, you are responsible for collecting and submitting the full team payment.
-          </p>
-        )}
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
       </div>
+      
+      {/* Due date and captain reminder section */}
+      {dueDate && !isPaid && (
+        <div className={cn(
+          "p-2 rounded-md mb-2",
+          isOverdue ? "bg-red-100/40" : 
+          dueDate.isUrgent ? "bg-amber-100/40" : 
+          ""
+        )}>
+          <div className="flex items-center justify-between">
+            {/* Left side: Due date */}
+            <div className="flex items-center gap-2">
+              {isOverdue ? (
+                <AlertCircle className="h-4 w-4 text-red-600" />
+              ) : dueDate.isUrgent ? (
+                <Calendar className="h-4 w-4 text-amber-600" />
+              ) : (
+                <Calendar className="h-4 w-4 text-gray-600" />
+              )}
+              <span className={cn(
+                "text-sm font-medium",
+                isOverdue ? "text-red-700" : 
+                dueDate.isUrgent ? "text-amber-700" : 
+                "text-gray-900"
+              )}>
+                {dueDate.text}
+              </span>
+            </div>
+            
+            {/* Right side: Captain responsibility */}
+            {isCaptain && remainingBalance > 0 && (
+              <p className="text-xs text-gray-600 italic">
+                As team captain, you are responsible for collecting and submitting the full team payment.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Success message for paid teams */}
+      {isPaid && (
+        <div className="flex items-center gap-2 p-2 bg-emerald-100/40 rounded-md mb-2">
+          <CheckCircle className="h-4 w-4 text-emerald-600" />
+          <span className="text-sm font-medium text-emerald-700">
+            Fully paid - Thank you!
+          </span>
+        </div>
+      )}
+      
+      {/* Captain-only reminder for cases without due date */}
+      {isCaptain && remainingBalance > 0 && (!dueDate || isPaid) && (
+        <p className="text-xs text-gray-600 italic">
+          As team captain, you are responsible for collecting and submitting the full team payment.
+        </p>
+      )}
     </div>
   );
 }
