@@ -4,6 +4,15 @@ import { ProfileTab } from '../ProfileTab';
 import { supabase } from '../../../../../lib/supabase';
 import { useAuth } from '../../../../../contexts/AuthContext';
 
+interface ExtendedUserSportsSkill {
+  id: number;
+  user_id: string;
+  sport_id: number;
+  skill_id: number;
+  sport_name?: string;
+  skill_name?: string;
+}
+
 // Mock dependencies
 vi.mock('../../../../../contexts/AuthContext');
 vi.mock('../../../../../lib/supabase', () => ({
@@ -35,6 +44,9 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
     name: 'Test User',
     email: 'test@example.com',
     phone: '1234567890',
+    skill_id: null,
+    is_admin: false,
+    team_ids: [],
     user_sports_skills: []
   };
 
@@ -56,8 +68,20 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
     // Mock useAuth
     vi.mocked(useAuth).mockReturnValue({
       userProfile: mockUserProfile,
-      refreshUserProfile: mockRefreshUserProfile
-    } as any);
+      refreshUserProfile: mockRefreshUserProfile,
+      user: null,
+      session: null,
+      loading: false,
+      profileComplete: true,
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: true,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
+    } as ReturnType<typeof useAuth>);
 
     // Mock Supabase queries
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -69,7 +93,7 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
             data: mockSports,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       if (table === 'skills') {
         return {
@@ -78,7 +102,7 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
             data: mockSkills,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       if (table === 'users') {
         return {
@@ -94,9 +118,9 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
   });
 
@@ -177,14 +201,33 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
     const profileWithSports = {
       ...mockUserProfile,
       user_sports_skills: [
-        { sport_id: 1, skill_id: 1, sport_name: 'Volleyball', skill_name: 'Beginner' }
-      ]
+        { 
+          id: 1,
+          user_id: 'user123',
+          sport_id: 1, 
+          skill_id: 1, 
+          sport_name: 'Volleyball', 
+          skill_name: 'Beginner' 
+        }
+      ] as ExtendedUserSportsSkill[]
     };
 
     vi.mocked(useAuth).mockReturnValue({
       userProfile: profileWithSports,
-      refreshUserProfile: mockRefreshUserProfile
-    } as any);
+      refreshUserProfile: mockRefreshUserProfile,
+      user: null,
+      session: null,
+      loading: false,
+      profileComplete: true,
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: true,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
+    } as ReturnType<typeof useAuth>);
 
     render(<ProfileTab />);
 
@@ -238,15 +281,41 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
     const profileWithSports = {
       ...mockUserProfile,
       user_sports_skills: [
-        { sport_id: 1, skill_id: 1, sport_name: 'Volleyball', skill_name: 'Beginner' },
-        { sport_id: 2, skill_id: 2, sport_name: 'Badminton', skill_name: 'Intermediate' }
-      ]
+        { 
+          id: 1,
+          user_id: 'user123',
+          sport_id: 1, 
+          skill_id: 1, 
+          sport_name: 'Volleyball', 
+          skill_name: 'Beginner' 
+        },
+        { 
+          id: 2,
+          user_id: 'user123',
+          sport_id: 2, 
+          skill_id: 2, 
+          sport_name: 'Badminton', 
+          skill_name: 'Intermediate' 
+        }
+      ] as ExtendedUserSportsSkill[]
     };
 
     vi.mocked(useAuth).mockReturnValue({
       userProfile: profileWithSports,
-      refreshUserProfile: mockRefreshUserProfile
-    } as any);
+      refreshUserProfile: mockRefreshUserProfile,
+      user: null,
+      session: null,
+      loading: false,
+      profileComplete: true,
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: true,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
+    } as ReturnType<typeof useAuth>);
 
     render(<ProfileTab />);
 
@@ -322,7 +391,7 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
           eq: vi.fn().mockResolvedValue({
             error: new Error('Update failed')
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       // Return default mocks for other tables
       return {
@@ -332,7 +401,7 @@ describe('ProfileTab - Sports & Skills Persistence', () => {
           data: table === 'sports' ? mockSports : mockSkills,
           error: null
         })
-      } as any;
+      } as unknown as ReturnType<typeof supabase.from>;
     });
 
     // Wait for save button to appear

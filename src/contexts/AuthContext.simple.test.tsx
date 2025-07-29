@@ -85,12 +85,12 @@ describe('AuthContext Basic Flow', () => {
 
   it('should show loading initially', () => {
     // Mock no session
-    mockSupabase.auth.getSession.mockResolvedValue({
+    (mockSupabase.auth.getSession as Mock).mockResolvedValue({
       data: { session: null },
       error: null,
     });
 
-    mockSupabase.auth.onAuthStateChange.mockImplementation(() => ({
+    (mockSupabase.auth.onAuthStateChange as Mock).mockImplementation(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
     }));
 
@@ -133,26 +133,18 @@ describe('AuthContext Basic Flow', () => {
     };
 
     // Setup session mock
-    mockSupabase.auth.getSession.mockResolvedValue({
+    (mockSupabase.auth.getSession as Mock).mockResolvedValue({
       data: { session: mockSession },
       error: null,
     });
 
-    // Setup auth state change mock
-    mockSupabase.auth.onAuthStateChange.mockImplementation((callback: (event: string, session: typeof mockSession | null) => void) => {
-      // Simulate initial session
-      setTimeout(() => {
-        callback('INITIAL_SESSION', mockSession);
-      }, 10);
-      
-      return {
-        data: { subscription: { unsubscribe: vi.fn() } },
-      };
+    // Setup auth state change mock - no need for callback since getSession is called first
+    (mockSupabase.auth.onAuthStateChange as Mock).mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
     });
 
-    // Mock RPC call
-    mockSupabase.rpc.mockResolvedValue({
-      data: mockIncompleteProfile,
+    // Mock RPC call for check_and_fix_user_profile_v4
+    (mockSupabase.rpc as Mock).mockResolvedValue({
       error: null,
     });
 
@@ -162,7 +154,7 @@ describe('AuthContext Basic Flow', () => {
       error: null,
     });
 
-    mockSupabase.from.mockReturnValue({
+    (mockSupabase.from as Mock).mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           single: mockSingle,
@@ -177,10 +169,10 @@ describe('AuthContext Basic Flow', () => {
     );
 
     
-    // Wait for redirect to happen
+    // Wait for redirect to happen by checking window.location.hash
     await waitFor(() => {
-      expect(mockLocationReplace).toHaveBeenCalledWith('/#/complete-profile');
-    }, { timeout: 5000 });
+      expect(window.location.hash).toBe('#/complete-profile');
+    }, { timeout: 3000 });
 
   });
 });

@@ -21,7 +21,7 @@ vi.mock('../../../../components/ui/toast');
 
 // Mock StripeProductSelector to avoid stripe API calls in tests
 vi.mock('../LeaguesTab/components/StripeProductSelector', () => ({
-  StripeProductSelector: ({ selectedProductId, onChange }: any) => (
+  StripeProductSelector: ({ selectedProductId, onChange }: { selectedProductId: string | null; onChange: (value: string | null) => void }) => (
     <div data-testid="stripe-product-selector">
       <select 
         value={selectedProductId || ''} 
@@ -81,12 +81,25 @@ describe('LeagueEditPage Integration Tests', () => {
     // Mock auth context
     vi.mocked(useAuth).mockReturnValue({
       userProfile: { id: '123', is_admin: true },
-    } as any);
+      user: null,
+      session: null,
+      loading: false,
+      profileComplete: true,
+      refreshUserProfile: vi.fn(),
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: true,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
+    } as ReturnType<typeof useAuth>);
 
     // Mock toast
     vi.mocked(useToast).mockReturnValue({
       showToast: mockShowToast,
-    } as any);
+    });
 
     // Mock Supabase queries
     vi.mocked(supabase.from).mockReturnValue({
@@ -96,7 +109,7 @@ describe('LeagueEditPage Integration Tests', () => {
       update: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       single: vi.fn().mockReturnThis(),
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Mock league functions
     vi.mocked(fetchSports).mockResolvedValue([
@@ -125,7 +138,7 @@ describe('LeagueEditPage Integration Tests', () => {
       update: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       single: vi.fn().mockReturnThis(),
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
   });
 
   const renderComponent = (leagueId = '1') => {
@@ -152,9 +165,9 @@ describe('LeagueEditPage Integration Tests', () => {
             ],
             error: null
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     renderComponent();
@@ -181,16 +194,16 @@ describe('LeagueEditPage Integration Tests', () => {
         return {
           update: vi.fn().mockReturnThis(),
           eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       if (table === 'gyms') {
         return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     renderComponent();
@@ -226,9 +239,9 @@ describe('LeagueEditPage Integration Tests', () => {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     renderComponent();
@@ -250,7 +263,7 @@ describe('LeagueEditPage Integration Tests', () => {
     // Mock non-admin user
     vi.mocked(useAuth).mockReturnValue({
       userProfile: { id: '123', is_admin: false },
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     renderComponent();
 
@@ -270,9 +283,9 @@ describe('LeagueEditPage Integration Tests', () => {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     renderComponent();

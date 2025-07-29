@@ -43,12 +43,18 @@ describe('SignupPage', () => {
     const mockSignIn = vi.fn();
     vi.mocked(useAuth).mockReturnValue({
       user: null,
+      session: null,
       loading: false,
       profileComplete: false,
       userProfile: null,
       refreshUserProfile: vi.fn(),
       signIn: mockSignIn,
       signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: false,
+      isNewUser: false,
       setIsNewUser: vi.fn(),
     } as ReturnType<typeof useAuth>);
     
@@ -231,11 +237,18 @@ describe('SignupPage', () => {
     
     vi.mocked(useAuth).mockReturnValue({
       user: null,
+      session: null,
       loading: false,
       profileComplete: false,
       userProfile: null,
       refreshUserProfile: vi.fn(),
+      signIn: vi.fn(),
       signInWithGoogle: mockSignInWithGoogle,
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: false,
+      isNewUser: false,
       setIsNewUser: vi.fn(),
     } as ReturnType<typeof useAuth>);
     

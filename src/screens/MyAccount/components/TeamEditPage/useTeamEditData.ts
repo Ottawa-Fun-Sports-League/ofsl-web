@@ -34,7 +34,7 @@ export function useTeamEditData(teamId: string | undefined) {
       setLoading(true);
       
       const skillsData = await fetchSkills();
-      setSkills(skillsData.map((s: any) => ({ ...s, description: s.description || null })));
+      setSkills(skillsData.map((s: { id: number; name: string }) => ({ ...s, description: null })));
 
       const { data: teamData, error: teamError } = await supabase
         .from('teams')

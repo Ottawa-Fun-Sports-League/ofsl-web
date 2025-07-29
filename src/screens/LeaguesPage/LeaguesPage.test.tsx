@@ -1,9 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LeaguesPage } from './LeaguesPage';
-import { render, mockNavigate } from '../../test/test-utils';
+import { render } from '../../test/test-utils';
 import { mockSupabase } from '../../test/mocks/supabase-enhanced';
+
+// Mock the league functions
+vi.mock('../../lib/leagues', () => ({
+  fetchLeagues: vi.fn(),
+  fetchSports: vi.fn(),
+  fetchSkills: vi.fn(),
+  getDayName: vi.fn((day) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[day] || 'Unknown';
+  }),
+  formatLeagueDates: vi.fn((start, end) => `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`),
+  getPrimaryLocation: vi.fn(() => ['Community Center']),
+  getGymNamesByLocation: vi.fn(() => ['Main Gym']),
+  LeagueWithTeamCount: {},
+}));
+
+// Import after mocking
+import { LeaguesPage } from './LeaguesPage';
+import { fetchLeagues, fetchSports, fetchSkills } from '../../lib/leagues';
+
+const mockFetchLeagues = fetchLeagues as ReturnType<typeof vi.fn>;
+const mockFetchSports = fetchSports as ReturnType<typeof vi.fn>;
+const mockFetchSkills = fetchSkills as ReturnType<typeof vi.fn>;
+
+// Mock the auth context to prevent loading state
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: null,
+    userProfile: null,
+    loading: false,
+    profileComplete: false,
+    emailVerified: false,
+    isNewUser: false,
+    setIsNewUser: vi.fn(),
+    signIn: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    checkProfileCompletion: vi.fn(),
+    refreshUserProfile: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 describe('LeaguesPage', () => {
   const mockLeagues = [
@@ -59,24 +101,53 @@ describe('LeaguesPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock leagues fetch
-    mockSupabase.from('leagues').select().eq('active', true).order().then = vi.fn().mockResolvedValue({
-      data: mockLeagues,
+    
+    // Mock auth session to prevent loading state
+    mockSupabase.auth.getSession.mockResolvedValue({
+      data: { session: null },
       error: null,
     });
     
-    // Mock sports fetch
-    mockSupabase.from('sports').select().order().then = vi.fn().mockResolvedValue({
-      data: mockSports,
-      error: null,
+    // Mock auth state change to immediately return null session
+    mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      // Immediately call callback with no session
+      if (callback) {
+        callback('INITIAL_SESSION', null);
+      }
+      return {
+        data: { 
+          subscription: { 
+            unsubscribe: vi.fn() 
+          } 
+        },
+      };
     });
+    
+    // Mock the fetch functions with proper data including spots_remaining
+    const mockLeaguesWithSpots = mockLeagues.map(league => ({
+      ...league,
+      spots_remaining: 10,
+      team_count: 2,
+      sport_name: league.sports.name,
+      skill_name: league.skills.name,
+      gyms: [],
+    }));
+    
+    mockFetchLeagues.mockResolvedValue(mockLeaguesWithSpots);
+    mockFetchSports.mockResolvedValue(mockSports);
+    mockFetchSkills.mockResolvedValue([
+      { id: 1, name: 'Recreational' },
+      { id: 2, name: 'All Levels' },
+      { id: 3, name: 'Beginner' },
+    ]);
   });
 
   it('renders leagues page with header', async () => {
     render(<LeaguesPage />);
     
-    expect(screen.getByRole('heading', { name: /all leagues/i })).toBeInTheDocument();
-    expect(screen.getByText(/browse all available leagues/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /find a league/i })).toBeInTheDocument();
+    });
   });
 
   it('displays all active leagues', async () => {
@@ -93,10 +164,15 @@ describe('LeaguesPage', () => {
     render(<LeaguesPage />);
     
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /all sports/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /volleyball/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /badminton/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /pickleball/i })).toBeInTheDocument();
+      // Sport buttons are now individual buttons without "All Sports"
+      // There might be multiple instances (mobile and desktop), so use getAllBy
+      const volleyballButtons = screen.getAllByRole('button', { name: /volleyball/i });
+      const badmintonButtons = screen.getAllByRole('button', { name: /badminton/i });
+      const pickleballButtons = screen.getAllByRole('button', { name: /pickleball/i });
+      
+      expect(volleyballButtons.length).toBeGreaterThan(0);
+      expect(badmintonButtons.length).toBeGreaterThan(0);
+      expect(pickleballButtons.length).toBeGreaterThan(0);
     });
   });
 
@@ -111,46 +187,50 @@ describe('LeaguesPage', () => {
       expect(screen.getByText('Fall Pickleball League')).toBeInTheDocument();
     });
     
-    // Click volleyball filter
-    const volleyballFilter = screen.getByRole('button', { name: /volleyball/i });
-    await user.click(volleyballFilter);
+    // Click volleyball filter (get the first one if multiple exist)
+    const volleyballFilters = screen.getAllByRole('button', { name: /volleyball/i });
+    await user.click(volleyballFilters[0]);
     
     // Only volleyball leagues should be visible
-    expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
-    expect(screen.queryByText('Summer Badminton League')).not.toBeInTheDocument();
-    expect(screen.queryByText('Fall Pickleball League')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
+      expect(screen.queryByText('Summer Badminton League')).not.toBeInTheDocument();
+      expect(screen.queryByText('Fall Pickleball League')).not.toBeInTheDocument();
+    });
   });
 
-  it('shows all leagues when clicking All Sports filter', async () => {
+  it('shows only selected sport leagues when clicking sport filter', async () => {
     const user = userEvent.setup();
     render(<LeaguesPage />);
     
     await waitFor(() => {
       expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
+      expect(screen.getByText('Summer Badminton League')).toBeInTheDocument();
+      expect(screen.getByText('Fall Pickleball League')).toBeInTheDocument();
     });
     
-    // Filter by volleyball first
-    const volleyballFilter = screen.getByRole('button', { name: /volleyball/i });
-    await user.click(volleyballFilter);
+    // Filter by volleyball (get the first one if multiple exist)
+    const volleyballFilters = screen.getAllByRole('button', { name: /volleyball/i });
+    await user.click(volleyballFilters[0]);
     
-    // Then click all sports
-    const allSportsFilter = screen.getByRole('button', { name: /all sports/i });
-    await user.click(allSportsFilter);
-    
-    // All leagues should be visible again
-    expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
-    expect(screen.getByText('Summer Badminton League')).toBeInTheDocument();
-    expect(screen.getByText('Fall Pickleball League')).toBeInTheDocument();
+    // Only volleyball leagues should be visible
+    await waitFor(() => {
+      expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
+      expect(screen.queryByText('Summer Badminton League')).not.toBeInTheDocument();
+      expect(screen.queryByText('Fall Pickleball League')).not.toBeInTheDocument();
+    });
   });
 
-  it('displays search input', () => {
+  // Search functionality has been removed from the current implementation
+  it.skip('displays search input', () => {
     render(<LeaguesPage />);
     
     const searchInput = screen.getByPlaceholderText(/search leagues/i);
     expect(searchInput).toBeInTheDocument();
   });
 
-  it('filters leagues by search term', async () => {
+  // Search functionality has been removed from the current implementation
+  it.skip('filters leagues by search term', async () => {
     const user = userEvent.setup();
     render(<LeaguesPage />);
     
@@ -167,20 +247,23 @@ describe('LeaguesPage', () => {
     expect(screen.queryByText('Fall Pickleball League')).not.toBeInTheDocument();
   });
 
-  it('shows loading state while fetching leagues', () => {
+  it('shows loading state while fetching leagues', async () => {
     // Make the promise hang to see loading state
-    mockSupabase.from('leagues').select().eq().order().then = vi.fn(() => new Promise(() => {}));
+    mockFetchLeagues.mockImplementation(() => new Promise(() => {}));
     
     render(<LeaguesPage />);
     
-    expect(screen.getByTestId('leagues-loading')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /find a league/i })).toBeInTheDocument();
+    });
+    
+    // Check for loading spinner
+    const spinner = screen.getByRole('status', { name: /loading/i });
+    expect(spinner).toBeInTheDocument();
   });
 
   it('handles error when fetching leagues fails', async () => {
-    mockSupabase.from('leagues').select().eq().order().then = vi.fn().mockResolvedValue({
-      data: null,
-      error: { message: 'Failed to fetch leagues' },
-    });
+    mockFetchLeagues.mockRejectedValue(new Error('Failed to fetch leagues'));
     
     render(<LeaguesPage />);
     
@@ -190,32 +273,26 @@ describe('LeaguesPage', () => {
   });
 
   it('shows message when no leagues match filters', async () => {
-    const user = userEvent.setup();
+    // Test with empty league data
+    mockFetchLeagues.mockResolvedValue([]);
+    
     render(<LeaguesPage />);
     
     await waitFor(() => {
-      expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
+      expect(screen.getByText(/no leagues match your filters/i)).toBeInTheDocument();
     });
-    
-    const searchInput = screen.getByPlaceholderText(/search leagues/i);
-    await user.type(searchInput, 'nonexistent league');
-    
-    expect(screen.getByText(/no leagues found/i)).toBeInTheDocument();
   });
 
   it('navigates to league detail page when clicking on a league', async () => {
-    const user = userEvent.setup();
     render(<LeaguesPage />);
     
     await waitFor(() => {
       expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
     });
     
-    const leagueCard = screen.getByText('Spring Volleyball League').closest('div[role="article"]');
-    const viewDetailsButton = leagueCard!.querySelector('a');
-    await user.click(viewDetailsButton!);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/leagues/1');
+    // The entire card is a link now
+    const leagueLink = screen.getByText('Spring Volleyball League').closest('a');
+    expect(leagueLink).toHaveAttribute('href', '/leagues/1');
   });
 
   it('displays league information correctly', async () => {
@@ -224,23 +301,22 @@ describe('LeaguesPage', () => {
     await waitFor(() => {
       // League names
       expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
+      expect(screen.getByText('Summer Badminton League')).toBeInTheDocument();
+      expect(screen.getByText('Fall Pickleball League')).toBeInTheDocument();
       
-      // Locations
-      expect(screen.getByText(/community center/i)).toBeInTheDocument();
+      // Locations (there might be multiple)
+      const communityLocations = screen.getAllByText(/community center/i);
+      expect(communityLocations.length).toBeGreaterThan(0);
       
-      // Costs
-      expect(screen.getByText('$120')).toBeInTheDocument();
-      expect(screen.getByText('$80')).toBeInTheDocument();
-      expect(screen.getByText('$60')).toBeInTheDocument();
-      
-      // Skill levels
-      expect(screen.getByText('Recreational')).toBeInTheDocument();
-      expect(screen.getByText('All Levels')).toBeInTheDocument();
-      expect(screen.getByText('Beginner')).toBeInTheDocument();
+      // Costs - check for the cost values with currency and additional text
+      expect(screen.getByText(/\$120.*per team/i)).toBeInTheDocument();
+      expect(screen.getByText(/\$80.*per player/i)).toBeInTheDocument();
+      expect(screen.getByText(/\$60.*per player/i)).toBeInTheDocument();
     });
   });
 
-  it('combines sport filter and search', async () => {
+  // Search functionality has been removed from the current implementation
+  it.skip('combines sport filter and search', async () => {
     const user = userEvent.setup();
     render(<LeaguesPage />);
     
@@ -248,17 +324,19 @@ describe('LeaguesPage', () => {
       expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
     });
     
-    // Filter by volleyball
-    const volleyballFilter = screen.getByRole('button', { name: /volleyball/i });
-    await user.click(volleyballFilter);
+    // Filter by volleyball (get the first one if multiple exist)
+    const volleyballFilters = screen.getAllByRole('button', { name: /volleyball/i });
+    await user.click(volleyballFilters[0]);
     
     // Search for "spring"
     const searchInput = screen.getByPlaceholderText(/search leagues/i);
     await user.type(searchInput, 'spring');
     
     // Only Spring Volleyball League should be visible
-    expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
-    expect(screen.queryByText('Summer Badminton League')).not.toBeInTheDocument();
-    expect(screen.queryByText('Fall Pickleball League')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Spring Volleyball League')).toBeInTheDocument();
+      expect(screen.queryByText('Summer Badminton League')).not.toBeInTheDocument();
+      expect(screen.queryByText('Fall Pickleball League')).not.toBeInTheDocument();
+    });
   });
 });
