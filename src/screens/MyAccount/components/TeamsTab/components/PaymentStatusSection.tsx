@@ -25,8 +25,19 @@ export function PaymentStatusSection({ payment, leagueCost, isCaptain }: Payment
   // Format due date
   const formatDueDate = (dateString?: string) => {
     if (!dateString) return null;
-    const date = new Date(dateString);
+    
+    let date: Date;
+    // Check if it's a date-only string (YYYY-MM-DD) or includes time
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Date-only string - parse as local date to prevent timezone shift
+      date = new Date(dateString + 'T00:00:00');
+    } else {
+      // Full ISO string or other format - parse normally
+      date = new Date(dateString);
+    }
+    
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day for accurate comparison
     const daysUntilDue = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     const formattedDate = date.toLocaleDateString('en-US', { 
@@ -55,6 +66,48 @@ export function PaymentStatusSection({ payment, leagueCost, isCaptain }: Payment
   
   // Don't show payment section if there's no cost or if payment is fully paid
   if (!totalDue || totalDue === 0 || isPaid) {
+    return null;
+  }
+  
+  // Check if we should show the enhanced section
+  const showEnhancedSection = isCaptain && 
+    !isPaid && 
+    dueDate && 
+    dueDate.daysUntilDue <= 7;
+  
+  // If not showing enhanced section, show simple payment status
+  if (!showEnhancedSection) {
+    if (isPaid) {
+      return (
+        <div className="mt-4 flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <CheckCircle className="h-5 w-5 text-emerald-600" />
+          <span className="text-sm font-medium text-emerald-700">
+            Fully paid - Thank you!
+          </span>
+        </div>
+      );
+    }
+    
+    if (remainingBalance > 0) {
+      return (
+        <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">
+                Balance: ${remainingBalance.toFixed(2)}
+              </span>
+            </div>
+            {dueDate && (
+              <span className="text-sm text-gray-600">
+                {dueDate.text}
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+    
     return null;
   }
   

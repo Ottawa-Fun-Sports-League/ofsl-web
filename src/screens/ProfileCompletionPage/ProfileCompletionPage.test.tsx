@@ -5,6 +5,10 @@ import { ProfileCompletionPage } from './ProfileCompletionPage';
 import { render, mockUser } from '../../test/test-utils';
 import { mockSupabase } from '../../test/mocks/supabase-enhanced';
 import { useAuth } from '../../contexts/AuthContext';
+import type { UserSportsSkill } from '../../types/auth';
+
+// Type for mocked window.location
+type MockLocation = Location & { href: string };
 
 // Mock auth context
 vi.mock('../../contexts/AuthContext', () => ({
@@ -25,7 +29,7 @@ describe('ProfileCompletionPage', () => {
     
     // Mock window.location.href
     Object.defineProperty(window, 'location', {
-      value: { href: '/' } as Location,
+      value: { href: '/' },
       writable: true,
     });
     
@@ -35,10 +39,19 @@ describe('ProfileCompletionPage', () => {
         ...mockUser,
         email_confirmed_at: new Date().toISOString(),
       },
+      session: null,
       loading: false,
       profileComplete: false,
       userProfile: null,
       refreshUserProfile: vi.fn(),
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: true,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
     } as ReturnType<typeof useAuth>);
     
     // Mock skills fetch
@@ -176,7 +189,7 @@ describe('ProfileCompletionPage', () => {
     // Mock window.location.href
     const originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: '' } as Location;
+    window.location = { ...originalLocation, href: '' } as MockLocation;
     
     // Mock the refreshUserProfile function
     const mockRefreshUserProfile = vi.fn();
@@ -185,10 +198,18 @@ describe('ProfileCompletionPage', () => {
         ...mockUser,
         email_confirmed_at: new Date().toISOString(),
       },
+      session: null,
       loading: false,
       profileComplete: false,
       userProfile: null,
       refreshUserProfile: mockRefreshUserProfile,
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: true,
+      isNewUser: false,
       setIsNewUser: vi.fn(),
     } as ReturnType<typeof useAuth>);
     
@@ -218,7 +239,7 @@ describe('ProfileCompletionPage', () => {
     expect(errorElements.length).toBeGreaterThan(0);
     
     // Restore window.location
-    (window as { location?: Location }).location = originalLocation;
+    (window as { location: Location }).location = originalLocation;
   });
 
   it.skip('handles profile creation error', async () => {
@@ -292,6 +313,7 @@ describe('ProfileCompletionPage', () => {
         ...mockUser,
         email_confirmed_at: new Date().toISOString(),
       },
+      session: null,
       loading: false,
       profileComplete: true,
       userProfile: {
@@ -299,7 +321,13 @@ describe('ProfileCompletionPage', () => {
         email: 'test@example.com',
         name: 'Existing User',
         phone: '613-555-1234',
-        user_sports_skills: [{ sport: 'volleyball', skill_id: 2 }],
+        skill_id: 2,
+        user_sports_skills: [{ 
+          id: 1, 
+          user_id: 'test-user-id', 
+          sport_id: 1, 
+          skill_id: 2 
+        }] as UserSportsSkill[],
         is_admin: false,
         team_ids: [],
         created_at: new Date().toISOString(),
@@ -307,12 +335,20 @@ describe('ProfileCompletionPage', () => {
         profile_completed: true,
       },
       refreshUserProfile: vi.fn(),
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: true,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
     } as ReturnType<typeof useAuth>);
     
     // Mock window.location.href
     const originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: '' } as Location;
+    window.location = { ...originalLocation, href: '' } as MockLocation;
     
     render(<ProfileCompletionPage />);
     
@@ -321,23 +357,32 @@ describe('ProfileCompletionPage', () => {
     }, { timeout: 2000 });
     
     // Restore window.location
-    (window as { location?: Location }).location = originalLocation;
+    (window as { location: Location }).location = originalLocation;
   });
 
   it('requires authentication to access', async () => {
     // Mock no user for this test
     vi.mocked(useAuth).mockReturnValue({
       user: null,
+      session: null,
       loading: false,
       profileComplete: false,
       userProfile: null,
       refreshUserProfile: vi.fn(),
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: false,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
     } as ReturnType<typeof useAuth>);
     
     // Mock window.location.href
     const originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: '' } as Location;
+    window.location = { ...originalLocation, href: '' } as MockLocation;
     
     render(<ProfileCompletionPage />);
     
@@ -346,7 +391,7 @@ describe('ProfileCompletionPage', () => {
     }, { timeout: 2000 });
     
     // Restore window.location
-    (window as { location?: Location }).location = originalLocation;
+    (window as { location: Location }).location = originalLocation;
   });
 
   it('formats phone number as user types', async () => {

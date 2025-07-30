@@ -211,7 +211,7 @@ describe('TeamRegistrationModal', () => {
           }))
         } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     renderComponent();
@@ -257,7 +257,7 @@ describe('TeamRegistrationModal', () => {
           }))
         } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     renderComponent();

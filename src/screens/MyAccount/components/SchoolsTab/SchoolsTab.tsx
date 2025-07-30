@@ -160,12 +160,12 @@ export function SchoolsTab() {
         locations={[...GYM_LOCATIONS]}
         loading={loading}
         editingGym={editingGym}
-        editGym={editGym as any}
+        editGym={editGym}
         saving={saving}
         deleting={deleting}
         isAnyFilterActive={isAnyFilterActive()}
         onEditGym={handleEditGym}
-        onEditGymChange={setEditGym as any}
+        onEditGymChange={setEditGym}
         onDayToggle={handleDayToggle}
         onSportToggle={handleSportToggle}
         onLocationToggle={handleLocationToggle}
