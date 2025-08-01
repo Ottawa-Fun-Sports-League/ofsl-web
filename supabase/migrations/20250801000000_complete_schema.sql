@@ -81,7 +81,8 @@ CREATE TABLE gyms (
     active BOOLEAN NOT NULL DEFAULT true,
     available_days SMALLINT[] DEFAULT '{}'::smallint[],
     available_sports BIGINT[] DEFAULT '{}'::bigint[],
-    locations gym_location_enum[]
+    locations gym_location_enum[],
+    CONSTRAINT gyms_pkey PRIMARY KEY (id)
 );
 
 -- Waivers table (referenced by users, waiver_acceptances)
