@@ -1,0 +1,1 @@
+-- Create waivers table fixed (placeholder)

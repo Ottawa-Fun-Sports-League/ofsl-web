@@ -1,0 +1,1 @@
+-- Fix team invite acceptance trigger (placeholder)

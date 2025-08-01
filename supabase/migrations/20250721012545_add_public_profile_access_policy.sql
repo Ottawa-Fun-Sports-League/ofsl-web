@@ -1,0 +1,1 @@
+-- Add public profile access policy (placeholder)

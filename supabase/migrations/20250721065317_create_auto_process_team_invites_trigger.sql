@@ -1,0 +1,1 @@
+-- Create auto process team invites trigger (placeholder)

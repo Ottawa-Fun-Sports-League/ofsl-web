@@ -1,0 +1,1 @@
+-- Add locations to gyms (placeholder)
