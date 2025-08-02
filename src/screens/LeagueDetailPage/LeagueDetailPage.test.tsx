@@ -61,8 +61,9 @@ const mockFetchLeagueById = fetchLeagueById as ReturnType<typeof vi.fn>;
 
 // Mock the auth context to prevent loading state
 const mockAuthContext = {
-  user: null,
-  userProfile: null,
+  session: null,
+  user: null as typeof mockUser | null,
+  userProfile: null as typeof mockUserProfile | null,
   loading: false,
   profileComplete: false,
   emailVerified: false,
@@ -179,121 +180,88 @@ describe("LeagueDetailPage", () => {
     });
 
     // Also return proper mocks for all tables
-    mockSupabase.from.mockImplementation((table) => {
-      if (table === "gyms") {
-        return {
-          select: vi.fn().mockReturnValue({
-            in: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue({
-                data: [],
-                error: null,
-              }),
-            }),
-          }),
-        };
-      } else if (table === "teams") {
-        // Mock teams table to return empty array for spots calculation
-        // The enhanced mock needs proper async handling
+    mockSupabase.from.mockImplementation((table: string) => {
+      const createMockQueryBuilder = (defaultData: unknown[] = []) => {
         const queryResult = Promise.resolve({
-          data: [], // No teams registered, all spots available
+          data: defaultData,
           error: null,
         });
 
-        // Create a thenable object that also has query builder methods
-        const teamsMock = {
+        return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
           insert: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+          upsert: vi.fn().mockReturnThis(),
+          delete: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          range: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: {
-              id: 999,
-              name: "My Awesome Team",
-              league_id: 1,
-              captain_id: "test-user-id",
-              active: true,
-            },
+            data: defaultData[0] || null,
             error: null,
           }),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          neq: vi.fn().mockReturnThis(),
+          gt: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lt: vi.fn().mockReturnThis(),
+          lte: vi.fn().mockReturnThis(),
+          like: vi.fn().mockReturnThis(),
+          ilike: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          filter: vi.fn().mockReturnThis(),
+          match: vi.fn().mockReturnThis(),
+          not: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(),
+          textSearch: vi.fn().mockReturnThis(),
+          throwOnError: vi.fn().mockReturnThis(),
+          contains: vi.fn().mockReturnThis(),
+          containedBy: vi.fn().mockReturnThis(),
           // Make the mock thenable so it can be awaited
-          then: (onFulfilled, onRejected) =>
-            queryResult.then(onFulfilled, onRejected),
-          catch: (onRejected) => queryResult.catch(onRejected),
-          finally: (onFinally) => queryResult.finally(onFinally),
+          then: queryResult.then.bind(queryResult),
+          catch: queryResult.catch.bind(queryResult),
+          finally: queryResult.finally.bind(queryResult),
         };
+      };
 
-        teamsMock.select.mockReturnValue(teamsMock);
-        teamsMock.eq.mockReturnValue(teamsMock);
-        teamsMock.insert.mockReturnValue(teamsMock);
-
+      if (table === "gyms") {
+        return createMockQueryBuilder([]);
+      } else if (table === "teams") {
+        const teamsMock = createMockQueryBuilder([]);
+        // Override single method for team registration
+        teamsMock.single.mockResolvedValue({
+          data: {
+            id: 999,
+            name: "My Awesome Team",
+            league_id: 1,
+            captain_id: "test-user-id",
+            active: true,
+          },
+          error: null,
+        });
         return teamsMock;
       } else if (table === "stripe_products") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: null,
-                error: null,
-              }),
-            }),
-          }),
-        };
+        return createMockQueryBuilder([]);
       } else if (table === "users") {
-        // Mock for user captain check
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: null,
-                error: null,
-              }),
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: null,
-                error: null,
-              }),
-            }),
-          }),
-        };
+        return createMockQueryBuilder([]);
       } else if (table === "leagues") {
-        // Mock for league query in the modal
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: mockLeague,
-                error: null,
-              }),
-            }),
-          }),
-        };
+        const leaguesMock = createMockQueryBuilder([]);
+        leaguesMock.single.mockResolvedValue({
+          data: mockLeague,
+          error: null,
+        });
+        return leaguesMock;
       } else if (table === "skills") {
-        // Mock for skills query in the modal
-        return {
-          select: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue({
-                data: [
-                  { id: 1, name: "Recreational", description: "For fun" },
-                  { id: 2, name: "Competitive", description: "Serious play" },
-                ],
-                error: null,
-              }),
-            }),
-          }),
-        };
+        const skillsMock = createMockQueryBuilder([
+          { id: 1, name: "Recreational", description: "For fun" },
+          { id: 2, name: "Competitive", description: "Serious play" },
+        ]);
+        return skillsMock;
       }
       // Default mock for other tables
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            then: vi.fn().mockResolvedValue({
-              data: [],
-              error: null,
-            }),
-          }),
-        }),
-      };
+      return createMockQueryBuilder([]);
     });
   });
 
@@ -350,7 +318,6 @@ describe("LeagueDetailPage", () => {
       const spotsBadge = availabilitySection?.querySelector(
         'span[class*="rounded-full"]',
       );
-      console.log("Spots badge text:", spotsBadge?.textContent);
 
       // Should show 12 spots left since we mocked 0 teams
       expect(spotsBadge?.textContent).toBe("12 spots left");
@@ -464,62 +431,61 @@ describe("LeagueDetailPage", () => {
     mockFetchLeagueById.mockResolvedValue(fullLeague);
 
     // Override the teams mock for this test
-    mockSupabase.from.mockImplementation((table) => {
-      if (table === "teams") {
-        // Create a chainable mock that returns 12 teams (full)
-        const teamsMock = {
+    mockSupabase.from.mockImplementation((table: string) => {
+      const createMockQueryBuilder = (defaultData: unknown[] = []) => {
+        const queryResult = Promise.resolve({
+          data: defaultData,
+          error: null,
+        });
+
+        return {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
-          maybeSingle: vi
-            .fn()
-            .mockResolvedValue({ data: { id: 1 }, error: null }),
-          then: vi.fn().mockResolvedValue({
-            data: Array(12)
-              .fill({})
-              .map((_, i) => ({ id: i + 1 })), // 12 teams = full
+          insert: vi.fn().mockReturnThis(),
+          update: vi.fn().mockReturnThis(),
+          upsert: vi.fn().mockReturnThis(),
+          delete: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          range: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: defaultData[0] || null,
             error: null,
           }),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          neq: vi.fn().mockReturnThis(),
+          gt: vi.fn().mockReturnThis(),
+          gte: vi.fn().mockReturnThis(),
+          lt: vi.fn().mockReturnThis(),
+          lte: vi.fn().mockReturnThis(),
+          like: vi.fn().mockReturnThis(),
+          ilike: vi.fn().mockReturnThis(),
+          is: vi.fn().mockReturnThis(),
+          filter: vi.fn().mockReturnThis(),
+          match: vi.fn().mockReturnThis(),
+          not: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(),
+          textSearch: vi.fn().mockReturnThis(),
+          throwOnError: vi.fn().mockReturnThis(),
+          contains: vi.fn().mockReturnThis(),
+          containedBy: vi.fn().mockReturnThis(),
+          // Make the mock thenable so it can be awaited
+          then: queryResult.then.bind(queryResult),
+          catch: queryResult.catch.bind(queryResult),
+          finally: queryResult.finally.bind(queryResult),
         };
-
-        teamsMock.select.mockReturnValue(teamsMock);
-        teamsMock.eq.mockReturnValue(teamsMock);
-
-        return teamsMock;
-      } else if (table === "gyms") {
-        return {
-          select: vi.fn().mockReturnValue({
-            in: vi.fn().mockReturnValue({
-              then: vi.fn().mockResolvedValue({
-                data: [],
-                error: null,
-              }),
-            }),
-          }),
-        };
-      } else if (table === "stripe_products") {
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
-                data: null,
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            then: vi.fn().mockResolvedValue({
-              data: [],
-              error: null,
-            }),
-          }),
-        }),
       };
+
+      if (table === "teams") {
+        // Create a chainable mock that returns 12 teams (full)
+        const fullTeamsData = Array(12).fill({}).map((_, i) => ({ id: i + 1 }));
+        const teamsMock = createMockQueryBuilder(fullTeamsData);
+        teamsMock.maybeSingle.mockResolvedValue({ data: { id: 1 }, error: null });
+        return teamsMock;
+      }
+      
+      return createMockQueryBuilder([]);
     });
 
     render(<LeagueDetailPage />);

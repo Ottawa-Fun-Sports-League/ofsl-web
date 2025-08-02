@@ -2,7 +2,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { LeaguesListView } from './LeaguesListView';
-import { LeagueWithTeamCount } from '../types';
+import { LeagueWithTeamCount, Gym } from '../types';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -24,10 +24,15 @@ vi.mock('../../../../../lib/leagues', () => ({
     return `${startDate} - ${endDate}`;
   }),
   getGymNamesByLocation: vi.fn(() => []),
-  getPrimaryLocation: vi.fn((gyms) => {
+  getPrimaryLocation: vi.fn((gyms: Gym[]) => {
     if (!gyms || gyms.length === 0) return [];
-    const locations = [...new Set(gyms.map(g => g.location))];
-    return locations;
+    const allLocations = new Set<string>();
+    gyms.forEach((gym) => {
+      if (gym.locations && gym.locations.length > 0) {
+        gym.locations.forEach((location: string) => allLocations.add(location));
+      }
+    });
+    return Array.from(allLocations);
   }),
 }));
 
@@ -35,31 +40,63 @@ const mockLeagues: LeagueWithTeamCount[] = [
   {
     id: 1,
     name: 'Summer Volleyball League',
+    description: 'Summer volleyball league',
+    additional_info: null,
+    location: 'Ottawa',
+    league_type: 'regular_season',
+    gender: 'Mixed',
+    sport_id: 1,
+    skill_id: 1,
+    skill_ids: [1],
     sport_name: 'Volleyball',
+    skill_name: 'Intermediate',
+    skill_names: ['Intermediate'],
     day_of_week: 1,
     start_date: '2024-06-01',
+    year: '2024',
     end_date: '2024-08-31',
     cost: 750,
+    max_teams: 10,
+    gym_ids: [1, 2],
+    active: true,
+    hide_day: false,
+    payment_due_date: '2024-05-15',
+    created_at: '2024-01-01T00:00:00Z',
     spots_remaining: 5,
     team_count: 8,
     gyms: [
-      { id: 1, name: 'Sandy Hill Community Centre', location: 'Central' },
-      { id: 2, name: 'Rideau Sports Centre', location: 'East' }
+      { id: 1, gym: 'Sandy Hill Community Centre', address: '123 Street', locations: ['Central'] },
+      { id: 2, gym: 'Rideau Sports Centre', address: '456 Avenue', locations: ['East'] }
     ],
-    hide_day: false,
   },
   {
     id: 2,
     name: 'Fall Badminton League',
+    description: 'Fall badminton league',
+    additional_info: null,
+    location: 'Ottawa',
+    league_type: 'regular_season',
+    gender: 'Mixed',
+    sport_id: 2,
+    skill_id: 2,
+    skill_ids: [2],
     sport_name: 'Badminton',
+    skill_name: 'Beginner',
+    skill_names: ['Beginner'],
     day_of_week: 3,
     start_date: '2024-09-01',
+    year: '2024',
     end_date: '2024-11-30',
     cost: 120,
+    max_teams: 16,
+    gym_ids: [],
+    active: true,
+    hide_day: false,
+    payment_due_date: '2024-08-15',
+    created_at: '2024-01-01T00:00:00Z',
     spots_remaining: 0,
     team_count: 16,
     gyms: [],
-    hide_day: false,
   },
 ];
 

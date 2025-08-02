@@ -166,7 +166,7 @@ describe('Improved League Teams Table View', () => {
       skill_name: 'Intermediate',
       roster_count: 8,
       created_at: '2024-01-15T10:00:00Z',
-      payment_status: 'paid',
+      payment_status: 'paid' as const,
       amount_due: 300,
       amount_paid: 300
     },
@@ -177,7 +177,7 @@ describe('Improved League Teams Table View', () => {
       skill_name: 'Advanced',
       roster_count: 6,
       created_at: '2024-01-16T14:00:00Z',
-      payment_status: 'partial',
+      payment_status: 'partial' as const,
       amount_due: 300,
       amount_paid: 150
     },
@@ -188,7 +188,7 @@ describe('Improved League Teams Table View', () => {
       skill_name: 'Beginner',
       roster_count: 5,
       created_at: '2024-01-17T09:00:00Z',
-      payment_status: 'pending',
+      payment_status: 'pending' as const,
       amount_due: 300,
       amount_paid: 0
     }

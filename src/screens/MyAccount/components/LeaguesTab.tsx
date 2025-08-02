@@ -156,7 +156,10 @@ export function LeaguesTab() {
 
       {/* View Toggle */}
       <div className="flex justify-between items-center">
-        <ViewToggle view={viewMode} onViewChange={setViewMode} />
+        <ViewToggle 
+          view={viewMode as 'card' | 'list'} 
+          onViewChange={(view) => setViewMode(view)} 
+        />
         <div className="text-sm text-gray-600">
           {filteredLeagues.length} {filteredLeagues.length === 1 ? 'league' : 'leagues'} found
         </div>
