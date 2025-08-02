@@ -7,8 +7,6 @@ import { mockSupabase } from '../../test/mocks/supabase-enhanced';
 import { useAuth } from '../../contexts/AuthContext';
 import type { UserSportsSkill } from '../../types/auth';
 
-// Type for mocked window.location
-type MockLocation = Location & { href: string };
 
 // Mock auth context
 vi.mock('../../contexts/AuthContext', () => ({
@@ -189,7 +187,7 @@ describe('ProfileCompletionPage', () => {
     // Mock window.location.href
     const originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: '' } as MockLocation;
+    (window as { location: Location }).location = { ...originalLocation, href: '' };
     
     // Mock the refreshUserProfile function
     const mockRefreshUserProfile = vi.fn();
@@ -348,7 +346,7 @@ describe('ProfileCompletionPage', () => {
     // Mock window.location.href
     const originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: '' } as MockLocation;
+    (window as { location: Location }).location = { ...originalLocation, href: '' };
     
     render(<ProfileCompletionPage />);
     
@@ -382,7 +380,7 @@ describe('ProfileCompletionPage', () => {
     // Mock window.location.href
     const originalLocation = window.location;
     delete (window as { location?: Location }).location;
-    window.location = { ...originalLocation, href: '' } as MockLocation;
+    (window as { location: Location }).location = { ...originalLocation, href: '' };
     
     render(<ProfileCompletionPage />);
     

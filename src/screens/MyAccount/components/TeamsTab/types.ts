@@ -23,4 +23,9 @@ export interface Team {
   captain_id: string;
   roster: string[];
   active: boolean;
+  payment?: {
+    id: number;
+    amount_due: number;
+    amount_paid: number;
+  };
 }

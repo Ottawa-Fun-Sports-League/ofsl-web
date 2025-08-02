@@ -183,7 +183,10 @@ export const customRender = (
   mockSupabase.auth.onAuthStateChange.mockImplementation((callback) => {
     // Immediately call the callback with the current auth state
     if (callback) {
-      callback(user ? 'SIGNED_IN' : 'SIGNED_OUT', user ? { user } : null);
+      // Use setTimeout to ensure this runs after component mount
+      setTimeout(() => {
+        callback(user ? 'SIGNED_IN' : 'SIGNED_OUT', user ? { user } : null);
+      }, 0);
     }
     return {
       data: { 

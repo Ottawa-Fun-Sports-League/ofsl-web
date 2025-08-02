@@ -20,6 +20,24 @@ vi.mock('../../contexts/AuthContext', () => ({
 }));
 
 describe('LoginPage', () => {
+  const createMockAuthContext = (overrides: Partial<ReturnType<typeof useAuth>> = {}): ReturnType<typeof useAuth> => ({
+    user: null,
+    session: null,
+    loading: false,
+    profileComplete: false,
+    userProfile: null,
+    refreshUserProfile: vi.fn(),
+    signIn: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    checkProfileCompletion: vi.fn(),
+    emailVerified: false,
+    isNewUser: false,
+    setIsNewUser: vi.fn(),
+    ...overrides,
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -56,15 +74,9 @@ describe('LoginPage', () => {
   it('validates required fields', async () => {
     const user = userEvent.setup();
     const mockSignIn = vi.fn();
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      loading: false,
-      profileComplete: false,
-      userProfile: null,
-      refreshUserProfile: vi.fn(),
+    vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
       signIn: mockSignIn,
-      signInWithGoogle: vi.fn(),
-    } as ReturnType<typeof useAuth>);
+    }));
     
     render(<LoginPage />);
     
@@ -79,15 +91,9 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     const mockSignIn = vi.fn().mockResolvedValue({ error: null });
     
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      loading: false,
-      profileComplete: false,
-      userProfile: null,
-      refreshUserProfile: vi.fn(),
+    vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
       signIn: mockSignIn,
-      signInWithGoogle: vi.fn(),
-    } as ReturnType<typeof useAuth>);
+    }));
     
     render(<LoginPage />);
     
@@ -110,15 +116,9 @@ describe('LoginPage', () => {
       error: { message: 'Invalid credentials' } 
     });
     
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      loading: false,
-      profileComplete: false,
-      userProfile: null,
-      refreshUserProfile: vi.fn(),
+    vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
       signIn: mockSignIn,
-      signInWithGoogle: vi.fn(),
-    } as ReturnType<typeof useAuth>);
+    }));
     
     render(<LoginPage />);
     
@@ -169,15 +169,9 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     const mockSignInWithGoogle = vi.fn().mockResolvedValue({ error: null });
     
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      loading: false,
-      profileComplete: false,
-      userProfile: null,
-      refreshUserProfile: vi.fn(),
-      signIn: vi.fn(),
+    vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
       signInWithGoogle: mockSignInWithGoogle,
-    } as ReturnType<typeof useAuth>);
+    }));
     
     render(<LoginPage />);
     
@@ -191,15 +185,9 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     const mockSignIn = vi.fn().mockImplementation(() => new Promise(() => {})); // Never resolves
     
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      loading: false,
-      profileComplete: false,
-      userProfile: null,
-      refreshUserProfile: vi.fn(),
+    vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
       signIn: mockSignIn,
-      signInWithGoogle: vi.fn(),
-    } as ReturnType<typeof useAuth>);
+    }));
     
     render(<LoginPage />);
     

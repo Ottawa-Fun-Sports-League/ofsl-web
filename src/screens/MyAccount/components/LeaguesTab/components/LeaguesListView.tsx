@@ -63,8 +63,8 @@ export function LeaguesListView({ leagues, onDelete, onCopy }: LeaguesListViewPr
           bValue = b.name.toLowerCase();
           break;
         case 'start_date':
-          aValue = new Date(a.start_date).getTime();
-          bValue = new Date(b.start_date).getTime();
+          aValue = a.start_date ? new Date(a.start_date).getTime() : 0;
+          bValue = b.start_date ? new Date(b.start_date).getTime() : 0;
           break;
         case 'spots_remaining':
           aValue = a.spots_remaining;

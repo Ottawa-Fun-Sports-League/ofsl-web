@@ -3,11 +3,10 @@ import { MapPin } from 'lucide-react';
 import { TeamActions } from './TeamActions';
 import { TeamInfo } from './TeamInfo';
 import { PaymentStatusSection } from './PaymentStatusSection';
+import { Team } from '../types';
 
-type Team = {
-    id: number;
-    name: string;
-    captain_id: string;
+// Extended Team type for this component with additional properties
+type ExtendedTeam = Team & {
     captain_name: string | null;
     league_id: number;
     league?: {
@@ -20,26 +19,22 @@ type Team = {
         name: string;
       } | null;
     } | null;
-    skill?: {
-      name: string;
-    } | null;
     payment?: {
       id: number;
       amount_due: number;
       amount_paid: number;
       status: string;
       due_date?: string;
-    };
-    roster: string[];
+    } | null;
 };
 
 interface TeamCardProps {
-  team: Team;
+  team: ExtendedTeam;
   currentUserId: string;
-  onManageTeam: (team: Team) => void;
+  onManageTeam: (team: ExtendedTeam) => void;
   onPayNow?: (paymentId: number) => void;
-  showDeleteTeamConfirmation: (team: Team) => void;
-  showLeaveTeamConfirmation: (team: Team) => void;
+  showDeleteTeamConfirmation: (team: ExtendedTeam) => void;
+  showLeaveTeamConfirmation: (team: ExtendedTeam) => void;
   deletingTeam: number | null;
   unregisteringPayment: number | null;
 }

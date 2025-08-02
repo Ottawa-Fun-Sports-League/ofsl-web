@@ -59,6 +59,7 @@ describe('LeagueInfo', () => {
     created_at: '2024-01-01T00:00:00Z',
     sport_name: 'Volleyball',
     skill_name: 'Intermediate',
+    payment_due_date: '2024-01-15',
     gyms: [
       {
         id: 1,

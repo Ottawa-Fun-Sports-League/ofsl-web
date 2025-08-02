@@ -191,8 +191,11 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
           .eq('active', false)
           .order('created_at', { ascending: false });
           
-        activeResult = activeResultFallback;
-        waitlistResult = waitlistResultFallback;
+        // Cast to the expected type for consistency  
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        activeResult = activeResultFallback as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        waitlistResult = waitlistResultFallback as any;
       }
 
       if (activeResult.error) throw activeResult.error;

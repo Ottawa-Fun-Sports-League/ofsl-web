@@ -98,7 +98,7 @@ describe('VolleyballPage', () => {
       "Monday Mixed League",
       "Tuesday Mixed League",
       "Wednesday Mixed League",
-      "Thursday Mixed League"
+      "Thursday Elite/Comp/Adv League"
     ];
     
     expectedLeagues.forEach(leagueName => {

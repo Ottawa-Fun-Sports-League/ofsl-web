@@ -16,25 +16,37 @@ describe('LeagueStandings', () => {
       id: 1,
       name: 'Team Alpha',
       captain_name: 'John Doe',
+      roster_size: 6,
       wins: 0,
       losses: 0,
-      points: 0
+      points: 0,
+      differential: 0,
+      created_at: '2024-01-01T00:00:00Z',
+      captain_id: 'captain-1'
     },
     {
       id: 2,
       name: 'Team Beta',
       captain_name: 'Jane Smith',
+      roster_size: 6,
       wins: 0,
       losses: 0,
-      points: 0
+      points: 0,
+      differential: 0,
+      created_at: '2024-01-01T00:00:00Z',
+      captain_id: 'captain-2'
     },
     {
       id: 3,
       name: 'Team Gamma',
       captain_name: null, // Hidden captain
+      roster_size: 6,
       wins: 0,
       losses: 0,
-      points: 0
+      points: 0,
+      differential: 0,
+      created_at: '2024-01-01T00:00:00Z',
+      captain_id: 'captain-3'
     }
   ];
 
@@ -46,7 +58,8 @@ describe('LeagueStandings', () => {
     mockUseLeagueStandings.mockReturnValue({
       teams: [],
       loading: true,
-      error: null
+      error: null,
+      refetch: vi.fn()
     });
 
     render(<LeagueStandings leagueId="1" />);
@@ -61,7 +74,8 @@ describe('LeagueStandings', () => {
     mockUseLeagueStandings.mockReturnValue({
       teams: [],
       loading: false,
-      error: 'Failed to load standings'
+      error: 'Failed to load standings',
+      refetch: vi.fn()
     });
 
     render(<LeagueStandings leagueId="1" />);
@@ -74,7 +88,8 @@ describe('LeagueStandings', () => {
     mockUseLeagueStandings.mockReturnValue({
       teams: [],
       loading: false,
-      error: null
+      error: null,
+      refetch: vi.fn()
     });
 
     render(<LeagueStandings leagueId="1" />);
@@ -88,7 +103,8 @@ describe('LeagueStandings', () => {
     mockUseLeagueStandings.mockReturnValue({
       teams: mockTeams,
       loading: false,
-      error: null
+      error: null,
+      refetch: vi.fn()
     });
 
     render(<LeagueStandings leagueId="1" />);
@@ -120,7 +136,8 @@ describe('LeagueStandings', () => {
     mockUseLeagueStandings.mockReturnValue({
       teams: mockTeams,
       loading: false,
-      error: null
+      error: null,
+      refetch: vi.fn()
     });
 
     render(<LeagueStandings leagueId="1" />);
@@ -134,7 +151,8 @@ describe('LeagueStandings', () => {
     mockUseLeagueStandings.mockReturnValue({
       teams: mockTeams,
       loading: false,
-      error: null
+      error: null,
+      refetch: vi.fn()
     });
 
     const { container } = render(<LeagueStandings leagueId="1" />);
@@ -150,7 +168,8 @@ describe('LeagueStandings', () => {
     mockUseLeagueStandings.mockReturnValue({
       teams: [],
       loading: false,
-      error: null
+      error: null,
+      refetch: vi.fn()
     });
 
     render(<LeagueStandings leagueId={undefined} />);

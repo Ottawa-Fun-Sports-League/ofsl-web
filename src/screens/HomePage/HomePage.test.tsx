@@ -57,7 +57,7 @@ describe('HomePage', () => {
           }),
         }),
       }),
-    } as ReturnType<typeof supabase.from>);
+    } as unknown as ReturnType<typeof supabase.from>);
   });
 
   it('renders hero section with all elements', async () => {
@@ -163,8 +163,8 @@ describe('HomePage', () => {
   it('has correct links on league cards', () => {
     render(<HomePage />);
     
-    // Check that league cards have correct href attributes
+    // Check that league cards have correct href attributes with all filters
     const leagueCard = screen.getByText("Women's Elite Volleyball").closest('a');
-    expect(leagueCard).toHaveAttribute('href', '/leagues?sport=Volleyball');
+    expect(leagueCard).toHaveAttribute('href', '/leagues?sport=Volleyball&level=Elite&gender=Female');
   });
 });

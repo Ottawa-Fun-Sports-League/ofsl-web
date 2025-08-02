@@ -1,26 +1,37 @@
 import { Button } from '../../../../../components/ui/button';
 import { DollarSign, Users } from 'lucide-react';
+import { Team } from '../types';
 
-type Team = {
-  id: number;
-  captain_id: string;
+// Use the same ExtendedTeam type as TeamCard
+type ExtendedTeam = Team & {
+  captain_name: string | null;
+  league_id: number;
+  league?: {
+    id: number;
+    name: string;
+    day_of_week: number | null;
+    cost: number | null;
+    location: string | null;
+    sports?: {
+      name: string;
+    } | null;
+  } | null;
   payment?: {
     id: number;
     amount_due: number;
     amount_paid: number;
-  };
-  league?: {
-    cost: number | null;
-  };
+    status: string;
+    due_date?: string;
+  } | null;
 };
 
 interface TeamActionsProps {
-  team: Team;
+  team: ExtendedTeam;
   isCaptain: boolean;
-  onManageTeam: (team: Team) => void;
-  onPayNow?: (team: Team) => void;
-  showDeleteTeamConfirmation: (team: Team) => void;
-  showLeaveTeamConfirmation: (team: Team) => void;
+  onManageTeam: (team: ExtendedTeam) => void;
+  onPayNow?: () => void;
+  showDeleteTeamConfirmation: (team: ExtendedTeam) => void;
+  showLeaveTeamConfirmation: (team: ExtendedTeam) => void;
   deletingTeam: number | null;
   unregisteringPayment: number | null;
 }
@@ -41,7 +52,7 @@ export function TeamActions({
 
   const handlePayNow = () => {
     if (onPayNow) {
-      onPayNow(team);
+      onPayNow();
     }
   };
 
