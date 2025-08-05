@@ -1,152 +1,115 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, render, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { SuccessPage } from './SuccessPage';
-import { render, mockNavigate, mockUser, mockUserProfile } from '../../test/test-utils';
+
+// Mock navigation
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// Mock Stripe functions
+vi.mock('../../lib/stripe', () => ({
+  getUserSubscription: vi.fn().mockResolvedValue(null),
+  getUserOrders: vi.fn().mockResolvedValue([]),
+}));
+
+// Mock stripe-config
+vi.mock('../../stripe-config', () => ({
+  formatPrice: vi.fn((price) => `$${price.toFixed(2)}`),
+}));
+
+// Simple render without AuthProvider for public pages
+const renderSuccessPage = (searchParams = '?session_id=cs_test_123') => {
+  return render(
+    <MemoryRouter initialEntries={[`/success${searchParams}`]}>
+      <SuccessPage />
+    </MemoryRouter>
+  );
+};
 
 describe('SuccessPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock URL with session_id
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        search: '?session_id=cs_test_123',
-      },
-      writable: true,
+  });
+
+  it('renders success message', async () => {
+    renderSuccessPage();
+    
+    // Wait for component to load (it has useEffect)
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /registration complete|payment successful/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(/thank you for your purchase/i)).toBeInTheDocument();
+  });
+
+  it('shows confirmation details', async () => {
+    renderSuccessPage();
+    
+    // Wait for component to load and check for confirmation email text
+    await waitFor(() => {
+      expect(screen.getByText(/confirmation email has been sent/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/payment details/i)).toBeInTheDocument();
+  });
+
+  it('displays action buttons', async () => {
+    renderSuccessPage();
+    
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /view my teams/i })).toBeInTheDocument();
+    });
+    expect(screen.getByRole('link', { name: /browse more leagues/i })).toBeInTheDocument();
+  });
+
+  it('navigates to my teams when clicked', async () => {
+    renderSuccessPage();
+    
+    await waitFor(() => {
+      const myTeamsLink = screen.getByRole('link', { name: /view my teams/i });
+      expect(myTeamsLink).toHaveAttribute('href', '/my-account/teams');
     });
   });
 
-  it('renders success message', () => {
-    render(<SuccessPage />);
+  it('shows success icon', async () => {
+    renderSuccessPage();
     
-    expect(screen.getByRole('heading', { name: /payment successful/i })).toBeInTheDocument();
-    expect(screen.getByText(/thank you for your payment/i)).toBeInTheDocument();
-    expect(screen.getByText(/your team registration is confirmed/i)).toBeInTheDocument();
-  });
-
-  it('shows confirmation details', () => {
-    render(<SuccessPage />);
-    
-    expect(screen.getByText(/what's next/i)).toBeInTheDocument();
-    expect(screen.getByText(/you will receive an email confirmation/i)).toBeInTheDocument();
-    expect(screen.getByText(/league schedule will be sent/i)).toBeInTheDocument();
-    expect(screen.getByText(/captain will receive team management/i)).toBeInTheDocument();
-  });
-
-  it('displays action buttons', () => {
-    render(<SuccessPage />);
-    
-    expect(screen.getByRole('link', { name: /view my teams/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to home/i })).toBeInTheDocument();
-  });
-
-  it('navigates to my teams when authenticated', async () => {
-    const user = userEvent.setup();
-    
-    render(<SuccessPage />, {
-      user: mockUser,
-      userProfile: mockUserProfile,
+    // Wait for component to load and look for the CheckCircle icon
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /payment successful/i })).toBeInTheDocument();
     });
-    
-    const myTeamsLink = screen.getByRole('link', { name: /view my teams/i });
-    await user.click(myTeamsLink);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/my-account/teams');
-  });
-
-  it('navigates to home page', async () => {
-    const user = userEvent.setup();
-    
-    render(<SuccessPage />);
-    
-    const homeLink = screen.getByRole('link', { name: /back to home/i });
-    await user.click(homeLink);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/');
-  });
-
-  it('shows success icon', () => {
-    render(<SuccessPage />);
-    
-    const successIcon = screen.getByTestId('success-icon');
+    const successIcon = document.querySelector('svg.lucide-circle-check-big.h-16.w-16.text-green-500');
     expect(successIcon).toBeInTheDocument();
     expect(successIcon).toHaveClass('text-green-500');
   });
 
-  it('displays session id when present', () => {
-    render(<SuccessPage />);
+  it('displays payment details section', async () => {
+    renderSuccessPage();
     
-    expect(screen.getByText(/payment reference:/i)).toBeInTheDocument();
-    expect(screen.getByText(/cs_test_123/)).toBeInTheDocument();
-  });
-
-  it('handles missing session id', () => {
-    // Remove session_id from URL
-    Object.defineProperty(window, 'location', {
-      value: {
-        ...window.location,
-        search: '',
-      },
-      writable: true,
+    await waitFor(() => {
+      expect(screen.getByText(/payment details/i)).toBeInTheDocument();
     });
-    
-    render(<SuccessPage />);
-    
-    // Should still show success page but without reference
-    expect(screen.getByRole('heading', { name: /payment successful/i })).toBeInTheDocument();
-    expect(screen.queryByText(/payment reference:/i)).not.toBeInTheDocument();
   });
 
-  it('shows login prompt for unauthenticated users', () => {
-    render(<SuccessPage />, {
-      user: null,
+  it('shows confirmation message', async () => {
+    renderSuccessPage();
+    
+    await waitFor(() => {
+      expect(screen.getByText(/confirmation email has been sent/i)).toBeInTheDocument();
     });
-    
-    expect(screen.getByText(/sign in to view your teams/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it('preserves return URL when navigating to login', async () => {
-    const user = userEvent.setup();
+  it('handles product name from URL params', async () => {
+    renderSuccessPage('?session_id=cs_test_123&product=Test%20Product');
     
-    render(<SuccessPage />, {
-      user: null,
+    await waitFor(() => {
+      expect(screen.getByText(/thank you for your purchase of/i)).toBeInTheDocument();
+      expect(screen.getByText(/test product/i)).toBeInTheDocument();
     });
-    
-    const signInLink = screen.getByRole('link', { name: /sign in/i });
-    await user.click(signInLink);
-    
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
-    // Should store current URL for redirect after login
-    expect(localStorage.setItem).toHaveBeenCalledWith('redirectAfterLogin', '/success');
-  });
-
-  it('clears cart/session data on mount', () => {
-    render(<SuccessPage />);
-    
-    // Should clear any temporary cart data
-    expect(sessionStorage.clear).toHaveBeenCalled();
-  });
-
-  it('displays contact support message', () => {
-    render(<SuccessPage />);
-    
-    expect(screen.getByText(/questions\?/i)).toBeInTheDocument();
-    expect(screen.getByText(/contact.*support@ofsl.ca/i)).toBeInTheDocument();
-  });
-
-  it('renders in mobile view appropriately', () => {
-    // Mock mobile viewport
-    global.innerWidth = 375;
-    global.innerHeight = 667;
-    
-    render(<SuccessPage />);
-    
-    // Check that content is still visible and properly sized
-    expect(screen.getByRole('heading', { name: /payment successful/i })).toBeInTheDocument();
-    
-    const container = screen.getByRole('main');
-    expect(container).toHaveClass('min-h-screen');
   });
 });

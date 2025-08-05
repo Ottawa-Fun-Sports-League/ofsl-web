@@ -58,6 +58,7 @@ describe('LeagueEditPage Integration Tests', () => {
     cost: 100,
     max_teams: 20,
     gym_ids: [1, 2],
+    payment_due_date: '2025-01-15',
     active: true,
     created_at: '2024-01-01',
     year: '2025',
@@ -80,7 +81,15 @@ describe('LeagueEditPage Integration Tests', () => {
     
     // Mock auth context
     vi.mocked(useAuth).mockReturnValue({
-      userProfile: { id: '123', is_admin: true },
+      userProfile: { 
+        id: '123', 
+        is_admin: true,
+        email: 'test@test.com',
+        name: 'Test User',
+        phone: '123-456-7890',
+        skill_id: 1,
+        team_ids: []
+      },
       user: null,
       session: null,
       loading: false,
@@ -262,8 +271,29 @@ describe('LeagueEditPage Integration Tests', () => {
   it('should redirect non-admin users', async () => {
     // Mock non-admin user
     vi.mocked(useAuth).mockReturnValue({
-      userProfile: { id: '123', is_admin: false },
-    } as unknown as ReturnType<typeof supabase.from>);
+      userProfile: { 
+        id: '123', 
+        is_admin: false, 
+        email: 'test@test.com',
+        name: 'Test User',
+        phone: null,
+        skill_id: null,
+        team_ids: null
+      },
+      user: null,
+      session: null,
+      loading: false,
+      profileComplete: false,
+      refreshUserProfile: vi.fn(),
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      checkProfileCompletion: vi.fn(),
+      emailVerified: false,
+      isNewUser: false,
+      setIsNewUser: vi.fn(),
+    } as ReturnType<typeof useAuth>);
 
     renderComponent();
 

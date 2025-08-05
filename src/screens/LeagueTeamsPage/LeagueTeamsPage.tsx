@@ -233,7 +233,7 @@ export function LeagueTeamsPage() {
         dragSupported = false;
         
         // Fallback to created_at ordering
-        activeResult = await supabase
+        activeResult = (await supabase
           .from('teams')
           .select(`
             id,
@@ -248,9 +248,10 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', true)
-          .order('created_at', { ascending: false }) as unknown as { data: ExtendedTeam[] | null; error: Error | null };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .order('created_at', { ascending: false })) as any;
 
-        waitlistResult = await supabase
+        waitlistResult = (await supabase
           .from('teams')
           .select(`
             id,
@@ -265,19 +266,22 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', false)
-          .order('created_at', { ascending: false }) as unknown as { data: ExtendedTeam[] | null; error: Error | null };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .order('created_at', { ascending: false })) as any;
       }
 
       if (activeResult.error) throw activeResult.error;
       if (waitlistResult.error) throw waitlistResult.error;
 
-      const activeData = (activeResult as { data: ExtendedTeam[] | null }).data || [];
-      activeTeamsData = activeData.map((team: ExtendedTeam) => ({
+      const activeData = activeResult.data || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      activeTeamsData = activeData.map((team: any) => ({
         ...team,
         display_order: team.display_order || 0
       }));
-      const waitlistData = (waitlistResult as { data: ExtendedTeam[] | null }).data || [];
-      waitlistedTeamsData = waitlistData.map((team: ExtendedTeam) => ({
+      const waitlistData = waitlistResult.data || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      waitlistedTeamsData = waitlistData.map((team: any) => ({
         ...team,
         display_order: team.display_order || 0
       }));

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getUserLeaguePayments, getUserPaymentSummary } from './payments';
 import { supabase } from './supabase';
+import type { AuthError } from '@supabase/supabase-js';
 
 // Mock the supabase client
 vi.mock('./supabase', () => ({
@@ -153,7 +154,7 @@ describe('payments', () => {
     it('should handle errors gracefully', async () => {
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: null },
-        error: null
+        error: { message: 'No user' } as AuthError
       });
 
       const result = await getUserLeaguePayments();
@@ -197,7 +198,7 @@ describe('payments', () => {
     it('should return zeros when no user is authenticated', async () => {
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
         data: { user: null },
-        error: null
+        error: { message: 'No user' } as AuthError
       });
 
       const result = await getUserPaymentSummary();
