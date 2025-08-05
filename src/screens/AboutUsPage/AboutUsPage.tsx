@@ -381,7 +381,7 @@ export const AboutUsPage = (): React.ReactElement => {
               disease and avoid long-term complications with comprehensive
               resources, education, and support.{" "}
               <a
-                href="https://www.diabetes.ca/takeaction"
+                href="https://www.diabetes.ca"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#B20000] underline"

@@ -284,7 +284,7 @@ export const HomePage = (): React.ReactElement => {
                 lifestyles through sport and community wellness.
               </span>
               <a
-                href="https://www.diabetes.ca/takeaction"
+                href="https://www.diabetes.ca"
                 className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold"
               >
                 Learn more
