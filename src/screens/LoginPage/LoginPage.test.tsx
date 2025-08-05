@@ -106,7 +106,7 @@ describe('LoginPage', () => {
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123');
+      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123', undefined);
     });
   });
 

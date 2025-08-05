@@ -59,8 +59,9 @@ export function LoginPage() {
       return;
     }
 
-    // Check for Turnstile token
-    if (!turnstileToken) {
+    // Check for Turnstile token only if Turnstile is configured
+    const turnstileConfigured = !!import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (turnstileConfigured && !turnstileToken) {
       setError("Please complete the security verification");
       return;
     }
@@ -70,7 +71,7 @@ export function LoginPage() {
     setLoading(true);
     
     try {
-      const { error } = await signIn(email.trim(), password, turnstileToken);
+      const { error } = await signIn(email.trim(), password, turnstileToken || undefined);
       
       if (error) {
         logger.error('Sign in error', error);
@@ -258,7 +259,7 @@ export function LoginPage() {
             <Button
               type="submit"
               className="w-full h-12 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] font-medium text-base"
-              disabled={loading || googleLoading || !turnstileToken}
+              disabled={loading || googleLoading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}
             >
               {loading ? "Logging in..." : "Login"}
             </Button>

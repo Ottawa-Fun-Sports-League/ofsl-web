@@ -479,12 +479,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, turnstileToken?: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: turnstileToken ? {
+          captchaToken: turnstileToken
+        } : undefined
       });
 
       if (error) {
