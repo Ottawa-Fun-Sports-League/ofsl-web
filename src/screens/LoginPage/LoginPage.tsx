@@ -7,6 +7,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { logger } from "../../lib/logger";
 import { analyticsEvents } from "../../hooks/useGoogleAnalytics";
+import { Turnstile } from "../../components/ui/turnstile";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const { signIn, signInWithGoogle, user } = useAuth();
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -57,12 +59,18 @@ export function LoginPage() {
       return;
     }
 
+    // Check for Turnstile token
+    if (!turnstileToken) {
+      setError("Please complete the security verification");
+      return;
+    }
+
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
     
     try {
-      const { error } = await signIn(email.trim(), password);
+      const { error } = await signIn(email.trim(), password, turnstileToken);
       
       if (error) {
         logger.error('Sign in error', error);
@@ -232,10 +240,25 @@ export function LoginPage() {
                 </button>
               </div>
             </div>
+            
+            {/* Turnstile widget */}
+            <div className="flex justify-center">
+              <Turnstile 
+                onVerify={(token) => setTurnstileToken(token)}
+                onError={() => {
+                  setError("Security verification failed. Please try again.");
+                  setTurnstileToken(null);
+                }}
+                onExpire={() => {
+                  setTurnstileToken(null);
+                }}
+              />
+            </div>
+            
             <Button
               type="submit"
               className="w-full h-12 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] font-medium text-base"
-              disabled={loading || googleLoading}
+              disabled={loading || googleLoading || !turnstileToken}
             >
               {loading ? "Logging in..." : "Login"}
             </Button>

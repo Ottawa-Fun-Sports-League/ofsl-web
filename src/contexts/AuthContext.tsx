@@ -21,6 +21,7 @@ interface AuthContextType {
   signIn: (
     email: string,
     password: string,
+    captchaToken?: string,
   ) => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
   signUp: (

@@ -8,6 +8,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import { logger } from "../../lib/logger";
 import { analyticsEvents } from "../../hooks/useGoogleAnalytics";
+import { Turnstile } from "../../components/ui/turnstile";
 
 export function SignupPage() {
   const [name, setName] = useState("");
@@ -21,6 +22,7 @@ export function SignupPage() {
   const [emailChecking, setEmailChecking] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signInWithGoogle, setIsNewUser } = useAuth();
 
@@ -69,6 +71,12 @@ export function SignupPage() {
       return;
     }
     
+    // Check for Turnstile token
+    if (!turnstileToken) {
+      setError("Please complete the security verification");
+      return;
+    }
+    
     setError(null);
     setLoading(true);
     
@@ -81,7 +89,8 @@ export function SignupPage() {
           data: {
             full_name: name
           },
-          emailRedirectTo: `${window.location.origin}/#/complete-profile`
+          emailRedirectTo: `${window.location.origin}/#/complete-profile`,
+          captchaToken: turnstileToken
         }
       });
       
@@ -422,10 +431,24 @@ export function SignupPage() {
               </div>
             </div>
             
+            {/* Turnstile widget */}
+            <div className="flex justify-center">
+              <Turnstile 
+                onVerify={(token) => setTurnstileToken(token)}
+                onError={() => {
+                  setError("Security verification failed. Please try again.");
+                  setTurnstileToken(null);
+                }}
+                onExpire={() => {
+                  setTurnstileToken(null);
+                }}
+              />
+            </div>
+            
             <Button
               type="submit"
               className="w-full h-12 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] font-medium text-base"
-              disabled={loading || googleLoading}
+              disabled={loading || googleLoading || !turnstileToken}
             >
               {loading ? (
                 <>
