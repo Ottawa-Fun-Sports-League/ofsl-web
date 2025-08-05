@@ -16,14 +16,13 @@ const statsData = [
 ];
 
 export const AboutUsPage = (): React.ReactElement => {
-
   // Newsletter form state
   const [email, setEmail] = useState("");
   const [interests, setInterests] = useState({
     volleyball: false,
     badminton: false,
     basketball: false,
-    pickleball: false
+    pickleball: false,
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
@@ -32,9 +31,11 @@ export const AboutUsPage = (): React.ReactElement => {
     name: "",
     email: "",
     subject: "",
-    message: ""
+    message: "",
   });
-  const [submitStatus, setSubmitStatus] = useState<null | "success" | "error">(null);
+  const [submitStatus, setSubmitStatus] = useState<null | "success" | "error">(
+    null,
+  );
 
   // FAQ accordion state - commented out section
   // const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -77,25 +78,27 @@ export const AboutUsPage = (): React.ReactElement => {
   // };
 
   // Handle contact form input changes
-  const handleContactInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleContactInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setContactForm(prev => ({
+    setContactForm((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   // Handle contact form submission
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      const { error } = await supabase.functions.invoke('send-contact-email', {
+      const { error } = await supabase.functions.invoke("send-contact-email", {
         body: contactForm,
       });
 
       if (error) {
-        console.error('Supabase function error:', error);
+        console.error("Supabase function error:", error);
         setSubmitStatus("error");
         setTimeout(() => {
           setSubmitStatus(null);
@@ -112,7 +115,7 @@ export const AboutUsPage = (): React.ReactElement => {
             name: "",
             email: "",
             subject: "",
-            message: ""
+            message: "",
           });
           setSubmitStatus(null);
         }, 3000);
@@ -124,7 +127,7 @@ export const AboutUsPage = (): React.ReactElement => {
         }, 5000);
       }
     } catch (error) {
-      console.error('Error sending contact form:', error);
+      console.error("Error sending contact form:", error);
       setSubmitStatus("error");
       // Clear error message after 5 seconds
       setTimeout(() => {
@@ -135,9 +138,9 @@ export const AboutUsPage = (): React.ReactElement => {
 
   // Handle checkbox changes
   const handleInterestChange = (sport: keyof typeof interests) => {
-    setInterests(prev => ({
+    setInterests((prev) => ({
       ...prev,
-      [sport]: !prev[sport]
+      [sport]: !prev[sport],
     }));
   };
 
@@ -151,7 +154,7 @@ export const AboutUsPage = (): React.ReactElement => {
       volleyball: false,
       badminton: false,
       basketball: false,
-      pickleball: false
+      pickleball: false,
     });
     setAgreeToTerms(false);
     // Show confirmation message (in a real app)
@@ -168,7 +171,7 @@ export const AboutUsPage = (): React.ReactElement => {
   useEffect(() => {
     const options = {
       root: null,
-      rootMargin: '0px',
+      rootMargin: "0px",
       threshold: 0.1,
     };
 
@@ -199,30 +202,30 @@ export const AboutUsPage = (): React.ReactElement => {
     const duration = 2000; // ms
     const interval = 16; // ms (approximately 60fps)
     const steps = duration / interval;
-    
+
     let currentStep = 0;
-    const finalValues = statsData.map(stat => stat.value);
-    
+    const finalValues = statsData.map((stat) => stat.value);
+
     const timer = setInterval(() => {
       currentStep++;
       const progress = Math.min(currentStep / steps, 1);
-      
+
       // Easing function for smoother animation
       const easeOutQuad = (t: number) => t * (2 - t);
       const easedProgress = easeOutQuad(progress);
-      
-      const newCounts = finalValues.map(value => 
-        Math.round(easedProgress * value)
+
+      const newCounts = finalValues.map((value) =>
+        Math.round(easedProgress * value),
       );
-      
+
       setCounts(newCounts);
-      
+
       if (currentStep >= steps) {
         clearInterval(timer);
         setCounts(finalValues);
       }
     }, interval);
-    
+
     return () => clearInterval(timer);
   }, [animationStarted]);
 
@@ -237,28 +240,46 @@ export const AboutUsPage = (): React.ReactElement => {
         <div className="text-center text-white">
           <h1 className="text-5xl mb-4 font-heading">About Us</h1>
           <p className="text-xl max-w-2xl mx-auto">
-            Founded in 2010, The Ottawa Fun Sports League (OFSL) is a volunteer-run, non-profit organization dedicated to making a meaningful impact in the Ottawa community through sport and recreation.
+            Founded in 2010, The Ottawa Fun Sports League (OFSL) is a
+            volunteer-run, non-profit organization dedicated to making a
+            meaningful impact in the Ottawa community through sport and
+            recreation.
           </p>
         </div>
       </HeroBanner>
 
       {/* Statistics row - moved directly under hero banner and title removed */}
-      <div ref={statsRef} className="max-w-[1280px] mx-auto px-4 pt-12 md:pt-16 pb-8 md:pb-12">
+      <div
+        ref={statsRef}
+        className="max-w-[1280px] mx-auto px-4 pt-12 md:pt-16 pb-8 md:pb-12"
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 text-center">
           <div>
-            <div className="text-[#B20000] text-5xl font-bold mb-2">{counts[0]}{statsData[0].suffix}</div>
+            <div className="text-[#B20000] text-5xl font-bold mb-2">
+              {counts[0]}
+              {statsData[0].suffix}
+            </div>
             <p className="text-[#6F6F6F] text-lg">{statsData[0].label}</p>
           </div>
           <div>
-            <div className="text-[#B20000] text-5xl font-bold mb-2">{counts[1]}{statsData[1].suffix}</div>
+            <div className="text-[#B20000] text-5xl font-bold mb-2">
+              {counts[1]}
+              {statsData[1].suffix}
+            </div>
             <p className="text-[#6F6F6F] text-lg">{statsData[1].label}</p>
           </div>
           <div>
-            <div className="text-[#B20000] text-5xl font-bold mb-2">{counts[2]}{statsData[2].suffix}</div>
+            <div className="text-[#B20000] text-5xl font-bold mb-2">
+              {counts[2]}
+              {statsData[2].suffix}
+            </div>
             <p className="text-[#6F6F6F] text-lg">{statsData[2].label}</p>
           </div>
           <div>
-            <div className="text-[#B20000] text-5xl font-bold mb-2">${counts[3]}{statsData[3].suffix}</div>
+            <div className="text-[#B20000] text-5xl font-bold mb-2">
+              ${counts[3]}
+              {statsData[3].suffix}
+            </div>
             <p className="text-[#6F6F6F] text-lg">{statsData[3].label}</p>
           </div>
         </div>
@@ -269,9 +290,16 @@ export const AboutUsPage = (): React.ReactElement => {
         {/* Our mission section - Updated to grid layout with image on right */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28">
           <div className="flex flex-col justify-center">
-            <h2 className="text-3xl font-bold text-[#6F6F6F] mb-6">Our Mission</h2>
+            <h2 className="text-3xl font-bold text-[#6F6F6F] mb-6">
+              Our Mission
+            </h2>
             <p className="text-lg text-[#6F6F6F]">
-              Our mission is to create inclusive, affordable, and enjoyable opportunities for individuals of all ages to stay active, meet new people, and live a healthy lifestyle, while having fun at the same time. We are dedicated to creating a welcoming environment where people of all skill levels can enjoy sports, make connections, and build community.
+              Our mission is to create inclusive, affordable, and enjoyable
+              opportunities for individuals of all ages to stay active, meet new
+              people, and live a healthy lifestyle, while having fun at the same
+              time. We are dedicated to creating a welcoming environment where
+              people of all skill levels can enjoy sports, make connections, and
+              build community.
             </p>
           </div>
           <div>
@@ -293,16 +321,20 @@ export const AboutUsPage = (): React.ReactElement => {
             />
           </div>
           <div className="flex flex-col justify-center">
-            <h2 className="text-3xl font-bold text-[#6F6F6F] mb-6">Our Story</h2>
+            <h2 className="text-3xl font-bold text-[#6F6F6F] mb-6">
+              Our Story
+            </h2>
             <p className="text-lg text-[#6F6F6F] mb-6">
-              Founded in 2010 by a group of sports enthusiasts who wanted to create more accessible 
-              recreational opportunities in Ottawa, OFSL began with just two volleyball courts and 
-              48 players.
+              Founded in 2010 by a group of sports enthusiasts who wanted to
+              create more accessible recreational opportunities in Ottawa, OFSL
+              began with just two volleyball courts and 48 players.
             </p>
             <p className="text-lg text-[#6F6F6F]">
-              Today, we&apos;ve grown to serve over 2,000 participants across multiple sports including 
-              volleyball, badminton, pickleball, and basketball. Our focus has always been on creating 
-              a balance of competitive play and inclusive fun that welcomes players of all backgrounds.
+              Today, we&apos;ve grown to serve over 2,000 participants across
+              multiple sports including volleyball, badminton, pickleball, and
+              basketball. Our focus has always been on creating a balance of
+              competitive play and inclusive fun that welcomes players of all
+              backgrounds.
             </p>
           </div>
         </div>
@@ -311,14 +343,21 @@ export const AboutUsPage = (): React.ReactElement => {
 
         {/* Our partners section - formerly Community impact */}
         <div id="partners-section" className="mb-20 md:mb-28">
-          <h2 className="text-3xl font-bold text-[#6F6F6F] mb-8 text-center">Our Partners</h2>
+          <h2 className="text-3xl font-bold text-[#6F6F6F] mb-8 text-center">
+            Our Partners
+          </h2>
           <p className="text-lg text-[#6F6F6F] max-w-3xl mx-auto text-center">
-            Partnering with us is a great way to connect with an active, engaged community while supporting local sports and wellness. Together, we can create meaningful experiences and drive mutual growth.
+            Partnering with us is a great way to connect with an active, engaged
+            community while supporting local sports and wellness. Together, we
+            can create meaningful experiences and drive mutual growth.
           </p>
         </div>
 
         {/* Diabetes Canada section - New section with 2 columns */}
-        <div id="diabetes-canada-section" className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28">
+        <div
+          id="diabetes-canada-section"
+          className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28"
+        >
           {/* First column - Image */}
           <div className="flex items-center justify-center">
             <img
@@ -327,7 +366,7 @@ export const AboutUsPage = (): React.ReactElement => {
               className="w-full h-auto object-cover rounded-lg shadow-lg"
             />
           </div>
-          
+
           {/* Second column - Logo and text */}
           <div className="flex flex-col justify-center">
             <img
@@ -336,7 +375,19 @@ export const AboutUsPage = (): React.ReactElement => {
               className="w-[180px] h-auto object-contain mb-6"
             />
             <p className="text-lg text-[#6F6F6F]">
-              Diabetes Canada works tirelessly to advocate for and support Canadians living with diabetes with helpful resources, education, research, and more. We work to help Canadians better manage the disease and avoid long-term complications with comprehensive resources, education, and support. <a href="https://www.diabetes.ca/" target="_blank" rel="noopener noreferrer" className="text-[#B20000] underline">Learn more</a>
+              Diabetes Canada works tirelessly to advocate for and support
+              Canadians living with diabetes with helpful resources, education,
+              research, and more. We work to help Canadians better manage the
+              disease and avoid long-term complications with comprehensive
+              resources, education, and support.{" "}
+              <a
+                href="https://www.diabetes.ca/takeaction"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#B20000] underline"
+              >
+                Learn more
+              </a>
             </p>
           </div>
         </div>
@@ -356,17 +407,22 @@ export const AboutUsPage = (): React.ReactElement => {
                       </h2>
                       {/* General inquiries moved up */}
                       <div>
-                        <p className="text-[#6F6F6F] font-bold mb-1">General inquiries</p>
-                        <a href="mailto:info@ofsl.ca" className="text-[#B20000] hover:underline">
+                        <p className="text-[#6F6F6F] font-bold mb-1">
+                          General inquiries
+                        </p>
+                        <a
+                          href="mailto:info@ofsl.ca"
+                          className="text-[#B20000] hover:underline"
+                        >
                           info@ofsl.ca
                         </a>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* This div will push the content to the bottom */}
                   <div className="flex-grow"></div>
-                  
+
                   {/* Contact information at the bottom */}
                   <div className="space-y-4 mt-auto">
                     {/* Temporarily hidden email addresses
@@ -391,29 +447,32 @@ export const AboutUsPage = (): React.ReactElement => {
                     */}
                   </div>
                 </div>
-                
+
                 {/* Right side - Contact form */}
                 <div className="md:col-span-2">
-                  <h3 className="text-xl font-bold text-[#6F6F6F] mb-4">Send Us a Message</h3>
-                  
+                  <h3 className="text-xl font-bold text-[#6F6F6F] mb-4">
+                    Send Us a Message
+                  </h3>
+
                   {submitStatus === "success" && (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                      Thank you for your message! We&apos;ll get back to you soon.
+                      Thank you for your message! We&apos;ll get back to you
+                      soon.
                     </div>
                   )}
-                  
+
                   {submitStatus === "error" && (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
                       There was an error sending your message. Please try again.
                     </div>
                   )}
-                  
+
                   <form onSubmit={handleContactSubmit} className="space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       {/* Name field */}
                       <div>
-                        <label 
-                          htmlFor="name" 
+                        <label
+                          htmlFor="name"
                           className="block text-sm font-medium text-[#6F6F6F] mb-1"
                         >
                           Your Name *
@@ -429,11 +488,11 @@ export const AboutUsPage = (): React.ReactElement => {
                           required
                         />
                       </div>
-                      
+
                       {/* Email field */}
                       <div>
-                        <label 
-                          htmlFor="contact-email" 
+                        <label
+                          htmlFor="contact-email"
                           className="block text-sm font-medium text-[#6F6F6F] mb-1"
                         >
                           Email Address *
@@ -450,11 +509,11 @@ export const AboutUsPage = (): React.ReactElement => {
                         />
                       </div>
                     </div>
-                    
+
                     {/* Subject field */}
                     <div>
-                      <label 
-                        htmlFor="subject" 
+                      <label
+                        htmlFor="subject"
                         className="block text-sm font-medium text-[#6F6F6F] mb-1"
                       >
                         Subject *
@@ -470,11 +529,11 @@ export const AboutUsPage = (): React.ReactElement => {
                         required
                       />
                     </div>
-                    
+
                     {/* Message field */}
                     <div>
-                      <label 
-                        htmlFor="message" 
+                      <label
+                        htmlFor="message"
                         className="block text-sm font-medium text-[#6F6F6F] mb-1"
                       >
                         Message *
@@ -490,10 +549,10 @@ export const AboutUsPage = (): React.ReactElement => {
                         required
                       ></textarea>
                     </div>
-                    
+
                     {/* Submit button */}
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] font-medium text-base px-8 py-2.5"
                     >
                       Send Message
@@ -554,11 +613,13 @@ export const AboutUsPage = (): React.ReactElement => {
       <div id="newsletter-section" className="bg-gray-50 py-16">
         <div className="max-w-[1280px] mx-auto px-4">
           <div className="max-w-[600px] mx-auto">
-            <h2 className="text-3xl font-bold text-[#6F6F6F] mb-4 text-center">Newsletter</h2>
+            <h2 className="text-3xl font-bold text-[#6F6F6F] mb-4 text-center">
+              Newsletter
+            </h2>
             <p className="text-lg text-[#6F6F6F] text-center mb-8">
               Get regular updates about our league.
             </p>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Input
@@ -570,16 +631,16 @@ export const AboutUsPage = (): React.ReactElement => {
                   required
                 />
               </div>
-              
+
               <div>
                 <p className="text-[#6F6F6F] mb-3">I&apos;m interested in:</p>
                 <div className="flex flex-row flex-wrap gap-6">
                   <div className="flex items-center">
-                    <input 
+                    <input
                       type="checkbox"
                       id="volleyball"
                       checked={interests.volleyball}
-                      onChange={() => handleInterestChange('volleyball')}
+                      onChange={() => handleInterestChange("volleyball")}
                       className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
                     />
                     <label htmlFor="volleyball" className="ml-2 text-[#6F6F6F]">
@@ -587,11 +648,11 @@ export const AboutUsPage = (): React.ReactElement => {
                     </label>
                   </div>
                   <div className="flex items-center">
-                    <input 
+                    <input
                       type="checkbox"
                       id="badminton"
                       checked={interests.badminton}
-                      onChange={() => handleInterestChange('badminton')}
+                      onChange={() => handleInterestChange("badminton")}
                       className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
                     />
                     <label htmlFor="badminton" className="ml-2 text-[#6F6F6F]">
@@ -599,11 +660,11 @@ export const AboutUsPage = (): React.ReactElement => {
                     </label>
                   </div>
                   <div className="flex items-center">
-                    <input 
+                    <input
                       type="checkbox"
                       id="basketball"
                       checked={interests.basketball}
-                      onChange={() => handleInterestChange('basketball')}
+                      onChange={() => handleInterestChange("basketball")}
                       className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
                     />
                     <label htmlFor="basketball" className="ml-2 text-[#6F6F6F]">
@@ -611,11 +672,11 @@ export const AboutUsPage = (): React.ReactElement => {
                     </label>
                   </div>
                   <div className="flex items-center">
-                    <input 
+                    <input
                       type="checkbox"
                       id="pickleball"
                       checked={interests.pickleball}
-                      onChange={() => handleInterestChange('pickleball')}
+                      onChange={() => handleInterestChange("pickleball")}
                       className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
                     />
                     <label htmlFor="pickleball" className="ml-2 text-[#6F6F6F]">
@@ -624,14 +685,14 @@ export const AboutUsPage = (): React.ReactElement => {
                   </div>
                 </div>
               </div>
-              
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full h-12 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] font-medium text-base"
               >
                 Subscribe
               </Button>
-              
+
               <div className="flex items-start">
                 <div className="flex items-center h-5">
                   <input
@@ -657,3 +718,4 @@ export const AboutUsPage = (): React.ReactElement => {
     </div>
   );
 };
+

@@ -195,8 +195,10 @@ export const HomePage = (): React.ReactElement => {
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const isAtStart = container.scrollLeft <= 0;
-      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
-      
+      const isAtEnd =
+        container.scrollLeft + container.clientWidth >=
+        container.scrollWidth - 1;
+
       setShowLeftButton(!isAtStart);
       setShowRightButton(!isAtEnd);
     }
@@ -208,7 +210,7 @@ export const HomePage = (): React.ReactElement => {
     if (container) {
       // Set initial button visibility
       handleScroll();
-      
+
       container.addEventListener("scroll", handleScroll);
       return () => container.removeEventListener("scroll", handleScroll);
     }
@@ -282,7 +284,7 @@ export const HomePage = (): React.ReactElement => {
                 lifestyles through sport and community wellness.
               </span>
               <a
-                href="#"
+                href="https://www.diabetes.ca/takeaction"
                 className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold"
               >
                 Learn more
@@ -413,23 +415,23 @@ export const HomePage = (): React.ReactElement => {
                 onClick={() => scrollCarousel("right")}
                 className="hidden md:block absolute -right-12 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 z-20 transition-all hover:scale-110 border border-gray-200"
               >
-              <div className="w-6 h-6 flex items-center justify-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-[#B20000]"
-                >
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-[#B20000]"
+                  >
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </div>
               </div>
-            </div>
             )}
           </div>
         </div>
@@ -548,4 +550,3 @@ export const HomePage = (): React.ReactElement => {
     </div>
   );
 };
-
