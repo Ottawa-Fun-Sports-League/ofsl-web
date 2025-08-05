@@ -1,5 +1,5 @@
-import { Turnstile as TurnstileWidget } from '@marsidev/react-turnstile';
-import { useEffect, useState } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
+import { forwardRef, useImperativeHandle, useRef, memo } from 'react';
 
 interface TurnstileProps {
   onVerify: (token: string) => void;
@@ -8,46 +8,54 @@ interface TurnstileProps {
   className?: string;
 }
 
-export function Turnstile({ onVerify, onError, onExpire, className }: TurnstileProps) {
-  const [key, setKey] = useState(0);
-  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
-
-  // Reset widget when component mounts or when we need to refresh
-  const reset = () => {
-    setKey(prev => prev + 1);
-  };
-
-  useEffect(() => {
-    // Reset on mount
-    return () => {
-      // Cleanup if needed
-    };
-  }, []);
-
-  if (!siteKey) {
-    return null;
-  }
-
-  return (
-    <div className={className}>
-      <TurnstileWidget
-        key={key}
-        siteKey={siteKey}
-        onSuccess={onVerify}
-        onError={() => {
-          onError?.();
-          // Auto-retry after error
-          setTimeout(reset, 1000);
-        }}
-        onExpire={() => {
-          onExpire?.();
-          reset();
-        }}
-        options={{
-          theme: 'light',
-          size: 'normal',
-        }}
-      />
-    </div>
-  );
+export interface TurnstileHandle {
+  reset: () => void;
 }
+
+const TurnstileWidgetComponent = forwardRef<TurnstileHandle, TurnstileProps>(
+  ({ onVerify, onError, onExpire, className }, ref) => {
+    const widgetRef = useRef<any>(null);
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+
+    useImperativeHandle(ref, () => ({
+      reset: () => {
+        if (widgetRef.current?.reset) {
+          widgetRef.current.reset();
+        }
+      }
+    }));
+
+    if (!siteKey || siteKey === 'undefined') {
+      return null;
+    }
+
+    return (
+      <div 
+        className={className} 
+        style={{ 
+          minHeight: '70px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <Turnstile
+          ref={widgetRef}
+          siteKey={siteKey}
+          onSuccess={onVerify}
+          onError={onError}
+          onExpire={onExpire}
+          options={{
+            theme: 'light',
+            size: 'normal',
+          }}
+        />
+      </div>
+    );
+  }
+);
+
+TurnstileWidgetComponent.displayName = 'TurnstileWidget';
+
+// Memoize the component to prevent re-renders when parent state changes
+export const TurnstileWidget = memo(TurnstileWidgetComponent);

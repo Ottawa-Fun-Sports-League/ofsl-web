@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -7,7 +7,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { logger } from "../../lib/logger";
 import { analyticsEvents } from "../../hooks/useGoogleAnalytics";
-import { Turnstile } from "../../components/ui/turnstile";
+import { TurnstileWidget, TurnstileHandle } from "../../components/ui/turnstile";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -21,7 +21,10 @@ export function LoginPage() {
   const { signIn, signInWithGoogle, user } = useAuth();
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const navigate = useNavigate();
-  const location = useLocation(); 
+  const location = useLocation();
+  const turnstileRef = useRef<TurnstileHandle>(null);
+
+ 
 
   // Check for success message from signup
   useEffect(() => {
@@ -77,6 +80,9 @@ export function LoginPage() {
         logger.error('Sign in error', error);
         setError(error.message);
         setLoading(false);
+        // Reset CAPTCHA on error
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
       } else {
         // Track successful login
         analyticsEvents.login();
@@ -92,6 +98,9 @@ export function LoginPage() {
       setError("An unexpected error occurred");
       logger.error('Unexpected error during sign in', err);
       setLoading(false);
+      // Reset CAPTCHA on error
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     }
   };
 
@@ -119,6 +128,20 @@ export function LoginPage() {
       setGoogleLoading(false);
     }
   };
+
+  // Stable callbacks for Turnstile
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileError = useCallback(() => {
+    setError("Security verification failed. Please try again.");
+    setTurnstileToken(null);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   return (
     <div className="min-h-[calc(100vh-135px)] bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -243,18 +266,16 @@ export function LoginPage() {
             </div>
             
             {/* Turnstile widget */}
-            <div className="flex justify-center">
-              <Turnstile 
-                onVerify={(token) => setTurnstileToken(token)}
-                onError={() => {
-                  setError("Security verification failed. Please try again.");
-                  setTurnstileToken(null);
-                }}
-                onExpire={() => {
-                  setTurnstileToken(null);
-                }}
-              />
-            </div>
+            {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+              <div className="flex justify-center my-4">
+                <TurnstileWidget 
+                  ref={turnstileRef}
+                  onVerify={handleTurnstileVerify}
+                  onError={handleTurnstileError}
+                  onExpire={handleTurnstileExpire}
+                />
+              </div>
+            )}
             
             <Button
               type="submit"

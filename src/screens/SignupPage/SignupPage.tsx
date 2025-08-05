@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useRef, useCallback } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input"; 
@@ -8,7 +8,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import { logger } from "../../lib/logger";
 import { analyticsEvents } from "../../hooks/useGoogleAnalytics";
-import { Turnstile } from "../../components/ui/turnstile";
+import { TurnstileWidget, TurnstileHandle } from "../../components/ui/turnstile";
 
 export function SignupPage() {
   const [name, setName] = useState("");
@@ -25,6 +25,7 @@ export function SignupPage() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signInWithGoogle, setIsNewUser } = useAuth();
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -71,8 +72,9 @@ export function SignupPage() {
       return;
     }
     
-    // Check for Turnstile token
-    if (!turnstileToken) {
+    // Check for Turnstile token only if Turnstile is configured
+    const turnstileConfigured = !!import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (turnstileConfigured && !turnstileToken) {
       setError("Please complete the security verification");
       return;
     }
@@ -90,22 +92,31 @@ export function SignupPage() {
             full_name: name
           },
           emailRedirectTo: `${window.location.origin}/#/complete-profile`,
-          captchaToken: turnstileToken
+          captchaToken: turnstileToken || undefined
         }
       });
       
       if (authError) {
         if (authError.message.includes('rate limit') || authError.message.includes('Email rate limit exceeded')) {
           setError("Too many signup attempts. Please wait a few minutes before trying again, or contact support if this persists.");
+          // Reset CAPTCHA on error
+          turnstileRef.current?.reset();
+          setTurnstileToken(null);
           return;
         }
         
         if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
           setError("An account with this email already exists. Please try logging in instead.");
+          // Reset CAPTCHA on error
+          turnstileRef.current?.reset();
+          setTurnstileToken(null);
           return;
         }
         
         setError(authError.message);
+        // Reset CAPTCHA on error
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
         return;
       }
       
@@ -201,6 +212,9 @@ export function SignupPage() {
     } catch (err) {
       logger.error("Unexpected error during signup", err);
       setError("An unexpected error occurred. Please try again later.");
+      // Reset CAPTCHA on error
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } finally {
       setLoading(false);
     }
@@ -258,6 +272,19 @@ export function SignupPage() {
     }
   };
 
+  // Stable callbacks for Turnstile
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileError = useCallback(() => {
+    setError("Security verification failed. Please try again.");
+    setTurnstileToken(null);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   return (
     <div className="min-h-[calc(100vh-135px)] bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -432,23 +459,21 @@ export function SignupPage() {
             </div>
             
             {/* Turnstile widget */}
-            <div className="flex justify-center">
-              <Turnstile 
-                onVerify={(token) => setTurnstileToken(token)}
-                onError={() => {
-                  setError("Security verification failed. Please try again.");
-                  setTurnstileToken(null);
-                }}
-                onExpire={() => {
-                  setTurnstileToken(null);
-                }}
-              />
-            </div>
+            {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+              <div className="flex justify-center my-4">
+                <TurnstileWidget 
+                  ref={turnstileRef}
+                  onVerify={handleTurnstileVerify}
+                  onError={handleTurnstileError}
+                  onExpire={handleTurnstileExpire}
+                />
+              </div>
+            )}
             
             <Button
               type="submit"
               className="w-full h-12 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] font-medium text-base"
-              disabled={loading || googleLoading || !turnstileToken}
+              disabled={loading || googleLoading || (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}
             >
               {loading ? (
                 <>
