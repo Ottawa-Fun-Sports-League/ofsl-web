@@ -292,7 +292,7 @@ export function SportsSkillsSelector({
                 </Button>
               </>
             )}
-            {getAvailableSports().length > 0 && !hasUnsavedChanges && (
+            {getAvailableSports().length > 0 && (
               <Button
                 onClick={handleShowAddInterface}
                 className="border border-[#B20000] text-[#B20000] bg-white hover:bg-[#B20000] hover:text-white rounded-lg px-4 py-2 flex items-center gap-2"
@@ -309,29 +309,10 @@ export function SportsSkillsSelector({
         <div className="space-y-2 mb-4">
           <div className="flex justify-between items-center">
             <label className="block text-sm font-medium text-[#6F6F6F]">
-              Sports & Skill Levels * {hasUnsavedChanges && <span className="text-amber-600 text-xs ml-2">(unsaved changes)</span>}
+              Sports & Skill Levels *
             </label>
             <div className="flex items-center gap-2">
-              {hasUnsavedChanges && (
-                <>
-                  <Button
-                    type="button"
-                    onClick={handleCancelChanges}
-                    className="border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 rounded-lg px-3 py-1 h-8 text-sm"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSaveChanges}
-                    disabled={saving}
-                    className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-3 py-1 h-8 text-sm"
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </Button>
-                </>
-              )}
-              {getAvailableSports().length > 0 && !hasUnsavedChanges && (
+              {getAvailableSports().length > 0 && (
                 <Button
                   type="button"
                   onClick={handleShowAddInterface}
