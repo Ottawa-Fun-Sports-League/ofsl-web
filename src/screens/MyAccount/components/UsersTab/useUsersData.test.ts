@@ -3,6 +3,8 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useUsersData } from './useUsersData';
 import { supabase } from '../../../../lib/supabase';
 import { SPORT_IDS } from './constants';
+import { MemoryRouter } from 'react-router-dom';
+import React from 'react';
 
 // Mock dependencies
 vi.mock('../../../../contexts/AuthContext', () => ({
@@ -24,6 +26,9 @@ vi.mock('../../../../lib/supabase', () => ({
 }));
 
 describe('useUsersData - Sport Filters', () => {
+  // Wrapper component for Router context
+  const wrapper = ({ children }: { children: React.ReactNode }) => 
+    React.createElement(MemoryRouter, {}, children);
   const mockUsers = [
     {
       id: 'user-1',
@@ -134,6 +139,12 @@ describe('useUsersData - Sport Filters', () => {
       })
     };
 
+    // Mock teams query for captain teams
+    const captainTeamsMock = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ data: [], error: null })
+    };
+
     (supabase.from as any).mockImplementation((table: string) => {
       if (table === 'users' && adminCheckMock.select.mock.calls.length === 0) {
         return adminCheckMock;
@@ -144,6 +155,9 @@ describe('useUsersData - Sport Filters', () => {
       if (table === 'registrations') {
         return registrationsMock;
       }
+      if (table === 'teams') {
+        return captainTeamsMock;
+      }
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ data: [], error: null })
@@ -152,7 +166,7 @@ describe('useUsersData - Sport Filters', () => {
   });
 
   it('should filter volleyball players in league', async () => {
-    const { result } = renderHook(() => useUsersData());
+    const { result } = renderHook(() => useUsersData(), { wrapper });
 
     // Wait for initial load
     await waitFor(() => {
@@ -171,7 +185,7 @@ describe('useUsersData - Sport Filters', () => {
   });
 
   it('should filter badminton players (all)', async () => {
-    const { result } = renderHook(() => useUsersData());
+    const { result } = renderHook(() => useUsersData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -191,7 +205,7 @@ describe('useUsersData - Sport Filters', () => {
   });
 
   it('should filter volleyball players (all)', async () => {
-    const { result } = renderHook(() => useUsersData());
+    const { result } = renderHook(() => useUsersData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -212,7 +226,7 @@ describe('useUsersData - Sport Filters', () => {
   });
 
   it('should filter players not in league', async () => {
-    const { result } = renderHook(() => useUsersData());
+    const { result } = renderHook(() => useUsersData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -230,7 +244,7 @@ describe('useUsersData - Sport Filters', () => {
   });
 
   it('should correctly identify when sport filters are active', async () => {
-    const { result } = renderHook(() => useUsersData());
+    const { result } = renderHook(() => useUsersData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -254,8 +268,8 @@ describe('useUsersData - Sport Filters', () => {
     expect(result.current.isAnyFilterActive()).toBe(false);
   });
 
-  it('should handle multiple filters together', async () => {
-    const { result } = renderHook(() => useUsersData());
+  it('should handle multiple sport filters with OR logic', async () => {
+    const { result } = renderHook(() => useUsersData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -268,10 +282,32 @@ describe('useUsersData - Sport Filters', () => {
     });
 
     await waitFor(() => {
-      // Should only show users that match BOTH filters
-      // In this case, only Alice has both sports
+      // Should show users that match EITHER filter (OR logic)
+      // All 4 users should be shown: John (volleyball), Jane (badminton), Bob (volleyball), Alice (both)
+      expect(result.current.filteredUsers).toHaveLength(4);
+      const names = result.current.filteredUsers.map(u => u.name);
+      expect(names).toContain('John Volleyball Player');
+      expect(names).toContain('Jane Badminton Player');
+      expect(names).toContain('Bob Not In League');
+      expect(names).toContain('Alice All Sports');
+    });
+  });
+
+  it('should filter badminton players in league', async () => {
+    const { result } = renderHook(() => useUsersData(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Apply badminton in league filter
+    act(() => {
+      result.current.handleFilterChange('badmintonPlayersInLeague');
+    });
+
+    await waitFor(() => {
       expect(result.current.filteredUsers).toHaveLength(1);
-      expect(result.current.filteredUsers[0].name).toBe('Alice All Sports');
+      expect(result.current.filteredUsers[0].name).toBe('Jane Badminton Player');
     });
   });
 });
