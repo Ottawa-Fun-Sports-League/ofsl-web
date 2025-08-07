@@ -187,7 +187,13 @@ export function ProfileCompletionPage() {
         })
         .eq("auth_id", user?.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // Check if it's a duplicate phone number error
+        if (profileError.code === '23505' && profileError.message.includes('phone')) {
+          throw new Error('The phone number you are trying to use has already been used by another user, please enter another phone number');
+        }
+        throw profileError;
+      }
 
       // Record waiver acceptance if there's an active waiver
       if (activeWaiver && waiverAccepted && user?.id) {
@@ -442,6 +448,9 @@ export function ProfileCompletionPage() {
               <p className="text-xs text-gray-500 mt-1">
                 We use your phone number for important league communications and
                 emergency contact.
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                <strong>NOTE:</strong> Only one phone number per account
               </p>
             </div>
 
