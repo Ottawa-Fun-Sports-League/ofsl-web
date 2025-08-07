@@ -31,6 +31,11 @@ export function useProfileOperations(userProfile: { id: string } | null, refresh
         .eq('id', userProfile.id);
 
       if (error) {
+        // Check if it's a duplicate phone number error
+        if (error.code === '23505' && error.message.includes('phone')) {
+          showToast('The phone number you are trying to use has already been used by another user, please enter another phone number', 'error');
+          return false;
+        }
         throw error;
       }
 

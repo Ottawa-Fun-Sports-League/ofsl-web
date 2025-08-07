@@ -100,6 +100,9 @@ export function ProfileInformation({
               <p className="text-xs text-gray-500 mt-1">
                 Format: ###-###-####
               </p>
+              <p className="text-xs text-gray-500 mt-1">
+                <strong>NOTE:</strong> Only one phone number per account
+              </p>
             </div>
           ) : (
             <p className="text-[#6F6F6F] py-2">{profile.phone || 'No phone number available'}</p>
