@@ -1,7 +1,17 @@
 export const INITIAL_FILTERS = {
   administrator: false,
   facilitator: false,
-  activePlayer: false
+  activePlayer: false,
+  volleyballPlayersInLeague: false,
+  playersNotInLeague: false,
+  volleyballPlayersAll: false,
+  badmintonPlayersAll: false
+};
+
+// Sport IDs - these should match the IDs in your sports table
+export const SPORT_IDS = {
+  VOLLEYBALL: 1,
+  BADMINTON: 2
 };
 
 export const POSITION_OPTIONS = [

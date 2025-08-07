@@ -1,12 +1,7 @@
 import { X } from 'lucide-react';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
-
-interface UserFilters {
-  administrator: boolean;
-  facilitator: boolean;
-  activePlayer: boolean;
-}
+import { UserFilters } from '../types';
 
 interface MobileFilterDrawerProps {
   isOpen: boolean;
@@ -106,6 +101,64 @@ export function MobileFilterDrawer({
                 />
                 <label htmlFor="mobile-filter-active" className="text-[#6F6F6F]">
                   Active Player
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Sport Filters */}
+          <div>
+            <h3 className="text-lg font-medium text-[#6F6F6F] mb-3">Sport Filters</h3>
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="mobile-filter-volleyball-league"
+                  checked={filters.volleyballPlayersInLeague}
+                  onChange={() => handleFilterChange('volleyballPlayersInLeague')}
+                  className="mr-2"
+                />
+                <label htmlFor="mobile-filter-volleyball-league" className="text-[#6F6F6F]">
+                  Volleyball (In League)
+                </label>
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="mobile-filter-volleyball-all"
+                  checked={filters.volleyballPlayersAll}
+                  onChange={() => handleFilterChange('volleyballPlayersAll')}
+                  className="mr-2"
+                />
+                <label htmlFor="mobile-filter-volleyball-all" className="text-[#6F6F6F]">
+                  Volleyball (All)
+                </label>
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="mobile-filter-badminton-all"
+                  checked={filters.badmintonPlayersAll}
+                  onChange={() => handleFilterChange('badmintonPlayersAll')}
+                  className="mr-2"
+                />
+                <label htmlFor="mobile-filter-badminton-all" className="text-[#6F6F6F]">
+                  Badminton (All)
+                </label>
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="mobile-filter-not-in-league"
+                  checked={filters.playersNotInLeague}
+                  onChange={() => handleFilterChange('playersNotInLeague')}
+                  className="mr-2"
+                />
+                <label htmlFor="mobile-filter-not-in-league" className="text-[#6F6F6F]">
+                  Not in League
                 </label>
               </div>
             </div>
