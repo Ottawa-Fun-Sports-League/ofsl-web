@@ -1,16 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { useToast } from '../../../../components/ui/toast';
-import { supabase } from '../../../../lib/supabase';
-import { User, UserFilters, SortField, SortDirection } from './types';
-import { INITIAL_FILTERS, SPORT_IDS } from './constants';
-import { useSearchParams } from 'react-router-dom';
-
-export function useUsersData() {
-  const { userProfile } = useAuth();
-  const { showToast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  
+import { useState, useEffect } from 'react'; import { useAuth } from '../../../../contexts/AuthContext'; import { useToast } from '../../../../components/ui/toast'; import { supabase } from '../../../../lib/supabase'; import { User, UserFilters, SortField, SortDirection } from './types'; import { INITIAL_FILTERS, SPORT_IDS } from './constants'; import { useSearchParams } from 'react-router-dom'; export function useUsersData() { const { userProfile } = useAuth(); const { showToast } = useToast(); const [searchParams, setSearchParams] = useSearchParams();
   // Parse filters from URL on initial load
   const getInitialFilters = (): UserFilters => {
     const urlFilters = { ...INITIAL_FILTERS };
