@@ -113,98 +113,69 @@ export function useUsersData() {
 
       if (usersError) throw usersError;
       
-      // Fetch current registrations (teams in active leagues)
-      const { data: registrationsData, error: registrationsError } = await supabase
-        .from('registrations')
-        .select(`
-          id,
-          user_id,
-          team_id,
-          teams!inner (
-            id,
-            name,
-            league_id,
-            leagues!inner (
-              id,
-              name,
-              sport_id,
-              is_active,
-              sports!inner (
-                id,
-                name
-              )
-            )
-          )
-        `)
-        .eq('teams.leagues.is_active', true);
-
-      if (registrationsError) {
-        console.error('Error loading registrations:', registrationsError);
-      }
-      
-      // Also fetch teams where users are captains in active leagues
-      const { data: captainTeamsData, error: captainTeamsError } = await supabase
+      // Fetch all teams in active leagues with their roster data
+      const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
           id,
           name,
           captain_id,
+          roster,
+          co_captains,
           league_id,
           leagues!inner (
             id,
             name,
             sport_id,
-            is_active,
+            active,
             sports!inner (
               id,
               name
             )
           )
         `)
-        .eq('leagues.is_active', true);
+        .eq('leagues.active', true);
 
-      if (captainTeamsError) {
-        console.error('Error loading captain teams:', captainTeamsError);
+      if (teamsError) {
+        console.error('Error loading teams:', teamsError);
       }
+      
 
       // Process users and add registration data
       const processedUsers = (usersData || []).map(user => {
-        // Find registrations for this user
-        const userRegistrations = registrationsData?.filter(reg => 
-          reg.user_id === user.id
-        ) || [];
-        
-        // Find teams where this user is captain
-        const captainTeams = captainTeamsData?.filter(team =>
-          team.captain_id === user.id
-        ) || [];
+        // Find teams where this user is involved (as captain, co-captain, or roster member)
+        const userTeams = (teamsData || []).filter(team => {
+          // Check if user is captain
+          if (team.captain_id === user.id) return true;
+          
+          // Check if user is in roster array
+          if (team.roster && Array.isArray(team.roster) && team.roster.includes(user.id)) return true;
+          
+          // Check if user is in co_captains array
+          if (team.co_captains && Array.isArray(team.co_captains) && team.co_captains.includes(user.id)) return true;
+          
+          return false;
+        });
 
-        // Combine registrations from both sources
-        const allRegistrations = [
-          ...userRegistrations.map(reg => ({
-            team_id: reg.team_id,
-            team_name: reg.teams.name,
-            league_id: reg.teams.league_id,
-            league_name: reg.teams.leagues.name,
-            sport_name: reg.teams.leagues.sports.name
-          })),
-          ...captainTeams.map(team => ({
+        // Map teams to registration format
+        const userRegistrations = userTeams.map(team => {
+          // Handle the nested structure from Supabase joins
+          const league = team.leagues as { name?: string; sports?: { name?: string } };
+          const sport = league?.sports;
+          
+          return {
             team_id: team.id,
             team_name: team.name,
             league_id: team.league_id,
-            league_name: team.leagues.name,
-            sport_name: team.leagues.sports.name
-          }))
-        ];
-        
-        // Remove duplicates (in case someone is both captain and registered)
-        const uniqueRegistrations = allRegistrations.filter((reg, index, self) =>
-          index === self.findIndex(r => r.team_id === reg.team_id)
-        );
+            league_name: league?.name || '',
+            sport_name: sport?.name || ''
+          };
+        });
 
+        
         return {
           ...user,
-          current_registrations: uniqueRegistrations.length > 0 ? uniqueRegistrations : null
+          current_registrations: userRegistrations.length > 0 ? userRegistrations : null
         };
       });
 
@@ -232,7 +203,7 @@ export function useUsersData() {
       filtered = filtered.filter(user => user.is_facilitator === true);
     }
     if (filters.activePlayer) {
-      filtered = filtered.filter(user => user.team_ids && user.team_ids.length > 0);
+      filtered = filtered.filter(user => user.current_registrations && user.current_registrations.length > 0);
     }
     
     // Sport-specific filters - Apply with OR logic within sport filters

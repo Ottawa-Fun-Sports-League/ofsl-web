@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { MobileFilterDrawer } from './components/MobileFilterDrawer';
+import { ImprovedMobileFilterDrawer } from './components/ImprovedMobileFilterDrawer';
 import { UsersHeader } from './components/UsersHeader';
-import { SearchAndFilters } from './components/SearchAndFilters';
+import { ImprovedFilters } from './components/ImprovedFilters';
 import { UsersTable } from './components/UsersTable';
 import { EditUserModal } from './components/EditUserModal';
 import { useUsersData } from './useUsersData';
@@ -67,9 +67,10 @@ export function UsersTab() {
         userCount={filteredUsers.length}
         onOpenMobileFilter={() => setShowMobileFilterDrawer(true)}
         onRefresh={loadUsers}
+        activeFilterCount={Object.values(filters).filter(Boolean).length}
       />
 
-      <SearchAndFilters
+      <ImprovedFilters
         searchTerm={searchTerm}
         filters={filters}
         isAnyFilterActive={isAnyFilterActive()}
@@ -78,11 +79,9 @@ export function UsersTab() {
         onClearFilters={clearFilters}
       />
 
-      <MobileFilterDrawer
+      <ImprovedMobileFilterDrawer
         isOpen={showMobileFilterDrawer}
         onClose={() => setShowMobileFilterDrawer(false)}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
         filters={filters}
         handleFilterChange={handleFilterChange}
         clearFilters={clearFilters}
