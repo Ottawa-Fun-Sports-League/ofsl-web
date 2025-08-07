@@ -14,7 +14,6 @@ export function UsersTab() {
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
 
   const {
-    users,
     filteredUsers,
     searchTerm,
     loading,

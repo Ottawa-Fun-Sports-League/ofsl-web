@@ -24,12 +24,12 @@ describe('SportFilters', () => {
     // Mock useAuth
     vi.mocked(useAuth).mockReturnValue({
       userProfile: mockUserProfile,
-    } as any);
+    } as ReturnType<typeof useAuth>);
     
     // Mock useToast
     vi.mocked(useToast).mockReturnValue({
       showToast: mockShowToast,
-    } as any);
+    } as ReturnType<typeof useToast>);
     
     // Mock useSearchParams
     vi.mocked(useSearchParams).mockReturnValue([mockSearchParams, mockSetSearchParams]);
@@ -118,7 +118,7 @@ describe('SportFilters', () => {
             data: mockUsers,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       if (table === 'teams') {
         return {
@@ -127,9 +127,9 @@ describe('SportFilters', () => {
             data: mockTeams,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as ReturnType<typeof supabase.from>;
     });
 
     // Render the hook
@@ -221,7 +221,7 @@ describe('SportFilters', () => {
             data: mockUsers,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       if (table === 'teams') {
         return {
@@ -230,9 +230,9 @@ describe('SportFilters', () => {
             data: mockTeams,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as ReturnType<typeof supabase.from>;
     });
 
     // Render the hook
@@ -342,7 +342,7 @@ describe('SportFilters', () => {
             data: mockUsers,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       if (table === 'teams') {
         return {
@@ -351,9 +351,9 @@ describe('SportFilters', () => {
             data: mockTeams,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as ReturnType<typeof supabase.from>;
     });
 
     // Render the hook

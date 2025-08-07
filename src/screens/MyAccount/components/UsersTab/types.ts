@@ -23,6 +23,7 @@ export interface User {
     team_name: string;
     league_id: number;
     league_name: string;
+    sport_id: number;
     sport_name: string;
   }[] | null;
 }

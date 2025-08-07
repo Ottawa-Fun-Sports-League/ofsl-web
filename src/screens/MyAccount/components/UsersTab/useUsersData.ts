@@ -112,36 +112,74 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
 
       if (teamsError) {
         console.error('Error loading teams:', teamsError);
+        // Continue processing with empty teams data
+        showToast('Warning: Could not load team data', 'warning');
       }
       
 
+      // Create a map for O(1) team lookups by user ID
+      type TeamData = NonNullable<typeof teamsData>[number];
+      const userTeamsMap = new Map<string, TeamData[]>();
+      
+      // Pre-process teams data for better performance
+      if (teamsData) {
+        teamsData.forEach(team => {
+          // Add team to captain's list
+          if (team.captain_id) {
+            if (!userTeamsMap.has(team.captain_id)) {
+              userTeamsMap.set(team.captain_id, []);
+            }
+            userTeamsMap.get(team.captain_id)?.push(team);
+          }
+          
+          // Add team to roster members' lists
+          if (team.roster && Array.isArray(team.roster)) {
+            team.roster.forEach((userId: string) => {
+              if (!userTeamsMap.has(userId)) {
+                userTeamsMap.set(userId, []);
+              }
+              userTeamsMap.get(userId)?.push(team);
+            });
+          }
+          
+          // Add team to co-captains' lists
+          if (team.co_captains && Array.isArray(team.co_captains)) {
+            team.co_captains.forEach((userId: string) => {
+              if (!userTeamsMap.has(userId)) {
+                userTeamsMap.set(userId, []);
+              }
+              userTeamsMap.get(userId)?.push(team);
+            });
+          }
+        });
+      }
+      
       // Process users and add registration data
       const processedUsers = (usersData || []).map(user => {
-        // Find teams where this user is involved (as captain, co-captain, or roster member)
-        const userTeams = (teamsData || []).filter(team => {
-          // Check if user is captain
-          if (team.captain_id === user.id) return true;
-          
-          // Check if user is in roster array
-          if (team.roster && Array.isArray(team.roster) && team.roster.includes(user.id)) return true;
-          
-          // Check if user is in co_captains array
-          if (team.co_captains && Array.isArray(team.co_captains) && team.co_captains.includes(user.id)) return true;
-          
-          return false;
-        });
+        // Get teams for this user from the pre-processed map (O(1) lookup)
+        const userTeams = userTeamsMap.get(user.id) || [];
 
         // Map teams to registration format
         const userRegistrations = userTeams.map(team => {
           // Handle the nested structure from Supabase joins
-          const league = team.leagues as { name?: string; sports?: { name?: string } };
+          interface LeagueWithSport {
+            name?: string;
+            sport_id?: number;
+            sports?: {
+              id?: number;
+              name?: string;
+            };
+          }
+          
+          const league = team.leagues as LeagueWithSport | undefined;
           const sport = league?.sports;
           
           return {
             team_id: team.id,
-            team_name: team.name,
-            league_id: team.league_id,
+            team_name: team.name || '',
+            league_id: team.league_id || 0,
             league_name: league?.name || '',
+            sport_id: league?.sport_id || 0,
             sport_name: sport?.name || ''
           };
         });
@@ -186,7 +224,7 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
     if (filters.volleyballPlayersInLeague) {
       sportFilters.push((user: User) => 
         user.current_registrations?.some(reg => 
-          reg.sport_name.toLowerCase() === 'volleyball'
+          reg.sport_id === SPORT_IDS.VOLLEYBALL
         ) || false
       );
     }
@@ -202,7 +240,7 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
         }
         // Also include players currently in volleyball leagues
         return user.current_registrations?.some(reg => 
-          reg.sport_name.toLowerCase() === 'volleyball'
+          reg.sport_id === SPORT_IDS.VOLLEYBALL
         ) || false;
       });
     }
@@ -210,7 +248,7 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
     if (filters.badmintonPlayersInLeague) {
       sportFilters.push((user: User) => 
         user.current_registrations?.some(reg => 
-          reg.sport_name.toLowerCase() === 'badminton'
+          reg.sport_id === SPORT_IDS.BADMINTON
         ) || false
       );
     }
@@ -226,7 +264,7 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
         }
         // Also include players currently in badminton leagues
         return user.current_registrations?.some(reg => 
-          reg.sport_name.toLowerCase() === 'badminton'
+          reg.sport_id === SPORT_IDS.BADMINTON
         ) || false;
       });
     }
