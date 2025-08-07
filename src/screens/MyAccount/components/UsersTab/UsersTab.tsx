@@ -64,7 +64,7 @@ export function UsersTab() {
   return (
     <div className="space-y-6">
       <UsersHeader
-        userCount={users.length}
+        userCount={filteredUsers.length}
         onOpenMobileFilter={() => setShowMobileFilterDrawer(true)}
         onRefresh={loadUsers}
       />
