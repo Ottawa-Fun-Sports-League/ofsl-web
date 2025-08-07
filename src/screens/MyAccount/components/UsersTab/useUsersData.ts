@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
@@ -91,24 +91,10 @@ export function useUsersData() {
         return;
       }
 
-      // Fetch users with their sports skills
+      // Fetch users with their sports skills (JSONB column)
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select(`
-          *,
-          user_sports_skills (
-            sport_id,
-            skill_id,
-            sports (
-              id,
-              name
-            ),
-            skills (
-              id,
-              name
-            )
-          )
-        `)
+        .select('*')
         .order('date_created', { ascending: false });
 
       if (usersError) throw usersError;
@@ -183,17 +169,17 @@ export function useUsersData() {
         const allRegistrations = [
           ...userRegistrations.map(reg => ({
             team_id: reg.team_id,
-            team_name: reg.teams.name,
-            league_id: reg.teams.league_id,
-            league_name: reg.teams.leagues.name,
-            sport_name: reg.teams.leagues.sports.name
+            team_name: reg.teams?.name || '',
+            league_id: reg.teams?.league_id || 0,
+            league_name: reg.teams?.leagues?.name || '',
+            sport_name: reg.teams?.leagues?.sports?.name || ''
           })),
           ...captainTeams.map(team => ({
             team_id: team.id,
             team_name: team.name,
             league_id: team.league_id,
-            league_name: team.leagues.name,
-            sport_name: team.leagues.sports.name
+            league_name: team.leagues?.name || '',
+            sport_name: team.leagues?.sports?.name || ''
           }))
         ];
         
@@ -236,7 +222,7 @@ export function useUsersData() {
     }
     
     // Sport-specific filters - Apply with OR logic within sport filters
-    const sportFilters = [];
+    const sportFilters: ((user: User) => boolean)[] = [];
     
     if (filters.volleyballPlayersInLeague) {
       sportFilters.push((user: User) => 
