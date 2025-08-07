@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
@@ -91,24 +91,10 @@ export function useUsersData() {
         return;
       }
 
-      // Fetch users with their sports skills
+      // Fetch users with their sports skills (JSONB column)
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select(`
-          *,
-          user_sports_skills (
-            sport_id,
-            skill_id,
-            sports (
-              id,
-              name
-            ),
-            skills (
-              id,
-              name
-            )
-          )
-        `)
+        .select('*')
         .order('date_created', { ascending: false });
 
       if (usersError) throw usersError;
@@ -207,7 +193,7 @@ export function useUsersData() {
     }
     
     // Sport-specific filters - Apply with OR logic within sport filters
-    const sportFilters = [];
+    const sportFilters: ((user: User) => boolean)[] = [];
     
     if (filters.volleyballPlayersInLeague) {
       sportFilters.push((user: User) => 
