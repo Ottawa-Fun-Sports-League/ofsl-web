@@ -35,6 +35,7 @@ export interface UserFilters {
   facilitator: boolean;
   activePlayer: boolean;
   volleyballPlayersInLeague: boolean;
+  badmintonPlayersInLeague: boolean;
   playersNotInLeague: boolean;
   volleyballPlayersAll: boolean;
   badmintonPlayersAll: boolean;

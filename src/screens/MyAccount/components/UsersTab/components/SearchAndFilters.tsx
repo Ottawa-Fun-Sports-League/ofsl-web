@@ -105,6 +105,19 @@ export function SearchAndFilters({
             <div className="flex items-center">
               <input
                 type="checkbox"
+                id="filter-badminton-league"
+                checked={filters.badmintonPlayersInLeague}
+                onChange={() => onFilterChange('badmintonPlayersInLeague')}
+                className="mr-2"
+              />
+              <label htmlFor="filter-badminton-league" className="text-sm text-[#6F6F6F]">
+                Badminton (In League)
+              </label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="checkbox"
                 id="filter-badminton-all"
                 checked={filters.badmintonPlayersAll}
                 onChange={() => onFilterChange('badmintonPlayersAll')}

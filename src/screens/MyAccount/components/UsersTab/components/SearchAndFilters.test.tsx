@@ -19,6 +19,7 @@ describe('SearchAndFilters - Sport Filters', () => {
     // Check for sport filter labels
     expect(screen.getByLabelText('Volleyball (In League)')).toBeInTheDocument();
     expect(screen.getByLabelText('Volleyball (All)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Badminton (In League)')).toBeInTheDocument();
     expect(screen.getByLabelText('Badminton (All)')).toBeInTheDocument();
     expect(screen.getByLabelText('Not in League')).toBeInTheDocument();
   });
@@ -41,6 +42,16 @@ describe('SearchAndFilters - Sport Filters', () => {
     fireEvent.click(volleyballAllCheckbox);
     
     expect(onFilterChange).toHaveBeenCalledWith('volleyballPlayersAll');
+  });
+
+  it('should call onFilterChange when badminton in league filter is clicked', () => {
+    const onFilterChange = vi.fn();
+    render(<SearchAndFilters {...defaultProps} onFilterChange={onFilterChange} />);
+    
+    const badmintonInLeagueCheckbox = screen.getByLabelText('Badminton (In League)');
+    fireEvent.click(badmintonInLeagueCheckbox);
+    
+    expect(onFilterChange).toHaveBeenCalledWith('badmintonPlayersInLeague');
   });
 
   it('should call onFilterChange when badminton all filter is clicked', () => {

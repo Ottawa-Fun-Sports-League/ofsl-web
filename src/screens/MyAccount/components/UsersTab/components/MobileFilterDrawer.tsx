@@ -139,6 +139,19 @@ export function MobileFilterDrawer({
               <div className="flex items-center">
                 <input
                   type="checkbox"
+                  id="mobile-filter-badminton-league"
+                  checked={filters.badmintonPlayersInLeague}
+                  onChange={() => handleFilterChange('badmintonPlayersInLeague')}
+                  className="mr-2"
+                />
+                <label htmlFor="mobile-filter-badminton-league" className="text-[#6F6F6F]">
+                  Badminton (In League)
+                </label>
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
                   id="mobile-filter-badminton-all"
                   checked={filters.badmintonPlayersAll}
                   onChange={() => handleFilterChange('badmintonPlayersAll')}

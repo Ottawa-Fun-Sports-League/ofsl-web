@@ -254,7 +254,7 @@ describe('useUsersData - Sport Filters', () => {
     expect(result.current.isAnyFilterActive()).toBe(false);
   });
 
-  it('should handle multiple filters together', async () => {
+  it('should handle multiple sport filters with OR logic', async () => {
     const { result } = renderHook(() => useUsersData());
 
     await waitFor(() => {
@@ -268,10 +268,32 @@ describe('useUsersData - Sport Filters', () => {
     });
 
     await waitFor(() => {
-      // Should only show users that match BOTH filters
-      // In this case, only Alice has both sports
+      // Should show users that match EITHER filter (OR logic)
+      // All 4 users should be shown: John (volleyball), Jane (badminton), Bob (volleyball), Alice (both)
+      expect(result.current.filteredUsers).toHaveLength(4);
+      const names = result.current.filteredUsers.map(u => u.name);
+      expect(names).toContain('John Volleyball Player');
+      expect(names).toContain('Jane Badminton Player');
+      expect(names).toContain('Bob Not In League');
+      expect(names).toContain('Alice All Sports');
+    });
+  });
+
+  it('should filter badminton players in league', async () => {
+    const { result } = renderHook(() => useUsersData());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Apply badminton in league filter
+    act(() => {
+      result.current.handleFilterChange('badmintonPlayersInLeague');
+    });
+
+    await waitFor(() => {
       expect(result.current.filteredUsers).toHaveLength(1);
-      expect(result.current.filteredUsers[0].name).toBe('Alice All Sports');
+      expect(result.current.filteredUsers[0].name).toBe('Jane Badminton Player');
     });
   });
 });

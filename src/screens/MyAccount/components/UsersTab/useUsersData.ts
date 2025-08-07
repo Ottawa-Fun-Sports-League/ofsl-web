@@ -47,7 +47,21 @@ export function useUsersData() {
       // Fetch users with their sports skills
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          user_sports_skills (
+            sport_id,
+            skill_id,
+            sports (
+              id,
+              name
+            ),
+            skills (
+              id,
+              name
+            )
+          )
+        `)
         .order('date_created', { ascending: false });
 
       if (usersError) throw usersError;
@@ -130,33 +144,25 @@ export function useUsersData() {
       filtered = filtered.filter(user => user.team_ids && user.team_ids.length > 0);
     }
     
-    // Sport-specific filters
+    // Sport-specific filters - Apply with OR logic within sport filters
+    const sportFilters = [];
+    
     if (filters.volleyballPlayersInLeague) {
-      // Filter for volleyball players who are registered in current active leagues
-      filtered = filtered.filter(user => 
+      sportFilters.push((user: User) => 
         user.current_registrations?.some(reg => 
           reg.sport_name.toLowerCase() === 'volleyball'
         ) || false
       );
     }
     
-    if (filters.playersNotInLeague) {
-      // Filter for players that are registered (have team_ids) but not in any active league
-      filtered = filtered.filter(user => 
-        user.team_ids && 
-        user.team_ids.length > 0 && 
-        (!user.current_registrations || user.current_registrations.length === 0)
-      );
-    }
-    
     if (filters.volleyballPlayersAll) {
-      // Filter for all volleyball players (those who have volleyball in their sports skills)
-      filtered = filtered.filter(user => {
+      sportFilters.push((user: User) => {
         // Check if user has volleyball in their sports skills
         if (user.user_sports_skills && Array.isArray(user.user_sports_skills)) {
-          return user.user_sports_skills.some(skill => 
+          const hasVolleyballSkill = user.user_sports_skills.some(skill => 
             skill.sport_id === SPORT_IDS.VOLLEYBALL
           );
+          if (hasVolleyballSkill) return true;
         }
         // Also include players currently in volleyball leagues
         return user.current_registrations?.some(reg => 
@@ -165,20 +171,45 @@ export function useUsersData() {
       });
     }
     
+    if (filters.badmintonPlayersInLeague) {
+      sportFilters.push((user: User) => 
+        user.current_registrations?.some(reg => 
+          reg.sport_name.toLowerCase() === 'badminton'
+        ) || false
+      );
+    }
+    
     if (filters.badmintonPlayersAll) {
-      // Filter for all badminton players (those who have badminton in their sports skills)
-      filtered = filtered.filter(user => {
+      sportFilters.push((user: User) => {
         // Check if user has badminton in their sports skills
         if (user.user_sports_skills && Array.isArray(user.user_sports_skills)) {
-          return user.user_sports_skills.some(skill => 
+          const hasBadmintonSkill = user.user_sports_skills.some(skill => 
             skill.sport_id === SPORT_IDS.BADMINTON
           );
+          if (hasBadmintonSkill) return true;
         }
         // Also include players currently in badminton leagues
         return user.current_registrations?.some(reg => 
           reg.sport_name.toLowerCase() === 'badminton'
         ) || false;
       });
+    }
+    
+    // Apply sport filters with OR logic
+    if (sportFilters.length > 0) {
+      filtered = filtered.filter(user => 
+        sportFilters.some(filterFn => filterFn(user))
+      );
+    }
+    
+    // Apply "Not in League" filter separately (this is independent of sport filters)
+    if (filters.playersNotInLeague) {
+      // Filter for players that are registered (have team_ids) but not in any active league
+      filtered = filtered.filter(user => 
+        user.team_ids && 
+        user.team_ids.length > 0 && 
+        (!user.current_registrations || user.current_registrations.length === 0)
+      );
     }
     
     // Apply sorting
@@ -253,6 +284,7 @@ export function useUsersData() {
            filters.facilitator || 
            filters.activePlayer ||
            filters.volleyballPlayersInLeague ||
+           filters.badmintonPlayersInLeague ||
            filters.playersNotInLeague ||
            filters.volleyballPlayersAll ||
            filters.badmintonPlayersAll;

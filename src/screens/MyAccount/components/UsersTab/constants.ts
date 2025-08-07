@@ -3,6 +3,7 @@ export const INITIAL_FILTERS = {
   facilitator: false,
   activePlayer: false,
   volleyballPlayersInLeague: false,
+  badmintonPlayersInLeague: false,
   playersNotInLeague: false,
   volleyballPlayersAll: false,
   badmintonPlayersAll: false
