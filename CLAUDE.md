@@ -120,6 +120,17 @@ Claude Code can manage the Supabase database for this project:
 - Generate TypeScript types from database schema
 - Access project logs and advisors for debugging
 
+## MCP (Model Context Protocol) Integration
+
+This project uses MCP servers for enhanced functionality:
+
+- **Supabase MCP**: Database management, migrations, edge functions
+- **Stripe MCP**: Payment processing, customer management, subscriptions
+- **Netlify MCP**: Deployment, hosting, environment management
+- **IDE MCP**: Code diagnostics and execution
+
+See [MCP Usage Guide](./docs/MCP_USAGE.md) for detailed documentation and `mcp.json` for configuration.
+
 ## Important Notes
 
 - Google OAuth requires specific redirect URI configuration (see README.md)

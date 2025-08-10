@@ -1,0 +1,91 @@
+{
+  "name": "OFSL Web MCP Configuration",
+  "description": "Model Context Protocol servers configuration for Ottawa Fun Sports League web application",
+  "servers": {
+    "supabase": {
+      "enabled": true,
+      "description": "Supabase MCP server for database management, migrations, and edge functions",
+      "capabilities": [
+        "Database migrations",
+        "SQL query execution",
+        "Edge function deployment",
+        "Project management",
+        "TypeScript type generation",
+        "Documentation search"
+      ],
+      "requiredEnvVars": [
+        "SUPABASE_ACCESS_TOKEN"
+      ],
+      "projectId": "aijuhalowwjbccyjrlgf"
+    },
+    "stripe": {
+      "enabled": true,
+      "description": "Stripe MCP server for payment processing and customer management",
+      "capabilities": [
+        "Customer management",
+        "Product and price creation",
+        "Payment link generation",
+        "Invoice management",
+        "Subscription handling",
+        "Refund processing"
+      ],
+      "requiredEnvVars": [
+        "STRIPE_API_KEY"
+      ]
+    },
+    "netlify": {
+      "enabled": true,
+      "description": "Netlify MCP server for deployment and hosting management",
+      "capabilities": [
+        "Site deployment",
+        "Environment variable management",
+        "Function deployment",
+        "Form handling"
+      ],
+      "requiredEnvVars": [
+        "NETLIFY_AUTH_TOKEN"
+      ]
+    },
+    "ide": {
+      "enabled": true,
+      "description": "IDE integration for code diagnostics and execution",
+      "capabilities": [
+        "Get language diagnostics",
+        "Execute code snippets"
+      ]
+    }
+  },
+  "usage": {
+    "supabase": {
+      "examples": [
+        "Apply database migrations",
+        "Execute SQL queries",
+        "Deploy edge functions",
+        "Generate TypeScript types from database schema"
+      ]
+    },
+    "stripe": {
+      "examples": [
+        "Create Stripe customers",
+        "Set up products and pricing",
+        "Generate payment links",
+        "Manage subscriptions"
+      ]
+    },
+    "netlify": {
+      "examples": [
+        "Deploy site to production",
+        "Update environment variables",
+        "View deployment logs"
+      ]
+    }
+  },
+  "setup": {
+    "instructions": [
+      "1. Ensure you have the required environment variables set",
+      "2. Add the MCP servers to your Claude settings.local.json",
+      "3. Enable the servers in the 'enabledMcpjsonServers' array",
+      "4. Restart Claude Code if needed"
+    ]
+  }
+}
