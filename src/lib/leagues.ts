@@ -165,6 +165,62 @@ export const getLocationDisplay = (
   return "Various";
 };
 
+// Day of week ordering for sorting (Monday = 0, Sunday = 6)
+export const getDayOrder = (dayOfWeek: number | null): number => {
+  if (dayOfWeek === null) return 7; // Put null values at the end
+  // Convert from Sunday=0 indexing to Monday=0 indexing
+  return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+};
+
+// Group leagues by day of the week
+export interface GroupedLeagues {
+  [dayName: string]: LeagueWithTeamCount[];
+}
+
+export const groupLeaguesByDay = (leagues: LeagueWithTeamCount[]): GroupedLeagues => {
+  const grouped: GroupedLeagues = {};
+  
+  leagues.forEach(league => {
+    const dayName = getDayName(league.day_of_week);
+    if (dayName) {
+      if (!grouped[dayName]) {
+        grouped[dayName] = [];
+      }
+      grouped[dayName].push(league);
+    }
+  });
+
+  return grouped;
+};
+
+// Sort leagues by day of the week (Monday to Sunday)
+export const sortLeaguesByDay = (leagues: LeagueWithTeamCount[]): LeagueWithTeamCount[] => {
+  return [...leagues].sort((a, b) => {
+    const dayOrderA = getDayOrder(a.day_of_week);
+    const dayOrderB = getDayOrder(b.day_of_week);
+    
+    if (dayOrderA !== dayOrderB) {
+      return dayOrderA - dayOrderB;
+    }
+    
+    // If same day, sort by league name
+    return a.name.localeCompare(b.name);
+  });
+};
+
+// Get ordered day names for consistent display (Monday to Sunday)
+export const getOrderedDayNames = (): string[] => {
+  return [
+    "Monday",
+    "Tuesday", 
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+  ];
+};
+
 // Fetch all leagues with related data
 export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
   try {

@@ -1,30 +1,61 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
-import { BookOpen, Star } from "lucide-react";
+import { BookOpen, Star, MapPin, Calendar, DollarSign, Users } from "lucide-react";
+import { 
+  fetchLeagues,
+  LeagueWithTeamCount,
+  groupLeaguesByDay,
+  getOrderedDayNames,
+  GroupedLeagues,
+  formatLeagueDates,
+  getPrimaryLocation
+} from "../../lib/leagues";
+import { LoadingSpinner } from "../../components/ui/loading-spinner";
 
 export const BadmintonPage = (): React.ReactElement => {
-  // League card data for badminton
-  const leagueCards = [
-    {
-      title: "Wednesday Competitive",
-      image: "/badminton-card.png",
-      link: "/leagues/badminton-advanced-singles"
-    },
-    {
-      title: "Wednesday Intermediate",
-      image: "/AdobeStock_319667211.jpeg",
-      link: "/leagues/badminton-intermediate-doubles"
-    },
-    {
-      title: "Monday Int/Adv/Comp",
-      image: "/AdobeStock_480292293.jpeg",
-      link: "/leagues/badminton-competitive-singles"
-    },
-    
-  ];
+  const [leagues, setLeagues] = useState<LeagueWithTeamCount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadBadmintonLeagues = async () => {
+      try {
+        setLoading(true);
+        const allLeagues = await fetchLeagues();
+        // Filter for badminton leagues only
+        const badmintonLeagues = allLeagues.filter(league => 
+          league.sport_name?.toLowerCase().includes('badminton')
+        );
+        setLeagues(badmintonLeagues);
+      } catch (err) {
+        console.error('Error loading badminton leagues:', err);
+        setError('Failed to load badminton leagues');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBadmintonLeagues();
+  }, []);
+
+  // Group badminton leagues by day of the week
+  const groupedLeagues: GroupedLeagues = groupLeaguesByDay(leagues);
+  const orderedDayNames = getOrderedDayNames();
+
+  // Only show days that have leagues
+  const activeDays = orderedDayNames.filter(dayName => 
+    groupedLeagues[dayName] && groupedLeagues[dayName].length > 0
+  );
+
+  // Function to get spots text
+  const getSpotsText = (spots: number) => {
+    if (spots === 0) return "Full";
+    if (spots === 1) return "1 spot left";
+    return `${spots} spots left`;
+  };
 
   return (
     <div className="bg-white flex flex-row justify-center w-full">
@@ -69,32 +100,103 @@ export const BadmintonPage = (): React.ReactElement => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
-            {leagueCards.map((card, index) => (
-              <Link 
-                to={card.link} 
-                key={index} 
-                className="block transition-transform duration-300 hover:scale-105 hover:shadow-lg rounded-lg"
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-600 text-lg mb-4">{error}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-3"
               >
-                <Card className="border-none overflow-hidden h-full rounded-lg">
-                  <CardContent className="p-0">
-                    <div className="relative">
-                      <img
-                        className="w-full h-[300px] object-cover rounded-t-lg"
-                        alt={card.title}
-                        src={card.image}
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 h-[90px] flex items-center justify-center px-4">
-                        <h3 className="text-white font-bold text-lg text-center">
-                          {card.title}
-                        </h3>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                Try Again
+              </Button>
+            </div>
+          ) : activeDays.length > 0 ? (
+            <div className="space-y-12">
+              {activeDays.map(dayName => (
+                <div key={dayName}>
+                  {/* Day Header */}
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">{dayName}</h3>
+                    <div className="w-16 h-1 bg-[#B20000] rounded"></div>
+                  </div>
+                  
+                  {/* League Cards for this Day */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
+                    {groupedLeagues[dayName].map(league => (
+                      <Link 
+                        key={league.id} 
+                        to={`/leagues/${league.id}`}
+                        className="block transition-transform duration-300 hover:scale-105 hover:shadow-lg rounded-lg"
+                      >
+                        <Card className="border-none overflow-hidden h-full rounded-lg">
+                          <CardContent className="p-0">
+                            <div className="relative">
+                              <img
+                                className="w-full h-[300px] object-cover rounded-t-lg"
+                                alt={league.name}
+                                src="/badminton-card.png"
+                              />
+                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-4">
+                                <h3 className="text-white font-bold text-lg text-center mb-2">
+                                  {league.name}
+                                </h3>
+                                
+                                {/* League Info Overlay */}
+                                <div className="space-y-1 text-sm text-white/90">
+                                  {/* Dates */}
+                                  <div className="flex items-center justify-center">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    <span>{formatLeagueDates(league.start_date, league.end_date, league.hide_day || false)}</span>
+                                  </div>
+                                  
+                                  {/* Location */}
+                                  <div className="flex items-center justify-center">
+                                    <MapPin className="h-3 w-3 mr-1" />
+                                    <div className="flex flex-wrap gap-1">
+                                      {(() => {
+                                        const gymLocations = getPrimaryLocation(league.gyms || []);
+                                        if (gymLocations.length === 0) {
+                                          return <span>TBD</span>;
+                                        }
+                                        return gymLocations.join(', ');
+                                      })()}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Price and Spots */}
+                                  <div className="flex items-center justify-between mt-2">
+                                    <div className="flex items-center">
+                                      <DollarSign className="h-3 w-3 mr-1" />
+                                      <span>${league.cost}</span>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Users className="h-3 w-3 mr-1" />
+                                      <span className={`text-xs py-0.5 px-1 rounded ${league.spots_remaining === 0 ? 'bg-red-600' : league.spots_remaining <= 3 ? 'bg-orange-600' : 'bg-green-600'}`}>
+                                        {getSpotsText(league.spots_remaining)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-[#6F6F6F] text-lg">No badminton leagues available at this time.</p>
+              <p className="text-[#6F6F6F]">Check back soon for upcoming leagues!</p>
+            </div>
+          )}
         </div>
         
         {/* Standards of Play section */}

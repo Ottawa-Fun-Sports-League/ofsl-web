@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
-import { MapPin, Calendar, Clock, Users, DollarSign } from "lucide-react";
+import { MapPin, Calendar, Users, DollarSign } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { 
   fetchLeagues,
   fetchSports,
   fetchSkills,
-  getDayName,
   formatLeagueDates,
   getPrimaryLocation,
   getGymNamesByLocation,
-  LeagueWithTeamCount 
+  LeagueWithTeamCount,
+  groupLeaguesByDay,
+  getOrderedDayNames,
+  GroupedLeagues 
 } from "../../lib/leagues";
 import { getStripeProductByLeagueId } from '../../lib/stripe';
 import { MobileFilterDrawer } from "./components/MobileFilterDrawer";
@@ -144,6 +146,15 @@ export const LeaguesPage = (): React.ReactElement => {
   // Filter leagues using the shared filter function
   const filteredLeagues = filterLeagues(leagues, filters, skills);
 
+  // Group filtered leagues by day of the week
+  const groupedLeagues: GroupedLeagues = groupLeaguesByDay(filteredLeagues);
+  const orderedDayNames = getOrderedDayNames();
+
+  // Only show days that have leagues
+  const activeDays = orderedDayNames.filter(dayName => 
+    groupedLeagues[dayName] && groupedLeagues[dayName].length > 0
+  );
+
   // Function to get badge color based on spots remaining
   const getSpotsBadgeColor = (spots: number) => {
     if (spots === 0) return "bg-red-100 text-red-800";
@@ -220,106 +231,113 @@ export const LeaguesPage = (): React.ReactElement => {
           hideOnMobile={true}
         />
 
-        {/* League Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLeagues.map(league => (
-            <Link 
-              key={league.id} 
-              to={`/leagues/${league.id}`}
-              className="block rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
-            >
-              <Card 
-                className="overflow-hidden rounded-lg border border-gray-200 flex flex-col h-full"
-              >
-                <CardContent className="p-0 flex flex-col h-full">
-                  {/* Card Header with League Name and Sport Icon */}
-                  <div className="bg-[#F8F8F8] border-b border-gray-200 p-4 flex justify-between items-start">
-                    <div>
-                      <h3 className="text-lg font-bold text-[#6F6F6F] line-clamp-2">{league.name}</h3>
-                    </div>
-                    <img 
-                      src={getSportIcon(league.sport_name)} 
-                      alt={`${league.sport_name} icon`}
-                      className="w-8 h-8 object-contain ml-2"
-                    />
-                  </div>
-                  
-                  {/* Card Body with Info */}
-                  <div className="p-4 flex-grow flex flex-col space-y-4">
-                    {/* Day & Time */}
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <p className="text-sm font-medium text-[#6F6F6F]">{getDayName(league.day_of_week)}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Dates */}
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <p className="text-sm font-medium text-[#6F6F6F]">{formatLeagueDates(league.start_date, league.end_date, league.hide_day || false)}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Location */}
-                    <div className="flex items-center flex-wrap">
-                      <MapPin className="h-4 w-4 text-[#B20000] mr-1.5 flex-shrink-0" />
-                      <p className="text-sm font-medium text-[#6F6F6F] mr-2">Location:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {(() => {
-                          const gymLocations = getPrimaryLocation(league.gyms || []);
-                          
-                          if (gymLocations.length === 0) {
-                            return <span className="text-sm text-gray-500">TBD</span>;
-                          }
-                          
-                          return gymLocations.map((location, index) => (
-                            <LocationPopover
-                              key={index}
-                              locations={getGymNamesByLocation(league.gyms || [], location)}
-                            >
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                                {location}
-                              </span>
-                            </LocationPopover>
-                          ));
-                        })()}
-                      </div>
-                    </div>
-                    
-                    {/* Price */}
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <DollarSign className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <p className="text-sm font-medium text-[#6F6F6F]">
-                          ${league.cost} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Register Button with spots remaining */}
-                  <div className="mt-auto p-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 text-[#B20000] mr-1" />
-                      <span className={`text-xs font-medium py-0.5 px-2 rounded-full ${getSpotsBadgeColor(league.spots_remaining)}`}>
-                        {getSpotsText(league.spots_remaining)}
-                      </span>
-                    </div>
-                    
-                    <Button 
-                      className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-4"
-                      variant="default"
+        {/* Grouped League Cards by Day */}
+        {activeDays.length > 0 ? (
+          <div className="space-y-12">
+            {activeDays.map(dayName => (
+              <div key={dayName}>
+                {/* Day Header */}
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-[#6F6F6F] mb-2">{dayName}</h2>
+                  <div className="w-16 h-1 bg-[#B20000] rounded"></div>
+                </div>
+                
+                {/* League Cards for this Day */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {groupedLeagues[dayName].map(league => (
+                    <Link 
+                      key={league.id} 
+                      to={`/leagues/${league.id}`}
+                      className="block rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
                     >
-                      {league.spots_remaining === 0 ? 'Join Waitlist' : 'View Details'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                      <Card 
+                        className="overflow-hidden rounded-lg border border-gray-200 flex flex-col h-full"
+                      >
+                        <CardContent className="p-0 flex flex-col h-full">
+                          {/* Card Header with League Name and Sport Icon */}
+                          <div className="bg-[#F8F8F8] border-b border-gray-200 p-4 flex justify-between items-start">
+                            <div>
+                              <h3 className="text-lg font-bold text-[#6F6F6F] line-clamp-2">{league.name}</h3>
+                            </div>
+                            <img 
+                              src={getSportIcon(league.sport_name)} 
+                              alt={`${league.sport_name} icon`}
+                              className="w-8 h-8 object-contain ml-2"
+                            />
+                          </div>
+                          
+                          {/* Card Body with Info */}
+                          <div className="p-4 flex-grow flex flex-col space-y-4">
+                            {/* Dates */}
+                            <div className="space-y-1">
+                              <div className="flex items-center">
+                                <Calendar className="h-4 w-4 text-[#B20000] mr-1.5" />
+                                <p className="text-sm font-medium text-[#6F6F6F]">{formatLeagueDates(league.start_date, league.end_date, league.hide_day || false)}</p>
+                              </div>
+                            </div>
+                            
+                            {/* Location */}
+                            <div className="flex items-center flex-wrap">
+                              <MapPin className="h-4 w-4 text-[#B20000] mr-1.5 flex-shrink-0" />
+                              <p className="text-sm font-medium text-[#6F6F6F] mr-2">Location:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {(() => {
+                                  const gymLocations = getPrimaryLocation(league.gyms || []);
+                                  
+                                  if (gymLocations.length === 0) {
+                                    return <span className="text-sm text-gray-500">TBD</span>;
+                                  }
+                                  
+                                  return gymLocations.map((location, index) => (
+                                    <LocationPopover
+                                      key={index}
+                                      locations={getGymNamesByLocation(league.gyms || [], location)}
+                                    >
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
+                                        {location}
+                                      </span>
+                                    </LocationPopover>
+                                  ));
+                                })()}
+                              </div>
+                            </div>
+                            
+                            {/* Price */}
+                            <div className="space-y-1">
+                              <div className="flex items-center">
+                                <DollarSign className="h-4 w-4 text-[#B20000] mr-1.5" />
+                                <p className="text-sm font-medium text-[#6F6F6F]">
+                                  ${league.cost} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Register Button with spots remaining */}
+                          <div className="mt-auto p-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+                            <div className="flex items-center">
+                              <Users className="h-4 w-4 text-[#B20000] mr-1" />
+                              <span className={`text-xs font-medium py-0.5 px-2 rounded-full ${getSpotsBadgeColor(league.spots_remaining)}`}>
+                                {getSpotsText(league.spots_remaining)}
+                              </span>
+                            </div>
+                            
+                            <Button 
+                              className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-4"
+                              variant="default"
+                            >
+                              {league.spots_remaining === 0 ? 'Join Waitlist' : 'View Details'}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
         
         {/* No Results Message */}
         {filteredLeagues.length === 0 && !loading && (
