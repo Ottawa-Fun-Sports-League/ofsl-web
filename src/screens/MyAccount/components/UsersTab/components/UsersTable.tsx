@@ -2,6 +2,8 @@ import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { Edit2, Trash2, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
 import { User, SortField, SortDirection } from '../types';
+import { UserStatusBadge } from './UserStatusBadge';
+import { MagicLinkButton } from './MagicLinkButton';
 
 interface UsersTableProps {
   users: User[];
@@ -66,6 +68,15 @@ export function UsersTable({
                 </th>
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  onClick={() => onSort('status')}
+                >
+                  <div className="flex items-center">
+                    Status
+                    {getSortIcon('status')}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => onSort('team_count')}
                 >
                   <div className="flex items-center">
@@ -118,7 +129,7 @@ export function UsersTable({
                           )}
                         </div>
                         <div className="text-sm text-gray-500">
-                          ID: {user.id.slice(0, 8)}...
+                          ID: {user.id ? `${user.id.slice(0, 8)}...` : 'N/A'}
                         </div>
                       </div>
                     </div>
@@ -139,6 +150,9 @@ export function UsersTable({
                       )}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <UserStatusBadge status={user.status} confirmedAt={user.confirmed_at} />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
                     {user.team_ids?.length || 0} teams
                   </td>
@@ -150,9 +164,17 @@ export function UsersTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
+                      {user.email && (
+                        <MagicLinkButton 
+                          userEmail={user.email} 
+                          userName={user.name}
+                        />
+                      )}
                       <Button
                         onClick={() => onEditUser(user)} 
                         className="bg-transparent hover:bg-blue-50 text-blue-500 hover:text-blue-600 rounded-lg p-2 transition-colors" 
+                        disabled={!user.name} // Can't edit users without profiles
+                        title={!user.name ? "User has not completed profile" : "Edit user"}
                       >
                         <Edit2 className="h-3 w-3" />
                       </Button>
