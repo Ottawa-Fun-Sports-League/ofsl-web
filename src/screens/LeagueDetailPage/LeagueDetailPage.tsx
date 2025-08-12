@@ -17,12 +17,16 @@ import { logger } from "../../lib/logger";
 import { supabase } from "../../lib/supabase";
 import {
   useActiveView,
+  useScoreSubmissionModal,
   type ActiveView,
 } from "./hooks/useLeagueDetail";
 import { NavigationTabs } from "./components/NavigationTabs";
 import { LeagueInfo } from "./components/LeagueInfo";
 import { LeagueStandings } from "./components/LeagueStandings";
+import { LeagueSchedule } from "./components/LeagueSchedule";
 import { LeagueGyms } from "./components/LeagueGyms";
+import { ScoreSubmissionModal } from "./components/ScoreSubmissionModal";
+import { mockSchedule, getTeamNameFromPosition } from "./utils/leagueUtils";
 
 export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,9 +46,20 @@ export function LeagueDetailPage() {
 
   // Get initial view from URL search params
   const tabParam = searchParams.get('tab');
-  const initialView: ActiveView = tabParam === 'standings' ? 'standings' : tabParam === 'gyms' ? 'gyms' : 'info';
+  const initialView: ActiveView = 
+    tabParam === 'standings' ? 'standings' : 
+    tabParam === 'schedule' ? 'schedule' :
+    tabParam === 'gyms' ? 'gyms' : 'info';
   
   const { activeView, setActiveView } = useActiveView(initialView);
+  
+  // Score submission modal hook
+  const {
+    showScoreSubmissionModal,
+    selectedTier,
+    openScoreSubmissionModal,
+    closeScoreSubmissionModal
+  } = useScoreSubmissionModal();
 
   useEffect(() => {
     loadLeague();
@@ -211,6 +226,14 @@ export function LeagueDetailPage() {
               <LeagueStandings leagueId={id} />
             )}
 
+            {/* Schedule View */}
+            {activeView === "schedule" && (
+              <LeagueSchedule 
+                mockSchedule={mockSchedule} 
+                openScoreSubmissionModal={openScoreSubmissionModal}
+              />
+            )}
+
             {/* Gyms View */}
             {activeView === "gyms" && (
               <LeagueGyms gyms={league.gyms || []} gymDetails={gymDetails || undefined} />
@@ -220,6 +243,16 @@ export function LeagueDetailPage() {
         </div>
       </div>
 
+      {/* Score Submission Modal */}
+      {showScoreSubmissionModal && selectedTier && (
+        <ScoreSubmissionModal
+          showModal={showScoreSubmissionModal}
+          selectedTier={selectedTier}
+          mockSchedule={mockSchedule}
+          getTeamNameFromPosition={getTeamNameFromPosition}
+          closeModal={closeScoreSubmissionModal}
+        />
+      )}
     </div>
   );
 }
