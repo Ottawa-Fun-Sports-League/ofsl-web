@@ -36,6 +36,7 @@ const FILTER_OPTIONS: FilterOption[] = [
   // Status filters
   { key: 'activePlayer', label: 'Active Player', category: 'status', description: 'Currently on a team in an active league' },
   { key: 'playersNotInLeague', label: 'Not in League', category: 'status', description: 'Previously on teams but not in active leagues' },
+  { key: 'pendingUsers', label: 'Pending Users', category: 'status', description: 'Users who have not completed their profile' },
 ];
 
 const CATEGORY_LABELS: Record<FilterCategory, string> = {

@@ -8,12 +8,21 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('Delete user function called:', req.method);
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Authorization header required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const token = authHeader.replace('Bearer ', '');
     
     const supabaseClient = createClient(
@@ -31,14 +40,23 @@ serve(async (req) => {
       );
     }
 
-    // Check if the user is an admin
+    // Check if the user is an admin - try both auth_id and id fields
     const { data: userData, error: fetchError } = await supabaseClient
       .from('users')
       .select('is_admin')
-      .eq('auth_id', user.id)
-      .single();
+      .or(`auth_id.eq.${user.id},id.eq.${user.id}`)
+      .maybeSingle();
 
-    if (fetchError || !userData?.is_admin) {
+    if (fetchError) {
+      console.error('Admin check query error:', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify admin status' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!userData?.is_admin) {
+      console.error('User is not an admin:', userData);
       return new Response(
         JSON.stringify({ error: 'Forbidden: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -54,19 +72,7 @@ serve(async (req) => {
       );
     }
 
-    // Get the auth_id for the user to delete
-    const { data: targetUser, error: targetFetchError } = await supabaseClient
-      .from('users')
-      .select('auth_id')
-      .eq('id', userId)
-      .single();
-
-    if (targetFetchError || !targetUser?.auth_id) {
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log('Attempting to delete user:', userId);
 
     // Create admin client with service role key
     const supabaseAdmin = createClient(
@@ -74,42 +80,83 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Delete from auth.users table using admin client
-    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(
-      targetUser.auth_id
-    );
+    // First, try to get the user from public.users table
+    const { data: targetUser, error: targetFetchError } = await supabaseAdmin
+      .from('users')
+      .select('auth_id, id')
+      .or(`id.eq.${userId},auth_id.eq.${userId}`)
+      .maybeSingle();
 
-    if (authDeleteError) {
-      // eslint-disable-next-line no-console
-      console.error('Error deleting auth user:', authDeleteError);
-      return new Response(
-        JSON.stringify({ error: `Failed to delete auth user: ${authDeleteError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (targetFetchError) {
+      console.error('Error fetching target user from public.users:', targetFetchError);
     }
 
-    // The deletion from public.users should cascade automatically due to foreign key constraints
-    // But let's check if the user was deleted
-    const { data: checkUser } = await supabaseClient
-      .from('users')
-      .select('id')
-      .eq('id', userId)
-      .single();
+    let authIdToDelete = null;
+    let publicUserIdToDelete = null;
 
-    if (checkUser) {
-      // If user still exists in public.users, delete manually
-      const { error: publicDeleteError } = await supabaseClient
-        .from('users')
-        .delete()
-        .eq('id', userId);
-
-      if (publicDeleteError) {
-        // eslint-disable-next-line no-console
-        console.error('Error deleting public user:', publicDeleteError);
+    if (targetUser) {
+      console.log('Found user in public.users:', targetUser);
+      authIdToDelete = targetUser.auth_id;
+      publicUserIdToDelete = targetUser.id;
+    } else {
+      // User not in public.users, they might be auth-only (unconfirmed)
+      // The userId might be the auth UUID itself
+      console.log('User not found in public.users, checking if it is an auth UUID');
+      
+      // Try to get the auth user directly
+      const { data: authUser, error: authFetchError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      
+      if (authFetchError || !authUser) {
+        console.error('User not found in auth.users either:', authFetchError);
         return new Response(
-          JSON.stringify({ error: 'User deleted from auth but failed to delete from public users table' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'User not found in database' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+      
+      console.log('Found auth-only user:', authUser.email);
+      authIdToDelete = userId;
+    }
+
+    // Delete from auth.users table if we have an auth ID
+    if (authIdToDelete) {
+      console.log('Deleting from auth.users:', authIdToDelete);
+      const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(
+        authIdToDelete
+      );
+
+      if (authDeleteError) {
+        console.error('Error deleting auth user:', authDeleteError);
+        // Continue to try deleting from public.users even if auth deletion fails
+      } else {
+        console.log('Successfully deleted from auth.users');
+      }
+    }
+
+    // If we had a public user, check if it was deleted (in case cascade didn't work)
+    if (publicUserIdToDelete) {
+      const { data: checkUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('id', publicUserIdToDelete)
+        .maybeSingle();
+
+      if (checkUser) {
+        // If user still exists in public.users, delete manually using admin client
+        console.log('User still exists after auth deletion, deleting from public.users');
+        const { error: publicDeleteError } = await supabaseAdmin
+          .from('users')
+          .delete()
+          .eq('id', publicUserIdToDelete);
+
+        if (publicDeleteError) {
+          console.error('Error deleting public user:', publicDeleteError);
+          return new Response(
+            JSON.stringify({ error: 'Failed to delete user from database' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        console.log('Successfully deleted from public.users');
       }
     }
 
