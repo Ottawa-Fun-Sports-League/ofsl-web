@@ -39,8 +39,17 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
             <section>
               <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Players&apos; responsibilities</h3>
-              
-              {/* Set up and Take down Section */}
+              <p className="text-lg text-[#6F6F6F] mb-4">
+                Team <strong>A & C</strong> are responsible for <strong>net & pole set up</strong> and Team <strong>B & C</strong> for take down. OFSL facilitators will notify players to begin activities 10 minutes after schedule time and to stop activities at 10 minutes before the schedule time ie. For games scheduled for 8:00-10:00 pm, start time will be at 8:10 pm & end time at 9:50 pm. Note if a team is late, the order of play can be changed without penalty as long as the teams present agree to play, All 6 sets must be played within the time permitted. The team who is not sitting off, must score keep for the duration of the matches.
+              </p>
+              <p className="text-lg text-[#6F6F6F] mb-4">
+                A game ball will not be provided by the league. If team captains can not agree upon a ball to use, the team sitting off will make the decision.
+              </p>
+              <p className="text-lg text-[#6F6F6F] mb-6">
+                Note that a game ball will be provided by the league if team captains have not already agreed upon a ball to use.
+              </p>
+
+              {/* New detailed content added after the original paragraph */}
               <div className="mb-6">
                 <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Set up and Take down</h4>
                 
@@ -63,8 +72,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </div>
               </div>
 
-              {/* Score Keeping Section */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Score Keeping</h4>
                 
                 <div className="mb-4">
@@ -82,19 +90,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Facilitator not required to keep score</li>
                   </ul>
                 </div>
-              </div>
-
-              {/* General Information */}
-              <div className="mb-4">
-                <p className="text-lg text-[#6F6F6F] mb-4">
-                  OFSL facilitators will notify players to begin activities 10 minutes after schedule time and to stop activities at 10 minutes before the schedule time ie. For games scheduled for 8:00-10:00 pm, start time will be at 8:10 pm & end time at 9:50 pm. Note if a team is late, the order of play can be changed without penalty as long as the teams present agree to play, All 6 sets must be played within the time permitted.
-                </p>
-                <p className="text-lg text-[#6F6F6F] mb-4">
-                  A game ball will not be provided by the league. If team captains can not agree upon a ball to use, the team sitting off will make the decision.
-                </p>
-                <p className="text-lg text-[#6F6F6F]">
-                  Note that a game ball will be provided by the league if team captains have not already agreed upon a ball to use.
-                </p>
               </div>
             </section>
 
