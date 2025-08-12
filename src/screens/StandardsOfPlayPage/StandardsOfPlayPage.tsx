@@ -45,9 +45,52 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               <p className="text-lg text-[#6F6F6F] mb-4">
                 A game ball will not be provided by the league. If team captains can not agree upon a ball to use, the team sitting off will make the decision.
               </p>
-              <p className="text-lg text-[#6F6F6F]">
+              <p className="text-lg text-[#6F6F6F] mb-6">
                 Note that a game ball will be provided by the league if team captains have not already agreed upon a ball to use.
               </p>
+
+              {/* New detailed content added after the original paragraph */}
+              <div className="mb-6">
+                <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Set up and Take down</h4>
+                
+                <div className="mb-4">
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">For 3 Team Tier:</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mb-3">
+                    <li>Teams <strong>A & C</strong> must set up the net before warm-up</li>
+                    <li>Teams <strong>B & C</strong> must take down nets and equipment</li>
+                    <li>Facilitator is not responsible for set up/take down</li>
+                    <li>Potential league warning for non-compliance</li>
+                  </ul>
+                </div>
+
+                <div className="mb-4">
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">For 2 Team Tier:</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Teams <strong>A & B</strong> must set up the net before warm-up</li>
+                    <li>Teams <strong>A & B</strong> must take down nets and equipment</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Score Keeping</h4>
+                
+                <div className="mb-4">
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">For 3 Team Tier:</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mb-3">
+                    <li>Teams sitting out must score keep during other matches</li>
+                    <li>Team <strong>B</strong> must arrive early to score keep for Teams A & C</li>
+                  </ul>
+                </div>
+
+                <div className="mb-4">
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">For 2 Team Tier:</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Both teams responsible for score keeping</li>
+                    <li>Facilitator not required to keep score</li>
+                  </ul>
+                </div>
+              </div>
             </section>
 
             <section>
