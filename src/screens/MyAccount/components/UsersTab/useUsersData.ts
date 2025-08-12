@@ -1,4 +1,15 @@
-import { useState, useEffect } from 'react'; import { useAuth } from '../../../../contexts/AuthContext'; import { useToast } from '../../../../components/ui/toast'; import { supabase } from '../../../../lib/supabase'; import { User, UserFilters, SortField, SortDirection } from './types'; import { INITIAL_FILTERS, SPORT_IDS } from './constants'; import { useSearchParams } from 'react-router-dom'; export function useUsersData() { const { userProfile } = useAuth(); const { showToast } = useToast(); const [searchParams, setSearchParams] = useSearchParams();
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { useToast } from '../../../../components/ui/toast';
+import { supabase } from '../../../../lib/supabase';
+import { User, UserFilters, SortField, SortDirection, UserSportSkill } from './types';
+import { INITIAL_FILTERS, SPORT_IDS } from './constants';
+import { useSearchParams } from 'react-router-dom';
+
+export function useUsersData() {
+  const { userProfile } = useAuth();
+  const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   // Parse filters from URL on initial load
   const getInitialFilters = (): UserFilters => {
     const urlFilters = { ...INITIAL_FILTERS };
@@ -79,13 +90,153 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
         return;
       }
 
-      // Fetch users with their sports skills (JSONB column)
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('*')
-        .order('date_created', { ascending: false });
+      // Fetch all users including auth-only users using the admin function
+      interface UserData {
+        id?: string;  // This is the profile ID from users table
+        auth_id?: string;  // This is the auth UUID
+        name?: string | null;
+        email: string;
+        phone?: string | null;
+        is_admin?: boolean;
+        is_facilitator?: boolean;
+        date_created: string;
+        date_modified?: string;
+        auth_created_at?: string;
+        team_ids?: string[] | null;
+        user_sports_skills?: UserSportSkill[] | null;
+        status: 'active' | 'pending' | 'unconfirmed' | 'confirmed_no_profile' | 'profile_incomplete';
+        confirmed_at?: string | null;
+        last_sign_in_at?: string | null;
+        preferred_position?: null;
+      }
+      
+      // Transformed user data with profile_id field added
+      interface TransformedUserData extends UserData {
+        profile_id?: string | null;
+      }
+      
+      let usersData: TransformedUserData[] = [];
+      
+      const { data: allUsersData, error: allUsersError } = await supabase
+        .rpc('get_all_users_admin');
 
-      if (usersError) throw usersError;
+      // Debug: RPC response for admin function
+      if (process.env.NODE_ENV === 'development') {
+        console.log('RPC response:', { 
+          allUsersData, 
+          allUsersError,
+          dataLength: allUsersData?.length,
+          isArray: Array.isArray(allUsersData)
+        });
+      }
+
+      if (allUsersError) {
+        console.error('Error fetching all users, falling back to regular users table:', allUsersError);
+        // Fallback to regular users table if RPC fails
+        const { data: fallbackData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
+          .order('date_created', { ascending: false });
+
+        if (usersError) throw usersError;
+        
+        // Map regular users to the expected format (user.id is profile_id)
+        usersData = (fallbackData || []).map((user, index) => {
+          // Debug: log first user to see structure
+          if (process.env.NODE_ENV === 'development' && index === 0) {
+            console.log('First user from fallback query:', user);
+          }
+          
+          // Explicitly construct the object to ensure profile_id is set
+          // Users in the users table ALWAYS have an id (it's the primary key)
+          const mappedUser = {
+            ...user,
+            id: user.id || user.auth_id || '',
+            profile_id: user.id || null,  // This should always be user.id for users table entries
+            auth_id: user.auth_id || null,
+            status: 'active' as const
+          };
+          
+          if (process.env.NODE_ENV === 'development' && index === 0) {
+            console.log('First mapped user:', mappedUser);
+          }
+          
+          return mappedUser;
+        }).filter(user => user.id); // Only include users with valid IDs
+      } else if (!allUsersData || allUsersData.length === 0) {
+        // If RPC returns empty (user not admin or no users), fall back to regular query
+        // Debug: RPC returned empty, using fallback
+        if (process.env.NODE_ENV === 'development') {
+          console.log('RPC returned empty, falling back to regular users table');
+        }
+        const { data: fallbackData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
+          .order('date_created', { ascending: false });
+
+        if (usersError) throw usersError;
+        
+        // Map regular users to the expected format (user.id is profile_id)
+        usersData = (fallbackData || []).map((user, index) => {
+          // Debug: log first user to see structure
+          if (process.env.NODE_ENV === 'development' && index === 0) {
+            console.log('First user from fallback query:', user);
+          }
+          
+          // Explicitly construct the object to ensure profile_id is set
+          // Users in the users table ALWAYS have an id (it's the primary key)
+          const mappedUser = {
+            ...user,
+            id: user.id || user.auth_id || '',
+            profile_id: user.id || null,  // This should always be user.id for users table entries
+            auth_id: user.auth_id || null,
+            status: 'active' as const
+          };
+          
+          if (process.env.NODE_ENV === 'development' && index === 0) {
+            console.log('First mapped user:', mappedUser);
+          }
+          
+          return mappedUser;
+        }).filter(user => user.id); // Only include users with valid IDs
+      } else {
+        // Map the RPC response to our User type - Include ALL users, even those missing IDs
+        usersData = (allUsersData || []).map((user: UserData) => {
+          // Use whichever ID is available (user.id is profile_id, user.auth_id is auth UUID)
+          const userId = user.id || user.auth_id || '';
+          if (!userId) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Skipping user without any valid ID from RPC:', user);
+            }
+            return null;
+          }
+          return {
+          id: userId,
+          profile_id: user.id || null,  // user.id from users table is the profile ID
+          auth_id: user.auth_id || null,
+          name: user.name,
+          email: user.email,
+          phone: user.phone || '',
+          preferred_position: null,
+          is_admin: user.is_admin || false,
+          is_facilitator: user.is_facilitator || false,
+          date_created: user.date_created || user.auth_created_at,
+          date_modified: user.date_created || user.auth_created_at,
+          team_ids: user.team_ids,
+          user_sports_skills: user.user_sports_skills,
+          status: user.status === 'confirmed_no_profile' ? 'pending' : 
+                  user.status === 'profile_incomplete' ? 'pending' : 
+                  user.status,
+          confirmed_at: user.confirmed_at,
+          last_sign_in_at: user.last_sign_in_at
+        };
+        }).filter((user: TransformedUserData | null): user is TransformedUserData => user !== null); // Filter out null users (only those with NO IDs at all)
+      }
+      
+      // Debug: Processed users data
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Processed users data:', usersData);
+      }
       
       // Fetch all teams in active leagues with their roster data
       const { data: teamsData, error: teamsError } = await supabase
@@ -157,7 +308,8 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
       // Process users and add registration data
       const processedUsers = (usersData || []).map(user => {
         // Get teams for this user from the pre-processed map (O(1) lookup)
-        const userTeams = userTeamsMap.get(user.id) || [];
+        const userId = user.id || user.auth_id || '';  // user.id is the profile ID
+        const userTeams = userId ? userTeamsMap.get(userId) || [] : [];
 
         // Map teams to registration format
         const userRegistrations = userTeams.map(team => {
@@ -185,11 +337,35 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
         });
 
         
-        return {
-          ...user,
+        const finalUserId = user.id;  // This is already set from the mapping above
+        if (!finalUserId) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('User missing valid ID:', user);
+          }
+          return null; // Skip only users without ANY valid IDs
+        }
+        
+        const processedUser: User = {
+          id: finalUserId,
+          profile_id: user.profile_id || null,  // Already set from the mapping above
+          auth_id: user.auth_id || null,
+          name: user.name || null,
+          email: user.email,
+          phone: user.phone || '',
+          preferred_position: null,
+          is_admin: user.is_admin || false,
+          is_facilitator: user.is_facilitator || false,
+          date_created: user.date_created,
+          date_modified: user.date_created,
+          team_ids: user.team_ids ? user.team_ids.map(id => parseInt(id)) : null,
+          user_sports_skills: user.user_sports_skills || null,
+          status: user.status === 'confirmed_no_profile' ? 'pending' : user.status,
+          confirmed_at: user.confirmed_at,
+          last_sign_in_at: user.last_sign_in_at,
           current_registrations: userRegistrations.length > 0 ? userRegistrations : null
         };
-      });
+        return processedUser;
+      }).filter((user): user is User => user !== null); // Filter out null users
 
       setUsers(processedUsers);
     } catch (error) {
@@ -216,6 +392,14 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
     }
     if (filters.activePlayer) {
       filtered = filtered.filter(user => user.current_registrations && user.current_registrations.length > 0);
+    }
+    if (filters.pendingUsers) {
+      filtered = filtered.filter(user => 
+        user.status === 'pending' || 
+        user.status === 'unconfirmed' || 
+        user.status === 'confirmed_no_profile' ||
+        user.status === 'profile_incomplete'
+      );
     }
     
     // Sport-specific filters - Apply with OR logic within sport filters
@@ -320,6 +504,18 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
           aValue = a.team_ids?.length || 0;
           bValue = b.team_ids?.length || 0;
           break;
+        case 'status':
+          // Sort order: active > pending > unconfirmed > confirmed_no_profile > profile_incomplete
+          const statusOrder = {
+            'active': 1,
+            'pending': 2,
+            'unconfirmed': 3,
+            'confirmed_no_profile': 4,
+            'profile_incomplete': 5
+          };
+          aValue = statusOrder[a.status || 'active'] || 6;
+          bValue = statusOrder[b.status || 'active'] || 6;
+          break;
         default:
           aValue = a.date_created;
           bValue = b.date_created;
@@ -357,6 +553,7 @@ import { useState, useEffect } from 'react'; import { useAuth } from '../../../.
     return filters.administrator || 
            filters.facilitator || 
            filters.activePlayer ||
+           filters.pendingUsers ||
            filters.volleyballPlayersInLeague ||
            filters.badmintonPlayersInLeague ||
            filters.playersNotInLeague ||
