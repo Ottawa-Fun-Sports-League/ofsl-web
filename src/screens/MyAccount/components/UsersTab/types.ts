@@ -8,12 +8,13 @@ export interface UserSportSkill {
 export interface User {
   id: string;
   auth_id: string | null;
+  profile_id?: string | null;
   name: string | null;
   email: string | null;
   phone: string;
   preferred_position: string | null;
   is_admin: boolean | null;
-  is_facilitator: boolean | null;
+  is_facilitator?: boolean | null;  // Optional until column is added to database
   date_created: string;
   date_modified: string;
   team_ids: number[] | null;
@@ -26,15 +27,20 @@ export interface User {
     sport_id: number;
     sport_name: string;
   }[] | null;
+  // Auth-specific fields for pending users
+  status?: 'active' | 'pending' | 'unconfirmed' | 'confirmed_no_profile' | 'profile_incomplete';
+  confirmed_at?: string | null;
+  last_sign_in_at?: string | null;
 }
 
-export type SortField = 'name' | 'email' | 'phone' | 'date_created' | 'is_admin' | 'is_facilitator' | 'team_count';
+export type SortField = 'name' | 'email' | 'phone' | 'date_created' | 'is_admin' | 'is_facilitator' | 'team_count' | 'status';
 export type SortDirection = 'asc' | 'desc';
 
 export interface UserFilters {
   administrator: boolean;
   facilitator: boolean;
   activePlayer: boolean;
+  pendingUsers: boolean;
   volleyballPlayersInLeague: boolean;
   badmintonPlayersInLeague: boolean;
   playersNotInLeague: boolean;

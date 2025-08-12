@@ -10,7 +10,12 @@ import { supabase } from "../../../lib/supabase";
 import { useEffect } from "react";
 import { getStripeProductByLeagueId } from "../../../lib/stripe";
 import { LocationPopover } from "../../../components/ui/LocationPopover";
-import { getGymNamesByLocation, getPrimaryLocation, getDayName, formatLeagueDates } from "../../../lib/leagues";
+import {
+  getGymNamesByLocation,
+  getPrimaryLocation,
+  getDayName,
+  formatLeagueDates,
+} from "../../../lib/leagues";
 import type { League } from "../../../lib/leagues";
 
 // Function to get spots badge color
@@ -34,7 +39,12 @@ interface LeagueInfoProps {
   onSpotsUpdate?: (spots: number) => void;
 }
 
-export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: LeagueInfoProps) {
+export function LeagueInfo({
+  league,
+  sport,
+  skillLevels,
+  onSpotsUpdate,
+}: LeagueInfoProps) {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [actualSpotsRemaining, setActualSpotsRemaining] = useState(0);
   const [stripeProduct, setStripeProduct] = useState<{
@@ -76,7 +86,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
       const product = await getStripeProductByLeagueId(league.id);
       setStripeProduct(product);
     } catch (error) {
-      console.error('Error loading Stripe product:', error);
+      console.error("Error loading Stripe product:", error);
     }
   };
 
@@ -87,51 +97,51 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
         setMatchingProduct(product);
       }
     } catch (error) {
-      console.error('Error loading product info:', error);
+      console.error("Error loading product info:", error);
     }
   };
 
   const checkIfTeamCaptain = async () => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
-        .from('teams')
-        .select('id')
-        .eq('league_id', league.id)
-        .eq('captain_id', user.id)
-        .eq('active', true)
+        .from("teams")
+        .select("id")
+        .eq("league_id", league.id)
+        .eq("captain_id", user.id)
+        .eq("active", true)
         .maybeSingle();
 
       if (error) throw error;
       setIsTeamCaptain(!!data);
     } catch (error) {
-      console.error('Error checking team captain status:', error);
+      console.error("Error checking team captain status:", error);
     }
   };
 
   const loadActualTeamCount = async () => {
     try {
       const { data: teams, error } = await supabase
-        .from('teams')
-        .select('id')
-        .eq('league_id', league.id)
-        .eq('active', true);
+        .from("teams")
+        .select("id")
+        .eq("league_id", league.id)
+        .eq("active", true);
 
       if (error) throw error;
 
       const teamCount = teams?.length || 0;
       const maxTeams = league.max_teams || 20;
       const spotsRemaining = Math.max(0, maxTeams - teamCount);
-      
+
       setActualSpotsRemaining(spotsRemaining);
-      
+
       // Notify parent component of the update
       if (onSpotsUpdate) {
         onSpotsUpdate(spotsRemaining);
       }
     } catch (error) {
-      console.error('Error loading team count:', error);
+      console.error("Error loading team count:", error);
     }
   };
 
@@ -139,11 +149,11 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
     if (!user) {
       // Store the current page URL for redirect after login
       const currentPath = window.location.pathname;
-      localStorage.setItem('redirectAfterLogin', currentPath);
-      navigate('/login');
+      localStorage.setItem("redirectAfterLogin", currentPath);
+      navigate("/login");
       return;
     }
-    
+
     // User is logged in, show registration modal
     setShowRegistrationModal(true);
   };
@@ -158,7 +168,9 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
           <div className="flex items-start">
             <Clock className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" />
             <div>
-              <p className="font-medium text-[#6F6F6F]">{getDayName(league.day_of_week)}</p>
+              <p className="font-medium text-[#6F6F6F]">
+                {getDayName(league.day_of_week)}
+              </p>
             </div>
           </div>
 
@@ -169,15 +181,20 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
             <div className="flex flex-wrap gap-1">
               {(() => {
                 const gymLocations = getPrimaryLocation(league.gyms || []);
-                
+
                 if (gymLocations.length === 0) {
-                  return <span className="font-medium text-[#6F6F6F]">TBD</span>;
+                  return (
+                    <span className="font-medium text-[#6F6F6F]">TBD</span>
+                  );
                 }
-                
+
                 return gymLocations.map((location, index) => (
                   <LocationPopover
                     key={index}
-                    locations={getGymNamesByLocation(league.gyms || [], location)}
+                    locations={getGymNamesByLocation(
+                      league.gyms || [],
+                      location,
+                    )}
                   >
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
                       {location}
@@ -193,21 +210,31 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
             <Calendar className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" />
             <div>
               <p className="font-medium text-[#6F6F6F]">Season Dates</p>
-              <p className="text-sm text-[#6F6F6F]">{formatLeagueDates(league.start_date, league.end_date, league.hide_day || false)}</p>
+              <p className="text-sm text-[#6F6F6F]">
+                {formatLeagueDates(
+                  league.start_date,
+                  league.end_date,
+                  league.hide_day || false,
+                )}
+              </p>
             </div>
           </div>
 
           {/* Skill Level */}
-          {(skillLevels && skillLevels.length > 0) ? (
+          {skillLevels && skillLevels.length > 0 ? (
             <div className="flex items-start">
-              <svg className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path d="M3,5H9V11H3V5M5,7V9H7V7H5M11,7H21V9H11V7M11,15H21V17H11V15M5,13V15H7V13H5M3,13H9V19H3V13Z" />
               </svg>
               <div>
                 <p className="font-medium text-[#6F6F6F]">Skill Levels</p>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {skillLevels.map((skill, index) => (
-                    <span 
+                    <span
                       key={index}
                       className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                     >
@@ -217,16 +244,22 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
                 </div>
               </div>
             </div>
-          ) : league.skill_name && (
-            <div className="flex items-start">
-              <svg className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3,5H9V11H3V5M5,7V9H7V7H5M11,7H21V9H11V7M11,15H21V17H11V15M5,13V15H7V13H5M3,13H9V19H3V13Z" />
-              </svg>
-              <div>
-                <p className="font-medium text-[#6F6F6F]">Skill Level</p>
-                <p className="text-sm text-[#6F6F6F]">{league.skill_name}</p>
+          ) : (
+            league.skill_name && (
+              <div className="flex items-start">
+                <svg
+                  className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M3,5H9V11H3V5M5,7V9H7V7H5M11,7H21V9H11V7M11,15H21V17H11V15M5,13V15H7V13H5M3,13H9V19H3V13Z" />
+                </svg>
+                <div>
+                  <p className="font-medium text-[#6F6F6F]">Skill Level</p>
+                  <p className="text-sm text-[#6F6F6F]">{league.skill_name}</p>
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {/* Price */}
@@ -267,19 +300,23 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
         {/* Register Button or Payment Button */}
         {stripeProduct && isTeamCaptain ? (
           <PaymentButton
-            priceId={stripeProduct.price_id} 
+            priceId={stripeProduct.price_id}
             productName={stripeProduct.name}
             price={stripeProduct.price}
-            mode={stripeProduct.mode as 'payment' | 'subscription'}
+            mode={stripeProduct.mode as "payment" | "subscription"}
             metadata={{ leagueId: league.id.toString() }}
             className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] w-full py-3"
             variant="default"
           >
-            {actualSpotsRemaining === 0 ? "Join Waitlist" : "Register & Pay Now"}
+            {actualSpotsRemaining === 0
+              ? "Join Waitlist"
+              : "Register & Pay Now"}
           </PaymentButton>
         ) : isTeamCaptain ? (
           <div className="text-center">
-            <p className="text-sm text-gray-500 mb-2">Payment options not available for this league</p>
+            <p className="text-sm text-gray-500 mb-2">
+              Payment options not available for this league
+            </p>
             <Link to="/my-account/teams">
               <Button
                 variant="outline"
@@ -294,7 +331,7 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
             onClick={handleRegisterClick}
             className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] w-full py-3"
           >
-            {actualSpotsRemaining === 0 ? "Join Waitlist" : "Register Team"}
+            {actualSpotsRemaining === 0 ? "Join Waitlist" : "Register"}
           </Button>
         )}
       </div>
@@ -315,3 +352,4 @@ export function LeagueInfo({ league, sport, skillLevels, onSpotsUpdate }: League
     </>
   );
 }
+
