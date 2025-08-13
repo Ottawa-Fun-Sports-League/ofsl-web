@@ -88,6 +88,20 @@ export function TeamRegistrationModal({
     // Reset error state
     setError(null);
 
+    // Check if user profile is complete
+    if (!userProfile || 
+        !userProfile.profile_completed || 
+        !userProfile.name || 
+        !userProfile.phone || 
+        !userProfile.user_sports_skills || 
+        userProfile.user_sports_skills.length === 0) {
+      showToast("Please complete your profile before registering for a league", "error");
+      // Close modal and redirect to profile completion page
+      closeModal();
+      navigate('/complete-profile');
+      return;
+    }
+
     // For waitlist registrations, we only need skill level (not team name)
     if (!isWaitlist) {
       if (!teamName.trim()) {
@@ -205,6 +219,8 @@ export function TeamRegistrationModal({
                   : teamName.trim(),
                 leagueName: leagueName,
                 isWaitlist: isWaitlist,
+                depositAmount: league?.deposit_amount || null,
+                depositDate: league?.deposit_date || null,
               },
             },
           );
