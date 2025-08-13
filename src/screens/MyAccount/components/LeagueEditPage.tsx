@@ -79,6 +79,8 @@ export function LeagueEditPage() {
     gym_ids: number[];
     hide_day?: boolean;
     payment_due_date: string;
+    deposit_amount: number | null;
+    deposit_date: string;
   }>({
     name: "",
     description: "",
@@ -96,6 +98,8 @@ export function LeagueEditPage() {
     max_teams: 20,
     gym_ids: [],
     payment_due_date: "2025-08-21",
+    deposit_amount: null,
+    deposit_date: "",
   });
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -173,6 +177,8 @@ export function LeagueEditPage() {
           hide_day: leagueData.hide_day || false,
           gym_ids: leagueData.gym_ids || [],
           payment_due_date: leagueData.payment_due_date || "2025-08-21",
+          deposit_amount: leagueData.deposit_amount,
+          deposit_date: leagueData.deposit_date || "",
         });
       }
     } catch (error) {
@@ -214,6 +220,8 @@ export function LeagueEditPage() {
           max_teams: editLeague.max_teams,
           gym_ids: editLeague.gym_ids,
           payment_due_date: editLeague.payment_due_date,
+          deposit_amount: editLeague.deposit_amount,
+          deposit_date: editLeague.deposit_date || null,
         })
         .eq("id", id);
 
@@ -692,6 +700,52 @@ export function LeagueEditPage() {
                     className="w-full"
                     required
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                    Deposit Amount ($)
+                  </label>
+                  <Input
+                    type="number"
+                    value={editLeague.deposit_amount || ""}
+                    onChange={(e) =>
+                      setEditLeague({
+                        ...editLeague,
+                        deposit_amount: e.target.value
+                          ? parseFloat(e.target.value)
+                          : null,
+                      })
+                    }
+                    placeholder="0.00 (optional)"
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty if no deposit is required
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                    Deposit Due Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={editLeague.deposit_date}
+                    onChange={(e) =>
+                      setEditLeague({
+                        ...editLeague,
+                        deposit_date: e.target.value,
+                      })
+                    }
+                    className="w-full"
+                    disabled={!editLeague.deposit_amount}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Required if deposit amount is set
+                  </p>
                 </div>
               </div>
 

@@ -116,12 +116,43 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  // Allow access even if profile is incomplete - removed profile completion requirement
-  // This allows users to access their account without being forced to complete profile
-
   if (!user) {
     // Redirect to login if not authenticated
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  // Check if email is confirmed
+  const isEmailConfirmed = user?.email_confirmed_at != null;
+  const isGoogleUser = user?.app_metadata?.provider === 'google';
+  
+  // Check if user needs email confirmation (non-Google users only)
+  if (!isEmailConfirmed && !isGoogleUser && location.pathname !== '/signup-confirmation') {
+    console.log('User email not confirmed. Redirecting to signup confirmation page.');
+    return <Navigate to="/signup-confirmation" replace />;
+  }
+
+  // Check if user needs to complete their profile
+  const needsProfileCompletion = user && (!userProfile || 
+    !userProfile.profile_completed || 
+    !userProfile.name || 
+    !userProfile.phone || 
+    !userProfile.user_sports_skills || 
+    userProfile.user_sports_skills.length === 0);
+
+  // Allow access to profile completion page even if profile is incomplete
+  const isProfileCompletionPage = location.pathname === '/complete-profile';
+  const isSignupConfirmationPage = location.pathname === '/signup-confirmation';
+  
+  // If user needs profile completion and is not on the profile completion page, redirect them
+  if (needsProfileCompletion && !isProfileCompletionPage && !isSignupConfirmationPage) {
+    console.log('User needs to complete profile. Redirecting to profile completion page.', {
+      userProfile,
+      profileCompleted: userProfile?.profile_completed,
+      hasName: !!userProfile?.name,
+      hasPhone: !!userProfile?.phone,
+      hasSportsSkills: userProfile?.user_sports_skills?.length > 0
+    });
+    return <Navigate to="/complete-profile" replace />;
   }
 
   if (requireAdmin && !userProfile?.is_admin) {

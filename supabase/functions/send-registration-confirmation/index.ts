@@ -14,6 +14,8 @@ interface RegistrationRequest {
   teamName: string;
   leagueName: string;
   isWaitlist?: boolean;
+  depositAmount?: number | null;
+  depositDate?: string | null;
 }
 
 serve(async (req: Request) => {
@@ -39,6 +41,8 @@ serve(async (req: Request) => {
       teamName,
       leagueName,
       isWaitlist = false,
+      depositAmount = null,
+      depositDate = null,
     }: RegistrationRequest = await req.json();
 
     if (!email || !userName || !teamName || !leagueName) {
@@ -193,7 +197,15 @@ serve(async (req: Request) => {
                                   <tr>
                                     <td>
                                       <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
-                                        In order to secure your spot, please provide a <strong>non-refundable deposit of $200</strong> by e-transfer within <strong>48 hours</strong> to the following email address:
+                                        ${
+                                          depositAmount && depositDate
+                                            ? `In order to secure your spot, please provide a <strong>non-refundable deposit of $${depositAmount.toFixed(2)}</strong> by e-transfer by <strong>${new Date(depositDate + "T00:00:00").toLocaleDateString("en-US", {
+                                                month: "long",
+                                                day: "numeric",
+                                                year: "numeric",
+                                              })}</strong> to the following email address:`
+                                            : `In order to secure your spot, please provide payment by e-transfer within <strong>48 hours</strong> to the following email address:`
+                                        }
                                       </p>
                                     </td>
                                   </tr>
@@ -244,8 +256,20 @@ serve(async (req: Request) => {
                                 3. You'll have 24 hours to confirm and provide payment<br>
                                 4. Keep an eye on your email for updates!
                                 `
+                                    : depositAmount && depositDate
+                                    ? `
+                                1. Send your $${depositAmount.toFixed(2)} deposit via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
+                                2. Include your team name "<strong>${teamName}</strong>" in the e-transfer message<br>
+                                3. Ensure payment is sent by <strong>${new Date(depositDate + "T00:00:00").toLocaleDateString("en-US", {
+                                    month: "long",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}</strong><br>
+                                4. You'll receive a confirmation once we process your payment<br>
+                                5. Get ready for an amazing season!
+                                `
                                     : `
-                                1. Send your $200 deposit via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
+                                1. Send payment via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
                                 2. Include your team name "<strong>${teamName}</strong>" in the e-transfer message<br>
                                 3. You'll receive a confirmation once we process your payment<br>
                                 4. Get ready for an amazing season!
