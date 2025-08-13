@@ -592,6 +592,8 @@ export function TeamRegistrationModal({
         teamName={registeredTeamName}
         leagueName={leagueName}
         leagueCost={league?.cost || null}
+        depositAmount={league?.deposit_amount || null}
+        depositDate={league?.deposit_date || null}
       />
     </>
   );
