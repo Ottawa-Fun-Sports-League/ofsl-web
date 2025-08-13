@@ -22,6 +22,8 @@ export interface League {
   active: boolean | null;
   hide_day: boolean | null;
   payment_due_date: string | null;
+  deposit_amount: number | null;
+  deposit_date: string | null;
   created_at: string;
 
   // Joined data

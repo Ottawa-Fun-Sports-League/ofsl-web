@@ -283,6 +283,27 @@ export function LeagueInfo({
             </div>
           </div>
 
+          {/* Deposit Information */}
+          {league.deposit_amount && league.deposit_date && (
+            <div className="flex items-start">
+              <DollarSign className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-[#6F6F6F]">Deposit Required</p>
+                <p className="text-sm text-[#6F6F6F]">
+                  ${league.deposit_amount.toFixed(2)} by{" "}
+                  {new Date(league.deposit_date + "T00:00:00").toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Non-refundable deposit to secure your spot
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Spots Remaining */}
           <div className="flex items-start">
             <Users className="h-4 w-4 text-[#B20000] mr-2 mt-1 flex-shrink-0" />
