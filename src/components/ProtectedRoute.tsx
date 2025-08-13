@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
+import { isProfileComplete } from '../lib/profileUtils';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -27,70 +28,49 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
       }
     }
     
-    // If user exists but profile is missing, try to fix it
-    if (user && !userProfile && !loading && !fixingProfile) {
-      
-      // Determine if this is a Google user
-      const isGoogleUser = user.app_metadata?.provider === 'google';
-      
-      const fixUserProfile = async (retryCount = 0) => {
-        try {
-          
-          // Use the enhanced v4 function for better Google OAuth support
-          const { data, error } = await supabase.rpc('check_and_fix_user_profile_v4', {
-            p_auth_id: user.id,
-            p_email: user.email || '',
-            p_name: user.user_metadata?.name || user.user_metadata?.full_name || '',
-            p_phone: user.user_metadata?.phone || ''
-          });
-          
-          if (error) {
-            // Retry up to 3 times with exponential backoff for Google users
-            if (isGoogleUser && retryCount < 3) {
-              const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
-              setTimeout(() => fixUserProfile(retryCount + 1), delay);
-            }
-          } else if (data) {
-            // Refresh the user profile
-            await refreshUserProfile();
-          }
-        } catch (err) {
-          // Retry for Google users
-          if (isGoogleUser && retryCount < 3) {
-            const delay = Math.pow(2, retryCount) * 1000;
-            setTimeout(() => fixUserProfile(retryCount + 1), delay);
-          }
-        }
-      };
-      
-      fixUserProfile();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, loading, location]);
-  
-  // Attempt to fix missing user profile if user is authenticated but profile is missing
-  useEffect(() => {
+    // Attempt to fix missing user profile if user is authenticated but profile is missing
     const attemptProfileFix = async () => {
       if (user && !userProfile && !loading && !fixingProfile && !profileFixed) {
         try {
           setFixingProfile(true);
           
-          // Call the RPC function to fix the user profile
-          const { error } = await supabase.rpc('check_and_fix_user_profile_v4', {
-            p_auth_id: user.id.toString(),
-            p_email: user.email || null,
-            p_name: user.user_metadata?.name || user.user_metadata?.full_name || null,
-            p_phone: user.user_metadata?.phone || null
-          });
+          // Determine if this is a Google user for retry logic
+          const isGoogleUser = user.app_metadata?.provider === 'google';
           
-          if (error) {
-            logger.error("Failed to fix user profile via RPC", error);
-          } else {
-            // Refresh the user profile in AuthContext instead of forcing a page reload
-            await refreshUserProfile();
-          }
+          const fixUserProfile = async (retryCount = 0): Promise<void> => {
+            try {
+              // Call the RPC function to fix the user profile
+              const { error } = await supabase.rpc('check_and_fix_user_profile_v4', {
+                p_auth_id: user.id.toString(),
+                p_email: user.email || null,
+                p_name: user.user_metadata?.name || user.user_metadata?.full_name || null,
+                p_phone: user.user_metadata?.phone || null
+              });
+              
+              if (error) {
+                logger.error("Failed to fix user profile via RPC", error);
+                // Retry up to 3 times with exponential backoff for Google users
+                if (isGoogleUser && retryCount < 3) {
+                  const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+                  setTimeout(() => fixUserProfile(retryCount + 1), delay);
+                }
+              } else {
+                // Refresh the user profile in AuthContext
+                await refreshUserProfile();
+              }
+            } catch (err) {
+              logger.error("Failed to fix user profile", err);
+              // Retry for Google users
+              if (isGoogleUser && retryCount < 3) {
+                const delay = Math.pow(2, retryCount) * 1000;
+                setTimeout(() => fixUserProfile(retryCount + 1), delay);
+              }
+            }
+          };
+          
+          await fixUserProfile();
         } catch (err) {
-          logger.error("Failed to fix user profile", err);
+          logger.error("Error in attemptProfileFix", err);
         } finally {
           setFixingProfile(false);
           setProfileFixed(true);
@@ -100,7 +80,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     
     attemptProfileFix();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, userProfile, loading, fixingProfile, profileFixed]);
+  }, [user, userProfile, loading, location, fixingProfile, profileFixed]);
 
   if (loading || fixingProfile) {
     return (
@@ -127,17 +107,11 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   
   // Check if user needs email confirmation (non-Google users only)
   if (!isEmailConfirmed && !isGoogleUser && location.pathname !== '/signup-confirmation') {
-    console.log('User email not confirmed. Redirecting to signup confirmation page.');
     return <Navigate to="/signup-confirmation" replace />;
   }
 
   // Check if user needs to complete their profile
-  const needsProfileCompletion = user && (!userProfile || 
-    !userProfile.profile_completed || 
-    !userProfile.name || 
-    !userProfile.phone || 
-    !userProfile.user_sports_skills || 
-    userProfile.user_sports_skills.length === 0);
+  const needsProfileCompletion = user && !isProfileComplete(userProfile);
 
   // Allow access to profile completion page even if profile is incomplete
   const isProfileCompletionPage = location.pathname === '/complete-profile';
@@ -145,21 +119,10 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   
   // If user needs profile completion and is not on the profile completion page, redirect them
   if (needsProfileCompletion && !isProfileCompletionPage && !isSignupConfirmationPage) {
-    console.log('User needs to complete profile. Redirecting to profile completion page.', {
-      userProfile,
-      profileCompleted: userProfile?.profile_completed,
-      hasName: !!userProfile?.name,
-      hasPhone: !!userProfile?.phone,
-      hasSportsSkills: userProfile?.user_sports_skills?.length > 0
-    });
     return <Navigate to="/complete-profile" replace />;
   }
 
   if (requireAdmin && !userProfile?.is_admin) {
-    console.warn('Admin access required. Redirecting to profile page.', {
-      userProfile,
-      isAdmin: userProfile?.is_admin
-    });
     // Redirect to profile page if user is not an admin
     return <Navigate to="/my-account/profile" replace />;
   }

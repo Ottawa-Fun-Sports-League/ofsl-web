@@ -12,6 +12,7 @@ import {
   getPrimaryLocation,
   type League,
 } from "../../../lib/leagues";
+import { isProfileComplete } from "../../../lib/profileUtils";
 import { RegistrationSuccessModal } from "./RegistrationSuccessModal";
 
 interface Skill {
@@ -89,12 +90,7 @@ export function TeamRegistrationModal({
     setError(null);
 
     // Check if user profile is complete
-    if (!userProfile || 
-        !userProfile.profile_completed || 
-        !userProfile.name || 
-        !userProfile.phone || 
-        !userProfile.user_sports_skills || 
-        userProfile.user_sports_skills.length === 0) {
+    if (!isProfileComplete(userProfile)) {
       showToast("Please complete your profile before registering for a league", "error");
       // Close modal and redirect to profile completion page
       closeModal();
@@ -206,6 +202,7 @@ export function TeamRegistrationModal({
       if (userError) throw userError;
 
       // Send registration confirmation email
+      let emailSent = false;
       try {
         if (user?.email) {
           const response = await supabase.functions.invoke(
@@ -228,6 +225,8 @@ export function TeamRegistrationModal({
           if (response.error) {
             console.error("Failed to send confirmation email:", response.error);
             // Don't throw error - email failure shouldn't block registration
+          } else {
+            emailSent = true;
           }
         } else {
           console.error("No email found for user");
@@ -270,13 +269,20 @@ export function TeamRegistrationModal({
       // Payment record will be automatically created by database trigger for regular registrations
       if (isWaitlist) {
         // For waitlist, show a simple success message and close
-        showToast(
-          `You've been added to the waitlist for ${leagueName}. We'll contact you if a spot opens up!`,
-          "success",
-        );
+        const message = emailSent
+          ? `You've been added to the waitlist for ${leagueName}. We'll contact you if a spot opens up!`
+          : `You've been added to the waitlist for ${leagueName}. We'll contact you if a spot opens up! (Note: Confirmation email could not be sent, but your registration is complete)`;
+        showToast(message, emailSent ? "success" : "warning");
         closeModal();
       } else {
         // For regular registrations, show the full success modal
+        if (!emailSent) {
+          // Notify about email failure but don't block the success flow
+          showToast(
+            "Registration successful! Note: Confirmation email could not be sent, but your registration is complete.",
+            "warning"
+          );
+        }
         if (leagueData?.cost && leagueData.cost > 0) {
           setRegisteredTeamName(teamName);
           setShowSuccessModal(true);

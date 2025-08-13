@@ -234,9 +234,6 @@ export function ProfileCompletionPage() {
       // Refresh the user profile
       await refreshUserProfile();
       
-      // Small delay to ensure auth state is fully propagated
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Process any pending team invites for this user
       try {
         // Get the user's database ID first
