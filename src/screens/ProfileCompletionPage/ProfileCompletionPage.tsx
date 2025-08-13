@@ -164,6 +164,12 @@ export function ProfileCompletionPage() {
     // Validate waiver acceptance if there's an active waiver
     if (activeWaiver && !waiverAccepted) {
       setWaiverError("Please accept the waiver to continue");
+      // Scroll to waiver section
+      const waiverSection = document.getElementById('waiver-acceptance');
+      if (waiverSection) {
+        waiverSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        waiverSection.focus();
+      }
       return;
     }
 
@@ -493,6 +499,8 @@ export function ProfileCompletionPage() {
                         }
                       }}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
+                      required
+                      aria-required="true"
                     />
                     <label htmlFor="waiver-acceptance" className="text-sm text-[#6F6F6F] cursor-pointer">
                       I have read and agree to the terms and conditions outlined in this waiver *
