@@ -13,6 +13,7 @@ import {
   type League,
 } from "../../../lib/leagues";
 import { isProfileComplete } from "../../../lib/profileUtils";
+import { formatLocalDate } from "../../../lib/dateUtils";
 import { RegistrationSuccessModal } from "./RegistrationSuccessModal";
 
 interface Skill {
@@ -540,11 +541,21 @@ export function TeamRegistrationModal({
                               Registration Information
                             </p>
                             <p className="text-sm text-amber-700 mt-1">
-                              To secure your spot in this league, a deposit of
-                              $200 or full payment of ${totalAmount.toFixed(2)}{" "}
-                              (${baseAmount.toFixed(2)} + $
-                              {hstAmount.toFixed(2)} HST) will be required after
-                              registration.
+                              {league.deposit_amount && league.deposit_date ? (
+                                <>
+                                  To secure your spot in this league, a non-refundable deposit of ${league.deposit_amount.toFixed(2)} will be required by {formatLocalDate(league.deposit_date, {
+                                    month: 'long',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}. Full payment of ${totalAmount.toFixed(2)}{" "}
+                                  (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be due before the season starts.
+                                </>
+                              ) : (
+                                <>
+                                  To secure your spot in this league, payment of ${totalAmount.toFixed(2)}{" "}
+                                  (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be required within 48 hours after registration.
+                                </>
+                              )}
                             </p>
                           </div>
                         </div>
