@@ -51,51 +51,48 @@ export function RegistrationSuccessModal({
             </div>
           </div>
           
-          {/* Only show payment information if there's a cost */}
-          {leagueCost && leagueCost > 0 && (
+          {/* Only show payment information if there's a deposit requirement */}
+          {depositAmount && depositDate && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-              <h3 className="text-amber-800 font-medium mb-2">Important Payment Information</h3>
-              {depositAmount && depositDate ? (
-                <>
-                  <p className="text-amber-700 text-sm mb-3">
-                    To fully secure your spot in this league, a non-refundable deposit of ${depositAmount.toFixed(2)} is required by {formatLocalDate(depositDate, {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}.
-                  </p>
-                  <p className="text-amber-700 text-sm">
-                    Full payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be due before the season starts.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-amber-700 text-sm mb-3">
-                    To fully secure your spot in this league, payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) is required within 48 hours.
-                  </p>
-                  <p className="text-amber-700 text-sm font-medium">
-                    If payment is not received, your spot is not guaranteed.
-                  </p>
-                </>
+              <h3 className="text-amber-800 font-medium mb-2">Deposit Required</h3>
+              <p className="text-amber-700 text-sm mb-3">
+                To fully secure your spot in this league, a non-refundable deposit of ${depositAmount.toFixed(2)} is required by {formatLocalDate(depositDate, {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}.
+              </p>
+              {leagueCost && leagueCost > 0 && (
+                <p className="text-amber-700 text-sm">
+                  Full payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be due before the season starts.
+                </p>
               )}
             </div>
           )}
           
-          {/* Show payment instructions if there's a cost, or a success message for free leagues */}
-          {leagueCost && leagueCost > 0 ? (
+          {/* Show payment instructions only if there's a deposit requirement */}
+          {depositAmount && depositDate ? (
             <div className="text-sm text-[#6F6F6F] mb-6">
-              <p>You can make your payment through:</p>
+              <p>Please send your deposit via:</p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>The &ldquo;My Teams&rdquo; section in your account</li>
                 <li>E-transfer to <span className="font-medium text-[#B20000]">ofslpayments@gmail.com</span></li>
+                <li>Include your team name in the e-transfer message</li>
               </ul>
             </div>
           ) : (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-green-800 text-sm">
-                ✅ Your registration is complete! No payment is required for this league.
-              </p>
-            </div>
+            !leagueCost || leagueCost === 0 ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <p className="text-green-800 text-sm">
+                  ✅ Your registration is complete! No payment is required for this league.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <p className="text-green-800 text-sm">
+                  ✅ Your registration is complete! You can view and manage your team in the &ldquo;My Teams&rdquo; section.
+                </p>
+              </div>
+            )
           )}
           
           <div className="flex justify-end">

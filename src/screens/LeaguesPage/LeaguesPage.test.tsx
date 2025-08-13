@@ -16,6 +16,18 @@ vi.mock('../../lib/leagues', () => ({
   formatLeagueDates: vi.fn((start, end) => `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`),
   getPrimaryLocation: vi.fn(() => ['Community Center']),
   getGymNamesByLocation: vi.fn(() => ['Main Gym']),
+  groupLeaguesByDay: vi.fn((leagues) => {
+    // Simple mock implementation that groups leagues by day
+    const groups: Record<number, unknown[]> = {};
+    leagues.forEach((league: { day_of_week?: number }) => {
+      const day = league.day_of_week || 0;
+      if (!groups[day]) {
+        groups[day] = [];
+      }
+      groups[day].push(league);
+    });
+    return groups;
+  }),
   LeagueWithTeamCount: {},
 }));
 

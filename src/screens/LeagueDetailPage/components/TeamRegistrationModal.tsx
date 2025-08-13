@@ -533,29 +533,20 @@ export function TeamRegistrationModal({
                         )}
                       </div>
 
-                      {league && league.cost && league.cost > 0 && (
+                      {league && league.deposit_amount && league.deposit_date && (
                         <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3">
                           <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="text-sm text-amber-800 font-medium">
-                              Registration Information
+                              Deposit Required
                             </p>
                             <p className="text-sm text-amber-700 mt-1">
-                              {league.deposit_amount && league.deposit_date ? (
-                                <>
-                                  To secure your spot in this league, a non-refundable deposit of ${league.deposit_amount.toFixed(2)} will be required by {formatLocalDate(league.deposit_date, {
-                                    month: 'long',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                  })}. Full payment of ${totalAmount.toFixed(2)}{" "}
-                                  (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be due before the season starts.
-                                </>
-                              ) : (
-                                <>
-                                  To secure your spot in this league, payment of ${totalAmount.toFixed(2)}{" "}
-                                  (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be required within 48 hours after registration.
-                                </>
-                              )}
+                              To secure your spot in this league, a non-refundable deposit of ${league.deposit_amount.toFixed(2)} will be required by {formatLocalDate(league.deposit_date, {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}. Full payment of ${totalAmount.toFixed(2)}{" "}
+                              (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be due before the season starts.
                             </p>
                           </div>
                         </div>
