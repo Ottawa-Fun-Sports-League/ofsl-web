@@ -1,6 +1,6 @@
 interface NavigationTabsProps {
-  activeView: "info" | "standings" | "schedule" | "gyms";
-  setActiveView: (view: "info" | "standings" | "schedule" | "gyms") => void;
+  activeView: "info" | "standings" | "gyms";
+  setActiveView: (view: "info" | "standings" | "gyms") => void;
   sport: string;
   isAdmin?: boolean;
 }
@@ -27,37 +27,21 @@ export function NavigationTabs({
           )}
         </div>
 
-        {/* Show Standings and Schedule tabs for Volleyball */}
+        {/* Show Standings tab for Volleyball */}
         {sport === "Volleyball" && (
-          <>
-            <div
-              onClick={() => setActiveView("standings")}
-              className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                activeView === "standings"
-                  ? "text-[#B20000] font-medium"
-                  : "text-[#6F6F6F] hover:text-[#B20000]"
-              }`}
-            >
-              <span>Standings</span>
-              {activeView === "standings" && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-              )}
-            </div>
-
-            <div
-              onClick={() => setActiveView("schedule")}
-              className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                activeView === "schedule"
-                  ? "text-[#B20000] font-medium"
-                  : "text-[#6F6F6F] hover:text-[#B20000]"
-              }`}
-            >
-              <span>Schedule</span>
-              {activeView === "schedule" && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-              )}
-            </div>
-          </>
+          <div
+            onClick={() => setActiveView("standings")}
+            className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+              activeView === "standings"
+                ? "text-[#B20000] font-medium"
+                : "text-[#6F6F6F] hover:text-[#B20000]"
+            }`}
+          >
+            <span>Standings</span>
+            {activeView === "standings" && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+            )}
+          </div>
         )}
 
         {/* Gyms tab */}

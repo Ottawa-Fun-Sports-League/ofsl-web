@@ -27,7 +27,8 @@
       "Bash(npx supabase:*)",
       "Bash(npm install:*)",
       "Bash(del:*)",
-      "mcp__ide__executeCode"
+      "mcp__ide__executeCode",
+      "Bash(gh pr merge:*)"
     ],
     "deny": []
   },
