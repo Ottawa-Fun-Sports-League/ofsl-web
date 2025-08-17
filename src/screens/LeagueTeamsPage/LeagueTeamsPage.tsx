@@ -43,7 +43,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 interface TeamData {
-  id: number;
+  id: number | string;  // number for teams, string for individual users
   name: string;
   captain_id: string;
   roster: string[];
@@ -64,6 +64,9 @@ interface TeamData {
       name: string;
     } | null;
   } | null;
+  // Additional fields for individual registrations
+  email?: string;
+  isIndividual?: boolean;
 }
 
 interface ExtendedTeam {
@@ -93,6 +96,7 @@ interface League {
   sport_name: string;
   location: string;
   cost: number;
+  team_registration?: boolean;
 }
 
 export function LeagueTeamsPage() {
@@ -102,8 +106,8 @@ export function LeagueTeamsPage() {
   const [activeTeams, setActiveTeams] = useState<TeamData[]>([]);
   const [waitlistedTeams, setWaitlistedTeams] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState<number | null>(null);
-  const [movingTeam, setMovingTeam] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | string | null>(null);
+  const [movingTeam, setMovingTeam] = useState<number | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragEnabled, setDragEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,8 +129,13 @@ export function LeagueTeamsPage() {
 
   useEffect(() => {
     if (leagueId) {
-      loadLeagueData();
-      loadTeams();
+      loadLeagueData().then((isTeamLeague) => {
+        if (isTeamLeague !== false) {
+          loadTeams();
+        } else {
+          loadIndividualRegistrations();
+        }
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
@@ -157,6 +166,7 @@ export function LeagueTeamsPage() {
           name,
           location,
           cost,
+          team_registration,
           sports:sport_id(name)
         `)
         .eq('id', parseInt(leagueId!))
@@ -173,11 +183,15 @@ export function LeagueTeamsPage() {
             ? (data.sports as { name: string }).name 
             : ''),
         location: data.location || '',
-        cost: data.cost || 0
+        cost: data.cost || 0,
+        team_registration: data.team_registration
       });
+      
+      return data.team_registration;
     } catch (err) {
       console.error('Error loading league:', err);
       setError('Failed to load league data');
+      return true; // Default to team registration
     }
   };
 
@@ -338,13 +352,136 @@ export function LeagueTeamsPage() {
     }
   };
 
-  const handleDeleteTeam = async (teamId: number, teamName: string) => {
-    const confirmDelete = confirm(`Are you sure you want to delete the team "${teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`);
+  const loadIndividualRegistrations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get users registered for this league
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, name, email, league_ids')
+        .contains('league_ids', [parseInt(leagueId!)]);
+      
+      if (usersError) throw usersError;
+      
+      if (!users || users.length === 0) {
+        setActiveTeams([]);
+        setWaitlistedTeams([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Get payment information for these users
+      const userIds = users.map(u => u.id);
+      const { data: payments, error: paymentsError } = await supabase
+        .from('league_payments')
+        .select('user_id, status, amount_due, amount_paid')
+        .in('user_id', userIds)
+        .eq('league_id', parseInt(leagueId!))
+        .is('team_id', null);
+      
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+      }
+      
+      // Create payment map
+      const paymentMap = new Map();
+      payments?.forEach(payment => {
+        paymentMap.set(payment.user_id, payment);
+      });
+      
+      // Transform users to TeamData format for compatibility
+      const individualTeams: TeamData[] = users.map((user, index) => {
+        const payment = paymentMap.get(user.id);
+        return {
+          id: user.id,  // Using user ID as team ID
+          name: user.name || 'Unknown',
+          captain_id: user.id,  // Individual is their own "captain"
+          roster: [user.id],  // Single member roster
+          created_at: new Date().toISOString(),
+          skill_level_id: null,
+          display_order: index,
+          captain_name: user.name,
+          skill_name: null,
+          payment_status: payment?.status || null,
+          amount_due: payment?.amount_due || null,
+          amount_paid: payment?.amount_paid || null,
+          email: user.email,
+          isIndividual: true,
+          league: {
+            id: parseInt(leagueId!),
+            name: league?.name || '',
+            cost: league?.cost || null,
+            location: league?.location || null,
+            sports: league?.sport_name ? { name: league.sport_name } : null
+          }
+        };
+      });
+      
+      setActiveTeams(individualTeams);
+      setWaitlistedTeams([]);  // No waitlist for individual registrations
+      setDragEnabled(false);  // Disable drag for individual registrations
+    } catch (err) {
+      console.error('Error loading individual registrations:', err);
+      setError('Failed to load registrations');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Payment loading is handled within loadIndividualRegistrations for individual leagues
+
+  const handleDeleteTeam = async (teamId: number | string, teamName: string, isIndividual?: boolean) => {
+    const confirmDelete = confirm(
+      isIndividual 
+        ? `Are you sure you want to remove "${teamName}" from this league? This action cannot be undone.`
+        : `Are you sure you want to delete the team "${teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`
+    );
     
     if (!confirmDelete) return;
     
     try {
       setDeleting(teamId);
+      
+      if (isIndividual) {
+        // Handle individual registration deletion
+        const userId = teamId as string;
+        
+        // Get current user's league_ids
+        const { data: userData, error: fetchError } = await supabase
+          .from('users')
+          .select('league_ids')
+          .eq('id', userId)
+          .single();
+        
+        if (fetchError) throw fetchError;
+        
+        // Remove this league from their league_ids
+        const updatedLeagueIds = (userData.league_ids || []).filter(
+          (id: number) => id !== parseInt(leagueId!)
+        );
+        
+        // Update user's league_ids
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ league_ids: updatedLeagueIds })
+          .eq('id', userId);
+        
+        if (updateError) throw updateError;
+        
+        // Delete payment record if exists
+        await supabase
+          .from('league_payments')
+          .delete()
+          .eq('user_id', userId)
+          .eq('league_id', parseInt(leagueId!))
+          .is('team_id', null);
+        
+        showToast(`Successfully removed ${teamName} from the league`, 'success');
+        await loadIndividualRegistrations();
+        return;
+      }
       
       // 1. Update team_ids for all users in the roster
       const { data: teamData, error: teamFetchError } = await supabase
@@ -405,7 +542,7 @@ export function LeagueTeamsPage() {
     }
   };
 
-  const handleMoveTeam = async (teamId: number, teamName: string, currentlyActive: boolean) => {
+  const handleMoveTeam = async (teamId: number | string, teamName: string, currentlyActive: boolean) => {
     const actionText = currentlyActive ? 'move to waitlist' : 'activate from waitlist';
     const confirmMove = confirm(`Are you sure you want to ${actionText} the team "${teamName}"?`);
     
@@ -584,19 +721,19 @@ export function LeagueTeamsPage() {
           
           {/* Body Section - Team Info Grid */}
           <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm ${dragEnabled ? 'ml-6' : ''}`}>
-            {/* Captain Info */}
-            <div className="flex items-center gap-1.5" title="Captain">
+            {/* Captain Info or Email for Individuals */}
+            <div className="flex items-center gap-1.5" title={team.isIndividual ? "Email" : "Captain"}>
               <Crown className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-gray-600' : 'text-blue-600'}`} />
               <span className={`truncate text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
-                {team.captain_name || 'Unknown'}
+                {team.isIndividual ? (team.email || 'Unknown') : (team.captain_name || 'Unknown')}
               </span>
             </div>
             
-            {/* Player Count */}
+            {/* Player Count or Individual Badge */}
             <div className="flex items-center gap-1.5">
               <Users className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-blue-600' : 'text-blue-500'}`} />
               <span className={`whitespace-nowrap ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
-                {team.roster.length} players
+                {team.isIndividual ? 'Individual' : `${team.roster.length} players`}
               </span>
             </div>
             
@@ -645,19 +782,20 @@ export function LeagueTeamsPage() {
           <div className={`flex justify-between items-center pt-2 border-t border-gray-100 ${dragEnabled ? 'ml-6' : ''}`}>
             <div className="flex items-center gap-2">
               <Link 
-                to={`/my-account/teams/edit/${team.id}`}
+                to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors inline-flex items-center ${
-                  isWaitlisted 
-                    ? 'border-gray-300 text-gray-600 hover:text-gray-800' 
-                    : 'border-blue-300 text-blue-700 hover:text-blue-800'
-                }`}
+                isWaitlisted 
+                  ? 'border-gray-300 text-gray-600 hover:text-gray-800' 
+                  : 'border-blue-300 text-blue-700 hover:text-blue-800'
+              }`}
               >
-                Edit registration
+                Edit {team.isIndividual ? 'payment' : 'registration'}
               </Link>
               
-              <button
+              {!team.isIndividual && (
+                <button
                 onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
-                disabled={movingTeam === team.id}
+                disabled={movingTeam === team.id || team.isIndividual}
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   isWaitlisted 
                     ? 'border-green-300 text-green-700 hover:text-green-800' 
@@ -669,14 +807,15 @@ export function LeagueTeamsPage() {
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></div>
                 ) : isWaitlisted ? (
                   'Move to Active'
-                ) : (
-                  'Move to Waitlist'
-                )}
-              </button>
+                  ) : (
+                    'Move to Waitlist'
+                  )}
+                </button>
+              )}
             </div>
             
             <Button
-              onClick={() => handleDeleteTeam(team.id, team.name)}
+              onClick={() => handleDeleteTeam(team.id, team.name, team.isIndividual)}
               disabled={deleting === team.id}
               size="sm"
               variant="outline"
@@ -818,7 +957,7 @@ export function LeagueTeamsPage() {
                     <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-0.5">
                         <Link 
-                          to={`/my-account/teams/edit/${team.id}`}
+                          to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
                           className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
                           title="Edit team"
                         >
@@ -957,8 +1096,8 @@ export function LeagueTeamsPage() {
         {activeTeams.length === 0 && waitlistedTeams.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">
             <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Teams Registered</h3>
-            <p className="text-[#6F6F6F]">No teams have registered for this league yet.</p>
+            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">{league?.team_registration === false ? 'No Users Registered' : 'No Teams Registered'}</h3>
+            <p className="text-[#6F6F6F]">{league?.team_registration === false ? 'No users' : 'No teams'} have registered for this league yet.</p>
           </div>
         ) : filteredActiveTeams.length === 0 && filteredWaitlistedTeams.length === 0 && searchTerm ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">

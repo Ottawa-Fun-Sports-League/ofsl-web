@@ -140,7 +140,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy }: LeaguesListViewPr
             </th>
             <SortableHeader field="spots_remaining">Availability</SortableHeader>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Teams
+              Registrations
             </th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
@@ -221,6 +221,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy }: LeaguesListViewPr
                   size="sm"
                   onClick={() => navigate(`/leagues/${league.id}/teams`)}
                   className="h-8 w-8 p-0 hover:bg-blue-100 relative"
+                  title={league.team_registration === false ? "View registered users" : "View registered teams"}
                 >
                   <Users className="h-4 w-4 text-blue-600" />
                   {league.team_count > 0 && (

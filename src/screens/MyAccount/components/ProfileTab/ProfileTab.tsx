@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ProfileInformation } from './ProfileInformation';
 import { PasswordSecurity } from './PasswordSecurity';
@@ -14,6 +14,18 @@ export function ProfileTab() {
   const { userProfile, refreshUserProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
+  // Memoize the profile data to prevent infinite loops
+  const profileData = useMemo(() => {
+    if (!userProfile) return null;
+    return {
+      id: userProfile.id,
+      name: userProfile.name || undefined,
+      phone: userProfile.phone || undefined,
+      email: userProfile.email || undefined,
+      user_sports_skills: userProfile.user_sports_skills
+    };
+  }, [userProfile?.id, userProfile?.name, userProfile?.phone, userProfile?.email, userProfile?.user_sports_skills]);
+
   const {
     profile,
     notifications,
@@ -23,13 +35,7 @@ export function ProfileTab() {
     setProfile,
     handleNotificationToggle,
     markProfileAsSaved
-  } = useProfileData(userProfile ? {
-    id: userProfile.id,
-    name: userProfile.name || undefined,
-    phone: userProfile.phone || undefined,
-    email: userProfile.email || undefined,
-    user_sports_skills: userProfile.user_sports_skills
-  } : null);
+  } = useProfileData(profileData);
 
   const { saving, handleProfileSave } = useProfileOperations(userProfile, refreshUserProfile);
 

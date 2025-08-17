@@ -103,6 +103,7 @@ export function useUsersData() {
         date_modified?: string;
         auth_created_at?: string;
         team_ids?: string[] | null;
+        league_ids?: string[] | null;  // Individual league registrations
         user_sports_skills?: UserSportSkill[] | null;
         status: 'active' | 'pending' | 'unconfirmed' | 'confirmed_no_profile' | 'profile_incomplete';
         confirmed_at?: string | null;
@@ -223,6 +224,7 @@ export function useUsersData() {
           date_created: user.date_created || user.auth_created_at,
           date_modified: user.date_created || user.auth_created_at,
           team_ids: user.team_ids,
+          league_ids: user.league_ids,
           user_sports_skills: user.user_sports_skills,
           status: user.status === 'confirmed_no_profile' ? 'pending' : 
                   user.status === 'profile_incomplete' ? 'pending' : 
@@ -358,6 +360,7 @@ export function useUsersData() {
           date_created: user.date_created,
           date_modified: user.date_created,
           team_ids: user.team_ids ? user.team_ids.map(id => parseInt(id)) : null,
+          league_ids: user.league_ids ? user.league_ids.map(id => parseInt(id)) : null,
           user_sports_skills: user.user_sports_skills || null,
           status: user.status === 'confirmed_no_profile' ? 'pending' : user.status,
           confirmed_at: user.confirmed_at,

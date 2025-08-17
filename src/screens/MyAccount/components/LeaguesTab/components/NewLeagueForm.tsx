@@ -42,6 +42,7 @@ export function NewLeagueForm({
     gym_ids: [],
     hide_day: false,
     payment_due_date: "2025-08-21",
+    team_registration: true,
   });
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -82,6 +83,7 @@ export function NewLeagueForm({
       gym_ids: [],
       hide_day: false,
       payment_due_date: "2025-08-21",
+      team_registration: true,
     });
   };
 
@@ -116,7 +118,7 @@ export function NewLeagueForm({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                 League Type
@@ -234,6 +236,46 @@ export function NewLeagueForm({
                     className="mr-2"
                   />
                   <span className="text-sm">Male</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                Registration Type
+              </label>
+              <div className="flex flex-col gap-2 p-3 border border-gray-300 rounded-lg">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="team_registration"
+                    value="true"
+                    checked={newLeague.team_registration === true}
+                    onChange={() =>
+                      setNewLeague({
+                        ...newLeague,
+                        team_registration: true,
+                      })
+                    }
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Team Registration</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="team_registration"
+                    value="false"
+                    checked={newLeague.team_registration === false}
+                    onChange={() =>
+                      setNewLeague({
+                        ...newLeague,
+                        team_registration: false,
+                      })
+                    }
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Individual Registration</span>
                 </label>
               </div>
             </div>

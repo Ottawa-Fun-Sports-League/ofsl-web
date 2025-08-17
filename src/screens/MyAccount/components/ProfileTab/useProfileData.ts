@@ -41,7 +41,9 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
 
   // Update profile when userProfile changes, but only if it's a meaningful change
   useEffect(() => {
-    if (userProfile && sports.length > 0 && skills.length > 0) {
+    if (!userProfile) return;
+    
+    if (sports.length > 0 && skills.length > 0) {
       // Enrich sports skills with names
       const enrichedSportsSkills = (userProfile.user_sports_skills || []).map((item: SportSkill) => {
         const sport = sports.find(s => s.id === item.sport_id);
@@ -61,16 +63,15 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
         user_sports_skills: enrichedSportsSkills
       };
       
-      // Only update if this is the first load or if the changes are different from what we last saved
-      const isFirstLoad = !lastSavedProfile.current;
-      const hasSignificantChanges = lastSavedProfile.current && 
+      // Only update if this is the first load or if the profile actually changed
+      const profileChanged = !lastSavedProfile.current || 
         JSON.stringify(newProfile) !== JSON.stringify(lastSavedProfile.current);
       
-      if (isFirstLoad || hasSignificantChanges) {
+      if (profileChanged) {
         setProfile(newProfile);
         lastSavedProfile.current = newProfile;
       }
-    } else if (userProfile && (sports.length === 0 || skills.length === 0)) {
+    } else {
       // If sports/skills haven't loaded yet, just set basic profile without enrichment
       const newProfile = {
         name: userProfile.name || '',
@@ -79,10 +80,24 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
         user_sports_skills: userProfile.user_sports_skills || []
       };
       
-      setProfile(newProfile);
-      lastSavedProfile.current = newProfile;
+      // Only update if profile changed
+      const profileChanged = !lastSavedProfile.current || 
+        JSON.stringify(newProfile) !== JSON.stringify(lastSavedProfile.current);
+        
+      if (profileChanged) {
+        setProfile(newProfile);
+        lastSavedProfile.current = newProfile;
+      }
     }
-  }, [userProfile, sports, skills]);
+  }, [
+    userProfile?.name,
+    userProfile?.phone, 
+    userProfile?.email,
+    // Use JSON.stringify to compare arrays deeply
+    JSON.stringify(userProfile?.user_sports_skills),
+    sports.length,
+    skills.length
+  ]);
 
   const handleNotificationToggle = (key: keyof typeof notifications) => {
     setNotifications(prev => ({

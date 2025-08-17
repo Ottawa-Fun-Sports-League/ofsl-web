@@ -170,7 +170,7 @@ export function SuccessPage() {
           <div className="flex flex-col gap-3">
             <Link to="/my-account/teams">
               <Button className="w-full bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg">
-                View My Teams
+                View My Leagues
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>

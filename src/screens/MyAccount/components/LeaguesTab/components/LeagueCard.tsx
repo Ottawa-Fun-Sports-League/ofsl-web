@@ -177,6 +177,7 @@ export function LeagueCard({ league, onDelete, onCopy }: LeagueCardProps) {
               size="sm"
               onClick={() => navigate(`/leagues/${league.id}/teams`)}
               className="h-8 w-8 p-0 hover:bg-blue-100 relative"
+              title={league.team_registration === false ? "View registered users" : "View registered teams"}
             >
               <Users className="h-4 w-4 text-blue-600" />
               {league.team_count > 0 && (

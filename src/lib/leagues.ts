@@ -24,6 +24,7 @@ export interface League {
   payment_due_date: string | null;
   deposit_amount: number | null;
   deposit_date: string | null;
+  team_registration: boolean | null;
   created_at: string;
 
   // Joined data
@@ -255,6 +256,15 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
     if (teamCountsError) {
       logger.error("Error fetching team counts", teamCountsError);
     }
+    
+    // Get individual registration counts for individual leagues
+    const { data: users, error: usersError } = await supabase
+      .from("users")
+      .select("league_ids");
+    
+    if (usersError) {
+      logger.error("Error fetching user registrations", usersError);
+    }
 
     // Get all unique gym IDs
     const allGymIds = new Set<number>();
@@ -294,18 +304,33 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
     );
 
     const teamCountsMap = new Map<number, number>();
+    const individualCountsMap = new Map<number, number>();
 
     // Count teams per league
     teamCounts?.forEach((team) => {
       const currentCount = teamCountsMap.get(team.league_id) || 0;
       teamCountsMap.set(team.league_id, currentCount + 1);
     });
+    
+    // Count individual registrations per league
+    users?.forEach((user) => {
+      if (user.league_ids && Array.isArray(user.league_ids)) {
+        user.league_ids.forEach((leagueId: number) => {
+          const currentCount = individualCountsMap.get(leagueId) || 0;
+          individualCountsMap.set(leagueId, currentCount + 1);
+        });
+      }
+    });
 
     // Transform the data
     const leagues: LeagueWithTeamCount[] = leaguesData.map((league) => {
-      const teamCount = teamCountsMap.get(league.id) || 0;
-      const maxTeams = league.max_teams || 20;
-      const spotsRemaining = Math.max(0, maxTeams - teamCount);
+      // For individual leagues, count individuals; for team leagues, count teams
+      const isIndividualLeague = league.team_registration === false;
+      const registrationCount = isIndividualLeague 
+        ? (individualCountsMap.get(league.id) || 0)
+        : (teamCountsMap.get(league.id) || 0);
+      const maxCapacity = league.max_teams || 20;
+      const spotsRemaining = Math.max(0, maxCapacity - registrationCount);
 
       // Get skill names from skill_ids array
       let skillNames: string[] | null = null;
@@ -327,7 +352,7 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
         skill_ids: league.skill_ids || [],
         skill_names: skillNames,
         gyms: leagueGyms,
-        team_count: teamCount,
+        team_count: registrationCount,  // This now represents either teams or individuals
         spots_remaining: spotsRemaining,
       };
     });

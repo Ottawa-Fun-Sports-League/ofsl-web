@@ -8,4 +8,6 @@ export { WaiversTab } from './components/WaiversTab/';
 export { ManageTeamsTab } from './components/ManageTeamsTab/ManageTeamsTab';
 export { LeagueEditPage } from './components/LeagueEditPage';
 export { TeamEditPage } from './components/TeamEditPage/';
+export { IndividualEditPage } from './components/IndividualEditPage/';
 export { LeagueNewPage } from './components/LeagueNewPage';
+export { UserRegistrationsPage } from './components/UserRegistrationsPage/';

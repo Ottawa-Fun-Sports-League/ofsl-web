@@ -99,8 +99,9 @@ export function TeamRegistrationModal({
       return;
     }
 
-    // For waitlist registrations, we only need skill level (not team name)
-    if (!isWaitlist) {
+    // For team registrations (not individual), we need team name
+    const isTeamRegistration = league?.team_registration !== false;
+    if (!isWaitlist && isTeamRegistration) {
       if (!teamName.trim()) {
         showToast("Please enter a team name", "error");
         return;
@@ -109,7 +110,8 @@ export function TeamRegistrationModal({
 
     // Skill level is required for both regular and waitlist registrations
     if (!skillLevelId) {
-      showToast("Please select a skill level", "error");
+      const isTeamReg = league?.team_registration !== false;
+      showToast(isTeamReg ? "Please select a skill level" : "Please select your skill level", "error");
       return;
     }
 
@@ -137,75 +139,103 @@ export function TeamRegistrationModal({
       // Get league information for payment calculation
       const { data: leagueData, error: leagueError } = await supabase
         .from("leagues")
-        .select("cost")
+        .select("cost, team_registration")
         .eq("id", leagueId)
         .single();
 
       if (leagueError) throw leagueError;
 
-      // Get the highest display_order for this league to add new team at the end
-      const { data: maxOrderData } = await supabase
-        .from("teams")
-        .select("display_order")
-        .eq("league_id", leagueId)
-        .eq("active", !isWaitlist) // Same section (active or waitlist)
-        .order("display_order", { ascending: false })
-        .limit(1);
+      const isTeamRegistration = leagueData.team_registration !== false;
 
-      const nextDisplayOrder = (maxOrderData?.[0]?.display_order || 0) + 1;
+      // For individual registrations, update user's league_ids
+      if (!isWaitlist && !isTeamRegistration) {
+        // Update user's league_ids array for individual registration
+        const currentLeagueIds = userProfile.league_ids || [];
+        const updatedLeagueIds = [...currentLeagueIds, leagueId];
 
-      // Create the team
-      const teamInsertData: {
-        name: string;
-        league_id: number;
-        captain_id: string;
-        roster: string[];
-        active?: boolean;
-        display_order?: number;
-        skill_level_id?: number;
-      } = {
-        name: isWaitlist
-          ? `Waitlist - ${userProfile.name || "Team"}`
-          : teamName.trim(),
-        league_id: leagueId,
-        captain_id: userProfile.id,
-        roster: [userProfile.id], // Captain is automatically added to roster
-        active: !isWaitlist, // Set inactive for waitlist teams
-        display_order: nextDisplayOrder,
-      };
+        const { error: userError } = await supabase
+          .from("users")
+          .update({ league_ids: updatedLeagueIds })
+          .eq("id", userProfile.id);
 
-      // Add skill_level_id for both regular and waitlist registrations
-      if (skillLevelId) {
-        teamInsertData.skill_level_id = skillLevelId;
+        if (userError) throw userError;
+
+        // Create payment record for individual registration
+        const { error: paymentError } = await supabase
+          .from("league_payments")
+          .insert({
+            league_id: leagueId,
+            user_id: userProfile.id,
+            team_id: null, // No team for individual registration
+            amount_due: leagueData.cost || 0,
+            amount_paid: 0,
+            status: "pending",
+          });
+
+        if (paymentError) throw paymentError;
+      } else if (isTeamRegistration) {
+        // For team registrations, create team as before
+        // Get the highest display_order for this league to add new team at the end
+        const { data: maxOrderData } = await supabase
+          .from("teams")
+          .select("display_order")
+          .eq("league_id", leagueId)
+          .eq("active", !isWaitlist) // Same section (active or waitlist)
+          .order("display_order", { ascending: false })
+          .limit(1);
+
+        const nextDisplayOrder = (maxOrderData?.[0]?.display_order || 0) + 1;
+
+        // Create the team
+        const teamInsertData: {
+          name: string;
+          league_id: number;
+          captain_id: string;
+          roster: string[];
+          active?: boolean;
+          display_order?: number;
+          skill_level_id?: number;
+        } = {
+          name: isWaitlist
+            ? `Waitlist - ${userProfile.name || "Team"}`
+            : teamName.trim(),
+          league_id: leagueId,
+          captain_id: userProfile.id,
+          roster: [userProfile.id], // Captain is automatically added to roster
+          active: !isWaitlist, // Set inactive for waitlist teams
+          display_order: nextDisplayOrder,
+        };
+
+        // Add skill_level_id for both regular and waitlist registrations
+        if (skillLevelId) {
+          teamInsertData.skill_level_id = skillLevelId;
+        }
+
+        const { data: teamData, error: teamError } = await supabase
+          .from("teams")
+          .insert(teamInsertData)
+          .select()
+          .single();
+
+        if (teamError) throw teamError;
+
+        // Update user's team_ids array
+        const currentTeamIds = userProfile.team_ids || [];
+        const updatedTeamIds = [...currentTeamIds, teamData.id];
+
+        const { error: userError } = await supabase
+          .from("users")
+          .update({ team_ids: updatedTeamIds })
+          .eq("id", userProfile.id);
+
+        if (userError) throw userError;
       }
-
-      // Try to add is_waitlisted field if the schema supports it
-      // Note: We'll use the active field to distinguish waitlist teams (active=false)
-      // and can add a separate waitlist tracking table if needed later
-
-      const { data: teamData, error: teamError } = await supabase
-        .from("teams")
-        .insert(teamInsertData)
-        .select()
-        .single();
-
-      if (teamError) throw teamError;
-
-      // Update user's team_ids array
-      const currentTeamIds = userProfile.team_ids || [];
-      const updatedTeamIds = [...currentTeamIds, teamData.id];
-
-      const { error: userError } = await supabase
-        .from("users")
-        .update({ team_ids: updatedTeamIds })
-        .eq("id", userProfile.id);
-
-      if (userError) throw userError;
 
       // Send registration confirmation email
       let emailSent = false;
       try {
         if (user?.email) {
+          const isTeamRegistration = leagueData.team_registration !== false;
           const response = await supabase.functions.invoke(
             "send-registration-confirmation",
             {
@@ -214,11 +244,12 @@ export function TeamRegistrationModal({
                 userName: userProfile.name || "Team Captain",
                 teamName: isWaitlist
                   ? `Waitlist - ${userProfile.name || "Team"}`
-                  : teamName.trim(),
+                  : isTeamRegistration ? teamName.trim() : userProfile.name || "Individual",
                 leagueName: leagueName,
                 isWaitlist: isWaitlist,
                 depositAmount: league?.deposit_amount || null,
                 depositDate: league?.deposit_date || null,
+                isIndividualRegistration: !isTeamRegistration,
               },
             },
           );
@@ -268,6 +299,10 @@ export function TeamRegistrationModal({
       }
 
       // Payment record will be automatically created by database trigger for regular registrations
+      
+      // Set a flag to trigger data refresh on the My Leagues page for all successful registrations
+      sessionStorage.setItem('registration_completed', 'true');
+      
       if (isWaitlist) {
         // For waitlist, show a simple success message and close
         const message = emailSent
@@ -284,13 +319,10 @@ export function TeamRegistrationModal({
             "warning"
           );
         }
-        if (leagueData?.cost && leagueData.cost > 0) {
-          setRegisteredTeamName(teamName);
-          setShowSuccessModal(true);
-        } else {
-          setRegisteredTeamName(teamName);
-          setShowSuccessModal(true);
-        }
+        const isTeamRegistration = leagueData.team_registration !== false;
+        const displayName = isTeamRegistration ? teamName : userProfile.name || "Individual";
+        setRegisteredTeamName(displayName);
+        setShowSuccessModal(true);
         closeModal();
       }
     } catch (error) {
@@ -312,6 +344,8 @@ export function TeamRegistrationModal({
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
+    // Set a flag to trigger data refresh on the My Leagues page
+    sessionStorage.setItem('registration_completed', 'true');
     // Navigate to My Teams tab with proper routing
     navigate("/my-account/teams");
   };
@@ -411,10 +445,17 @@ export function TeamRegistrationModal({
                         )}
                       </>
                     )}
-                    <p className="text-sm text-[#6F6F6F] mt-1">
-                      <span className="font-medium">Captain:</span>{" "}
-                      {userProfile?.name || "Current User"}
-                    </p>
+                    {league?.team_registration !== false ? (
+                      <p className="text-sm text-[#6F6F6F] mt-1">
+                        <span className="font-medium">Captain:</span>{" "}
+                        {userProfile?.name || "Current User"}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-[#6F6F6F] mt-1">
+                        <span className="font-medium">Registrant:</span>{" "}
+                        {userProfile?.name || "Current User"}
+                      </p>
+                    )}
                   </div>
 
                   {isWaitlist ? (
@@ -438,7 +479,7 @@ export function TeamRegistrationModal({
 
                       <div className="mb-6">
                         <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                          Team Skill Level *
+                          {league?.team_registration !== false ? "Team Skill Level *" : "Your Skill Level *"}
                         </label>
                         {skillsLoading ? (
                           <div className="text-sm text-[#6F6F6F]">
@@ -488,22 +529,24 @@ export function TeamRegistrationModal({
                   ) : (
                     // Normal registration form
                     <form onSubmit={handleSubmit} className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                          Team Name *
-                        </label>
-                        <Input
-                          value={teamName}
-                          onChange={(e) => setTeamName(e.target.value)}
-                          placeholder="Enter your team name"
-                          className="w-full"
-                          required
-                        />
-                      </div>
+                      {league?.team_registration !== false && (
+                        <div>
+                          <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                            Team Name *
+                          </label>
+                          <Input
+                            value={teamName}
+                            onChange={(e) => setTeamName(e.target.value)}
+                            placeholder="Enter your team name"
+                            className="w-full"
+                            required
+                          />
+                        </div>
+                      )}
 
                       <div>
                         <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                          Team Skill Level *
+                          {league?.team_registration !== false ? "Team Skill Level *" : "Your Skill Level *"}
                         </label>
                         {skillsLoading ? (
                           <div className="text-sm text-[#6F6F6F]">
@@ -554,11 +597,21 @@ export function TeamRegistrationModal({
 
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <p className="text-sm text-blue-800">
-                          <strong>Note:</strong> You will be automatically added
-                          as the team captain and first player. After
-                          registration, you can add more players to your team
-                          from the &ldquo;My Teams&rdquo; page. Registration
-                          fees will be tracked and due within 30 days.
+                          {league?.team_registration !== false ? (
+                            <>
+                              <strong>Note:</strong> You will be automatically added
+                              as the team captain and first player. After
+                              registration, you can add more players to your team
+                              from the &ldquo;My Leagues&rdquo; page. Registration
+                              fees will be tracked and due within 30 days.
+                            </>
+                          ) : (
+                            <>
+                              <strong>Note:</strong> This is an individual registration.
+                              You will be registered directly for this league.
+                              Registration fees will be tracked and due within 30 days.
+                            </>
+                          )}
                         </p>
                       </div>
 

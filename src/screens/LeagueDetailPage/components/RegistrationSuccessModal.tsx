@@ -89,7 +89,7 @@ export function RegistrationSuccessModal({
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <p className="text-green-800 text-sm">
-                  ✅ Your registration is complete! You can view and manage your team in the &ldquo;My Teams&rdquo; section.
+                  ✅ Your registration is complete! You can view and manage your registrations in the &ldquo;My Leagues&rdquo; section.
                 </p>
               </div>
             )
@@ -100,7 +100,7 @@ export function RegistrationSuccessModal({
               onClick={closeModal}
               className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-2"
             >
-              Go to My Teams
+              Go to My Leagues
             </Button>
           </div>
         </div>

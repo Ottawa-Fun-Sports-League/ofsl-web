@@ -21,11 +21,25 @@ interface Team {
   active: boolean;
 }
 
+interface IndividualRegistration {
+  id: string;  // user_id
+  name: string;
+  email: string;
+  league_id: number;
+  league_name: string;
+  created_at: string;
+  payment_status?: 'pending' | 'partial' | 'paid' | 'overdue';
+  amount_due?: number;
+  amount_paid?: number;
+}
+
 export function ManageTeamsTab() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
+  const [individualRegistrations, setIndividualRegistrations] = useState<IndividualRegistration[]>([]);
+  const [filteredIndividuals, setFilteredIndividuals] = useState<IndividualRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
@@ -33,10 +47,11 @@ export function ManageTeamsTab() {
     const saved = localStorage.getItem('manage_teams_view_mode');
     return (saved as 'card' | 'table') || 'card';
   });
+  const [activeTab, setActiveTab] = useState<'teams' | 'individuals'>('teams');
 
   useEffect(() => {
     if (userProfile?.is_admin) {
-      fetchAllTeams();
+      fetchAllData();
     }
   }, [userProfile]);
 
@@ -44,18 +59,27 @@ export function ManageTeamsTab() {
     // Filter teams based on search term
     if (searchTerm.trim() === '') {
       setFilteredTeams(teams);
+      setFilteredIndividuals(individualRegistrations);
     } else {
       const search = searchTerm.toLowerCase();
-      const filtered = teams.filter(team => 
+      const filteredTeamsList = teams.filter(team => 
         team.name.toLowerCase().includes(search) ||
         team.captain_email.toLowerCase().includes(search) ||
-        team.captain_name.toLowerCase().includes(search)
+        team.captain_name.toLowerCase().includes(search) ||
+        team.league_name.toLowerCase().includes(search)
       );
-      setFilteredTeams(filtered);
+      setFilteredTeams(filteredTeamsList);
+      
+      const filteredIndividualsList = individualRegistrations.filter(ind => 
+        ind.name.toLowerCase().includes(search) ||
+        ind.email.toLowerCase().includes(search) ||
+        ind.league_name.toLowerCase().includes(search)
+      );
+      setFilteredIndividuals(filteredIndividualsList);
     }
-  }, [searchTerm, teams]);
+  }, [searchTerm, teams, individualRegistrations]);
 
-  const fetchAllTeams = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
       
@@ -113,6 +137,64 @@ export function ManageTeamsTab() {
 
       setTeams(transformedTeams);
       setFilteredTeams(transformedTeams);
+      
+      // Fetch individual registrations for individual leagues
+      const { data: individualLeagues } = await supabase
+        .from('leagues')
+        .select('id, name')
+        .eq('team_registration', false);
+      
+      const individualLeagueIds = individualLeagues?.map(l => l.id) || [];
+      const individualLeagueMap = new Map<number, string>();
+      individualLeagues?.forEach(league => {
+        individualLeagueMap.set(league.id, league.name);
+      });
+      
+      // Fetch users with individual registrations
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, name, email, league_ids')
+        .not('league_ids', 'is', null);
+      
+      // Fetch payment data for individual registrations
+      const { data: paymentData } = await supabase
+        .from('league_payments')
+        .select('user_id, league_id, amount_due, amount_paid, status')
+        .is('team_id', null)
+        .in('league_id', individualLeagueIds);
+      
+      // Create payment map
+      const paymentMap = new Map<string, any>();
+      paymentData?.forEach(payment => {
+        const key = `${payment.user_id}_${payment.league_id}`;
+        paymentMap.set(key, payment);
+      });
+      
+      // Transform individual registrations
+      const individuals: IndividualRegistration[] = [];
+      usersData?.forEach(user => {
+        if (user.league_ids && Array.isArray(user.league_ids)) {
+          user.league_ids.forEach((leagueId: number) => {
+            if (individualLeagueIds.includes(leagueId)) {
+              const payment = paymentMap.get(`${user.id}_${leagueId}`);
+              individuals.push({
+                id: user.id,
+                name: user.name || 'Unknown',
+                email: user.email || 'Unknown',
+                league_id: leagueId,
+                league_name: individualLeagueMap.get(leagueId) || 'Unknown League',
+                created_at: new Date().toISOString(), // We don't track when they registered
+                payment_status: payment?.status,
+                amount_due: payment?.amount_due,
+                amount_paid: payment?.amount_paid
+              });
+            }
+          });
+        }
+      });
+      
+      setIndividualRegistrations(individuals);
+      setFilteredIndividuals(individuals);
     } catch (error) {
       console.error('Error loading teams:', error);
     } finally {
@@ -146,10 +228,34 @@ export function ManageTeamsTab() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Teams</h2>
+        <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Registrations</h2>
         <p className="text-[#6F6F6F] mt-1">
-          View and manage all teams across leagues
+          View and manage all teams and individual registrations across leagues
         </p>
+      </div>
+      
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('teams')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            activeTab === 'teams'
+              ? 'text-[#B20000] border-[#B20000]'
+              : 'text-gray-600 border-transparent hover:text-gray-800'
+          }`}
+        >
+          Teams ({teams.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('individuals')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            activeTab === 'individuals'
+              ? 'text-[#B20000] border-[#B20000]'
+              : 'text-gray-600 border-transparent hover:text-gray-800'
+          }`}
+        >
+          Individual Registrations ({individualRegistrations.length})
+        </button>
       </div>
 
       {/* Search Bar and View Toggle */}
@@ -159,14 +265,17 @@ export function ManageTeamsTab() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <Input
               type="text"
-              placeholder="Search by team name or captain email..."
+              placeholder={activeTab === 'teams' ? "Search by team name or captain email..." : "Search by name, email, or league..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
           <div className="text-sm text-gray-600">
-            {filteredTeams.length} of {teams.length} teams
+            {activeTab === 'teams' 
+              ? `${filteredTeams.length} of ${teams.length} teams`
+              : `${filteredIndividuals.length} of ${individualRegistrations.length} registrations`
+            }
           </div>
         </div>
         
@@ -199,8 +308,10 @@ export function ManageTeamsTab() {
         </div>
       </div>
 
-      {/* Teams List */}
-      {filteredTeams.length === 0 ? (
+      {/* Content based on active tab */}
+      {activeTab === 'teams' ? (
+        // Teams List
+        filteredTeams.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-gray-500">
@@ -271,7 +382,155 @@ export function ManageTeamsTab() {
           teams={filteredTeams}
           onEditTeam={handleEditTeam}
         />
-      )}
+      )
+    ) : (
+      // Individual Registrations List
+      filteredIndividuals.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-gray-500">
+              {searchTerm ? 'No individual registrations found matching your search.' : 'No individual registrations yet.'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'card' ? (
+        <div className="space-y-4">
+          {filteredIndividuals.map((individual) => (
+            <Card key={`${individual.id}_${individual.league_id}`}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-[#6F6F6F]">
+                          {individual.name}
+                        </h3>
+                        <p className="text-sm text-gray-600">{individual.email}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>League: {individual.league_name}</span>
+                      </div>
+                      {individual.payment_status && (
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              individual.payment_status === 'paid' 
+                                ? 'bg-green-100 text-green-800'
+                                : individual.payment_status === 'partial'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : individual.payment_status === 'overdue'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {individual.payment_status.charAt(0).toUpperCase() + individual.payment_status.slice(1)}
+                            </span>
+                          </div>
+                          {individual.amount_due !== undefined && individual.amount_paid !== undefined && (
+                            <div className="text-sm text-gray-600">
+                              ${individual.amount_paid} / ${individual.amount_due} paid
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={() => navigate(`/leagues/${individual.league_id}/teams`)}
+                    size="sm"
+                    variant="outline"
+                    className="ml-4"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Manage
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        // Table view for individuals
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  League
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredIndividuals.map((individual) => (
+                <tr key={`${individual.id}_${individual.league_id}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {individual.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {individual.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {individual.league_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {individual.payment_status ? (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        individual.payment_status === 'paid' 
+                          ? 'bg-green-100 text-green-800'
+                          : individual.payment_status === 'partial'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : individual.payment_status === 'overdue'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {individual.payment_status.charAt(0).toUpperCase() + individual.payment_status.slice(1)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {individual.amount_due !== undefined && individual.amount_paid !== undefined ? (
+                      <span>${individual.amount_paid} / ${individual.amount_due}</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <Button
+                      onClick={() => navigate(`/leagues/${individual.league_id}/teams`)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Manage
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    )}
     </div>
   );
 }

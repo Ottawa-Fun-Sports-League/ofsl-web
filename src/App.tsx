@@ -32,7 +32,9 @@ import {
   ManageTeamsTab,
   LeagueEditPage,
   TeamEditPage,
+  IndividualEditPage,
   LeagueNewPage,
+  UserRegistrationsPage,
 } from "./screens/MyAccount";
 import { LeagueTeamsPage } from "./screens/LeagueTeamsPage";
 import { ProfileCompletionPage } from "./screens/ProfileCompletionPage/ProfileCompletionPage";
@@ -179,6 +181,26 @@ export function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <TeamEditPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Individual Edit Page - separate route */}
+            <Route
+              path="/my-account/individual/edit/:userId/:leagueId"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <IndividualEditPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* User Registrations Page - separate route */}
+            <Route
+              path="/my-account/users/:userId/registrations"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <UserRegistrationsPage />
                 </ProtectedRoute>
               }
             />

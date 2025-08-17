@@ -19,6 +19,7 @@ export interface UserProfile {
   is_admin: boolean;
   is_facilitator?: boolean | null;
   team_ids: number[] | null;
+  league_ids?: number[] | null;
   created_at?: string;
   updated_at?: string;
   preferred_position?: string | null;

@@ -11,8 +11,8 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { CheckCircle } from 'lucide-react';
 
 export function TeamsTab() {
-  const { user, userProfile } = useAuth();
-  const { leaguePayments, teams, loading, setLeaguePayments, refetchTeams, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
+  const { user, userProfile, refreshUserProfile } = useAuth();
+  const { leaguePayments, teams, individualLeagues, loading, setLeaguePayments, refetchTeams, refetchIndividualLeagues, refetchLeaguePayments, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
   const { unregisteringPayment, handleUnregister } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
@@ -35,13 +35,33 @@ export function TeamsTab() {
       }
     }
   }, []);
+  
+  // Check if we need to refresh data after a registration (separate effect to run on every render)
+  useEffect(() => {
+    const registrationCompleted = sessionStorage.getItem('registration_completed');
+    if (registrationCompleted) {
+      sessionStorage.removeItem('registration_completed');
+      // Refresh all data to show the new registration
+      Promise.all([
+        refetchTeams(),
+        refetchIndividualLeagues(),
+        refetchLeaguePayments(),
+        refreshUserProfile()
+      ]);
+    }
+  }); // No dependency array - run on every render to catch navigation
 
   const onUnregisterSuccess = async (paymentId: number) => {
-    // Remove the payment from the local state
+    // Remove the payment from the local state immediately for instant UI feedback
     setLeaguePayments(prev => prev.filter(p => p.id !== paymentId));
     
-    // Refetch teams data since the team was deleted
-    await refetchTeams();
+    // Refresh all relevant data
+    await Promise.all([
+      refetchTeams(),  // For team registrations
+      refetchIndividualLeagues(),  // For individual registrations
+      refetchLeaguePayments(),  // To ensure payment data is in sync
+      refreshUserProfile()  // To update user profile state
+    ]);
     
     // Close any open teammate management modal since the team no longer exists
     setSelectedTeam(null);
@@ -49,6 +69,47 @@ export function TeamsTab() {
 
   const onUnregister = (paymentId: number, leagueName: string) => {
     handleUnregister(paymentId, leagueName, onUnregisterSuccess);
+  };
+
+  const handleLeaveIndividualLeague = async (leagueId: number, leagueName: string) => {
+    if (!userProfile?.id || !user) return;
+    
+    if (window.confirm(`Are you sure you want to cancel your registration for "${leagueName}"? This action cannot be undone.`)) {
+      try {
+        // Get current league_ids
+        const currentLeagueIds = userProfile.league_ids || [];
+        const updatedLeagueIds = currentLeagueIds.filter(id => id !== leagueId);
+        
+        // Update user's league_ids
+        const { error } = await supabase
+          .from('users')
+          .update({ league_ids: updatedLeagueIds })
+          .eq('id', userProfile.id);
+        
+        if (error) throw error;
+        
+        // Delete any payment records for this individual registration
+        await supabase
+          .from('league_payments')
+          .delete()
+          .eq('user_id', userProfile.id)
+          .eq('league_id', leagueId)
+          .is('team_id', null);
+        
+        // Refresh all relevant data
+        await Promise.all([
+          refetchIndividualLeagues(),
+          refetchLeaguePayments(),
+          refreshUserProfile()  // This will update the user profile with new league_ids
+        ]);
+        
+        alert(`Successfully cancelled registration for: ${leagueName}`);
+        
+      } catch (error) {
+        console.error('Error leaving individual league:', error);
+        alert(`Failed to cancel registration: ${(error as Error).message}`);
+      }
+    }
   };
 
   const handleLeaveTeam = async (teamId: number, teamName: string) => {
@@ -214,6 +275,7 @@ export function TeamsTab() {
       
       <TeamsSection
         teams={teams}
+        individualLeagues={individualLeagues}
         currentUserId={userProfile?.id}
         leaguePayments={leaguePayments}
         unregisteringPayment={unregisteringPayment}
@@ -221,6 +283,7 @@ export function TeamsTab() {
         onUnregister={onUnregister}
         onLeaveTeam={handleLeaveTeam}
         onManageTeammates={handleManageTeammates}
+        onLeaveIndividualLeague={handleLeaveIndividualLeague}
       />
       
       {selectedTeam && (

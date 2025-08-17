@@ -10,18 +10,18 @@ const corsHeaders = {
 
 // Helper function for consistent date formatting
 function formatLocalDate(dateStr: string | null): string {
-  if (!dateStr) return '';
-  
-  const date = new Date(dateStr + 'T00:00:00');
-  
+  if (!dateStr) return "";
+
+  const date = new Date(dateStr + "T00:00:00");
+
   if (isNaN(date.getTime())) {
-    return '';
+    return "";
   }
-  
-  return date.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -33,6 +33,7 @@ interface RegistrationRequest {
   isWaitlist?: boolean;
   depositAmount?: number | null;
   depositDate?: string | null;
+  isIndividualRegistration?: boolean;
 }
 
 serve(async (req: Request) => {
@@ -60,6 +61,7 @@ serve(async (req: Request) => {
       isWaitlist = false,
       depositAmount = null,
       depositDate = null,
+      isIndividualRegistration = false,
     }: RegistrationRequest = await req.json();
 
     if (!email || !userName || !teamName || !leagueName) {
@@ -113,8 +115,8 @@ serve(async (req: Request) => {
 
     // Create the registration confirmation email content
     const emailSubject = isWaitlist
-      ? `Waitlist Confirmation: ${teamName} in ${leagueName}`
-      : `Registration Confirmation: ${teamName} in ${leagueName}`;
+      ? `Waitlist Confirmation: ${isIndividualRegistration ? userName : teamName} in ${leagueName}`
+      : `Registration Confirmation: ${isIndividualRegistration ? userName : teamName} in ${leagueName}`;
 
     const emailContent = {
       to: [email],
@@ -128,7 +130,6 @@ serve(async (req: Request) => {
                 <tr>
                   <td align="center" style="background-color: #B20000; padding: 30px 20px;">
                     <img src="https://ofsl.ca/group-1.png" alt="OFSL" style="width: 300px; height: auto; max-width: 100%;" />
-                    <p style="color: #ffcccc; margin: 15px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">OFSL</p>
                   </td>
                 </tr>
                 
@@ -157,8 +158,12 @@ serve(async (req: Request) => {
                                 <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
                                   ${
                                     isWaitlist
-                                      ? `Thank you for joining the waitlist for <strong style="color: #B20000;">${leagueName}</strong>! Your team <strong style="color: #B20000;">${teamName}</strong> has been added to our waitlist.`
-                                      : `Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> for <strong style="color: #B20000;">${leagueName}</strong>!`
+                                      ? isIndividualRegistration
+                                        ? `Thank you for joining the waitlist for <strong style="color: #B20000;">${leagueName}</strong>! You have been added to our waitlist.`
+                                        : `Thank you for joining the waitlist for <strong style="color: #B20000;">${leagueName}</strong>! Your team <strong style="color: #B20000;">${teamName}</strong> has been added to our waitlist.`
+                                      : isIndividualRegistration
+                                        ? `Thank you for registering for <strong style="color: #B20000;">${leagueName}</strong>!`
+                                        : `Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> for <strong style="color: #B20000;">${leagueName}</strong>!`
                                   }
                                 </p>
                               </td>
@@ -169,7 +174,8 @@ serve(async (req: Request) => {
                       
                       <!-- Important Notice -->
                       ${
-                        isWaitlist || (!isWaitlist && depositAmount && depositDate)
+                        isWaitlist ||
+                        (!isWaitlist && depositAmount && depositDate)
                           ? `
                       <tr>
                         <td style="padding-bottom: 30px;">
@@ -230,7 +236,7 @@ serve(async (req: Request) => {
                                               ofslpayments@gmail.com
                                             </p>
                                             <p style="color: #5a6c7d; font-size: 14px; margin: 10px 0 0 0; font-family: Arial, sans-serif;">
-                                              Please indicate your team name <strong>"${teamName}"</strong> on the e-transfer
+                                              Please indicate ${isIndividualRegistration ? `your name <strong>"${userName}"</strong>` : `your team name <strong>"${teamName}"</strong>`} on the e-transfer
                                             </p>
                                           </td>
                                         </tr>
@@ -253,7 +259,7 @@ serve(async (req: Request) => {
                         </td>
                       </tr>
                       `
-                          : ''
+                          : ""
                       }
                       
                       <!-- Next Steps -->
@@ -272,14 +278,14 @@ serve(async (req: Request) => {
                                 4. Keep an eye on your email for updates!
                                 `
                                     : depositAmount && depositDate
-                                    ? `
+                                      ? `
                                 1. Send your $${depositAmount.toFixed(2)} deposit via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
-                                2. Include your team name "<strong>${teamName}</strong>" in the e-transfer message<br>
+                                2. Include ${isIndividualRegistration ? `your name "<strong>${userName}</strong>"` : `your team name "<strong>${teamName}</strong>"`} in the e-transfer message<br>
                                 3. Ensure payment is sent by <strong>${formatLocalDate(depositDate)}</strong><br>
                                 4. You'll receive a confirmation once we process your payment<br>
                                 5. Get ready for an amazing season!
                                 `
-                                    : `
+                                      : `
                                 1. Your registration has been received<br>
                                 2. We'll be in touch with more information about the league<br>
                                 3. Get ready for an amazing season!
@@ -327,7 +333,7 @@ serve(async (req: Request) => {
                       © ${new Date().getFullYear()} Ottawa Fun Sports League. All rights reserved.
                     </p>
                     <p style="color: #95a5a6; font-size: 11px; margin: 0; font-family: Arial, sans-serif;">
-                      This email was sent because you ${isWaitlist ? "joined the waitlist for" : "registered a team for"} ${leagueName}.
+                      This email was sent because you ${isWaitlist ? "joined the waitlist for" : isIndividualRegistration ? "registered for" : "registered a team for"} ${leagueName}.
                     </p>
                   </td>
                 </tr>

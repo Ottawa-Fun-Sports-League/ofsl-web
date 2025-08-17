@@ -18,6 +18,7 @@ export interface User {
   date_created: string;
   date_modified: string;
   team_ids: number[] | null;
+  league_ids?: number[] | null;  // Individual league registrations
   user_sports_skills?: UserSportSkill[] | null;
   current_registrations?: {
     team_id: number;
