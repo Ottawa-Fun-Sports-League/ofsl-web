@@ -168,6 +168,9 @@ serve(async (req: Request) => {
                       </tr>
                       
                       <!-- Important Notice -->
+                      ${
+                        isWaitlist || (!isWaitlist && depositAmount && depositDate)
+                          ? `
                       <tr>
                         <td style="padding-bottom: 30px;">
                           ${
@@ -214,11 +217,7 @@ serve(async (req: Request) => {
                                   <tr>
                                     <td>
                                       <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
-                                        ${
-                                          depositAmount && depositDate
-                                            ? `In order to secure your spot, please provide a <strong>non-refundable deposit of $${depositAmount.toFixed(2)}</strong> by e-transfer by <strong>${formatLocalDate(depositDate)}</strong> to the following email address:`
-                                            : `In order to secure your spot, please provide payment by e-transfer within <strong>48 hours</strong> to the following email address:`
-                                        }
+                                        In order to secure your spot, please provide a <strong>non-refundable deposit of $${depositAmount.toFixed(2)}</strong> by e-transfer by <strong>${formatLocalDate(depositDate)}</strong> to the following email address:
                                       </p>
                                     </td>
                                   </tr>
@@ -253,6 +252,9 @@ serve(async (req: Request) => {
                           }
                         </td>
                       </tr>
+                      `
+                          : ''
+                      }
                       
                       <!-- Next Steps -->
                       <tr>
@@ -278,10 +280,9 @@ serve(async (req: Request) => {
                                 5. Get ready for an amazing season!
                                 `
                                     : `
-                                1. Send payment via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
-                                2. Include your team name "<strong>${teamName}</strong>" in the e-transfer message<br>
-                                3. You'll receive a confirmation once we process your payment<br>
-                                4. Get ready for an amazing season!
+                                1. Your registration has been received<br>
+                                2. We'll be in touch with more information about the league<br>
+                                3. Get ready for an amazing season!
                                 `
                                 }
                               </td>
