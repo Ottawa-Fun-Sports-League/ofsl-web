@@ -372,11 +372,18 @@ export function LeagueTeamsPage() {
         return;
       }
       
-      // Get payment information for these users
+      // Get payment information for these users including skill level
       const userIds = users.map(u => u.id);
       const { data: payments, error: paymentsError } = await supabase
         .from('league_payments')
-        .select('user_id, status, amount_due, amount_paid')
+        .select(`
+          user_id, 
+          status, 
+          amount_due, 
+          amount_paid,
+          skill_level_id,
+          skills!skill_level_id(id, name)
+        `)
         .in('user_id', userIds)
         .eq('league_id', parseInt(leagueId!))
         .is('team_id', null);
@@ -394,16 +401,22 @@ export function LeagueTeamsPage() {
       // Transform users to TeamData format for compatibility
       const individualTeams: TeamData[] = users.map((user, index) => {
         const payment = paymentMap.get(user.id);
+        // Handle skills which might be an array or object
+        const skillData = payment?.skills;
+        const skillName = Array.isArray(skillData) && skillData.length > 0 
+          ? skillData[0].name 
+          : (skillData?.name || null);
+        
         return {
           id: user.id,  // Using user ID as team ID
           name: user.name || 'Unknown',
           captain_id: user.id,  // Individual is their own "captain"
           roster: [user.id],  // Single member roster
           created_at: new Date().toISOString(),
-          skill_level_id: null,
+          skill_level_id: payment?.skill_level_id || null,
           display_order: index,
           captain_name: user.name,
-          skill_name: null,
+          skill_name: skillName,
           payment_status: payment?.status || null,
           amount_due: payment?.amount_due || null,
           amount_paid: payment?.amount_paid || null,

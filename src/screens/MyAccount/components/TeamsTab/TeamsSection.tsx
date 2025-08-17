@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, MapPin, Trash2, UserPlus, Users, Crown } from "lucide-react";
+import { User, MapPin, Trash2, UserPlus, Users, Crown, Edit2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
 import { PaymentStatusBadge } from "../../../../components/ui/payment-status-badge";
@@ -7,6 +7,7 @@ import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
 import { Team, LeaguePayment } from "./types";
 import { PaymentStatusSection } from "./components/PaymentStatusSection";
 import { LocationPopover } from "../../../../components/ui/LocationPopover";
+import { SkillLevelEditModal } from "./SkillLevelEditModal";
 import {
   getPrimaryLocation,
   getGymNamesByLocation,
@@ -41,6 +42,7 @@ interface TeamsSectionProps {
   onLeaveTeam: (teamId: number, teamName: string) => void;
   onManageTeammates?: (teamId: number, teamName: string) => void;
   onLeaveIndividualLeague?: (leagueId: number, leagueName: string) => void;
+  onSkillLevelUpdate?: () => void;
 }
 
 export function TeamsSection({
@@ -54,8 +56,22 @@ export function TeamsSection({
   onLeaveTeam,
   onManageTeammates,
   onLeaveIndividualLeague,
+  onSkillLevelUpdate,
 }: TeamsSectionProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [editSkillModal, setEditSkillModal] = useState<{
+    isOpen: boolean;
+    currentSkillId: number | null;
+    isTeamRegistration: boolean;
+    teamId?: number;
+    paymentId?: number;
+    teamName: string;
+  }>({
+    isOpen: false,
+    currentSkillId: null,
+    isTeamRegistration: true,
+    teamName: "",
+  });
 
   return (
     <div className="mt-8">
@@ -146,10 +162,38 @@ export function TeamsSection({
                         {isCaptain ? "Captain" : "Player"}
                       </span>
 
-                      {team.skill?.name && (
-                        <span className="px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800">
+                      {team.skill?.name ? (
+                        <button
+                          className="flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+                          onClick={() => {
+                            setEditSkillModal({
+                              isOpen: true,
+                              currentSkillId: team.skill?.id || null,
+                              isTeamRegistration: true,
+                              teamId: team.id,
+                              teamName: team.name,
+                            });
+                          }}
+                        >
                           {team.skill.name}
-                        </span>
+                          <Edit2 className="h-3 w-3" />
+                        </button>
+                      ) : (
+                        <button
+                          className="flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors animate-pulse"
+                          onClick={() => {
+                            setEditSkillModal({
+                              isOpen: true,
+                              currentSkillId: null,
+                              isTeamRegistration: true,
+                              teamId: team.id,
+                              teamName: team.name,
+                            });
+                          }}
+                        >
+                          Set Skill Level
+                          <Edit2 className="h-3 w-3" />
+                        </button>
                       )}
 
                       {teamPayment && (
@@ -401,10 +445,40 @@ export function TeamsSection({
                         Individual
                       </span>
 
-                      {leaguePayment?.skill_name && (
-                        <span className="px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800">
+                      {leaguePayment?.skill_name ? (
+                        <button
+                          className="flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+                          onClick={() => {
+                            setEditSkillModal({
+                              isOpen: true,
+                              currentSkillId: leaguePayment.skill_level_id || null,
+                              isTeamRegistration: false,
+                              paymentId: leaguePayment.id,
+                              teamName: league.name,
+                            });
+                          }}
+                        >
                           {leaguePayment.skill_name}
-                        </span>
+                          <Edit2 className="h-3 w-3" />
+                        </button>
+                      ) : (
+                        leaguePayment && (
+                          <button
+                            className="flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors animate-pulse"
+                            onClick={() => {
+                              setEditSkillModal({
+                                isOpen: true,
+                                currentSkillId: null,
+                                isTeamRegistration: false,
+                                paymentId: leaguePayment.id,
+                                teamName: league.name,
+                              });
+                            }}
+                          >
+                            Set Skill Level
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                        )
                       )}
 
                       {leaguePayment && (
@@ -552,6 +626,25 @@ export function TeamsSection({
       <PaymentInstructionsModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
+      />
+      
+      {/* Skill Level Edit Modal */}
+      <SkillLevelEditModal
+        isOpen={editSkillModal.isOpen}
+        onClose={() => setEditSkillModal(prev => ({ ...prev, isOpen: false }))}
+        currentSkillId={editSkillModal.currentSkillId}
+        isTeamRegistration={editSkillModal.isTeamRegistration}
+        teamId={editSkillModal.teamId}
+        paymentId={editSkillModal.paymentId}
+        teamName={editSkillModal.teamName}
+        onUpdate={() => {
+          // Close the modal
+          setEditSkillModal(prev => ({ ...prev, isOpen: false }));
+          // Trigger data refresh in parent component
+          if (onSkillLevelUpdate) {
+            onSkillLevelUpdate();
+          }
+        }}
       />
     </div>
   );

@@ -62,7 +62,7 @@ describe('SuccessPage', () => {
     renderSuccessPage();
     
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /view my teams/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /view my leagues/i })).toBeInTheDocument();
     });
     expect(screen.getByRole('link', { name: /browse more leagues/i })).toBeInTheDocument();
   });
@@ -71,7 +71,7 @@ describe('SuccessPage', () => {
     renderSuccessPage();
     
     await waitFor(() => {
-      const myTeamsLink = screen.getByRole('link', { name: /view my teams/i });
+      const myTeamsLink = screen.getByRole('link', { name: /view my leagues/i });
       expect(myTeamsLink).toHaveAttribute('href', '/my-account/teams');
     });
   });

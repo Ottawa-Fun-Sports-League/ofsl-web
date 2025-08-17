@@ -19,6 +19,8 @@ interface Team {
   roster_count: number;
   created_at: string;
   active: boolean;
+  skill_level_id?: number | null;
+  skill_level_name?: string | null;
 }
 
 interface IndividualRegistration {
@@ -31,6 +33,8 @@ interface IndividualRegistration {
   payment_status?: 'pending' | 'partial' | 'paid' | 'overdue';
   amount_due?: number;
   amount_paid?: number;
+  skill_level_id?: number | null;
+  skill_level_name?: string | null;
 }
 
 export function ManageTeamsTab() {
@@ -94,6 +98,11 @@ export function ManageTeamsTab() {
           active,
           created_at,
           league_id,
+          skill_level_id,
+          skills!skill_level_id (
+            id,
+            name
+          ),
           users!teams_captain_id_fkey (
             name,
             email
@@ -132,7 +141,9 @@ export function ManageTeamsTab() {
         league_name: leagueMap.get(team.league_id) || 'Unknown League',
         roster_count: team.roster?.length || 0,
         created_at: team.created_at,
-        active: team.active
+        active: team.active,
+        skill_level_id: team.skill_level_id,
+        skill_level_name: Array.isArray(team.skills) ? team.skills[0]?.name || null : (team.skills as { id: number; name: string } | null)?.name || null
       }));
 
       setTeams(transformedTeams);
@@ -156,18 +167,46 @@ export function ManageTeamsTab() {
         .select('id, name, email, league_ids')
         .not('league_ids', 'is', null);
       
-      // Fetch payment data for individual registrations
-      const { data: paymentData } = await supabase
+      // Fetch payment data for individual registrations with skill level
+      const { data: paymentData, error: paymentError } = await supabase
         .from('league_payments')
-        .select('user_id, league_id, amount_due, amount_paid, status')
+        .select(`
+          user_id, 
+          league_id, 
+          amount_due, 
+          amount_paid, 
+          status,
+          skill_level_id,
+          skills!skill_level_id(id, name)
+        `)
         .is('team_id', null)
         .in('league_id', individualLeagueIds);
       
+      if (paymentError) {
+        console.error('Error fetching payment data:', paymentError);
+      }
+      
       // Create payment map
-      const paymentMap = new Map<string, any>();
-      paymentData?.forEach(payment => {
+      interface PaymentRecord {
+        user_id: string;
+        league_id: number;
+        amount_due?: number;
+        amount_paid?: number;
+        status?: string;
+        skill_level_id?: number | null;
+        skills?: { id: number; name: string } | { id: number; name: string }[] | null;
+      }
+      const paymentMap = new Map<string, PaymentRecord>();
+      paymentData?.forEach((payment) => {
         const key = `${payment.user_id}_${payment.league_id}`;
-        paymentMap.set(key, payment);
+        // Normalize skills to always be a single object or null
+        const normalizedPayment = {
+          ...payment,
+          skills: Array.isArray(payment.skills) && payment.skills.length > 0 
+            ? payment.skills[0] 
+            : payment.skills
+        };
+        paymentMap.set(key, normalizedPayment);
       });
       
       // Transform individual registrations
@@ -184,9 +223,13 @@ export function ManageTeamsTab() {
                 league_id: leagueId,
                 league_name: individualLeagueMap.get(leagueId) || 'Unknown League',
                 created_at: new Date().toISOString(), // We don't track when they registered
-                payment_status: payment?.status,
+                payment_status: payment?.status as 'pending' | 'partial' | 'paid' | 'overdue' | undefined,
                 amount_due: payment?.amount_due,
-                amount_paid: payment?.amount_paid
+                amount_paid: payment?.amount_paid,
+                skill_level_id: payment?.skill_level_id,
+                skill_level_name: typeof payment?.skills === 'object' && payment?.skills && 'name' in payment.skills 
+                  ? payment.skills.name 
+                  : null
               });
             }
           });
@@ -355,6 +398,13 @@ export function ManageTeamsTab() {
                           <Users className="h-4 w-4" />
                           <span>{team.roster_count} players</span>
                         </div>
+                        {team.skill_level_name && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              Skill: {team.skill_level_name}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -414,6 +464,13 @@ export function ManageTeamsTab() {
                         <Calendar className="h-4 w-4" />
                         <span>League: {individual.league_name}</span>
                       </div>
+                      {individual.skill_level_name && (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Skill: {individual.skill_level_name}
+                          </span>
+                        </div>
+                      )}
                       {individual.payment_status && (
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">
@@ -469,6 +526,9 @@ export function ManageTeamsTab() {
                   League
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Skill Level
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Payment Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -490,6 +550,15 @@ export function ManageTeamsTab() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {individual.league_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {individual.skill_level_name ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        {individual.skill_level_name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {individual.payment_status ? (

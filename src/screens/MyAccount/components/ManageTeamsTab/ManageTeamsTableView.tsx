@@ -12,6 +12,8 @@ interface Team {
   roster_count: number;
   created_at: string;
   active: boolean;
+  skill_level_id?: number | null;
+  skill_level_name?: string | null;
 }
 
 interface ManageTeamsTableViewProps {
@@ -29,6 +31,7 @@ export function ManageTeamsTableView({ teams, onEditTeam }: ManageTeamsTableView
             <th className="text-left p-4 font-semibold text-[#6F6F6F] text-sm">Captain</th>
             <th className="text-left p-4 font-semibold text-[#6F6F6F] text-sm">Email</th>
             <th className="text-left p-4 font-semibold text-[#6F6F6F] text-sm">League</th>
+            <th className="text-left p-4 font-semibold text-[#6F6F6F] text-sm">Skill Level</th>
             <th className="text-center p-4 font-semibold text-[#6F6F6F] text-sm">Players</th>
             <th className="text-center p-4 font-semibold text-[#6F6F6F] text-sm">Status</th>
             <th className="text-center p-4 font-semibold text-[#6F6F6F] text-sm">Registered</th>
@@ -49,6 +52,15 @@ export function ManageTeamsTableView({ teams, onEditTeam }: ManageTeamsTableView
               </td>
               <td className="p-4 text-sm text-[#6F6F6F]">
                 {team.league_name}
+              </td>
+              <td className="p-4">
+                {team.skill_level_name ? (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    {team.skill_level_name}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                )}
               </td>
               <td className="p-4 text-center text-sm text-[#6F6F6F]">
                 {team.roster_count}

@@ -195,11 +195,12 @@ export function useTeamsData(userId?: string) {
 
     try {
       // Fetch payments with skill level information
+      // Note: skill_level_id is the foreign key to skills table
       const { data: paymentsData, error } = await supabase
         .from('league_payments')
         .select(`
           *,
-          skill:skills(id, name),
+          skills!skill_level_id(id, name),
           league:leagues(name),
           team:teams(name)
         `)
@@ -221,7 +222,7 @@ export function useTeamsData(userId?: string) {
         due_date: payment.due_date || '',
         payment_method: payment.payment_method,
         skill_level_id: payment.skill_level_id,
-        skill_name: payment.skill?.name || null
+        skill_name: payment.skills?.name || null
       }));
       
       setLeaguePayments(transformedData);
