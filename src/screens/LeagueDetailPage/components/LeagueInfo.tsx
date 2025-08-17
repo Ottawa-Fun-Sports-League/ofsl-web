@@ -122,17 +122,35 @@ export function LeagueInfo({
 
   const loadActualTeamCount = async () => {
     try {
-      const { data: teams, error } = await supabase
-        .from("teams")
-        .select("id")
-        .eq("league_id", league.id)
-        .eq("active", true);
+      let registrationCount = 0;
+      
+      // Check if this is an individual league or team league
+      if (league.team_registration === false) {
+        // For individual leagues, count users who have this league in their league_ids
+        const { data: users, error: usersError } = await supabase
+          .from("users")
+          .select("id, league_ids");
+        
+        if (usersError) throw usersError;
+        
+        // Count users who are registered for this league
+        registrationCount = (users || []).filter(user => 
+          user.league_ids && user.league_ids.includes(league.id)
+        ).length;
+      } else {
+        // For team leagues, count teams
+        const { data: teams, error } = await supabase
+          .from("teams")
+          .select("id")
+          .eq("league_id", league.id)
+          .eq("active", true);
 
-      if (error) throw error;
+        if (error) throw error;
+        registrationCount = teams?.length || 0;
+      }
 
-      const teamCount = teams?.length || 0;
       const maxTeams = league.max_teams || 20;
-      const spotsRemaining = Math.max(0, maxTeams - teamCount);
+      const spotsRemaining = Math.max(0, maxTeams - registrationCount);
 
       setActualSpotsRemaining(spotsRemaining);
 
@@ -141,7 +159,7 @@ export function LeagueInfo({
         onSpotsUpdate(spotsRemaining);
       }
     } catch (error) {
-      console.error("Error loading team count:", error);
+      console.error("Error loading registration count:", error);
     }
   };
 

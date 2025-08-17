@@ -2,6 +2,7 @@ import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { Edit2, Trash2, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
 import { User, SortField, SortDirection } from '../types';
+import { Link } from 'react-router-dom';
 import { UserStatusBadge } from './UserStatusBadge';
 import { MagicLinkButton } from './MagicLinkButton';
 
@@ -80,7 +81,7 @@ export function UsersTable({
                   onClick={() => onSort('team_count')}
                 >
                   <div className="flex items-center">
-                    Teams
+                    Registrations
                     {getSortIcon('team_count')}
                   </div>
                 </th>
@@ -154,7 +155,24 @@ export function UsersTable({
                     <UserStatusBadge status={user.status} confirmedAt={user.confirmed_at} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
-                    {user.team_ids?.length || 0} teams
+                    {(() => {
+                      const teamCount = user.team_ids?.length || 0;
+                      const individualCount = user.league_ids?.length || 0;
+                      const totalRegistrations = teamCount + individualCount;
+                      
+                      if (totalRegistrations === 0) {
+                        return <span>0</span>;
+                      }
+                      
+                      return (
+                        <Link
+                          to={`/my-account/users/${user.id}/registrations`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {totalRegistrations}
+                        </Link>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1 text-sm text-[#6F6F6F]">

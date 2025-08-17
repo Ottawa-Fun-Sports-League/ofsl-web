@@ -1,21 +1,38 @@
 import { useState } from "react";
-import {
-  User,
-  MapPin,
-  Trash2,
-  UserPlus,
-  Users,
-  Crown,
-} from "lucide-react";
+import { User, MapPin, Trash2, UserPlus, Users, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
 import { PaymentStatusBadge } from "../../../../components/ui/payment-status-badge";
 import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
 import { Team, LeaguePayment } from "./types";
 import { PaymentStatusSection } from "./components/PaymentStatusSection";
+import { LocationPopover } from "../../../../components/ui/LocationPopover";
+import {
+  getPrimaryLocation,
+  getGymNamesByLocation,
+} from "../../../../lib/leagues";
+
+interface IndividualLeague {
+  id: number;
+  name: string;
+  location?: string;
+  cost?: number;
+  sports?: {
+    name: string;
+  };
+  start_date?: string;
+  gym_ids?: number[];
+  gyms?: Array<{
+    id?: number;
+    gym: string | null;
+    address: string | null;
+    locations: string[] | null;
+  }>;
+}
 
 interface TeamsSectionProps {
   teams: Team[];
+  individualLeagues?: IndividualLeague[];
   currentUserId?: string;
   leaguePayments: LeaguePayment[];
   unregisteringPayment: number | null;
@@ -23,10 +40,12 @@ interface TeamsSectionProps {
   onUnregister: (paymentId: number, leagueName: string) => void;
   onLeaveTeam: (teamId: number, teamName: string) => void;
   onManageTeammates?: (teamId: number, teamName: string) => void;
+  onLeaveIndividualLeague?: (leagueId: number, leagueName: string) => void;
 }
 
 export function TeamsSection({
   teams,
+  individualLeagues = [],
   currentUserId,
   leaguePayments,
   unregisteringPayment,
@@ -34,15 +53,16 @@ export function TeamsSection({
   onUnregister,
   onLeaveTeam,
   onManageTeammates,
+  onLeaveIndividualLeague,
 }: TeamsSectionProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   return (
     <div className="mt-8">
-      <h3 className="text-lg font-semibold text-[#6F6F6F] mb-4">My Teams</h3>
-      {teams.length === 0 ? (
+      <h3 className="text-lg font-semibold text-[#6F6F6F] mb-4">My Leagues</h3>
+      {teams.length === 0 && individualLeagues.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <p>You are not currently on any teams.</p>
+          <p>You are not currently registered for any leagues.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -127,8 +147,8 @@ export function TeamsSection({
                       </span>
 
                       {teamPayment && (
-                        <PaymentStatusBadge 
-                          status={teamPayment.status} 
+                        <PaymentStatusBadge
+                          status={teamPayment.status}
                           size="sm"
                         />
                       )}
@@ -138,9 +158,34 @@ export function TeamsSection({
                   <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
-                      <span className="text-[#6F6F6F]">
-                        Location: {team.league?.location || "TBD"}
-                      </span>
+                      <span className="text-[#6F6F6F]">Location:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const gymLocations = getPrimaryLocation(
+                            team.league?.gyms || [],
+                          );
+
+                          if (gymLocations.length === 0) {
+                            return (
+                              <span className="text-sm text-gray-500">TBD</span>
+                            );
+                          }
+
+                          return gymLocations.map((location, index) => (
+                            <LocationPopover
+                              key={index}
+                              locations={getGymNamesByLocation(
+                                team.league?.gyms || [],
+                                location,
+                              )}
+                            >
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
+                                {location}
+                              </span>
+                            </LocationPopover>
+                          ));
+                        })()}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -150,17 +195,21 @@ export function TeamsSection({
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* Enhanced Payment Status Section */}
                   {(teamPayment || leagueFee > 0) && (
-                    <PaymentStatusSection 
-                      payment={teamPayment ? {
-                        id: teamPayment.id,
-                        amount_due: teamPayment.amount_due,
-                        amount_paid: teamPayment.amount_paid,
-                        status: teamPayment.status,
-                        due_date: teamPayment.due_date
-                      } : undefined}
+                    <PaymentStatusSection
+                      payment={
+                        teamPayment
+                          ? {
+                              id: teamPayment.id,
+                              amount_due: teamPayment.amount_due,
+                              amount_paid: teamPayment.amount_paid,
+                              status: teamPayment.status,
+                              due_date: teamPayment.due_date,
+                            }
+                          : undefined
+                      }
                       leagueCost={leagueFee}
                       isCaptain={isCaptain}
                     />
@@ -196,65 +245,289 @@ export function TeamsSection({
                         )}
                       </Button>
                     )}
-                    
+
                     {/* Make a payment link for captains with partial or pending payments */}
-                    {isCaptain && teamPayment && (teamPayment.status === 'partial' || teamPayment.status === 'pending') && (
-                      <button
-                        onClick={() => setShowPaymentModal(true)}
-                        className="text-sm text-[#B20000] hover:text-[#8A0000] hover:underline transition-colors font-medium"
-                      >
-                        Make a payment
-                      </button>
-                    )}
+                    {isCaptain &&
+                      teamPayment &&
+                      (teamPayment.status === "partial" ||
+                        teamPayment.status === "pending") && (
+                        <button
+                          onClick={() => setShowPaymentModal(true)}
+                          className="text-sm text-[#B20000] hover:text-[#8A0000] hover:underline transition-colors font-medium"
+                        >
+                          Make a payment
+                        </button>
+                      )}
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {isCaptain ? (
-                      // Show Delete Registration for captains
-                      teamPayment && (
+                    {(() => {
+                      // Check if season has started
+                      const seasonStarted =
+                        team.league?.start_date &&
+                        new Date(team.league.start_date) <= new Date();
+
+                      if (seasonStarted && isCaptain) {
+                        return (
+                          <span className="text-sm text-gray-500 italic">
+                            Cannot delete after season starts
+                          </span>
+                        );
+                      }
+
+                      if (isCaptain) {
+                        // Show Delete Registration for captains
+                        return teamPayment ? (
+                          <Button
+                            onClick={() =>
+                              onUnregister(
+                                teamPayment.id,
+                                teamPayment.league_name,
+                              )
+                            }
+                            disabled={unregisteringPayment === teamPayment.id}
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 w-full sm:w-auto"
+                          >
+                            {unregisteringPayment === teamPayment.id ? (
+                              "Removing..."
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4" />
+                                <span className="hidden sm:inline">
+                                  Cancel Registration
+                                </span>
+                                <span className="sm:hidden">Delete</span>
+                              </>
+                            )}
+                          </Button>
+                        ) : null;
+                      }
+
+                      return (
+                        // Show Leave Team for non-captains
                         <Button
-                          onClick={() =>
-                            onUnregister(
-                              teamPayment.id,
-                              teamPayment.league_name,
-                            )
-                          }
-                          disabled={unregisteringPayment === teamPayment.id}
+                          onClick={() => onLeaveTeam(team.id, team.name)}
+                          disabled={leavingTeam === team.id}
                           size="sm"
                           className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 w-full sm:w-auto"
                         >
-                          {unregisteringPayment === teamPayment.id ? (
+                          {leavingTeam === team.id ? (
+                            "Leaving..."
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4" />
+                              <span className="hidden sm:inline">
+                                Leave Team
+                              </span>
+                              <span className="sm:hidden">Leave</span>
+                            </>
+                          )}
+                        </Button>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Individual League Registrations */}
+          {individualLeagues.map((league) => {
+            // Find the corresponding payment for this individual league
+            const leaguePayment = leaguePayments.find(
+              (payment) => payment.league_id === league.id && !payment.team_id,
+            );
+
+            const leagueFee = league.cost || leaguePayment?.amount_due || 0;
+
+            return (
+              <div
+                key={`league-${league.id}`}
+                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="mb-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-lg text-[#6F6F6F] mb-2">
+                        {league.name}
+                      </h4>
+                      <div className="mb-3">
+                        {league.id ? (
+                          <div>
+                            <Link
+                              to={`/leagues/${league.id}`}
+                              className="text-sm text-[#B20000] font-medium hover:text-[#8A0000] hover:underline transition-colors block mb-1"
+                            >
+                              View League Details
+                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                to={`/leagues/${league.id}?tab=schedule`}
+                                className="text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors font-medium"
+                              >
+                                Schedule
+                              </Link>
+                              <span className="text-gray-300">•</span>
+                              <Link
+                                to={`/leagues/${league.id}?tab=standings`}
+                                className="text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors font-medium"
+                              >
+                                Standings
+                              </Link>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#B20000] font-medium">
+                            {league.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-3 sm:mt-0 sm:ml-4">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium">
+                        Active
+                      </span>
+
+                      <span className="bg-purple-100 text-purple-800 flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium">
+                        <User className="h-3 w-3" />
+                        Individual
+                      </span>
+
+                      {leaguePayment && (
+                        <PaymentStatusBadge
+                          status={leaguePayment.status}
+                          size="sm"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
+                      <span className="text-[#6F6F6F]">Location:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const gymLocations = getPrimaryLocation(
+                            league.gyms || [],
+                          );
+
+                          if (gymLocations.length === 0) {
+                            return (
+                              <span className="text-sm text-gray-500">TBD</span>
+                            );
+                          }
+
+                          return gymLocations.map((location, index) => (
+                            <LocationPopover
+                              key={index}
+                              locations={getGymNamesByLocation(
+                                league.gyms || [],
+                                location,
+                              )}
+                            >
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
+                                {location}
+                              </span>
+                            </LocationPopover>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                      <span className="text-[#6F6F6F]">
+                        Individual Registration
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Payment Status Section */}
+                  {(leaguePayment || leagueFee > 0) && (
+                    <PaymentStatusSection
+                      payment={
+                        leaguePayment
+                          ? {
+                              id: leaguePayment.id,
+                              amount_due: leaguePayment.amount_due,
+                              amount_paid: leaguePayment.amount_paid,
+                              status: leaguePayment.status,
+                              due_date: leaguePayment.due_date,
+                            }
+                          : undefined
+                      }
+                      leagueCost={leagueFee}
+                      isCaptain={true}
+                    />
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t pt-3">
+                  <div className="flex items-center gap-3">
+                    {/* Make a payment link for individuals with partial or pending payments */}
+                    {leaguePayment &&
+                      (leaguePayment.status === "partial" ||
+                        leaguePayment.status === "pending") && (
+                        <button
+                          onClick={() => setShowPaymentModal(true)}
+                          className="text-sm text-[#B20000] hover:text-[#8A0000] hover:underline transition-colors font-medium"
+                        >
+                          Make a payment
+                        </button>
+                      )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      // Check if season has started
+                      const seasonStarted =
+                        league.start_date &&
+                        new Date(league.start_date) <= new Date();
+
+                      if (seasonStarted) {
+                        return (
+                          <span className="text-sm text-gray-500 italic">
+                            Registration cannot be cancelled after season starts
+                          </span>
+                        );
+                      }
+
+                      // For individual registrations, we need to handle deletion differently
+                      // since they might not have a payment record
+                      return (
+                        <Button
+                          onClick={() => {
+                            if (leaguePayment) {
+                              // If there's a payment record, delete it
+                              onUnregister(leaguePayment.id, league.name);
+                            } else {
+                              // If no payment record, need to remove from league_ids
+                              // This would require a different handler
+                              onLeaveIndividualLeague?.(league.id, league.name);
+                            }
+                          }}
+                          disabled={unregisteringPayment === leaguePayment?.id}
+                          size="sm"
+                          className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 w-full sm:w-auto"
+                        >
+                          {unregisteringPayment === leaguePayment?.id ? (
                             "Removing..."
                           ) : (
                             <>
                               <Trash2 className="h-4 w-4" />
                               <span className="hidden sm:inline">
-                                Delete Registration
+                                Cancel Registration
                               </span>
-                              <span className="sm:hidden">Delete</span>
+                              <span className="sm:hidden">Cancel</span>
                             </>
                           )}
                         </Button>
-                      )
-                    ) : (
-                      // Show Leave Team for non-captains
-                      <Button
-                        onClick={() => onLeaveTeam(team.id, team.name)}
-                        disabled={leavingTeam === team.id}
-                        size="sm"
-                        className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 w-full sm:w-auto"
-                      >
-                        {leavingTeam === team.id ? (
-                          "Leaving..."
-                        ) : (
-                          <>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="hidden sm:inline">Leave Team</span>
-                            <span className="sm:hidden">Leave</span>
-                          </>
-                        )}
-                      </Button>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -262,13 +535,12 @@ export function TeamsSection({
           })}
         </div>
       )}
-      
+
       {/* Payment Instructions Modal */}
-      <PaymentInstructionsModal 
+      <PaymentInstructionsModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
       />
     </div>
   );
 }
-

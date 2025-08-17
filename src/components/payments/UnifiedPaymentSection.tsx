@@ -78,7 +78,7 @@ export function UnifiedPaymentSection({
             <div className={`text-2xl font-bold ${
               ((paymentInfo.amount_due * 1.13) - paymentInfo.amount_paid) > 0 ? 'text-orange-600' : 'text-green-600'
             }`}>
-              ${((paymentInfo.amount_due * 1.13) - paymentInfo.amount_paid).toFixed(2)}
+              ${Math.max(0, (paymentInfo.amount_due * 1.13) - paymentInfo.amount_paid).toFixed(2)}
             </div>
           </div>
         </div>

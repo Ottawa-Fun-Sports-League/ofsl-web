@@ -162,7 +162,7 @@ serve(async (req: Request) => {
                             <tr>
                               <td align="center" style="background-color: #B20000; border-radius: 4px;">
                                 <a href="${teamUrl}" style="display: inline-block; padding: 16px 32px; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; color: #ffffff; text-decoration: none;">
-                                  View My Teams
+                                  View My Leagues
                                 </a>
                               </td>
                             </tr>

@@ -81,6 +81,7 @@ export function LeagueEditPage() {
     payment_due_date: string;
     deposit_amount: number | null;
     deposit_date: string;
+    team_registration: boolean;
   }>({
     name: "",
     description: "",
@@ -100,6 +101,7 @@ export function LeagueEditPage() {
     payment_due_date: "2025-08-21",
     deposit_amount: null,
     deposit_date: "",
+    team_registration: true,
   });
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -179,6 +181,7 @@ export function LeagueEditPage() {
           payment_due_date: leagueData.payment_due_date || "2025-08-21",
           deposit_amount: leagueData.deposit_amount,
           deposit_date: leagueData.deposit_date || "",
+          team_registration: leagueData.team_registration !== false,
         });
       }
     } catch (error) {
@@ -222,6 +225,7 @@ export function LeagueEditPage() {
           payment_due_date: editLeague.payment_due_date,
           deposit_amount: editLeague.deposit_amount,
           deposit_date: editLeague.deposit_date || null,
+          team_registration: editLeague.team_registration,
         })
         .eq("id", id);
 
@@ -416,7 +420,7 @@ export function LeagueEditPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                     League Type
@@ -543,6 +547,46 @@ export function LeagueEditPage() {
                         className="mr-2"
                       />
                       <span className="text-sm">Male</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                    Registration Type
+                  </label>
+                  <div className="flex flex-col gap-2 p-3 border border-gray-300 rounded-lg">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="team_registration"
+                        value="true"
+                        checked={editLeague.team_registration === true}
+                        onChange={() =>
+                          setEditLeague({
+                            ...editLeague,
+                            team_registration: true,
+                          })
+                        }
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Team Registration</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="team_registration"
+                        value="false"
+                        checked={editLeague.team_registration === false}
+                        onChange={() =>
+                          setEditLeague({
+                            ...editLeague,
+                            team_registration: false,
+                          })
+                        }
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Individual Registration</span>
                     </label>
                   </div>
                 </div>

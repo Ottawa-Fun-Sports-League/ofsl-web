@@ -1,6 +1,7 @@
 export interface LeaguePayment {
   id: number;
   team_id: number | null;
+  league_id?: number;
   league_name: string;
   team_name: string;
   amount_due: number;
@@ -19,6 +20,14 @@ export interface Team {
     name: string;
     location?: string;
     cost?: number;
+    start_date?: string;
+    gym_ids?: number[];
+    gyms?: Array<{
+      id?: number;
+      gym: string | null;
+      address: string | null;
+      locations: string[] | null;
+    }>;
   };
   captain_id: string;
   roster: string[];

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../../../../lib/supabase';
-import { fetchSports, fetchSkills } from '../../../../../lib/leagues';
+import { fetchSports, fetchSkills, sortLeaguesByDay } from '../../../../../lib/leagues';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import { LeagueWithTeamCount, Sport, Skill, Gym } from '../types';
 
@@ -51,6 +51,15 @@ export function useLeaguesData() {
         if (teamCountsError) {
           console.error('Error fetching team counts:', teamCountsError);
         }
+        
+        // Get individual registration counts for individual leagues
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('league_ids');
+        
+        if (usersError) {
+          console.error('Error fetching user registrations:', usersError);
+        }
 
         // Get all unique gym IDs from leagues
         const allGymIds = new Set<number>();
@@ -62,6 +71,7 @@ export function useLeaguesData() {
 
         const gymsMap = new Map(gymsResponse.data?.map(gym => [gym.id, gym]) || []);
         const teamCountsMap = new Map<number, number>();
+        const individualCountsMap = new Map<number, number>();
         
         // Count teams per league
         teamCounts?.forEach(team => {
@@ -69,11 +79,25 @@ export function useLeaguesData() {
           teamCountsMap.set(team.league_id, currentCount + 1);
         });
         
+        // Count individual registrations per league
+        users?.forEach(user => {
+          if (user.league_ids && Array.isArray(user.league_ids)) {
+            user.league_ids.forEach((leagueId: number) => {
+              const currentCount = individualCountsMap.get(leagueId) || 0;
+              individualCountsMap.set(leagueId, currentCount + 1);
+            });
+          }
+        });
+        
         if (leaguesData) {
           const leaguesWithDetails = leaguesData.map(league => {
-            const teamCount = teamCountsMap.get(league.id) || 0;
-            const maxTeams = league.max_teams || 20;
-            const spotsRemaining = Math.max(0, maxTeams - teamCount);
+            // For individual leagues, count individuals; for team leagues, count teams
+            const isIndividualLeague = league.team_registration === false;
+            const registrationCount = isIndividualLeague 
+              ? (individualCountsMap.get(league.id) || 0)
+              : (teamCountsMap.get(league.id) || 0);
+            const maxCapacity = league.max_teams || 20;
+            const spotsRemaining = Math.max(0, maxCapacity - registrationCount);
 
             // Get gyms for this league
             const leagueGyms = (league.gym_ids || [])
@@ -98,11 +122,15 @@ export function useLeaguesData() {
               skill_ids: league.skill_ids || [],
               skill_names: skill_names,
               gyms: leagueGyms,
-              team_count: teamCount,
-              spots_remaining: spotsRemaining
+              team_count: registrationCount,  // This now represents either teams or individuals
+              spots_remaining: spotsRemaining,
+              is_individual: isIndividualLeague
             };
           });
-          setLeagues(leaguesWithDetails);
+          
+          // Sort leagues by day of week (Monday to Sunday)
+          const sortedLeagues = sortLeaguesByDay(leaguesWithDetails);
+          setLeagues(sortedLeagues);
         }
       }
     } catch (error) {
