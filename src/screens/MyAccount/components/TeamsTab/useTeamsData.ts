@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
-import { getUserLeaguePayments } from '../../../../lib/payments';
 import { LeaguePayment, Team } from './types';
 
 interface IndividualLeague {
@@ -49,7 +48,8 @@ export function useTeamsData(userId?: string) {
         .from('teams')
         .select(`
           *,
-          league:leagues(id, name, location, cost, start_date, gym_ids)
+          league:leagues(id, name, location, cost, start_date, gym_ids),
+          skill:skills(id, name)
         `)
         .contains('roster', [userId])
         .order('created_at', { ascending: true });
@@ -194,21 +194,34 @@ export function useTeamsData(userId?: string) {
     if (!userId) return;
 
     try {
-      const payments = await getUserLeaguePayments(userId);
+      // Fetch payments with skill level information
+      const { data: paymentsData, error } = await supabase
+        .from('league_payments')
+        .select(`
+          *,
+          skill:skills(id, name),
+          league:leagues(name),
+          team:teams(name)
+        `)
+        .eq('user_id', userId);
       
-      // Transform to match our local interface
-      const transformedData = payments.map(payment => ({
+      if (error) throw error;
+      
+      // Transform the data to match the expected format
+      const transformedData = (paymentsData || []).map(payment => ({
         id: payment.id,
         team_id: payment.team_id,
-        league_id: payment.league_id,  // Add league_id for matching
-        league_name: payment.league_name,
-        team_name: payment.team_name || '',
-        amount_due: payment.amount_due,
-        amount_paid: payment.amount_paid,
-        league_cost: payment.amount_due, // Use amount_due as league cost for now
-        status: payment.status,
+        league_id: payment.league_id,
+        league_name: payment.league?.name || '',
+        team_name: payment.team?.name || '',
+        amount_due: payment.amount_due || 0,
+        amount_paid: payment.amount_paid || 0,
+        league_cost: payment.amount_due || 0,
+        status: payment.status || 'pending',
         due_date: payment.due_date || '',
-        payment_method: payment.payment_method
+        payment_method: payment.payment_method,
+        skill_level_id: payment.skill_level_id,
+        skill_name: payment.skill?.name || null
       }));
       
       setLeaguePayments(transformedData);
