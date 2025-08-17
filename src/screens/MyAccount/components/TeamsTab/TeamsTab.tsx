@@ -9,14 +9,16 @@ import { useTeamOperations } from './useTeamOperations';
 import { PendingInvites } from '../../../../components/PendingInvites';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { CheckCircle } from 'lucide-react';
+import { ConfirmationModal } from '../../../../components/ui/confirmation-modal';
 
 export function TeamsTab() {
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { leaguePayments, teams, individualLeagues, loading, setLeaguePayments, refetchTeams, refetchIndividualLeagues, refetchLeaguePayments, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
-  const { unregisteringPayment, handleUnregister } = useTeamOperations();
+  const { unregisteringPayment, handleUnregister, confirmationState, handleConfirmCancellation, handleCloseModal } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
   const [welcomeTeams, setWelcomeTeams] = useState<string[]>([]);
+  const [leaveConfirmation, setLeaveConfirmation] = useState<{isOpen: boolean, type: 'team' | 'individual', id: number, name: string} | null>(null);
 
   // Check for teams added during signup
   useEffect(() => {
@@ -71,56 +73,68 @@ export function TeamsTab() {
     handleUnregister(paymentId, leagueName, onUnregisterSuccess);
   };
 
-  const handleLeaveIndividualLeague = async (leagueId: number, leagueName: string) => {
+  const handleLeaveIndividualLeague = (leagueId: number, leagueName: string) => {
     if (!userProfile?.id || !user) return;
+    setLeaveConfirmation({ isOpen: true, type: 'individual', id: leagueId, name: leagueName });
+  };
+
+  const handleConfirmLeaveIndividual = async () => {
+    if (!leaveConfirmation || !userProfile?.id || !user) return;
+    const { id: leagueId, name: leagueName } = leaveConfirmation;
     
-    if (window.confirm(`Are you sure you want to cancel your registration for "${leagueName}"? This action cannot be undone.`)) {
-      try {
-        // Get current league_ids
-        const currentLeagueIds = userProfile.league_ids || [];
-        const updatedLeagueIds = currentLeagueIds.filter(id => id !== leagueId);
+    setLeaveConfirmation(null);
+    
+    try {
+      // Get current league_ids
+      const currentLeagueIds = userProfile.league_ids || [];
+      const updatedLeagueIds = currentLeagueIds.filter(id => id !== leagueId);
+      
+      // Update user's league_ids
+      const { error } = await supabase
+        .from('users')
+        .update({ league_ids: updatedLeagueIds })
+        .eq('id', userProfile.id);
+      
+      if (error) throw error;
+      
+      // Delete any payment records for this individual registration
+      await supabase
+        .from('league_payments')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('league_id', leagueId)
+        .is('team_id', null);
+      
+      // Refresh all relevant data
+      await Promise.all([
+        refetchIndividualLeagues(),
+        refetchLeaguePayments(),
+        refreshUserProfile()  // This will update the user profile with new league_ids
+      ]);
+      
+      alert(`Successfully cancelled registration for: ${leagueName}`);
         
-        // Update user's league_ids
-        const { error } = await supabase
-          .from('users')
-          .update({ league_ids: updatedLeagueIds })
-          .eq('id', userProfile.id);
-        
-        if (error) throw error;
-        
-        // Delete any payment records for this individual registration
-        await supabase
-          .from('league_payments')
-          .delete()
-          .eq('user_id', userProfile.id)
-          .eq('league_id', leagueId)
-          .is('team_id', null);
-        
-        // Refresh all relevant data
-        await Promise.all([
-          refetchIndividualLeagues(),
-          refetchLeaguePayments(),
-          refreshUserProfile()  // This will update the user profile with new league_ids
-        ]);
-        
-        alert(`Successfully cancelled registration for: ${leagueName}`);
-        
-      } catch (error) {
-        console.error('Error leaving individual league:', error);
-        alert(`Failed to cancel registration: ${(error as Error).message}`);
-      }
+    } catch (error) {
+      console.error('Error leaving individual league:', error);
+      alert(`Failed to cancel registration: ${(error as Error).message}`);
     }
   };
 
-  const handleLeaveTeam = async (teamId: number, teamName: string) => {
+  const handleLeaveTeam = (teamId: number, teamName: string) => {
     if (!userProfile?.id || !user) return;
+    setLeaveConfirmation({ isOpen: true, type: 'team', id: teamId, name: teamName });
+  };
+
+  const handleConfirmLeaveTeam = async () => {
+    if (!leaveConfirmation || !userProfile?.id || !user) return;
+    const { id: teamId, name: teamName } = leaveConfirmation;
     
-    if (window.confirm(`Are you sure you want to leave the team "${teamName}"? This action cannot be undone.`)) {
-      setLeavingTeam(teamId);
-      
-      try {
-        const team = teams.find(t => t.id === teamId);
-        if (!team) throw new Error('Team not found');
+    setLeaveConfirmation(null);
+    setLeavingTeam(teamId);
+    
+    try {
+      const team = teams.find(t => t.id === teamId);
+      if (!team) throw new Error('Team not found');
 
         // Get the user's access token for the API call
         const { data: { session } } = await supabase.auth.getSession();
@@ -168,10 +182,9 @@ export function TeamsTab() {
         
       } catch (error) {
         console.error('Error leaving team:', error);
-        alert(`Failed to leave team: ${(error as Error).message}`);
-      } finally {
-        setLeavingTeam(null);
-      }
+      alert(`Failed to leave team: ${(error as Error).message}`);
+    } finally {
+      setLeavingTeam(null);
     }
   };
 
@@ -299,6 +312,71 @@ export function TeamsTab() {
           onCaptainUpdate={handleCaptainUpdate}
           leagueName={selectedTeam.leagueName}
           readOnly={selectedTeam.captainId !== userProfile?.id}
+        />
+      )}
+      
+      {/* Confirmation Modal for Cancellation */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmCancellation}
+        title={`Cancel ${confirmationState.isIndividual ? 'Individual' : 'Team'} Registration`}
+        message={
+          confirmationState.isIndividual ? (
+            <>
+              Are you sure you want to cancel your individual registration for <strong>{confirmationState.leagueName}</strong>?
+              {'\n\n'}
+              This will delete your payment record.
+              {'\n\n'}
+              This action cannot be undone.
+            </>
+          ) : (
+            <>
+              Are you sure you want to delete your team registration for <strong>{confirmationState.leagueName}</strong>?
+              {'\n\n'}
+              This will:
+              {'\n'}• Delete your team
+              {'\n'}• Remove all teammates from the team
+              {'\n'}• Delete all payment records
+              {'\n\n'}
+              This action cannot be undone.
+            </>
+          )
+        }
+        confirmText="Yes, Cancel Registration"
+        cancelText="Keep Registration"
+        variant="danger"
+        isLoading={unregisteringPayment === confirmationState.paymentId}
+      />
+      
+      {/* Confirmation Modal for Leaving Team/Individual League */}
+      {leaveConfirmation && (
+        <ConfirmationModal
+          isOpen={leaveConfirmation.isOpen}
+          onClose={() => setLeaveConfirmation(null)}
+          onConfirm={leaveConfirmation.type === 'team' ? handleConfirmLeaveTeam : handleConfirmLeaveIndividual}
+          title={leaveConfirmation.type === 'team' ? 'Leave Team' : 'Cancel Individual Registration'}
+          message={
+            leaveConfirmation.type === 'team' ? (
+              <>
+                Are you sure you want to leave the team <strong>{leaveConfirmation.name}</strong>?
+                {'\n\n'}
+                You will be removed from the team roster.
+                {'\n\n'}
+                This action cannot be undone.
+              </>
+            ) : (
+              <>
+                Are you sure you want to cancel your registration for <strong>{leaveConfirmation.name}</strong>?
+                {'\n\n'}
+                This action cannot be undone.
+              </>
+            )
+          }
+          confirmText={leaveConfirmation.type === 'team' ? 'Yes, Leave Team' : 'Yes, Cancel Registration'}
+          cancelText="Keep Registration"
+          variant="warning"
+          isLoading={leavingTeam === leaveConfirmation.id}
         />
       )}
     </div>

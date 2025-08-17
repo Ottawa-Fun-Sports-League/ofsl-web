@@ -1,8 +1,23 @@
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabase';
 
+interface ConfirmationState {
+  isOpen: boolean;
+  paymentId: number | null;
+  leagueName: string;
+  isIndividual: boolean;
+  onSuccess: ((paymentId: number) => void) | null;
+}
+
 export function useTeamOperations() {
   const [unregisteringPayment, setUnregisteringPayment] = useState<number | null>(null);
+  const [confirmationState, setConfirmationState] = useState<ConfirmationState>({
+    isOpen: false,
+    paymentId: null,
+    leagueName: '',
+    isIndividual: false,
+    onSuccess: null,
+  });
 
   const handleUnregister = async (
     paymentId: number, 
@@ -23,14 +38,36 @@ export function useTeamOperations() {
 
     const isIndividualRegistration = !payment.team_id;
 
-    if (isIndividualRegistration) {
+    // Store the payment info and show confirmation modal
+    setConfirmationState({
+      isOpen: true,
+      paymentId,
+      leagueName,
+      isIndividual: isIndividualRegistration,
+      onSuccess,
+    });
+  };
+
+  const handleConfirmCancellation = async () => {
+    const { paymentId, leagueName, isIndividual, onSuccess } = confirmationState;
+    
+    if (!paymentId || !onSuccess) return;
+
+    // Close the modal
+    setConfirmationState(prev => ({ ...prev, isOpen: false }));
+
+    if (isIndividual) {
       // Individual registration cancellation
-      if (!confirm(`Are you sure you want to cancel your individual registration for ${leagueName}?\n\nThis will delete your payment record.\n\nThis action cannot be undone.`)) {
-        return;
-      }
 
       setUnregisteringPayment(paymentId);
       try {
+        // Get payment details for league_id
+        const { data: payment } = await supabase
+          .from('league_payments')
+          .select('league_id, user_id')
+          .eq('id', paymentId)
+          .single();
+
         // Delete the payment record
         const { error: deletePaymentError } = await supabase
           .from('league_payments')
@@ -40,22 +77,24 @@ export function useTeamOperations() {
         if (deletePaymentError) throw deletePaymentError;
 
         // Remove league from user's league_ids
-        const { data: userData, error: userFetchError } = await supabase
-          .from('users')
-          .select('league_ids')
-          .eq('id', payment.user_id)
-          .single();
-
-        if (!userFetchError && userData && userData.league_ids) {
-          const updatedLeagueIds = userData.league_ids.filter((id: number) => id !== payment.league_id);
-          
-          const { error: updateError } = await supabase
+        if (payment) {
+          const { data: userData, error: userFetchError } = await supabase
             .from('users')
-            .update({ league_ids: updatedLeagueIds })
-            .eq('id', payment.user_id);
+            .select('league_ids')
+            .eq('id', payment.user_id)
+            .single();
 
-          if (updateError) {
-            console.error('Error updating user league_ids:', updateError);
+          if (!userFetchError && userData && userData.league_ids) {
+            const updatedLeagueIds = userData.league_ids.filter((id: number) => id !== payment.league_id);
+            
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ league_ids: updatedLeagueIds })
+              .eq('id', payment.user_id);
+
+            if (updateError) {
+              console.error('Error updating user league_ids:', updateError);
+            }
           }
         }
 
@@ -69,9 +108,6 @@ export function useTeamOperations() {
       }
     } else {
       // Team registration cancellation
-      if (!confirm(`Are you sure you want to delete your team registration for ${leagueName}?\n\nThis will:\n- Delete your team\n- Remove all teammates from the team\n- Delete all payment records\n\nThis action cannot be undone.`)) {
-        return;
-      }
 
       setUnregisteringPayment(paymentId);
       try {
@@ -118,8 +154,21 @@ export function useTeamOperations() {
     }
   };
 
+  const handleCloseModal = () => {
+    setConfirmationState({
+      isOpen: false,
+      paymentId: null,
+      leagueName: '',
+      isIndividual: false,
+      onSuccess: null,
+    });
+  };
+
   return {
     unregisteringPayment,
-    handleUnregister
+    handleUnregister,
+    confirmationState,
+    handleConfirmCancellation,
+    handleCloseModal
   };
 }

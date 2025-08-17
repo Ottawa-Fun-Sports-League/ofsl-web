@@ -297,7 +297,7 @@ export function TeamsSection({
                                 <span className="hidden sm:inline">
                                   Cancel Registration
                                 </span>
-                                <span className="sm:hidden">Delete</span>
+                                <span className="sm:hidden">Cancel</span>
                               </>
                             )}
                           </Button>
