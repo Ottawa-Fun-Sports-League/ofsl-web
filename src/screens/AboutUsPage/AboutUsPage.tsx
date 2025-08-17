@@ -92,25 +92,14 @@ export const AboutUsPage = (): React.ReactElement => {
     e.preventDefault();
 
     try {
-      // Make a direct HTTP call to the edge function with the anon key
-      // Supabase edge functions require the Authorization header even for public functions
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      const response = await fetch(
-        "https://api.ofsl.ca/functions/v1/send-contact-email",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseAnonKey}`,
-          },
-          body: JSON.stringify(contactForm),
-        }
-      );
+      // Use supabase.functions.invoke to handle authentication automatically
+      const { supabase } = await import("../../lib/supabase");
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: contactForm
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Contact form error:", errorData);
+      if (error) {
+        console.error("Contact form error:", error);
         setSubmitStatus("error");
         setTimeout(() => {
           setSubmitStatus(null);

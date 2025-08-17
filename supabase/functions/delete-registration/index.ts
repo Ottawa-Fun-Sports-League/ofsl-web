@@ -1,0 +1,201 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, x-client-info, apikey",
+};
+
+interface DeleteRegistrationRequest {
+  paymentId: number;
+  leagueName: string;
+}
+
+serve(async (req: Request) => {
+  try {
+    // Handle CORS preflight requests
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
+
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { paymentId, leagueName }: DeleteRegistrationRequest = await req.json();
+
+    if (!paymentId || !leagueName) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Get authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Authorization header required" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Initialize Supabase client with service role for full access
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get the payment record to find the team
+    const { data: payment, error: paymentError } = await supabase
+      .from("league_payments")
+      .select("team_id, user_id")
+      .eq("id", paymentId)
+      .single();
+
+    if (paymentError || !payment) {
+      console.error("Payment fetch error:", paymentError);
+      return new Response(
+        JSON.stringify({ error: "Payment record not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!payment.team_id) {
+      return new Response(
+        JSON.stringify({ error: "This is an individual registration, not a team registration" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Get the team to find all members
+    const { data: team, error: teamError } = await supabase
+      .from("teams")
+      .select("id, name, roster, captain_id")
+      .eq("id", payment.team_id)
+      .single();
+
+    if (teamError || !team) {
+      console.error("Team fetch error:", teamError);
+      return new Response(
+        JSON.stringify({ error: "Associated team not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const warnings: string[] = [];
+    let membersProcessed = 0;
+
+    // Process each team member
+    if (team.roster && Array.isArray(team.roster)) {
+      for (const memberId of team.roster) {
+        // Remove this team from each member's teams array
+        const { data: userData, error: userFetchError } = await supabase
+          .from("users")
+          .select("teams")
+          .eq("id", memberId)
+          .single();
+
+        if (userFetchError) {
+          warnings.push(`Could not fetch user ${memberId}: ${userFetchError.message}`);
+          continue;
+        }
+
+        if (userData && userData.teams) {
+          const updatedTeams = userData.teams.filter((teamId: number) => teamId !== team.id);
+          
+          const { error: updateError } = await supabase
+            .from("users")
+            .update({ teams: updatedTeams })
+            .eq("id", memberId);
+
+          if (updateError) {
+            warnings.push(`Could not update teams for user ${memberId}: ${updateError.message}`);
+          } else {
+            membersProcessed++;
+          }
+        }
+      }
+    }
+
+    // Delete the payment record
+    const { error: deletePaymentError } = await supabase
+      .from("league_payments")
+      .delete()
+      .eq("id", paymentId);
+
+    if (deletePaymentError) {
+      console.error("Payment deletion error:", deletePaymentError);
+      warnings.push(`Payment deletion warning: ${deletePaymentError.message}`);
+    }
+
+    // Delete the team
+    const { error: deleteTeamError } = await supabase
+      .from("teams")
+      .delete()
+      .eq("id", team.id);
+
+    if (deleteTeamError) {
+      console.error("Team deletion error:", deleteTeamError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to delete team",
+          details: deleteTeamError.message,
+          warnings 
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: `Successfully deleted registration for ${leagueName}`,
+        teamDeleted: team.name,
+        membersProcessed,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("Error in delete-registration function:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : String(error)
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+});
