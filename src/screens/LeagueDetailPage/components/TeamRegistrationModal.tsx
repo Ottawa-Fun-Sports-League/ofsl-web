@@ -12,6 +12,8 @@ import {
   getPrimaryLocation,
   type League,
 } from "../../../lib/leagues";
+import { isProfileComplete } from "../../../lib/profileUtils";
+import { formatLocalDate } from "../../../lib/dateUtils";
 import { RegistrationSuccessModal } from "./RegistrationSuccessModal";
 
 interface Skill {
@@ -89,12 +91,7 @@ export function TeamRegistrationModal({
     setError(null);
 
     // Check if user profile is complete
-    if (!userProfile || 
-        !userProfile.profile_completed || 
-        !userProfile.name || 
-        !userProfile.phone || 
-        !userProfile.user_sports_skills || 
-        userProfile.user_sports_skills.length === 0) {
+    if (!isProfileComplete(userProfile)) {
       showToast("Please complete your profile before registering for a league", "error");
       // Close modal and redirect to profile completion page
       closeModal();
@@ -206,6 +203,7 @@ export function TeamRegistrationModal({
       if (userError) throw userError;
 
       // Send registration confirmation email
+      let emailSent = false;
       try {
         if (user?.email) {
           const response = await supabase.functions.invoke(
@@ -228,6 +226,8 @@ export function TeamRegistrationModal({
           if (response.error) {
             console.error("Failed to send confirmation email:", response.error);
             // Don't throw error - email failure shouldn't block registration
+          } else {
+            emailSent = true;
           }
         } else {
           console.error("No email found for user");
@@ -270,13 +270,20 @@ export function TeamRegistrationModal({
       // Payment record will be automatically created by database trigger for regular registrations
       if (isWaitlist) {
         // For waitlist, show a simple success message and close
-        showToast(
-          `You've been added to the waitlist for ${leagueName}. We'll contact you if a spot opens up!`,
-          "success",
-        );
+        const message = emailSent
+          ? `You've been added to the waitlist for ${leagueName}. We'll contact you if a spot opens up!`
+          : `You've been added to the waitlist for ${leagueName}. We'll contact you if a spot opens up! (Note: Confirmation email could not be sent, but your registration is complete)`;
+        showToast(message, emailSent ? "success" : "warning");
         closeModal();
       } else {
         // For regular registrations, show the full success modal
+        if (!emailSent) {
+          // Notify about email failure but don't block the success flow
+          showToast(
+            "Registration successful! Note: Confirmation email could not be sent, but your registration is complete.",
+            "warning"
+          );
+        }
         if (leagueData?.cost && leagueData.cost > 0) {
           setRegisteredTeamName(teamName);
           setShowSuccessModal(true);
@@ -526,19 +533,20 @@ export function TeamRegistrationModal({
                         )}
                       </div>
 
-                      {league && league.cost && league.cost > 0 && (
+                      {league && league.deposit_amount && league.deposit_date && (
                         <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3">
                           <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="text-sm text-amber-800 font-medium">
-                              Registration Information
+                              Deposit Required
                             </p>
                             <p className="text-sm text-amber-700 mt-1">
-                              To secure your spot in this league, a deposit of
-                              $200 or full payment of ${totalAmount.toFixed(2)}{" "}
-                              (${baseAmount.toFixed(2)} + $
-                              {hstAmount.toFixed(2)} HST) will be required after
-                              registration.
+                              To secure your spot in this league, a non-refundable deposit of ${league.deposit_amount.toFixed(2)} will be required by {formatLocalDate(league.deposit_date, {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}. Full payment of ${totalAmount.toFixed(2)}{" "}
+                              (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be due before the season starts.
                             </p>
                           </div>
                         </div>
@@ -586,6 +594,8 @@ export function TeamRegistrationModal({
         teamName={registeredTeamName}
         leagueName={leagueName}
         leagueCost={league?.cost || null}
+        depositAmount={league?.deposit_amount || null}
+        depositDate={league?.deposit_date || null}
       />
     </>
   );

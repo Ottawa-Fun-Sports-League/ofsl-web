@@ -72,6 +72,9 @@ const mockUser = {
 const mockUserProfile = {
   id: "test-user-id",
   name: "Test User",
+  phone: "123-456-7890",
+  user_sports_skills: [{ sport_id: 1, skill_id: 2 }],
+  profile_completed: true,
   team_ids: [],
 };
 
@@ -150,29 +153,30 @@ describe("TeamRegistrationModal", () => {
     expect(costText).toContain("$113.00");
   });
 
-  it("handles team registration with skill level", async () => {
-    // Mock skills data
-    const mockSkills = [
-      {
-        id: 1,
-        name: "Beginner",
-        description: "New to the sport",
-        order_index: 1,
-      },
-      {
-        id: 2,
-        name: "Intermediate",
-        description: "Some experience",
-        order_index: 2,
-      },
-      {
-        id: 3,
-        name: "Advanced",
-        description: "Competitive player",
-        order_index: 3,
-      },
-    ];
 
+  it("handles waitlist registration", () => {
+    renderComponent({ isWaitlist: true });
+
+    // Check waitlist-specific content
+    expect(screen.getByText("Join Waitlist")).toBeInTheDocument();
+    expect(screen.getByText(/League's Full \(For Now!\)/)).toBeInTheDocument();
+    expect(screen.getByText("Yes, join waitlist")).toBeInTheDocument();
+
+    // Team name input should not be present for waitlist
+    expect(
+      screen.queryByPlaceholderText("Enter your team name"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends email confirmation without deposit info when league has no deposit", async () => {
+    // Mock league without deposit
+    const leagueNoDeposit = {
+      ...mockLeague,
+      deposit_amount: null,
+      deposit_date: null,
+    };
+
+    // Mock skills and team creation
     vi.mocked(supabase.from).mockImplementation(
       (table: string): ReturnType<typeof supabase.from> => {
         if (table === "skills") {
@@ -180,7 +184,9 @@ describe("TeamRegistrationModal", () => {
             select: vi.fn(() => ({
               order: vi.fn(() =>
                 Promise.resolve({
-                  data: mockSkills,
+                  data: [
+                    { id: 2, name: "Intermediate", description: "Some experience", order_index: 2 },
+                  ],
                   error: null,
                 }),
               ),
@@ -245,16 +251,16 @@ describe("TeamRegistrationModal", () => {
       },
     );
 
-    renderComponent();
+    renderComponent({ league: leagueNoDeposit });
 
-    // Wait for skills to load
+    // Wait for component to load
     await waitFor(() => {
       expect(screen.getByText("Team Name *")).toBeInTheDocument();
     });
 
     // Fill in team name
     const teamNameInput = screen.getByPlaceholderText("Enter your team name");
-    fireEvent.change(teamNameInput, { target: { value: "Test Team" } });
+    fireEvent.change(teamNameInput, { target: { value: "Test Team No Deposit" } });
 
     // Select skill level
     const skillSelect = screen.getByRole("combobox");
@@ -264,29 +270,32 @@ describe("TeamRegistrationModal", () => {
     const submitButton = screen.getByRole("button", { name: "Register" });
     fireEvent.click(submitButton);
 
-    // Wait for registration to complete
+    // Wait for email function to be called
     await waitFor(() => {
-      expect(vi.mocked(supabase.from)).toHaveBeenCalledWith("teams");
+      expect(vi.mocked(supabase.functions.invoke)).toHaveBeenCalledWith(
+        "send-registration-confirmation",
+        expect.objectContaining({
+          body: expect.objectContaining({
+            teamName: "Test Team No Deposit",
+            leagueName: "Test League",
+            depositAmount: null,
+            depositDate: null,
+            isWaitlist: false,
+          }),
+        }),
+      );
     });
   });
 
-  it("shows error for beginner skill level", async () => {
-    // Mock skills data
-    const mockSkills = [
-      {
-        id: 1,
-        name: "Beginner",
-        description: "New to the sport",
-        order_index: 1,
-      },
-      {
-        id: 2,
-        name: "Intermediate",
-        description: "Some experience",
-        order_index: 2,
-      },
-    ];
+  it("sends email confirmation without deposit info when league has only depositAmount", async () => {
+    // Mock league with only deposit amount (no date)
+    const leagueWithOnlyAmount = {
+      ...mockLeague,
+      deposit_amount: 200,
+      deposit_date: null,
+    };
 
+    // Mock skills and team creation
     vi.mocked(supabase.from).mockImplementation(
       (table: string): ReturnType<typeof supabase.from> => {
         if (table === "skills") {
@@ -294,10 +303,66 @@ describe("TeamRegistrationModal", () => {
             select: vi.fn(() => ({
               order: vi.fn(() =>
                 Promise.resolve({
-                  data: mockSkills,
+                  data: [
+                    { id: 2, name: "Intermediate", description: "Some experience", order_index: 2 },
+                  ],
                   error: null,
                 }),
               ),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "leagues") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: { cost: 100 },
+                    error: null,
+                  }),
+                ),
+              })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "teams") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn(() => ({
+                  order: vi.fn(() => ({
+                    limit: vi.fn(() =>
+                      Promise.resolve({
+                        data: [],
+                        error: null,
+                      }),
+                    ),
+                  })),
+                })),
+              })),
+            })),
+            insert: vi.fn(() => ({
+              select: vi.fn(() => ({
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: {
+                      id: 1,
+                      name: "Test Team",
+                      active: true,
+                      skill_level_id: 2,
+                    },
+                    error: null,
+                  }),
+                ),
+              })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "users") {
+          return {
+            update: vi.fn(() => ({
+              eq: vi.fn(() => Promise.resolve({ error: null })),
             })),
           } as unknown as ReturnType<typeof supabase.from>;
         }
@@ -305,50 +370,159 @@ describe("TeamRegistrationModal", () => {
       },
     );
 
-    renderComponent();
+    renderComponent({ league: leagueWithOnlyAmount });
 
-    // Wait for skills to load
+    // Wait for component to load
     await waitFor(() => {
       expect(screen.getByText("Team Name *")).toBeInTheDocument();
     });
 
     // Fill in team name
     const teamNameInput = screen.getByPlaceholderText("Enter your team name");
-    fireEvent.change(teamNameInput, { target: { value: "Test Team" } });
+    fireEvent.change(teamNameInput, { target: { value: "Test Team Only Amount" } });
 
-    // Select beginner skill level
+    // Select skill level
     const skillSelect = screen.getByRole("combobox");
-    fireEvent.change(skillSelect, { target: { value: "1" } });
+    fireEvent.change(skillSelect, { target: { value: "2" } });
 
     // Submit form
     const submitButton = screen.getByRole("button", { name: "Register" });
     fireEvent.click(submitButton);
 
-    // Check error message is displayed
+    // Wait for email function to be called - should pass deposit amount but no payment section in email
     await waitFor(() => {
-      expect(
-        screen.getByText(/Thank you for your interest!/),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          /our programs are designed for intermediate to elite level players/,
-        ),
-      ).toBeInTheDocument();
+      expect(vi.mocked(supabase.functions.invoke)).toHaveBeenCalledWith(
+        "send-registration-confirmation",
+        expect.objectContaining({
+          body: expect.objectContaining({
+            teamName: "Test Team Only Amount",
+            leagueName: "Test League",
+            depositAmount: 200,
+            depositDate: null,
+            isWaitlist: false,
+          }),
+        }),
+      );
     });
   });
 
-  it("handles waitlist registration", () => {
-    renderComponent({ isWaitlist: true });
+  it("sends email confirmation with deposit info when league has deposit", async () => {
+    // Mock league with deposit
+    const leagueWithDeposit = {
+      ...mockLeague,
+      deposit_amount: 50,
+      deposit_date: "2025-01-20",
+    };
 
-    // Check waitlist-specific content
-    expect(screen.getByText("Join Waitlist")).toBeInTheDocument();
-    expect(screen.getByText(/League's Full \(For Now!\)/)).toBeInTheDocument();
-    expect(screen.getByText("Yes, join waitlist")).toBeInTheDocument();
+    // Mock skills and team creation
+    vi.mocked(supabase.from).mockImplementation(
+      (table: string): ReturnType<typeof supabase.from> => {
+        if (table === "skills") {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn(() =>
+                Promise.resolve({
+                  data: [
+                    { id: 2, name: "Intermediate", description: "Some experience", order_index: 2 },
+                  ],
+                  error: null,
+                }),
+              ),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "leagues") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: { cost: 100 },
+                    error: null,
+                  }),
+                ),
+              })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "teams") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn(() => ({
+                  order: vi.fn(() => ({
+                    limit: vi.fn(() =>
+                      Promise.resolve({
+                        data: [],
+                        error: null,
+                      }),
+                    ),
+                  })),
+                })),
+              })),
+            })),
+            insert: vi.fn(() => ({
+              select: vi.fn(() => ({
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: {
+                      id: 1,
+                      name: "Test Team",
+                      active: true,
+                      skill_level_id: 2,
+                    },
+                    error: null,
+                  }),
+                ),
+              })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "users") {
+          return {
+            update: vi.fn(() => ({
+              eq: vi.fn(() => Promise.resolve({ error: null })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        return {} as unknown as ReturnType<typeof supabase.from>;
+      },
+    );
 
-    // Team name input should not be present for waitlist
-    expect(
-      screen.queryByPlaceholderText("Enter your team name"),
-    ).not.toBeInTheDocument();
+    renderComponent({ league: leagueWithDeposit });
+
+    // Wait for component to load
+    await waitFor(() => {
+      expect(screen.getByText("Team Name *")).toBeInTheDocument();
+    });
+
+    // Fill in team name
+    const teamNameInput = screen.getByPlaceholderText("Enter your team name");
+    fireEvent.change(teamNameInput, { target: { value: "Test Team With Deposit" } });
+
+    // Select skill level
+    const skillSelect = screen.getByRole("combobox");
+    fireEvent.change(skillSelect, { target: { value: "2" } });
+
+    // Submit form
+    const submitButton = screen.getByRole("button", { name: "Register" });
+    fireEvent.click(submitButton);
+
+    // Wait for email function to be called with deposit info
+    await waitFor(() => {
+      expect(vi.mocked(supabase.functions.invoke)).toHaveBeenCalledWith(
+        "send-registration-confirmation",
+        expect.objectContaining({
+          body: expect.objectContaining({
+            teamName: "Test Team With Deposit",
+            leagueName: "Test League",
+            depositAmount: 50,
+            depositDate: "2025-01-20",
+            isWaitlist: false,
+          }),
+        }),
+      );
+    });
   });
 });
 

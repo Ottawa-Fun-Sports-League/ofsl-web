@@ -5,7 +5,6 @@ import { Separator } from "../../components/ui/separator";
 import { Input } from "../../components/ui/input";
 import { Card, CardContent } from "../../components/ui/card";
 import { Mail } from "lucide-react";
-import { supabase } from "../../lib/supabase";
 
 // Stats final values - moved outside component to avoid dependency warnings
 const statsData = [
@@ -93,12 +92,25 @@ export const AboutUsPage = (): React.ReactElement => {
     e.preventDefault();
 
     try {
-      const { error } = await supabase.functions.invoke("send-contact-email", {
-        body: contactForm,
-      });
+      // Make a direct HTTP call to the edge function with the anon key
+      // Supabase edge functions require the Authorization header even for public functions
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const response = await fetch(
+        "https://api.ofsl.ca/functions/v1/send-contact-email",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify(contactForm),
+        }
+      );
 
-      if (error) {
-        console.error("Supabase function error:", error);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Contact form error:", errorData);
         setSubmitStatus("error");
         setTimeout(() => {
           setSubmitStatus(null);
@@ -106,26 +118,18 @@ export const AboutUsPage = (): React.ReactElement => {
         return;
       }
 
-      // If no error, consider it successful
-      if (!error) {
-        setSubmitStatus("success");
-        // Reset form after successful submission
-        setTimeout(() => {
-          setContactForm({
-            name: "",
-            email: "",
-            subject: "",
-            message: "",
-          });
-          setSubmitStatus(null);
-        }, 3000);
-      } else {
-        setSubmitStatus("error");
-        // Clear error message after 5 seconds
-        setTimeout(() => {
-          setSubmitStatus(null);
-        }, 5000);
-      }
+      // If successful
+      setSubmitStatus("success");
+      // Reset form after successful submission
+      setTimeout(() => {
+        setContactForm({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        });
+        setSubmitStatus(null);
+      }, 3000);
     } catch (error) {
       console.error("Error sending contact form:", error);
       setSubmitStatus("error");

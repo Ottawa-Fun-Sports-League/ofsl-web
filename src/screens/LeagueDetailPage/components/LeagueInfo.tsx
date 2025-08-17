@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../../components/ui/button";
 import { MapPin, Calendar, Clock, DollarSign, Users } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -7,7 +7,6 @@ import { TeamRegistrationModal } from "./TeamRegistrationModal";
 import { PaymentButton } from "../../../components/PaymentButton";
 import { formatPrice } from "../../../stripe-config";
 import { supabase } from "../../../lib/supabase";
-import { useEffect } from "react";
 import { getStripeProductByLeagueId } from "../../../lib/stripe";
 import { LocationPopover } from "../../../components/ui/LocationPopover";
 import {
@@ -16,6 +15,7 @@ import {
   getDayName,
   formatLeagueDates,
 } from "../../../lib/leagues";
+import { formatLocalDate } from "../../../lib/dateUtils";
 import type { League } from "../../../lib/leagues";
 
 // Function to get spots badge color
@@ -291,11 +291,7 @@ export function LeagueInfo({
                 <p className="font-medium text-[#6F6F6F]">Deposit Required</p>
                 <p className="text-sm text-[#6F6F6F]">
                   ${league.deposit_amount.toFixed(2)} by{" "}
-                  {new Date(league.deposit_date + "T00:00:00").toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
+                  {formatLocalDate(league.deposit_date)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Non-refundable deposit to secure your spot
