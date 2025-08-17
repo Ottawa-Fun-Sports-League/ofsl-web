@@ -58,6 +58,25 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Also create a client with user auth to verify the user
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    // Verify the user is authenticated
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication token" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Get the payment record to find the team
     const { data: payment, error: paymentError } = await supabase
@@ -104,6 +123,17 @@ serve(async (req: Request) => {
         }
       );
     }
+    
+    // Verify the user is the team captain
+    if (team.captain_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "Only the team captain can delete the team registration" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     const warnings: string[] = [];
     let membersProcessed = 0;
@@ -123,7 +153,7 @@ serve(async (req: Request) => {
           continue;
         }
 
-        if (userData && userData.teams) {
+        if (userData && Array.isArray(userData.teams)) {
           const updatedTeams = userData.teams.filter((teamId: number) => teamId !== team.id);
           
           const { error: updateError } = await supabase

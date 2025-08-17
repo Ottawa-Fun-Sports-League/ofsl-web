@@ -147,7 +147,8 @@ export function useTeamOperations() {
         }
 
         // Call the Edge Function
-        const response = await fetch('https://api.ofsl.ca/functions/v1/delete-registration', {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const response = await fetch(`${supabaseUrl}/functions/v1/delete-registration`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

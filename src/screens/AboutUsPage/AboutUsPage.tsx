@@ -5,6 +5,7 @@ import { Separator } from "../../components/ui/separator";
 import { Input } from "../../components/ui/input";
 import { Card, CardContent } from "../../components/ui/card";
 import { Mail } from "lucide-react";
+import { useToast } from "../../components/ui/toast";
 
 // Stats final values - moved outside component to avoid dependency warnings
 const statsData = [
@@ -15,6 +16,8 @@ const statsData = [
 ];
 
 export const AboutUsPage = (): React.ReactElement => {
+  const { showToast } = useToast();
+  
   // Newsletter form state
   const [email, setEmail] = useState("");
   const [interests, setInterests] = useState({
@@ -150,8 +153,8 @@ export const AboutUsPage = (): React.ReactElement => {
       pickleball: false,
     });
     setAgreeToTerms(false);
-    // Show confirmation message (in a real app)
-    alert("Thank you for subscribing to our newsletter!");
+    // Show confirmation message
+    showToast("Thank you for subscribing to our newsletter!", "success");
   };
 
   // Animation state

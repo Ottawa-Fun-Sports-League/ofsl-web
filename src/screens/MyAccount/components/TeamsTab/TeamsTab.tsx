@@ -11,6 +11,7 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { CheckCircle } from 'lucide-react';
 import { ConfirmationModal } from '../../../../components/ui/confirmation-modal';
 import { ResultModal } from '../../../../components/ui/result-modal';
+import { MissingSkillLevelPrompt } from './MissingSkillLevelPrompt';
 
 export function TeamsTab() {
   const { user, userProfile, refreshUserProfile } = useAuth();
@@ -26,6 +27,13 @@ export function TeamsTab() {
     title: '',
     message: '',
   });
+  
+  const [missingSkillRegistrations, setMissingSkillRegistrations] = useState<Array<{
+    paymentId: number;
+    leagueName: string;
+    isTeam: boolean;
+    teamId?: number;
+  }>>([]);
 
   // Check for teams added during signup
   useEffect(() => {
@@ -59,6 +67,49 @@ export function TeamsTab() {
       ]);
     }
   }); // No dependency array - run on every render to catch navigation
+
+  // Check for missing skill levels
+  useEffect(() => {
+    if (loading) return;
+    
+    const missing: Array<{
+      paymentId: number;
+      leagueName: string;
+      isTeam: boolean;
+      teamId?: number;
+    }> = [];
+    
+    // Check team registrations
+    teams.forEach(team => {
+      if (!team.skill || !team.skill.id) {
+        const payment = leaguePayments.find(p => p.team_id === team.id);
+        if (payment) {
+          missing.push({
+            paymentId: payment.id,
+            leagueName: team.name,
+            isTeam: true,
+            teamId: team.id,
+          });
+        }
+      }
+    });
+    
+    // Check individual registrations
+    leaguePayments.forEach(payment => {
+      if (!payment.team_id && !payment.skill_level_id) {
+        const league = individualLeagues.find(l => l.id === payment.league_id);
+        if (league) {
+          missing.push({
+            paymentId: payment.id,
+            leagueName: league.name,
+            isTeam: false,
+          });
+        }
+      }
+    });
+    
+    setMissingSkillRegistrations(missing);
+  }, [teams, leaguePayments, individualLeagues, loading]);
 
   const onUnregisterSuccess = async (paymentId: number) => {
     // Remove the payment from the local state immediately for instant UI feedback
@@ -324,6 +375,11 @@ export function TeamsTab() {
         onLeaveTeam={handleLeaveTeam}
         onManageTeammates={handleManageTeammates}
         onLeaveIndividualLeague={handleLeaveIndividualLeague}
+        onSkillLevelUpdate={() => {
+          // Refresh both teams and payments to get updated skill levels
+          refetchTeams();
+          refetchLeaguePayments();
+        }}
       />
       
       {selectedTeam && (
@@ -423,6 +479,16 @@ export function TeamsTab() {
         type={leaveResultModal.type as 'success' | 'error' | 'warning'}
         title={leaveResultModal.title}
         message={leaveResultModal.message}
+      />
+      
+      {/* Missing Skill Level Prompt */}
+      <MissingSkillLevelPrompt
+        missingSkillRegistrations={missingSkillRegistrations}
+        onComplete={() => {
+          // Refresh data to show updated skill levels
+          refetchTeams();
+          refetchLeaguePayments();
+        }}
       />
     </div>
   );
