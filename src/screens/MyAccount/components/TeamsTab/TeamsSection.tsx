@@ -146,6 +146,12 @@ export function TeamsSection({
                         {isCaptain ? "Captain" : "Player"}
                       </span>
 
+                      {team.skill?.name && (
+                        <span className="px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800">
+                          {team.skill.name}
+                        </span>
+                      )}
+
                       {teamPayment && (
                         <PaymentStatusBadge
                           status={teamPayment.status}
@@ -297,7 +303,7 @@ export function TeamsSection({
                                 <span className="hidden sm:inline">
                                   Cancel Registration
                                 </span>
-                                <span className="sm:hidden">Delete</span>
+                                <span className="sm:hidden">Cancel</span>
                               </>
                             )}
                           </Button>
@@ -394,6 +400,12 @@ export function TeamsSection({
                         <User className="h-3 w-3" />
                         Individual
                       </span>
+
+                      {leaguePayment?.skill_name && (
+                        <span className="px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800">
+                          {leaguePayment.skill_name}
+                        </span>
+                      )}
 
                       {leaguePayment && (
                         <PaymentStatusBadge

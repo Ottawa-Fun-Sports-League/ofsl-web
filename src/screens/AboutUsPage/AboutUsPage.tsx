@@ -94,7 +94,7 @@ export const AboutUsPage = (): React.ReactElement => {
     try {
       // Use supabase.functions.invoke to handle authentication automatically
       const { supabase } = await import("../../lib/supabase");
-      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+      const { error } = await supabase.functions.invoke('send-contact-email', {
         body: contactForm
       });
 

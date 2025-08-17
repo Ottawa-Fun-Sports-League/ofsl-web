@@ -1,8 +1,36 @@
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabase';
 
+interface ConfirmationState {
+  isOpen: boolean;
+  paymentId: number | null;
+  leagueName: string;
+  isIndividual: boolean;
+  onSuccess: ((paymentId: number) => void) | null;
+}
+
+interface ResultState {
+  isOpen: boolean;
+  type: 'success' | 'error' | 'warning';
+  title: string;
+  message: string;
+}
+
 export function useTeamOperations() {
   const [unregisteringPayment, setUnregisteringPayment] = useState<number | null>(null);
+  const [confirmationState, setConfirmationState] = useState<ConfirmationState>({
+    isOpen: false,
+    paymentId: null,
+    leagueName: '',
+    isIndividual: false,
+    onSuccess: null,
+  });
+  const [resultState, setResultState] = useState<ResultState>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: '',
+  });
 
   const handleUnregister = async (
     paymentId: number, 
@@ -17,20 +45,47 @@ export function useTeamOperations() {
       .single();
 
     if (fetchError || !payment) {
-      alert('Failed to fetch payment details');
+      setResultState({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to fetch payment details. Please try again.',
+      });
       return;
     }
 
     const isIndividualRegistration = !payment.team_id;
 
-    if (isIndividualRegistration) {
+    // Store the payment info and show confirmation modal
+    setConfirmationState({
+      isOpen: true,
+      paymentId,
+      leagueName,
+      isIndividual: isIndividualRegistration,
+      onSuccess,
+    });
+  };
+
+  const handleConfirmCancellation = async () => {
+    const { paymentId, leagueName, isIndividual, onSuccess } = confirmationState;
+    
+    if (!paymentId || !onSuccess) return;
+
+    // Close the modal
+    setConfirmationState(prev => ({ ...prev, isOpen: false }));
+
+    if (isIndividual) {
       // Individual registration cancellation
-      if (!confirm(`Are you sure you want to cancel your individual registration for ${leagueName}?\n\nThis will delete your payment record.\n\nThis action cannot be undone.`)) {
-        return;
-      }
 
       setUnregisteringPayment(paymentId);
       try {
+        // Get payment details for league_id
+        const { data: payment } = await supabase
+          .from('league_payments')
+          .select('league_id, user_id')
+          .eq('id', paymentId)
+          .single();
+
         // Delete the payment record
         const { error: deletePaymentError } = await supabase
           .from('league_payments')
@@ -40,38 +95,47 @@ export function useTeamOperations() {
         if (deletePaymentError) throw deletePaymentError;
 
         // Remove league from user's league_ids
-        const { data: userData, error: userFetchError } = await supabase
-          .from('users')
-          .select('league_ids')
-          .eq('id', payment.user_id)
-          .single();
-
-        if (!userFetchError && userData && userData.league_ids) {
-          const updatedLeagueIds = userData.league_ids.filter((id: number) => id !== payment.league_id);
-          
-          const { error: updateError } = await supabase
+        if (payment) {
+          const { data: userData, error: userFetchError } = await supabase
             .from('users')
-            .update({ league_ids: updatedLeagueIds })
-            .eq('id', payment.user_id);
+            .select('league_ids')
+            .eq('id', payment.user_id)
+            .single();
 
-          if (updateError) {
-            console.error('Error updating user league_ids:', updateError);
+          if (!userFetchError && userData && userData.league_ids) {
+            const updatedLeagueIds = userData.league_ids.filter((id: number) => id !== payment.league_id);
+            
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ league_ids: updatedLeagueIds })
+              .eq('id', payment.user_id);
+
+            if (updateError) {
+              console.error('Error updating user league_ids:', updateError);
+            }
           }
         }
 
-        alert(`Individual registration for ${leagueName} cancelled successfully.`);
+        setResultState({
+          isOpen: true,
+          type: 'success',
+          title: 'Registration Cancelled',
+          message: `Your individual registration for ${leagueName} has been cancelled successfully.`,
+        });
         onSuccess(paymentId);
       } catch (error) {
         console.error('Error cancelling individual registration:', error);
-        alert(`Failed to cancel registration: ${(error as Error).message || 'Please try again.'}`);
+        setResultState({
+          isOpen: true,
+          type: 'error',
+          title: 'Cancellation Failed',
+          message: `Failed to cancel registration: ${(error as Error).message || 'Please try again.'}`,
+        });
       } finally {
         setUnregisteringPayment(null);
       }
     } else {
       // Team registration cancellation
-      if (!confirm(`Are you sure you want to delete your team registration for ${leagueName}?\n\nThis will:\n- Delete your team\n- Remove all teammates from the team\n- Delete all payment records\n\nThis action cannot be undone.`)) {
-        return;
-      }
 
       setUnregisteringPayment(paymentId);
       try {
@@ -103,23 +167,62 @@ export function useTeamOperations() {
 
         // Show success message with details
         if (result.warnings && result.warnings.length > 0) {
-          alert(`Registration deleted successfully with warnings:\n${result.warnings.join('\n')}`);
+          setResultState({
+            isOpen: true,
+            type: 'warning',
+            title: 'Registration Deleted',
+            message: `Registration deleted successfully with warnings:\n${result.warnings.join('\n')}`,
+          });
         } else {
-          alert(`Registration for ${leagueName} deleted successfully.\nTeam and ${result.membersProcessed} team members were processed.`);
+          setResultState({
+            isOpen: true,
+            type: 'success',
+            title: 'Team Registration Deleted',
+            message: `Registration for ${leagueName} deleted successfully.\nTeam and ${result.membersProcessed} team members were processed.`,
+          });
         }
 
         onSuccess(paymentId);
       } catch (error) {
         console.error('Error unregistering:', error);
-        alert(`Failed to delete registration: ${(error as Error).message || 'Please try again.'}`);
+        setResultState({
+          isOpen: true,
+          type: 'error',
+          title: 'Deletion Failed',
+          message: `Failed to delete registration: ${(error as Error).message || 'Please try again.'}`,
+        });
       } finally {
         setUnregisteringPayment(null);
       }
     }
   };
 
+  const handleCloseModal = () => {
+    setConfirmationState({
+      isOpen: false,
+      paymentId: null,
+      leagueName: '',
+      isIndividual: false,
+      onSuccess: null,
+    });
+  };
+
+  const handleCloseResultModal = () => {
+    setResultState({
+      isOpen: false,
+      type: 'success',
+      title: '',
+      message: '',
+    });
+  };
+
   return {
     unregisteringPayment,
-    handleUnregister
+    handleUnregister,
+    confirmationState,
+    handleConfirmCancellation,
+    handleCloseModal,
+    resultState,
+    handleCloseResultModal
   };
 }

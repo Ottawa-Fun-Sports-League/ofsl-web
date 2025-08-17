@@ -160,7 +160,7 @@ export function TeamRegistrationModal({
 
         if (userError) throw userError;
 
-        // Create payment record for individual registration
+        // Create payment record for individual registration with skill level
         const { error: paymentError } = await supabase
           .from("league_payments")
           .insert({
@@ -170,6 +170,7 @@ export function TeamRegistrationModal({
             amount_due: leagueData.cost || 0,
             amount_paid: 0,
             status: "pending",
+            skill_level_id: skillLevelId, // Save skill level for individual registration
           });
 
         if (paymentError) throw paymentError;

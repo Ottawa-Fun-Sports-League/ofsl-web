@@ -10,6 +10,8 @@ export interface LeaguePayment {
   status: 'pending' | 'partial' | 'paid' | 'overdue';
   due_date: string;
   payment_method: string | null;
+  skill_level_id?: number | null;
+  skill_name?: string | null;
 }
 
 export interface Team {
@@ -32,6 +34,11 @@ export interface Team {
   captain_id: string;
   roster: string[];
   active: boolean;
+  skill_level_id?: number | null;
+  skill?: {
+    id: number;
+    name: string;
+  } | null;
   payment?: {
     id: number;
     amount_due: number;
