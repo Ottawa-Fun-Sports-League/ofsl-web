@@ -9,6 +9,13 @@ interface ConfirmationState {
   onSuccess: ((paymentId: number) => void) | null;
 }
 
+interface ResultState {
+  isOpen: boolean;
+  type: 'success' | 'error' | 'warning';
+  title: string;
+  message: string;
+}
+
 export function useTeamOperations() {
   const [unregisteringPayment, setUnregisteringPayment] = useState<number | null>(null);
   const [confirmationState, setConfirmationState] = useState<ConfirmationState>({
@@ -17,6 +24,12 @@ export function useTeamOperations() {
     leagueName: '',
     isIndividual: false,
     onSuccess: null,
+  });
+  const [resultState, setResultState] = useState<ResultState>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: '',
   });
 
   const handleUnregister = async (
@@ -32,7 +45,12 @@ export function useTeamOperations() {
       .single();
 
     if (fetchError || !payment) {
-      alert('Failed to fetch payment details');
+      setResultState({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to fetch payment details. Please try again.',
+      });
       return;
     }
 
@@ -98,11 +116,21 @@ export function useTeamOperations() {
           }
         }
 
-        alert(`Individual registration for ${leagueName} cancelled successfully.`);
+        setResultState({
+          isOpen: true,
+          type: 'success',
+          title: 'Registration Cancelled',
+          message: `Your individual registration for ${leagueName} has been cancelled successfully.`,
+        });
         onSuccess(paymentId);
       } catch (error) {
         console.error('Error cancelling individual registration:', error);
-        alert(`Failed to cancel registration: ${(error as Error).message || 'Please try again.'}`);
+        setResultState({
+          isOpen: true,
+          type: 'error',
+          title: 'Cancellation Failed',
+          message: `Failed to cancel registration: ${(error as Error).message || 'Please try again.'}`,
+        });
       } finally {
         setUnregisteringPayment(null);
       }
@@ -139,15 +167,30 @@ export function useTeamOperations() {
 
         // Show success message with details
         if (result.warnings && result.warnings.length > 0) {
-          alert(`Registration deleted successfully with warnings:\n${result.warnings.join('\n')}`);
+          setResultState({
+            isOpen: true,
+            type: 'warning',
+            title: 'Registration Deleted',
+            message: `Registration deleted successfully with warnings:\n${result.warnings.join('\n')}`,
+          });
         } else {
-          alert(`Registration for ${leagueName} deleted successfully.\nTeam and ${result.membersProcessed} team members were processed.`);
+          setResultState({
+            isOpen: true,
+            type: 'success',
+            title: 'Team Registration Deleted',
+            message: `Registration for ${leagueName} deleted successfully.\nTeam and ${result.membersProcessed} team members were processed.`,
+          });
         }
 
         onSuccess(paymentId);
       } catch (error) {
         console.error('Error unregistering:', error);
-        alert(`Failed to delete registration: ${(error as Error).message || 'Please try again.'}`);
+        setResultState({
+          isOpen: true,
+          type: 'error',
+          title: 'Deletion Failed',
+          message: `Failed to delete registration: ${(error as Error).message || 'Please try again.'}`,
+        });
       } finally {
         setUnregisteringPayment(null);
       }
@@ -164,11 +207,22 @@ export function useTeamOperations() {
     });
   };
 
+  const handleCloseResultModal = () => {
+    setResultState({
+      isOpen: false,
+      type: 'success',
+      title: '',
+      message: '',
+    });
+  };
+
   return {
     unregisteringPayment,
     handleUnregister,
     confirmationState,
     handleConfirmCancellation,
-    handleCloseModal
+    handleCloseModal,
+    resultState,
+    handleCloseResultModal
   };
 }

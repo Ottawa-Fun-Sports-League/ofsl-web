@@ -10,15 +10,22 @@ import { PendingInvites } from '../../../../components/PendingInvites';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { CheckCircle } from 'lucide-react';
 import { ConfirmationModal } from '../../../../components/ui/confirmation-modal';
+import { ResultModal } from '../../../../components/ui/result-modal';
 
 export function TeamsTab() {
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { leaguePayments, teams, individualLeagues, loading, setLeaguePayments, refetchTeams, refetchIndividualLeagues, refetchLeaguePayments, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
-  const { unregisteringPayment, handleUnregister, confirmationState, handleConfirmCancellation, handleCloseModal } = useTeamOperations();
+  const { unregisteringPayment, handleUnregister, confirmationState, handleConfirmCancellation, handleCloseModal, resultState, handleCloseResultModal } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
   const [welcomeTeams, setWelcomeTeams] = useState<string[]>([]);
   const [leaveConfirmation, setLeaveConfirmation] = useState<{isOpen: boolean, type: 'team' | 'individual', id: number, name: string} | null>(null);
+  const [leaveResultModal, setLeaveResultModal] = useState<{isOpen: boolean, type: 'success' | 'error', title: string, message: string}>({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: '',
+  });
 
   // Check for teams added during signup
   useEffect(() => {
@@ -112,11 +119,21 @@ export function TeamsTab() {
         refreshUserProfile()  // This will update the user profile with new league_ids
       ]);
       
-      alert(`Successfully cancelled registration for: ${leagueName}`);
+      setLeaveResultModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Registration Cancelled',
+        message: `Successfully cancelled registration for ${leagueName}.`,
+      });
         
     } catch (error) {
       console.error('Error leaving individual league:', error);
-      alert(`Failed to cancel registration: ${(error as Error).message}`);
+      setLeaveResultModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Cancellation Failed',
+        message: `Failed to cancel registration: ${(error as Error).message}`,
+      });
     }
   };
 
@@ -178,11 +195,21 @@ export function TeamsTab() {
         // Close any open teammate management modal since the user left
         setSelectedTeam(null);
         
-        alert(`Successfully left team: ${teamName}`);
+        setLeaveResultModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Left Team',
+          message: `Successfully left team ${teamName}.`,
+        });
         
       } catch (error) {
         console.error('Error leaving team:', error);
-      alert(`Failed to leave team: ${(error as Error).message}`);
+        setLeaveResultModal({
+          isOpen: true,
+          type: 'error',
+          title: 'Failed to Leave Team',
+          message: `Failed to leave team: ${(error as Error).message}`,
+        });
     } finally {
       setLeavingTeam(null);
     }
@@ -379,6 +406,24 @@ export function TeamsTab() {
           isLoading={leavingTeam === leaveConfirmation.id}
         />
       )}
+      
+      {/* Result Modal for Cancel Registration */}
+      <ResultModal
+        isOpen={resultState.isOpen}
+        onClose={handleCloseResultModal}
+        type={resultState.type as 'success' | 'error' | 'warning'}
+        title={resultState.title}
+        message={resultState.message}
+      />
+      
+      {/* Result Modal for Leave Team/Individual */}
+      <ResultModal
+        isOpen={leaveResultModal.isOpen}
+        onClose={() => setLeaveResultModal({ ...leaveResultModal, isOpen: false })}
+        type={leaveResultModal.type as 'success' | 'error' | 'warning'}
+        title={leaveResultModal.title}
+        message={leaveResultModal.message}
+      />
     </div>
   );
 }
