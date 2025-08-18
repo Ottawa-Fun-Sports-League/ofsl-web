@@ -44,6 +44,7 @@ import { AdminOnlyRoute } from "./components/AdminOnlyRoute";
 import { ConditionalRoute } from "./components/ConditionalRoute";
 import { ComingSoonPage } from "./screens/ComingSoonPage";
 import { useGoogleAnalytics } from "./hooks/useGoogleAnalytics";
+import { AuthErrorHandler } from "./components/AuthErrorHandler";
 
 // Create a catch-all route component to handle direct URL access
 // const CatchAllRoute = () => {
@@ -58,6 +59,7 @@ export function App() {
   return (
     <ToastProvider>
       <AuthProvider>
+        <AuthErrorHandler />
         <ScrollToTop />
         <Routes>
           <Route element={<Layout />}>

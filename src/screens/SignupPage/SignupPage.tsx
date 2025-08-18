@@ -1,9 +1,9 @@
-import { useState, FormEvent, useRef, useCallback } from "react";
+import { useState, FormEvent, useRef, useCallback, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input"; 
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import { logger } from "../../lib/logger";
@@ -23,9 +23,30 @@ export function SignupPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [expiredLinkMessage, setExpiredLinkMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { signInWithGoogle, setIsNewUser } = useAuth();
   const turnstileRef = useRef<TurnstileHandle>(null);
+
+  // Check for error messages from navigation state or localStorage
+  useEffect(() => {
+    // Check location state for error messages
+    if (location.state?.fromError) {
+      setExpiredLinkMessage(location.state.errorMessage || 'Your confirmation link has expired');
+    }
+    
+    // Check localStorage for auth error messages
+    const authErrorMessage = localStorage.getItem('auth_error_message');
+    const authErrorAction = localStorage.getItem('auth_error_action');
+    
+    if (authErrorMessage) {
+      setExpiredLinkMessage(authErrorMessage);
+      // Clear the messages from localStorage
+      localStorage.removeItem('auth_error_message');
+      localStorage.removeItem('auth_error_action');
+    }
+  }, [location]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -293,6 +314,20 @@ export function SignupPage() {
           <h1 className="text-[32px] font-bold text-center mb-8 text-[#6F6F6F]">
             Create Account
           </h1>
+          
+          {expiredLinkMessage && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-amber-800 font-medium">{expiredLinkMessage}</p>
+                  <p className="text-amber-700 text-sm mt-1">
+                    Please sign up again to receive a new confirmation email.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
