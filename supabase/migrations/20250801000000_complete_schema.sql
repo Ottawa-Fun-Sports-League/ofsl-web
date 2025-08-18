@@ -14,36 +14,60 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- CUSTOM TYPES AND ENUMS
 -- =============================================
 
--- Create custom enum types
-CREATE TYPE gym_location_enum AS ENUM ('Central', 'East', 'West', 'South', 'Gatineau');
-CREATE TYPE payment_method_enum AS ENUM ('stripe', 'cash', 'e_transfer', 'waived');
-CREATE TYPE payment_status_enum AS ENUM ('pending', 'partial', 'paid', 'overdue');
-CREATE TYPE stripe_order_status AS ENUM ('pending', 'completed', 'canceled');
-CREATE TYPE stripe_subscription_status AS ENUM ('not_started', 'incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused');
+-- Create custom enum types (if they don't exist)
+DO $$ BEGIN
+    CREATE TYPE gym_location_enum AS ENUM ('Central', 'East', 'West', 'South', 'Gatineau');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE payment_method_enum AS ENUM ('stripe', 'cash', 'e_transfer', 'waived');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE payment_status_enum AS ENUM ('pending', 'partial', 'paid', 'overdue');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE stripe_order_status AS ENUM ('pending', 'completed', 'canceled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE stripe_subscription_status AS ENUM ('not_started', 'incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- =============================================
 -- SEQUENCES
 -- =============================================
 
--- Create sequences for bigint primary keys
-CREATE SEQUENCE attendance_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE balances_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE gyms_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE league_payments_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE leagues_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE registrations_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE seasons_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE skills_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE sports_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE stripe_customers_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE stripe_orders_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE stripe_subscriptions_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE team_invites_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE teams_id_seq START 1 INCREMENT 1;
+-- Create sequences for bigint primary keys (if they don't exist)
+CREATE SEQUENCE IF NOT EXISTS attendance_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS balances_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS gyms_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS league_payments_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS leagues_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS registrations_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS seasons_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS skills_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS sports_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS stripe_customers_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS stripe_orders_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS stripe_subscriptions_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS team_invites_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS teams_id_seq START 1 INCREMENT 1;
 
--- Create sequences for integer primary keys
-CREATE SEQUENCE waiver_acceptances_id_seq START 1 INCREMENT 1;
-CREATE SEQUENCE waivers_id_seq START 1 INCREMENT 1;
+-- Create sequences for integer primary keys (if they don't exist)
+CREATE SEQUENCE IF NOT EXISTS waiver_acceptances_id_seq START 1 INCREMENT 1;
+CREATE SEQUENCE IF NOT EXISTS waivers_id_seq START 1 INCREMENT 1;
 
 -- =============================================
 -- TABLES (in dependency order)

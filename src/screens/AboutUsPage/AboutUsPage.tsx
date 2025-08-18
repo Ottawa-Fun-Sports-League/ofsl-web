@@ -97,43 +97,40 @@ export const AboutUsPage = (): React.ReactElement => {
     try {
       const { supabase } = await import("../../lib/supabase");
       
-      // Get the current session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Use the Supabase URL and anon key from environment
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      // Prepare headers - include auth token if available, otherwise use anon key
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'apikey': supabaseAnonKey,
-      };
-      
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      } else {
-        // Use anon key as authorization when no session
-        headers['Authorization'] = `Bearer ${supabaseAnonKey}`;
-      }
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/send-contact-email`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(contactForm),
+      // Try using supabase.functions.invoke first, which handles auth automatically
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: contactForm
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
-        console.error("Contact form error:", errorData);
-        setSubmitStatus("error");
-        setTimeout(() => {
-          setSubmitStatus(null);
-        }, 5000);
-        return;
+      if (error) {
+        // If invoke fails (e.g., JWT error), fall back to direct fetch with anon key
+        console.log("Falling back to direct fetch due to invoke error:", error);
+        
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-contact-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify(contactForm),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
+          console.error("Contact form error:", errorData);
+          setSubmitStatus("error");
+          setTimeout(() => {
+            setSubmitStatus(null);
+          }, 5000);
+          return;
+        }
       }
 
-      // If successful
+      // If successful (either through invoke or direct fetch)
       setSubmitStatus("success");
       // Reset form after successful submission
       setTimeout(() => {
