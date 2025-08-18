@@ -1,13 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 // Get allowed origins from environment or use defaults
 const getAllowedOrigin = (req: Request): string => {
   const origin = req.headers.get('origin') || ''
   
-  // In production, you can set ALLOWED_ORIGINS env variable
-  // Example: "https://ofsl.ca,https://www.ofsl.ca"
-  const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'https://ofsl.ca,https://www.ofsl.ca,http://localhost:5173').split(',')
+  // Allow common OFSL domains and localhost for development
+  const allowedOrigins = [
+    'https://ofsl.ca',
+    'https://www.ofsl.ca', 
+    'http://localhost:5173',
+    'http://localhost:5174'
+  ]
   
   // Return the origin if it's in the allowed list, otherwise return the first allowed origin
   return allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
@@ -37,43 +40,6 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(email) && email.length <= 254;
 }
 
-// Rate limiting using Supabase
-async function checkRateLimit(clientIp: string): Promise<boolean> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
-  
-  // Check submissions in last hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-  
-  const { data, error } = await supabase
-    .from('contact_submissions')
-    .select('id')
-    .eq('ip_address', clientIp)
-    .gte('created_at', oneHourAgo)
-  
-  if (error) {
-    console.error('Rate limit check error:', error)
-    return true // Allow on error to not block legitimate users
-  }
-  
-  // Allow max 5 submissions per hour per IP
-  return !data || data.length < 5
-}
-
-// Log submission for rate limiting
-async function logSubmission(clientIp: string, email: string): Promise<void> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
-  
-  await supabase.from('contact_submissions').insert({
-    ip_address: clientIp,
-    email: email,
-    created_at: new Date().toISOString()
-  })
-}
-
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
   
@@ -94,23 +60,6 @@ serve(async (req) => {
   }
 
   try {
-    // Get client IP for rate limiting
-    const clientIp = req.headers.get('x-forwarded-for') || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown'
-    
-    // Check rate limit
-    const canProceed = await checkRateLimit(clientIp)
-    if (!canProceed) {
-      return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
-        { 
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-    
     const { name, email, subject, message } = await req.json()
 
     // Validate required fields
@@ -164,6 +113,11 @@ serve(async (req) => {
     const safeSubject = escapeHtml(subject)
     const safeMessage = escapeHtml(message)
 
+    // Get client IP for logging (optional)
+    const clientIp = req.headers.get('x-forwarded-for') || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown'
+
     // Create HTML email content with sanitized inputs
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -210,8 +164,8 @@ serve(async (req) => {
     })
 
     if (response.ok) {
-      // Log successful submission for rate limiting
-      await logSubmission(clientIp, email)
+      // Note: Rate limiting is temporarily disabled until SUPABASE_SERVICE_ROLE_KEY is properly configured
+      // Once configured, we can re-enable the checkRateLimit and logSubmission functions
       
       return new Response(
         JSON.stringify({ message: 'Email sent successfully' }),
