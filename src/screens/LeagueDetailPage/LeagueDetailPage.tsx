@@ -4,9 +4,7 @@ import { Button } from "../../components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import "../../styles/rich-text.css";
-import {
-  getSportIcon,
-} from "./utils/leagueUtils";
+import { getSportIcon } from "./utils/leagueUtils";
 import {
   fetchLeagueById,
   getDayName,
@@ -15,14 +13,13 @@ import {
 } from "../../lib/leagues";
 import { logger } from "../../lib/logger";
 import { supabase } from "../../lib/supabase";
-import {
-  useActiveView,
-  type ActiveView,
-} from "./hooks/useLeagueDetail";
+import { useActiveView, type ActiveView } from "./hooks/useLeagueDetail";
 import { NavigationTabs } from "./components/NavigationTabs";
 import { LeagueInfo } from "./components/LeagueInfo";
 import { LeagueStandings } from "./components/LeagueStandings";
 import { LeagueGyms } from "./components/LeagueGyms";
+import { VolleyballScoreModal } from "./components/VolleyballScoreModal";
+import { FacilitatorManagement } from "./components/FacilitatorManagement";
 
 export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,12 +38,27 @@ export function LeagueDetailPage() {
   }> | null>(null);
 
   // Get initial view from URL search params
-  const tabParam = searchParams.get('tab');
-  const initialView: ActiveView = 
-    tabParam === 'standings' ? 'standings' : 
-    tabParam === 'gyms' ? 'gyms' : 'info';
-  
+  const tabParam = searchParams.get("tab");
+  const initialView: ActiveView =
+    tabParam === "standings"
+      ? "standings"
+      : tabParam === "schedule"
+        ? "schedule"
+        : tabParam === "gyms"
+          ? "gyms"
+          : tabParam === "facilitators"
+            ? "facilitators"
+            : "info";
+
   const { activeView, setActiveView } = useActiveView(initialView);
+
+  // Score submission modal hook
+  const {
+    showScoreSubmissionModal,
+    selectedMatchId,
+    openScoreSubmissionModal,
+    closeScoreSubmissionModal,
+  } = useScoreSubmissionModal();
 
   useEffect(() => {
     loadLeague();
@@ -68,14 +80,14 @@ export function LeagueDetailPage() {
         setError("League not found");
       } else {
         setLeague(leagueData);
-        
+
         // Load gym details if we have gym IDs
         if (leagueData.gym_ids && leagueData.gym_ids.length > 0) {
           const { data: gymsData, error: gymsError } = await supabase
-            .from('gyms')
-            .select('id, gym, address, instructions, locations')
-            .in('id', leagueData.gym_ids);
-            
+            .from("gyms")
+            .select("id, gym, address, instructions, locations")
+            .in("id", leagueData.gym_ids);
+
           if (gymsError) {
             logger.error("Error loading gym details", gymsError);
           } else if (gymsData) {
@@ -135,7 +147,7 @@ export function LeagueDetailPage() {
     ),
     skillLevel: league.skill_names?.[0] || league.skill_name || "Not specified",
     price: league.cost || 0,
-    spotsRemaining: spotsRemaining
+    spotsRemaining: spotsRemaining,
   };
 
   const handleSpotsUpdate = (spots: number) => {
@@ -210,20 +222,49 @@ export function LeagueDetailPage() {
 
             {/* Standings View */}
             {activeView === "standings" && (
-              <LeagueStandings leagueId={id} />
+              <LeagueStandings leagueId={parseInt(id!)} />
             )}
 
+            {/* Schedule View */}
+            {activeView === "schedule" && (
+              <LeagueSchedule
+                leagueId={parseInt(id!)}
+                openScoreSubmissionModal={openScoreSubmissionModal}
+              />
+            )}
 
             {/* Gyms View */}
             {activeView === "gyms" && (
-              <LeagueGyms gyms={league.gyms || []} gymDetails={gymDetails || undefined} />
+              <LeagueGyms
+                gyms={league.gyms || []}
+                gymDetails={gymDetails || undefined}
+              />
             )}
 
+            {/* Facilitators View - Admin Only */}
+            {activeView === "facilitators" &&
+              league.sport_name === "Volleyball" && (
+                <FacilitatorManagement
+                  leagueId={parseInt(id!)}
+                  isAdmin={userProfile?.is_admin || false}
+                />
+              )}
           </div>
         </div>
       </div>
 
+      {/* Volleyball Score Modal */}
+      {league?.sport_name === "Volleyball" && (
+        <VolleyballScoreModal
+          showModal={showScoreSubmissionModal}
+          matchId={selectedMatchId}
+          closeModal={closeScoreSubmissionModal}
+          onScoreSubmitted={() => {
+            // Optionally refresh the schedule after score submission
+            closeScoreSubmissionModal();
+          }}
+        />
+      )}
     </div>
   );
 }
-

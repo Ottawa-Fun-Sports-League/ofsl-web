@@ -1,34 +1,41 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-export type ActiveView = 'info' | 'standings' | 'gyms';
+export type ActiveView =
+  | "info"
+  | "standings"
+  | "schedule"
+  | "gyms"
+  | "facilitators";
 
-export const useActiveView = (initialView: ActiveView = 'info') => {
+export const useActiveView = (initialView: ActiveView = "info") => {
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
-  
+
   return {
     activeView,
-    setActiveView
+    setActiveView,
   };
 };
 
 export const useScoreSubmissionModal = () => {
-  const [showScoreSubmissionModal, setShowScoreSubmissionModal] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<number | null>(null);
+  const [showScoreSubmissionModal, setShowScoreSubmissionModal] =
+    useState(false);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
-  const openScoreSubmissionModal = (tierNumber: number) => {
-    setSelectedTier(tierNumber);
+  const openScoreSubmissionModal = (matchId: number) => {
+    setSelectedMatchId(matchId);
     setShowScoreSubmissionModal(true);
   };
 
   const closeScoreSubmissionModal = () => {
     setShowScoreSubmissionModal(false);
-    setSelectedTier(null);
+    setSelectedMatchId(null);
   };
 
   return {
     showScoreSubmissionModal,
-    selectedTier,
+    selectedMatchId,
     openScoreSubmissionModal,
-    closeScoreSubmissionModal
+    closeScoreSubmissionModal,
   };
 };
+

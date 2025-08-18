@@ -28,7 +28,9 @@
       "Bash(npm install:*)",
       "Bash(del:*)",
       "mcp__ide__executeCode",
-      "Bash(gh pr merge:*)"
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": []
   },
