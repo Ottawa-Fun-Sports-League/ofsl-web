@@ -157,17 +157,18 @@ export function Footer() {
             <div className="text-base md:text-lg mb-6 md:mb-8 text-white">
               <a
                 href="mailto:info@ofsl.ca"
-                className="flex items-center gap-2 footer-link hover:text-[#ffeae5] mb-4"
+                className="inline-flex items-center gap-2 hover:text-[#ffeae5] mb-4"
               >
                 <Mail size={18} className="text-white" />
-                <span>Email</span>
+                <span className="footer-link">Email</span>
               </a>
+              <div className="mb-4"></div>
               <a
                 href="tel:6137986375"
-                className="flex items-center gap-2 footer-link hover:text-[#ffeae5]"
+                className="inline-flex items-center gap-2 hover:text-[#ffeae5]"
               >
                 <Phone size={18} className="text-white" />
-                <span>Phone</span>
+                <span className="footer-link">Phone</span>
               </a>
             </div>
             <div className="flex gap-3">

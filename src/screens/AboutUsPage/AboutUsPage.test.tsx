@@ -2,12 +2,24 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AboutUsPage } from "./AboutUsPage";
 import { BrowserRouter } from "react-router-dom";
+import { ToastProvider } from "../../components/ui/toast";
 
 // Mock fetch for contact form
 global.fetch = vi.fn();
 
-// Mock environment variable
+// Mock environment variables
+vi.stubEnv('VITE_SUPABASE_URL', 'https://api.ofsl.ca');
 vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
+
+// Mock supabase module
+vi.mock("../../lib/supabase", () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      onAuthStateChange: vi.fn(),
+    },
+  },
+}));
 
 describe("AboutUsPage - Contact Form", () => {
   beforeEach(() => {
@@ -16,14 +28,16 @@ describe("AboutUsPage - Contact Form", () => {
 
   it("should send contact form successfully for unauthenticated users", async () => {
     // Mock successful response
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as unknown as vi.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ message: "Email sent successfully" }),
     });
 
     render(
       <BrowserRouter>
-        <AboutUsPage />
+        <ToastProvider>
+          <AboutUsPage />
+        </ToastProvider>
       </BrowserRouter>
     );
 
@@ -50,6 +64,7 @@ describe("AboutUsPage - Contact Form", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "apikey": "test-anon-key",
             "Authorization": "Bearer test-anon-key",
           },
           body: JSON.stringify({
@@ -70,14 +85,16 @@ describe("AboutUsPage - Contact Form", () => {
 
   it("should show error message when contact form submission fails", async () => {
     // Mock failed response
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as unknown as vi.Mock).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Failed to send email" }),
     });
 
     render(
       <BrowserRouter>
-        <AboutUsPage />
+        <ToastProvider>
+          <AboutUsPage />
+        </ToastProvider>
       </BrowserRouter>
     );
 
@@ -109,11 +126,13 @@ describe("AboutUsPage - Contact Form", () => {
 
   it("should handle network errors gracefully", async () => {
     // Mock network error
-    (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
+    (global.fetch as unknown as vi.Mock).mockRejectedValueOnce(new Error("Network error"));
 
     render(
       <BrowserRouter>
-        <AboutUsPage />
+        <ToastProvider>
+          <AboutUsPage />
+        </ToastProvider>
       </BrowserRouter>
     );
 

@@ -95,14 +95,37 @@ export const AboutUsPage = (): React.ReactElement => {
     e.preventDefault();
 
     try {
-      // Use supabase.functions.invoke to handle authentication automatically
       const { supabase } = await import("../../lib/supabase");
-      const { error } = await supabase.functions.invoke('send-contact-email', {
-        body: contactForm
+      
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Use the Supabase URL and anon key from environment
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      // Prepare headers - include auth token if available, otherwise use anon key
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+      };
+      
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      } else {
+        // Use anon key as authorization when no session
+        headers['Authorization'] = `Bearer ${supabaseAnonKey}`;
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-contact-email`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(contactForm),
       });
 
-      if (error) {
-        console.error("Contact form error:", error);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
+        console.error("Contact form error:", errorData);
         setSubmitStatus("error");
         setTimeout(() => {
           setSubmitStatus(null);
