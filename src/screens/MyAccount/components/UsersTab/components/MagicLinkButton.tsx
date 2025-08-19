@@ -42,7 +42,7 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
         if (event.metaKey || event.ctrlKey) {
           window.open(data.link, '_blank');
           showToast(
-            `Opening magic link for ${displayName} in new tab`,
+            `Opening password reset link for ${displayName} in new tab. User will need to set a new password.`,
             'success'
           );
         } else {
@@ -50,13 +50,13 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
           await navigator.clipboard.writeText(data.link);
           setCopied(true);
           showToast(
-            `Magic link copied! Open in new browser/incognito to login as ${displayName}`,
+            `Password reset link copied! Open in new browser/incognito. User will need to set a new password to login as ${displayName}.`,
             'success'
           );
         }
         
         // Also log the link for debugging (remove in production)
-        console.log(`Magic link for ${displayName}:`, data.link);
+        console.log(`Password reset link for ${displayName}:`, data.link);
         
         // Reset copied state after 3 seconds
         setTimeout(() => {
@@ -79,7 +79,7 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
       size="sm"
       variant={copied ? "secondary" : "outline"}
       className="h-8 w-8 p-0"
-      title={copied ? "Magic link copied to clipboard!" : "Generate magic link (Cmd/Ctrl+Click to open)"}
+      title={copied ? "Password reset link copied to clipboard!" : "Generate password reset link (Cmd/Ctrl+Click to open)"}
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
