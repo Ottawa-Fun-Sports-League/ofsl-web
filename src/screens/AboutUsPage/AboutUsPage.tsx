@@ -95,43 +95,43 @@ export const AboutUsPage = (): React.ReactElement => {
     e.preventDefault();
 
     try {
-      const { supabase } = await import("../../lib/supabase");
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
-      // Try using supabase.functions.invoke first, which handles auth automatically
-      const { data, error } = await supabase.functions.invoke('send-contact-email', {
-        body: contactForm
+      // Make direct request to edge function with proper headers
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-contact-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify(contactForm),
       });
 
-      if (error) {
-        // If invoke fails (e.g., JWT error), fall back to direct fetch with anon key
-        console.log("Falling back to direct fetch due to invoke error:", error);
-        
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        
-        const response = await fetch(`${supabaseUrl}/functions/v1/send-contact-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-          },
-          body: JSON.stringify(contactForm),
-        });
+      const data = await response.json();
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
-          console.error("Contact form error:", errorData);
-          setSubmitStatus("error");
-          setTimeout(() => {
-            setSubmitStatus(null);
-          }, 5000);
-          return;
+      if (!response.ok) {
+        console.error("Contact form error:", data);
+        setSubmitStatus("error");
+        // Show specific error message if available
+        if (data.error === "Too many requests. Please try again later.") {
+          showToast("Too many requests. Please try again in an hour.", "error");
+        } else if (data.details) {
+          showToast(data.details.join(", "), "error");
+        } else {
+          showToast(data.error || "Failed to send message", "error");
         }
+        setTimeout(() => {
+          setSubmitStatus(null);
+        }, 5000);
+        return;
       }
 
-      // If successful (either through invoke or direct fetch)
+      // If successful
       setSubmitStatus("success");
+      showToast(data.message || "Thank you for your message! We'll get back to you soon.", "success");
+      
       // Reset form after successful submission
       setTimeout(() => {
         setContactForm({
@@ -145,6 +145,7 @@ export const AboutUsPage = (): React.ReactElement => {
     } catch (error) {
       console.error("Error sending contact form:", error);
       setSubmitStatus("error");
+      showToast("Network error. Please check your connection and try again.", "error");
       // Clear error message after 5 seconds
       setTimeout(() => {
         setSubmitStatus(null);

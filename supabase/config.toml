@@ -1,0 +1,7 @@
+# Supabase Configuration
+
+# Edge Functions Configuration
+# This disables JWT verification for specific functions
+# allowing both anonymous and authenticated users to access them
+[functions.send-contact-email]
+verify_jwt = false
