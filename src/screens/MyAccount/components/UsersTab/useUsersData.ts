@@ -77,6 +77,9 @@ export function useUsersData() {
     try {
       setLoading(true);
       
+      // Get today's date for filtering active leagues
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
       const { data: adminCheck, error: adminError } = await supabase
         .from('users')
         .select('is_admin')
@@ -132,7 +135,11 @@ export function useUsersData() {
       }
 
       if (allUsersError || !allUsersData || allUsersData.length === 0) {
-        console.warn('RPC failed or returned empty, using fallback query:', allUsersError);
+        console.warn('RPC failed or returned empty, using fallback query:', {
+          error: allUsersError,
+          dataLength: allUsersData?.length,
+          isNull: allUsersData === null
+        });
         // Fallback to regular users table if RPC fails
         // This will get all users with profiles
         const { data: fallbackData, error: usersError } = await supabase
@@ -210,7 +217,6 @@ export function useUsersData() {
       
       // Fetch all teams with their roster data
       // We'll filter by end_date to determine active players
-      const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
@@ -251,9 +257,23 @@ export function useUsersData() {
         const league = team.leagues as any;
         // Consider a league active if it hasn't ended yet (end_date > today)
         // If no end_date is set, consider it active
-        if (!league?.end_date) return true;
-        return league.end_date >= today;
+        if (!league?.end_date) {
+          console.log('Team has no end date, considering active:', team.name);
+          return true;
+        }
+        const isActive = league.end_date >= today;
+        if (!isActive) {
+          console.log('Team excluded - league ended:', team.name, league.end_date);
+        }
+        return isActive;
       }) || [];
+      
+      console.log('Teams filtering:', {
+        totalTeams: teamsData?.length || 0,
+        activeTeams: activeTeams.length,
+        today,
+        sampleActiveTeam: activeTeams[0]
+      });
       
       if (activeTeams.length > 0) {
         activeTeams.forEach(team => {
@@ -299,29 +319,26 @@ export function useUsersData() {
         });
       }
       
-      // Debug: Active teams and team map
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Active teams (not ended):', {
-          totalTeams: teamsData?.length || 0,
-          activeTeams: activeTeams.length,
-          today: today
-        });
-      }
-      
-      // Debug: Team map
-      if (process.env.NODE_ENV === 'development') {
-        console.log('User teams map:', {
-          totalMappedUsers: userTeamsMap.size,
-          sampleIds: Array.from(userTeamsMap.keys()).slice(0, 5)
-        });
-      }
+      // Debug: Team map details
+      console.log('User teams map details:', {
+        totalMappedUsers: userTeamsMap.size,
+        sampleMappings: Array.from(userTeamsMap.entries()).slice(0, 3).map(([userId, teams]) => ({
+          userId,
+          teamCount: teams.length,
+          teamNames: teams.map(t => t.name)
+        }))
+      });
       
       // Process users and add registration data
-      const processedUsers = (usersData || []).map(user => {
+      const processedUsers = (usersData || []).map((user, index) => {
         // Get teams for this user from the pre-processed map (O(1) lookup)
         // Use profile_id for matching with teams (this is what's stored in rosters)
         const userIdForTeams = user.profile_id || user.id || '';  
         const userTeams = userIdForTeams ? userTeamsMap.get(userIdForTeams) || [] : [];
+        
+        if (index < 3 && userTeams.length > 0) {
+          console.log(`User ${user.name} (${userIdForTeams}) has ${userTeams.length} teams:`, userTeams.map(t => t.name));
+        }
 
         // Map teams to registration format
         // Note: userTeams already only contains teams from leagues that haven't ended
@@ -384,15 +401,17 @@ export function useUsersData() {
       }).filter((user): user is User => user !== null); // Filter out null users
 
       // Debug: Final processed users
-      if (process.env.NODE_ENV === 'development') {
-        const usersWithRegistrations = processedUsers.filter(u => u.current_registrations && u.current_registrations.length > 0);
-        console.log('Final processed users:', {
-          total: processedUsers.length,
-          withRegistrations: usersWithRegistrations.length,
-          withSkills: processedUsers.filter(u => u.user_sports_skills && u.user_sports_skills.length > 0).length,
-          sampleUserWithReg: usersWithRegistrations[0]
-        });
-      }
+      const usersWithRegistrations = processedUsers.filter(u => u.current_registrations && u.current_registrations.length > 0);
+      console.log('Final processed users:', {
+        total: processedUsers.length,
+        withRegistrations: usersWithRegistrations.length,
+        withSkills: processedUsers.filter(u => u.user_sports_skills && u.user_sports_skills.length > 0).length,
+        first3UsersWithReg: usersWithRegistrations.slice(0, 3).map(u => ({
+          name: u.name,
+          email: u.email,
+          registrations: u.current_registrations?.length
+        }))
+      });
       
       setUsers(processedUsers);
     } catch (error) {
@@ -411,12 +430,20 @@ export function useUsersData() {
     );
     
     // Debug filtering
-    if (process.env.NODE_ENV === 'development' && (filters.activePlayer || filters.playersNotInLeague)) {
-      console.log('Filter debug:', {
+    if (filters.activePlayer || filters.playersNotInLeague) {
+      const usersWithRegs = users.filter(u => u.current_registrations && u.current_registrations.length > 0);
+      console.log('Active Player Filter Debug:', {
         activeFilter: filters.activePlayer,
         notInLeagueFilter: filters.playersNotInLeague,
-        usersWithRegistrations: users.filter(u => u.current_registrations && u.current_registrations.length > 0).length,
-        usersWithoutRegistrations: users.filter(u => !u.current_registrations || u.current_registrations.length === 0).length
+        totalUsers: users.length,
+        usersWithRegistrations: usersWithRegs.length,
+        usersWithoutRegistrations: users.filter(u => !u.current_registrations || u.current_registrations.length === 0).length,
+        sampleUsersWithRegs: usersWithRegs.slice(0, 3).map(u => ({
+          name: u.name,
+          email: u.email,
+          profile_id: u.profile_id,
+          registrations: u.current_registrations?.map(r => r.team_name)
+        }))
       });
     }
     
