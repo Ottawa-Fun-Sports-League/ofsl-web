@@ -1,13 +1,44 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+// Get allowed origins from environment variable or use defaults
+const getAllowedOrigins = (): string[] => {
+  const envOrigins = Deno.env.get("ALLOWED_ORIGINS");
+  
+  if (envOrigins) {
+    // Parse comma-separated list of origins from environment variable
+    return envOrigins.split(",").map((origin) => origin.trim());
+  }
+  
+  // Default allowed origins if environment variable is not set
+  // Note: localhost origins should only be included in development
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://ofsl.ca';
+  return [
+    'https://ofsl.ca',
+    'https://www.ofsl.ca',
+    siteUrl,
+  ].filter((url, index, self) => self.indexOf(url) === index); // Remove duplicates
+};
+
+// Production CORS headers with dynamic origin validation
+const getCorsHeaders = (origin: string | null) => {
+  const allowedOrigins = getAllowedOrigins();
+  
+  // Check if the origin is in the allowed list
+  const isAllowed = origin && allowedOrigins.includes(origin);
+  
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
+  };
 };
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -61,108 +92,54 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Generate a magic link for the user
+    // First check if the user exists
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('auth_id')
+      .eq('email', email)
+      .single();
+
+    if (userError || !userData) {
+      console.error('User not found:', email, userError);
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Generate a recovery link (magic links require password reset)
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://ofsl.ca';
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+      type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/profile-completion`,
+        redirectTo: `${siteUrl}/#/my-account`,
       }
     });
 
     if (linkError) {
-      console.error('Error generating magic link:', linkError);
-      
-      // If magic link fails, try password recovery link as fallback
-      const { data: recoveryData, error: recoveryError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'recovery',
-        email: email,
-        options: {
-          redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/profile-completion`,
-        }
-      });
-
-      if (recoveryError) {
-        console.error('Error generating recovery link:', recoveryError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to generate magic link' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // If sendEmail is false, just return the link
-      if (!sendEmail) {
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            type: 'recovery', 
-            link: recoveryData.properties.action_link,
-            message: 'Magic link generated successfully' 
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Send recovery email using Resend
-      const resendApiKey = Deno.env.get('RESEND_API_KEY');
-      if (!resendApiKey) {
-        return new Response(
-          JSON.stringify({ error: 'Email service not configured' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const emailResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'OFSL <noreply@ofsl.ca>',
-          to: [email],
-          subject: 'Your OFSL Magic Link',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #B20000;">Your OFSL Magic Link</h2>
-              <p>Click the link below to sign in to your OFSL account:</p>
-              <p style="margin: 20px 0;">
-                <a href="${recoveryData.properties.action_link}" 
-                   style="background-color: #B20000; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                  Sign In to OFSL
-                </a>
-              </p>
-              <p style="color: #666; font-size: 14px;">
-                This link will expire in 24 hours. If you didn't request this link, you can safely ignore this email.
-              </p>
-            </div>
-          `,
-        }),
-      });
-
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        console.error('Resend API error:', errorText);
-        return new Response(
-          JSON.stringify({ error: 'Failed to send magic link email' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
+      console.error('Error generating recovery link:', linkError);
       return new Response(
-        JSON.stringify({ success: true, type: 'recovery', message: 'Magic link sent successfully' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Failed to generate authentication link' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // If sendEmail is false, just return the link
     if (!sendEmail) {
+      // The action_link is the full authentication URL that will log the user in
+      // It's in the format: https://api.ofsl.ca/auth/v1/verify?token=...&type=recovery&redirect_to=...
+      // This link can be opened directly in a browser to authenticate the user
+      const recoveryLink = linkData.properties.action_link;
+      
+      console.log('Generated recovery link for', email, ':', recoveryLink);
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
-          type: 'magiclink', 
-          link: linkData.properties.action_link,
-          message: 'Magic link generated successfully' 
+          type: 'recovery', 
+          link: recoveryLink,
+          message: 'Recovery link generated successfully (requires password reset)' 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -186,15 +163,15 @@ serve(async (req) => {
       body: JSON.stringify({
         from: 'OFSL <noreply@ofsl.ca>',
         to: [email],
-        subject: 'Your OFSL Magic Link',
+        subject: 'Your OFSL Password Reset Link',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #B20000;">Your OFSL Magic Link</h2>
-            <p>Click the link below to sign in to your OFSL account:</p>
+            <h2 style="color: #B20000;">Your OFSL Password Reset Link</h2>
+            <p>Click the link below to reset your password and sign in to your OFSL account:</p>
             <p style="margin: 20px 0;">
               <a href="${linkData.properties.action_link}" 
                  style="background-color: #B20000; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                Sign In to OFSL
+                Reset Password & Sign In
               </a>
             </p>
             <p style="color: #666; font-size: 14px;">
@@ -215,7 +192,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, type: 'magiclink', message: 'Magic link sent successfully' }),
+      JSON.stringify({ success: true, type: 'recovery', message: 'Password reset link sent successfully' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

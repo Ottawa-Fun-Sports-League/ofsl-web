@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
-import { Link2, Loader2, Copy, Check } from 'lucide-react';
+import { Link2, Loader2, Check } from 'lucide-react';
 import { useToast } from '../../../../../components/ui/toast';
 import { supabase } from '../../../../../lib/supabase';
 
@@ -11,12 +11,10 @@ interface MagicLinkButtonProps {
 
 export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
   const [loading, setLoading] = useState(false);
-  const [linkGenerated, setLinkGenerated] = useState(false);
-  const [magicLink, setMagicLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { showToast } = useToast();
 
-  const generateMagicLink = async () => {
+  const generateMagicLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
     setLoading(true);
     try {
       // Get the current session to send with the Edge Function
@@ -36,27 +34,35 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Failed to generate magic link');
 
-      // Copy link to clipboard
+      // Handle the magic link
       if (data.link) {
-        await navigator.clipboard.writeText(data.link);
-        setMagicLink(data.link);
-        setCopied(true);
-        showToast(
-          `Magic link copied to clipboard for ${userName || userEmail}`,
-          'success'
-        );
+        const displayName = userName || userEmail;
+        
+        // If Cmd/Ctrl is held, open in new tab
+        if (event.metaKey || event.ctrlKey) {
+          window.open(data.link, '_blank');
+          showToast(
+            `Opening password reset link for ${displayName} in new tab. User will need to set a new password.`,
+            'success'
+          );
+        } else {
+          // Otherwise copy to clipboard
+          await navigator.clipboard.writeText(data.link);
+          setCopied(true);
+          showToast(
+            `Password reset link copied! Open in new browser/incognito. User will need to set a new password to login as ${displayName}.`,
+            'success'
+          );
+        }
+        
+        // Also log the link for debugging (remove in production)
+        console.log(`Password reset link for ${displayName}:`, data.link);
         
         // Reset copied state after 3 seconds
         setTimeout(() => {
           setCopied(false);
-          setMagicLink(null);
         }, 3000);
       }
-      
-      setLinkGenerated(true);
-      
-      // Reset the button state after 3 seconds
-      setTimeout(() => setLinkGenerated(false), 3000);
     } catch (error) {
       console.error('Error generating magic link:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate magic link';
@@ -73,7 +79,7 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
       size="sm"
       variant={copied ? "secondary" : "outline"}
       className="h-8 w-8 p-0"
-      title={copied ? "Magic link copied to clipboard!" : "Generate and copy magic link"}
+      title={copied ? "Password reset link copied to clipboard!" : "Generate password reset link (Cmd/Ctrl+Click to open)"}
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
