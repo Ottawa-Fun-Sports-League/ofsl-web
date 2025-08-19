@@ -66,7 +66,7 @@ serve(async (req) => {
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/profile-completion`,
+        redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/my-account`,
       }
     });
 
@@ -78,7 +78,7 @@ serve(async (req) => {
         type: 'recovery',
         email: email,
         options: {
-          redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/profile-completion`,
+          redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/my-account`,
         }
       });
 
@@ -157,11 +157,16 @@ serve(async (req) => {
 
     // If sendEmail is false, just return the link
     if (!sendEmail) {
+      // The action_link is the full authentication URL that will log the user in
+      // It's in the format: https://api.ofsl.ca/auth/v1/verify?token=...&type=magiclink&redirect_to=...
+      // This link can be opened directly in a browser to authenticate the user
+      const magicLink = linkData.properties.action_link;
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
           type: 'magiclink', 
-          link: linkData.properties.action_link,
+          link: magicLink,
           message: 'Magic link generated successfully' 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
