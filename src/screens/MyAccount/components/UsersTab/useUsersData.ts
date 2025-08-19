@@ -131,9 +131,10 @@ export function useUsersData() {
         });
       }
 
-      if (allUsersError) {
-        console.error('Error fetching all users, falling back to regular users table:', allUsersError);
+      if (allUsersError || !allUsersData || allUsersData.length === 0) {
+        console.warn('RPC failed or returned empty, using fallback query:', allUsersError);
         // Fallback to regular users table if RPC fails
+        // This will get all users with profiles
         const { data: fallbackData, error: usersError } = await supabase
           .from('users')
           .select('*')
@@ -141,65 +142,27 @@ export function useUsersData() {
 
         if (usersError) throw usersError;
         
-        // Map regular users to the expected format (user.id is profile_id)
-        usersData = (fallbackData || []).map((user, index) => {
-          // Debug: log first user to see structure
-          if (process.env.NODE_ENV === 'development' && index === 0) {
-            console.log('First user from fallback query:', user);
-          }
-          
-          // Explicitly construct the object to ensure profile_id is set
-          // Users in the users table ALWAYS have an id (it's the primary key)
-          const mappedUser = {
+        // Map regular users to the expected format
+        usersData = (fallbackData || []).map((user) => {
+          // The users table has the profile data
+          return {
             ...user,
-            id: user.id || user.auth_id || '',
-            profile_id: user.id || null,  // This should always be user.id for users table entries
+            id: user.id,  // This is the profile ID
+            profile_id: user.id,  // Same as id for users from the users table
             auth_id: user.auth_id || null,
-            status: 'active' as const
+            status: user.profile_completed ? 'active' : 'profile_incomplete',
+            confirmed_at: null,  // Not available in users table
+            last_sign_in_at: null,  // Not available in users table
+            auth_created_at: user.date_created
           };
-          
-          if (process.env.NODE_ENV === 'development' && index === 0) {
-            console.log('First mapped user:', mappedUser);
-          }
-          
-          return mappedUser;
         }).filter(user => user.id); // Only include users with valid IDs
-      } else if (!allUsersData || allUsersData.length === 0) {
-        // If RPC returns empty (user not admin or no users), fall back to regular query
-        // Debug: RPC returned empty, using fallback
+        
         if (process.env.NODE_ENV === 'development') {
-          console.log('RPC returned empty, falling back to regular users table');
+          console.log('Using fallback data:', {
+            totalUsers: usersData.length,
+            sampleUser: usersData[0]
+          });
         }
-        const { data: fallbackData, error: usersError } = await supabase
-          .from('users')
-          .select('*')
-          .order('date_created', { ascending: false });
-
-        if (usersError) throw usersError;
-        
-        // Map regular users to the expected format (user.id is profile_id)
-        usersData = (fallbackData || []).map((user, index) => {
-          // Debug: log first user to see structure
-          if (process.env.NODE_ENV === 'development' && index === 0) {
-            console.log('First user from fallback query:', user);
-          }
-          
-          // Explicitly construct the object to ensure profile_id is set
-          // Users in the users table ALWAYS have an id (it's the primary key)
-          const mappedUser = {
-            ...user,
-            id: user.id || user.auth_id || '',
-            profile_id: user.id || null,  // This should always be user.id for users table entries
-            auth_id: user.auth_id || null,
-            status: 'active' as const
-          };
-          
-          if (process.env.NODE_ENV === 'development' && index === 0) {
-            console.log('First mapped user:', mappedUser);
-          }
-          
-          return mappedUser;
-        }).filter(user => user.id); // Only include users with valid IDs
       } else {
         // Map the RPC response to our User type - Include ALL users, even those missing IDs
         usersData = (allUsersData || []).map((user: UserData) => {
@@ -385,8 +348,8 @@ export function useUsersData() {
           is_facilitator: user.is_facilitator || false,
           date_created: user.date_created,
           date_modified: user.date_created,
-          team_ids: user.team_ids ? user.team_ids.map(id => parseInt(id)) : null,
-          league_ids: user.league_ids ? user.league_ids.map(id => parseInt(id)) : null,
+          team_ids: user.team_ids || null,  // Keep as strings, they're text in the DB
+          league_ids: user.league_ids || null,  // Keep as strings
           user_sports_skills: user.user_sports_skills || null,
           status: user.status === 'confirmed_no_profile' ? 'pending' : user.status,
           confirmed_at: user.confirmed_at,

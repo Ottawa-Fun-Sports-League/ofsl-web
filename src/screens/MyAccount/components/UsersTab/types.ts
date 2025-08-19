@@ -17,8 +17,8 @@ export interface User {
   is_facilitator?: boolean | null;  // Optional until column is added to database
   date_created: string;
   date_modified: string;
-  team_ids: number[] | null;
-  league_ids?: number[] | null;  // Individual league registrations
+  team_ids: string[] | null;  // Stored as text array in DB
+  league_ids?: string[] | null;  // Individual league registrations, stored as text array
   user_sports_skills?: UserSportSkill[] | null;
   current_registrations?: {
     team_id: number;
