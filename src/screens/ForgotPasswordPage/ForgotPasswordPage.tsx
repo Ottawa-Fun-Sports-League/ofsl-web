@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -6,12 +6,15 @@ import { Mail, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { logger } from "../../lib/logger";
+import { TurnstileWidget, TurnstileHandle } from "../../components/ui/turnstile";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,14 +24,27 @@ export function ForgotPasswordPage() {
       return;
     }
 
+    // Check if Turnstile is enabled and token is required
+    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError("Please complete the security verification");
+      return;
+    }
+
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const options: any = {
         redirectTo: `${window.location.origin}/#/reset-password?type=recovery`
-      });
+      };
+      
+      // Add captcha token if Turnstile is enabled
+      if (import.meta.env.VITE_TURNSTILE_SITE_KEY && turnstileToken) {
+        options.captchaToken = turnstileToken;
+      }
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, options);
       
       if (error) {
         throw error;
@@ -36,14 +52,34 @@ export function ForgotPasswordPage() {
       
       setSuccessMessage("Password reset instructions have been sent to your email");
       setEmail("");
+      // Reset Turnstile after successful submission
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } catch (err) {
       logger.error("Error in password reset", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to send password reset email";
       setError(errorMessage);
+      // Reset Turnstile on error
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } finally {
       setLoading(false);
     }
   };
+
+  // Stable callbacks for Turnstile
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileError = useCallback(() => {
+    setError("Security verification failed. Please try again.");
+    setTurnstileToken(null);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   return (
     <div className="min-h-[calc(100vh-135px)] bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -94,10 +130,22 @@ export function ForgotPasswordPage() {
               </p>
             </div>
             
+            {/* Turnstile Widget */}
+            {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+              <div className="flex justify-center my-4">
+                <TurnstileWidget 
+                  ref={turnstileRef}
+                  onVerify={handleTurnstileVerify}
+                  onError={handleTurnstileError}
+                  onExpire={handleTurnstileExpire}
+                />
+              </div>
+            )}
+            
             <Button
               type="submit"
               className="w-full h-12 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] font-medium text-base"
-              disabled={loading}
+              disabled={loading || (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}
             >
               {loading ? "Sending..." : "Send Reset Instructions"}
             </Button>
