@@ -1,13 +1,44 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+// Get allowed origins from environment variable or use defaults
+const getAllowedOrigins = (): string[] => {
+  const envOrigins = Deno.env.get("ALLOWED_ORIGINS");
+  
+  if (envOrigins) {
+    // Parse comma-separated list of origins from environment variable
+    return envOrigins.split(",").map((origin) => origin.trim());
+  }
+  
+  // Default allowed origins if environment variable is not set
+  // Note: localhost origins should only be included in development
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://ofsl.ca';
+  return [
+    'https://ofsl.ca',
+    'https://www.ofsl.ca',
+    siteUrl,
+  ].filter((url, index, self) => self.indexOf(url) === index); // Remove duplicates
+};
+
+// Production CORS headers with dynamic origin validation
+const getCorsHeaders = (origin: string | null) => {
+  const allowedOrigins = getAllowedOrigins();
+  
+  // Check if the origin is in the allowed list
+  const isAllowed = origin && allowedOrigins.includes(origin);
+  
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
+  };
 };
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -77,11 +108,12 @@ serve(async (req) => {
     }
 
     // Generate a recovery link (magic links require password reset)
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://ofsl.ca';
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/my-account`,
+        redirectTo: `${siteUrl}/#/my-account`,
       }
     });
 
