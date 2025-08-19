@@ -482,13 +482,30 @@ export function useUsersData() {
       // (current_registrations only includes teams from leagues where end_date >= today)
       filtered = filtered.filter(user => {
         const hasRegistrations = user.current_registrations && user.current_registrations.length > 0;
-        if (hasRegistrations && Math.random() < 0.01) { // Log 1% sample
+        
+        // More detailed logging for debugging
+        if (hasRegistrations && Math.random() < 0.02) { // Log 2% sample
           console.log('Sample active user:', {
+            name: user.name,
+            email: user.email,
+            profile_id: user.profile_id,
+            team_ids: user.team_ids,
+            registrations: user.current_registrations?.map(r => ({
+              team: r.team_name,
+              league: r.league_name
+            }))
+          });
+        }
+        
+        // Log users without profile but with registrations (shouldn't happen)
+        if (hasRegistrations && !user.profile_id) {
+          console.warn('⚠️ User has registrations but no profile_id:', {
             name: user.name,
             email: user.email,
             registrations: user.current_registrations
           });
         }
+        
         return hasRegistrations;
       });
     }
