@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ForgotPasswordPage } from './ForgotPasswordPage';
@@ -18,9 +18,27 @@ vi.mock('../../contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// Mock Turnstile widget - we don't want to test Turnstile functionality in basic tests
+vi.mock('../../components/ui/turnstile', () => ({
+  TurnstileWidget: vi.fn(() => null),
+  TurnstileHandle: {},
+}));
+
 describe('ForgotPasswordPage', () => {
+  const originalEnv = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Disable Turnstile for these tests by deleting the key
+    // @ts-ignore - we need to modify env for testing
+    delete import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  });
+
+  afterEach(() => {
+    // @ts-ignore - we need to restore env for testing
+    if (originalEnv !== undefined) {
+      import.meta.env.VITE_TURNSTILE_SITE_KEY = originalEnv;
+    }
   });
 
   it('renders forgot password form with all elements', () => {
