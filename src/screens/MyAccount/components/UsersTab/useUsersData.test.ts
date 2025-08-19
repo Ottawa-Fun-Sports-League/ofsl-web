@@ -178,8 +178,8 @@ describe('useUsersData - Sport Filters', () => {
           {
             id: 4,
             name: 'Team C',
-            captain_id: 'other-user',
-            roster: ['other-user'], 
+            captain_id: 'user-3',
+            roster: ['user-3'], // Bob is in this team but league is inactive
             co_captains: [],
             league_id: 3,
             leagues: {

@@ -237,7 +237,12 @@ export function useUsersData() {
       
       // Debug: Processed users data
       if (process.env.NODE_ENV === 'development') {
-        console.log('Processed users data:', usersData);
+        console.log('Processed users data:', {
+          totalUsers: usersData.length,
+          usersWithProfileId: usersData.filter(u => u.profile_id).length,
+          usersWithAuthId: usersData.filter(u => u.auth_id).length,
+          firstUser: usersData[0]
+        });
       }
       
       // Fetch all teams in active leagues with their roster data
@@ -277,41 +282,62 @@ export function useUsersData() {
       // Pre-process teams data for better performance
       if (teamsData) {
         teamsData.forEach(team => {
-          // Add team to captain's list
+          // Add team to captain's list (captain_id is the profile ID)
           if (team.captain_id) {
             if (!userTeamsMap.has(team.captain_id)) {
               userTeamsMap.set(team.captain_id, []);
             }
-            userTeamsMap.get(team.captain_id)?.push(team);
+            const existingTeams = userTeamsMap.get(team.captain_id) || [];
+            // Avoid duplicates
+            if (!existingTeams.some(t => t.id === team.id)) {
+              existingTeams.push(team);
+            }
           }
           
-          // Add team to roster members' lists
+          // Add team to roster members' lists (roster contains profile IDs)
           if (team.roster && Array.isArray(team.roster)) {
             team.roster.forEach((userId: string) => {
               if (!userTeamsMap.has(userId)) {
                 userTeamsMap.set(userId, []);
               }
-              userTeamsMap.get(userId)?.push(team);
+              const existingTeams = userTeamsMap.get(userId) || [];
+              // Avoid duplicates
+              if (!existingTeams.some(t => t.id === team.id)) {
+                existingTeams.push(team);
+              }
             });
           }
           
-          // Add team to co-captains' lists
+          // Add team to co-captains' lists (co_captains contains profile IDs)
           if (team.co_captains && Array.isArray(team.co_captains)) {
             team.co_captains.forEach((userId: string) => {
               if (!userTeamsMap.has(userId)) {
                 userTeamsMap.set(userId, []);
               }
-              userTeamsMap.get(userId)?.push(team);
+              const existingTeams = userTeamsMap.get(userId) || [];
+              // Avoid duplicates  
+              if (!existingTeams.some(t => t.id === team.id)) {
+                existingTeams.push(team);
+              }
             });
           }
+        });
+      }
+      
+      // Debug: Team map
+      if (process.env.NODE_ENV === 'development') {
+        console.log('User teams map:', {
+          totalMappedUsers: userTeamsMap.size,
+          sampleIds: Array.from(userTeamsMap.keys()).slice(0, 5)
         });
       }
       
       // Process users and add registration data
       const processedUsers = (usersData || []).map(user => {
         // Get teams for this user from the pre-processed map (O(1) lookup)
-        const userId = user.id || user.auth_id || '';  // user.id is the profile ID
-        const userTeams = userId ? userTeamsMap.get(userId) || [] : [];
+        // Use profile_id for matching with teams (this is what's stored in rosters)
+        const userIdForTeams = user.profile_id || user.id || '';  
+        const userTeams = userIdForTeams ? userTeamsMap.get(userIdForTeams) || [] : [];
 
         // Map teams to registration format
         const userRegistrations = userTeams.map(team => {
@@ -370,6 +396,17 @@ export function useUsersData() {
         return processedUser;
       }).filter((user): user is User => user !== null); // Filter out null users
 
+      // Debug: Final processed users
+      if (process.env.NODE_ENV === 'development') {
+        const usersWithRegistrations = processedUsers.filter(u => u.current_registrations && u.current_registrations.length > 0);
+        console.log('Final processed users:', {
+          total: processedUsers.length,
+          withRegistrations: usersWithRegistrations.length,
+          withSkills: processedUsers.filter(u => u.user_sports_skills && u.user_sports_skills.length > 0).length,
+          sampleUserWithReg: usersWithRegistrations[0]
+        });
+      }
+      
       setUsers(processedUsers);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -385,6 +422,16 @@ export function useUsersData() {
       (user.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (user.phone?.includes(searchTerm))
     );
+    
+    // Debug filtering
+    if (process.env.NODE_ENV === 'development' && (filters.activePlayer || filters.playersNotInLeague)) {
+      console.log('Filter debug:', {
+        activeFilter: filters.activePlayer,
+        notInLeagueFilter: filters.playersNotInLeague,
+        usersWithRegistrations: users.filter(u => u.current_registrations && u.current_registrations.length > 0).length,
+        usersWithoutRegistrations: users.filter(u => !u.current_registrations || u.current_registrations.length === 0).length
+      });
+    }
     
     // Apply filters
     if (filters.administrator) {
@@ -465,11 +512,9 @@ export function useUsersData() {
     
     // Apply "Not in League" filter separately (this is independent of sport filters)
     if (filters.playersNotInLeague) {
-      // Filter for players that are registered (have team_ids) but not in any active league
+      // Filter for players that have no current registrations in active leagues
       filtered = filtered.filter(user => 
-        user.team_ids && 
-        user.team_ids.length > 0 && 
-        (!user.current_registrations || user.current_registrations.length === 0)
+        !user.current_registrations || user.current_registrations.length === 0
       );
     }
     
