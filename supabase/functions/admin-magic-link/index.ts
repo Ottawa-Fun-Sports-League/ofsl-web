@@ -61,9 +61,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Generate a magic link for the user
+    // Generate an invite link for the user (works for existing users too)
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+      type: 'invite',
       email: email,
       options: {
         redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:5173'}/#/my-account`,
@@ -158,14 +158,16 @@ serve(async (req) => {
     // If sendEmail is false, just return the link
     if (!sendEmail) {
       // The action_link is the full authentication URL that will log the user in
-      // It's in the format: https://api.ofsl.ca/auth/v1/verify?token=...&type=magiclink&redirect_to=...
+      // It's in the format: https://api.ofsl.ca/auth/v1/verify?token=...&type=invite&redirect_to=...
       // This link can be opened directly in a browser to authenticate the user
       const magicLink = linkData.properties.action_link;
+      
+      console.log('Generated invite link for', email, ':', magicLink);
       
       return new Response(
         JSON.stringify({ 
           success: true, 
-          type: 'magiclink', 
+          type: 'invite', 
           link: magicLink,
           message: 'Magic link generated successfully' 
         }),
@@ -220,7 +222,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, type: 'magiclink', message: 'Magic link sent successfully' }),
+      JSON.stringify({ success: true, type: 'invite', message: 'Magic link sent successfully' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
