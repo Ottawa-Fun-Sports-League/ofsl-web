@@ -95,7 +95,7 @@ export function useUsersData() {
 
       // Fetch all users including auth-only users using the admin function
       interface UserData {
-        id?: string;  // This is the profile ID from users table
+        profile_id?: string;  // This is the profile ID from users table (returned by RPC)
         auth_id?: string;  // This is the auth UUID
         name?: string | null;
         email: string;
@@ -173,8 +173,8 @@ export function useUsersData() {
       } else {
         // Map the RPC response to our User type - Include ALL users, even those missing IDs
         usersData = (allUsersData || []).map((user: UserData) => {
-          // Use whichever ID is available (user.id is profile_id, user.auth_id is auth UUID)
-          const userId = user.id || user.auth_id || '';
+          // RPC returns profile_id directly, use it or fall back to auth_id
+          const userId = user.profile_id || user.auth_id || '';
           if (!userId) {
             if (process.env.NODE_ENV === 'development') {
               console.warn('Skipping user without any valid ID from RPC:', user);
@@ -183,7 +183,7 @@ export function useUsersData() {
           }
           return {
           id: userId,
-          profile_id: user.id || null,  // user.id from users table is the profile ID
+          profile_id: user.profile_id || null,  // RPC returns profile_id directly
           auth_id: user.auth_id || null,
           name: user.name,
           email: user.email,
@@ -206,14 +206,19 @@ export function useUsersData() {
       }
       
       // Debug: Processed users data
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Processed users data:', {
-          totalUsers: usersData.length,
-          usersWithProfileId: usersData.filter(u => u.profile_id).length,
-          usersWithAuthId: usersData.filter(u => u.auth_id).length,
-          firstUser: usersData[0]
-        });
-      }
+      console.log('Processed users data:', {
+        source: allUsersError || !allUsersData || allUsersData.length === 0 ? 'fallback' : 'RPC',
+        totalUsers: usersData.length,
+        usersWithProfileId: usersData.filter(u => u.profile_id).length,
+        usersWithAuthId: usersData.filter(u => u.auth_id).length,
+        first3Users: usersData.slice(0, 3).map(u => ({
+          name: u.name,
+          email: u.email,
+          id: u.id,
+          profile_id: u.profile_id,
+          auth_id: u.auth_id?.substring(0, 8) + '...'
+        }))
+      });
       
       // Fetch all teams with their roster data
       // We'll filter by end_date to determine active players
