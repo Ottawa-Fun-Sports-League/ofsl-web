@@ -338,11 +338,17 @@ export function useUsersData() {
       const processedUsers = (usersData || []).map((user, index) => {
         // Get teams for this user from the pre-processed map (O(1) lookup)
         // Use profile_id for matching with teams (this is what's stored in rosters)
-        const userIdForTeams = user.profile_id || user.id || '';  
+        // IMPORTANT: Only use profile_id, not auth_id, as team rosters contain profile IDs
+        const userIdForTeams = user.profile_id || '';  
         const userTeams = userIdForTeams ? userTeamsMap.get(userIdForTeams) || [] : [];
         
-        if (index < 3 && userTeams.length > 0) {
-          console.log(`User ${user.name} (${userIdForTeams}) has ${userTeams.length} teams:`, userTeams.map(t => t.name));
+        // Debug: Log samples of users with and without teams
+        if (index < 5) {
+          if (userTeams.length > 0) {
+            console.log(`✓ User ${user.name} (${userIdForTeams}) has ${userTeams.length} teams:`, userTeams.map(t => t.name));
+          } else if (user.name) {
+            console.log(`✗ User ${user.name} (${userIdForTeams}) has NO teams`);
+          }
         }
 
         // Map teams to registration format
@@ -407,14 +413,26 @@ export function useUsersData() {
 
       // Debug: Final processed users
       const usersWithRegistrations = processedUsers.filter(u => u.current_registrations && u.current_registrations.length > 0);
+      const usersWithProfile = processedUsers.filter(u => u.profile_id);
+      const usersWithoutProfile = processedUsers.filter(u => !u.profile_id);
+      
       console.log('Final processed users:', {
         total: processedUsers.length,
+        withProfile: usersWithProfile.length,
+        withoutProfile: usersWithoutProfile.length,
         withRegistrations: usersWithRegistrations.length,
         withSkills: processedUsers.filter(u => u.user_sports_skills && u.user_sports_skills.length > 0).length,
         first3UsersWithReg: usersWithRegistrations.slice(0, 3).map(u => ({
           name: u.name,
           email: u.email,
+          profile_id: u.profile_id,
           registrations: u.current_registrations?.length
+        })),
+        first3WithoutProfile: usersWithoutProfile.slice(0, 3).map(u => ({
+          name: u.name,
+          email: u.email,
+          profile_id: u.profile_id,
+          auth_id: u.auth_id?.substring(0, 8) + '...'
         }))
       });
       
@@ -462,7 +480,17 @@ export function useUsersData() {
     if (filters.activePlayer) {
       // Active players are those registered in leagues that haven't ended yet
       // (current_registrations only includes teams from leagues where end_date >= today)
-      filtered = filtered.filter(user => user.current_registrations && user.current_registrations.length > 0);
+      filtered = filtered.filter(user => {
+        const hasRegistrations = user.current_registrations && user.current_registrations.length > 0;
+        if (hasRegistrations && Math.random() < 0.01) { // Log 1% sample
+          console.log('Sample active user:', {
+            name: user.name,
+            email: user.email,
+            registrations: user.current_registrations
+          });
+        }
+        return hasRegistrations;
+      });
     }
     if (filters.pendingUsers) {
       filtered = filtered.filter(user => 
