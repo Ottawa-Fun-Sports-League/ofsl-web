@@ -114,10 +114,8 @@ export function useUsersData() {
         preferred_position?: null;
       }
       
-      // Transformed user data with profile_id field added
-      interface TransformedUserData extends UserData {
-        profile_id?: string | null;
-      }
+      // Transformed user data (no need to extend since UserData already has profile_id)
+      type TransformedUserData = UserData;
       
       let usersData: TransformedUserData[] = [];
       
@@ -615,8 +613,9 @@ export function useUsersData() {
           bValue = b.is_facilitator ? 1 : 0;
           break;
         case 'team_count':
-          aValue = a.team_ids?.length || 0;
-          bValue = b.team_ids?.length || 0;
+          // Sort by actual active registrations, not old team_ids
+          aValue = a.current_registrations?.length || 0;
+          bValue = b.current_registrations?.length || 0;
           break;
         case 'status':
           // Sort order: active > pending > unconfirmed > confirmed_no_profile > profile_incomplete

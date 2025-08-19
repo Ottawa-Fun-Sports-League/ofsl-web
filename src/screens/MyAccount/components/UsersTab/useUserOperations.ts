@@ -35,10 +35,12 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
       is_facilitator: user.is_facilitator || undefined
     });
     
-    await loadUserRegistrations(user.team_ids || []);
+    // Use current_registrations instead of team_ids to show all active team memberships
+    const teamIds = user.current_registrations?.map(r => r.team_id.toString()) || [];
+    await loadUserRegistrations(teamIds);
   };
 
-  const loadUserRegistrations = async (teamIds: number[]) => {
+  const loadUserRegistrations = async (teamIds: string[]) => {
     if (teamIds.length === 0) {
       setUserRegistrations([]);
       return;
@@ -56,7 +58,7 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
             sports:sport_id(name)
           )
         `)
-        .in('id', teamIds);
+        .in('id', teamIds.map(id => parseInt(id)));
 
       if (error) throw error;
 

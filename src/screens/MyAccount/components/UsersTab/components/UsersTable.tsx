@@ -156,9 +156,9 @@ export function UsersTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
                     {(() => {
-                      const teamCount = user.team_ids?.length || 0;
-                      const individualCount = user.league_ids?.length || 0;
-                      const totalRegistrations = teamCount + individualCount;
+                      // Use current_registrations which includes all active team memberships
+                      // (captain, roster member, co-captain) in leagues that haven't ended
+                      const totalRegistrations = user.current_registrations?.length || 0;
                       
                       if (totalRegistrations === 0) {
                         return <span>0</span>;
