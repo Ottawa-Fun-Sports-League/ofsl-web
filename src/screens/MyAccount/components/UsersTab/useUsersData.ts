@@ -208,7 +208,9 @@ export function useUsersData() {
         });
       }
       
-      // Fetch all teams in active leagues with their roster data
+      // Fetch all teams with their roster data
+      // We'll filter by end_date to determine active players
+      const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
@@ -223,13 +225,14 @@ export function useUsersData() {
             name,
             sport_id,
             active,
+            end_date,
             sports!inner (
               id,
               name
             )
           )
-        `)
-        .eq('leagues.active', true);
+        `);
+        // Note: We removed the active filter here and will check end_date instead
 
       if (teamsError) {
         console.error('Error loading teams:', teamsError);
@@ -243,8 +246,17 @@ export function useUsersData() {
       const userTeamsMap = new Map<string, TeamData[]>();
       
       // Pre-process teams data for better performance
-      if (teamsData) {
-        teamsData.forEach(team => {
+      // Only include teams from leagues that haven't ended yet
+      const activeTeams = teamsData?.filter(team => {
+        const league = team.leagues as any;
+        // Consider a league active if it hasn't ended yet (end_date > today)
+        // If no end_date is set, consider it active
+        if (!league?.end_date) return true;
+        return league.end_date >= today;
+      }) || [];
+      
+      if (activeTeams.length > 0) {
+        activeTeams.forEach(team => {
           // Add team to captain's list (captain_id is the profile ID)
           if (team.captain_id) {
             if (!userTeamsMap.has(team.captain_id)) {
@@ -287,6 +299,15 @@ export function useUsersData() {
         });
       }
       
+      // Debug: Active teams and team map
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Active teams (not ended):', {
+          totalTeams: teamsData?.length || 0,
+          activeTeams: activeTeams.length,
+          today: today
+        });
+      }
+      
       // Debug: Team map
       if (process.env.NODE_ENV === 'development') {
         console.log('User teams map:', {
@@ -303,11 +324,14 @@ export function useUsersData() {
         const userTeams = userIdForTeams ? userTeamsMap.get(userIdForTeams) || [] : [];
 
         // Map teams to registration format
+        // Note: userTeams already only contains teams from leagues that haven't ended
+        // (filtered in the activeTeams processing above)
         const userRegistrations = userTeams.map(team => {
           // Handle the nested structure from Supabase joins
           interface LeagueWithSport {
             name?: string;
             sport_id?: number;
+            end_date?: string;
             sports?: {
               id?: number;
               name?: string;
@@ -404,6 +428,8 @@ export function useUsersData() {
       filtered = filtered.filter(user => user.is_facilitator === true);
     }
     if (filters.activePlayer) {
+      // Active players are those registered in leagues that haven't ended yet
+      // (current_registrations only includes teams from leagues where end_date >= today)
       filtered = filtered.filter(user => user.current_registrations && user.current_registrations.length > 0);
     }
     if (filters.pendingUsers) {
