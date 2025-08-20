@@ -99,10 +99,7 @@ describe('Skill Level Editing', () => {
       });
     });
 
-    it('should show error when no skill level is selected', async () => {
-      const mockShowToast = vi.fn();
-      vi.mocked(useToast).mockReturnValue({ showToast: mockShowToast });
-
+    it('should disable update button when no skill level is selected', async () => {
       const { container } = render(
         <SkillLevelEditModal
           isOpen={true}
@@ -115,12 +112,16 @@ describe('Skill Level Editing', () => {
         />
       );
 
-      // Click update without selecting a skill level
+      // Check that update button is disabled when no skill level is selected
       const updateButton = screen.getByText('Update Skill Level');
-      fireEvent.click(updateButton);
-
-      // The component calls showToast directly, which we've mocked
-      expect(mockShowToast).toHaveBeenCalledWith('Please select a skill level', 'error');
+      expect(updateButton).toBeDisabled();
+      
+      // Select a skill level
+      const beginnerOption = screen.getByText('Beginner');
+      fireEvent.click(beginnerOption);
+      
+      // Now the button should be enabled
+      expect(updateButton).not.toBeDisabled();
     });
 
     it('should be disabled when selected skill is same as current', () => {
@@ -169,7 +170,7 @@ describe('Skill Level Editing', () => {
 
       // Check first registration is shown
       expect(screen.getByText(/League 1/)).toBeInTheDocument();
-      expect(screen.getByText('1 of 2 registrations need skill levels')).toBeInTheDocument();
+      expect(screen.getByText(/1 of 2 registration/)).toBeInTheDocument();
 
       // Select a skill level and update
       const beginnerOption = screen.getByText('Beginner');
@@ -181,11 +182,11 @@ describe('Skill Level Editing', () => {
       // Wait for second registration to appear
       await waitFor(() => {
         expect(screen.getByText(/League 2/)).toBeInTheDocument();
-        expect(screen.getByText('2 of 2 registrations need skill levels')).toBeInTheDocument();
+        expect(screen.getByText(/2 of 2 registration/)).toBeInTheDocument();
       });
     });
 
-    it('should allow skipping skill level setting', async () => {
+    it('should require skill level selection (no skip option)', async () => {
       const mockOnComplete = vi.fn();
       const missingRegistrations = [
         { paymentId: 1, leagueName: 'League 1', isTeam: false },
@@ -198,13 +199,19 @@ describe('Skill Level Editing', () => {
         />
       );
 
-      // Click skip button
-      const skipButton = screen.getByText('Skip for Now');
-      fireEvent.click(skipButton);
-
-      await waitFor(() => {
-        expect(mockOnComplete).toHaveBeenCalled();
-      });
+      // Verify skip button doesn't exist
+      expect(screen.queryByText('Skip for Now')).not.toBeInTheDocument();
+      
+      // Verify user must select a skill level
+      const setButton = screen.getByText('Set Skill Level');
+      expect(setButton).toBeDisabled(); // Disabled until a skill is selected
+      
+      // Select a skill level
+      const beginnerOption = screen.getByText('Beginner');
+      fireEvent.click(beginnerOption);
+      
+      // Now the button should be enabled
+      expect(setButton).not.toBeDisabled();
     });
 
     it('should handle team registration skill level updates', async () => {
