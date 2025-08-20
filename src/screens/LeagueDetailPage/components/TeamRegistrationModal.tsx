@@ -158,7 +158,7 @@ export function TeamRegistrationModal({
           .update({ league_ids: updatedLeagueIds })
           .eq("id", userProfile.id);
 
-        if (userError) throw userError;
+        if (userError) throw new Error(userError.message || 'Failed to update user');
 
         // Create payment record for individual registration with skill level
         const { error: paymentError } = await supabase
@@ -173,7 +173,13 @@ export function TeamRegistrationModal({
             skill_level_id: skillLevelId, // Save skill level for individual registration
           });
 
-        if (paymentError) throw paymentError;
+        if (paymentError) {
+          // Check if this is a duplicate registration error
+          if (paymentError.code === '23505' || paymentError.message?.includes('duplicate key') || paymentError.message?.includes('idx_unique_user_league_payment')) {
+            throw new Error("You have already registered for this league. Please check your registrations in the My Account page.");
+          }
+          throw new Error(paymentError.message || 'Failed to create payment record');
+        }
       } else if (isTeamRegistration) {
         // For team registrations, create team as before
         // Get the highest display_order for this league to add new team at the end
@@ -218,7 +224,13 @@ export function TeamRegistrationModal({
           .select()
           .single();
 
-        if (teamError) throw teamError;
+        if (teamError) {
+          // Check if this is a duplicate registration error
+          if (teamError.code === '23505' || teamError.message?.includes('duplicate key')) {
+            throw new Error("You have already registered a team for this league. Please check your teams in the My Account page.");
+          }
+          throw new Error(teamError.message || 'Failed to create team');
+        }
 
         // Update user's team_ids array
         const currentTeamIds = userProfile.team_ids || [];
@@ -229,7 +241,7 @@ export function TeamRegistrationModal({
           .update({ team_ids: updatedTeamIds })
           .eq("id", userProfile.id);
 
-        if (userError) throw userError;
+        if (userError) throw new Error(userError.message || 'Failed to update user');
       }
 
       // Send registration confirmation email
@@ -327,9 +339,22 @@ export function TeamRegistrationModal({
         closeModal();
       }
     } catch (error) {
-      console.error("Error registering team:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to register team";
+      console.error("Error registering:", error);
+      let errorMessage = "Failed to register";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Provide more specific error messages for common cases
+        if (error.message.includes("You have already registered")) {
+          // Use the custom message as-is
+          errorMessage = error.message;
+        } else if (error.message.includes("duplicate key") || error.message.includes("23505")) {
+          // Generic duplicate error fallback
+          errorMessage = "You have already registered for this league. Please check your registrations in the My Account page.";
+        }
+      }
+      
       showToast(errorMessage, "error");
     } finally {
       setLoading(false);
