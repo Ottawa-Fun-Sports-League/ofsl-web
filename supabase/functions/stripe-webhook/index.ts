@@ -153,7 +153,7 @@ async function handleEvent(event: Stripe.Event) {
   }
 }
 
-async function processLeaguePayments(customerId: string, orderData: { teamId?: string; metadata?: { team_id?: string } }, amountTotal: number, leagueId: number | null = null) {
+async function processLeaguePayments(customerId: string, orderData: { id?: string; teamId?: string; metadata?: { team_id?: string } }, amountTotal: number, leagueId: number | null = null) {
   try {
     // Get the user ID from the stripe_customers table
     const { data: customerData, error: customerError } = await supabase
@@ -251,6 +251,13 @@ async function processLeaguePayments(customerId: string, orderData: { teamId?: s
           // eslint-disable-next-line no-console
           console.info(`Applied $${paymentToApply.toFixed(2)} to league payment ${payment.id}, new status: ${newStatus}`);
           remainingAmount -= paymentToApply;
+
+          // Check if this is an individual registration (payment_type === 'individual')
+          // and the payment is now fully paid
+          if (newStatus === 'paid' && payment.payment_type === 'individual') {
+            // Send notification email for individual registration
+            await sendIndividualRegistrationNotification(userId, payment.league_id, paymentAmount);
+          }
         }
       }
     }
@@ -265,6 +272,68 @@ async function processLeaguePayments(customerId: string, orderData: { teamId?: s
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error processing league payments:', error);
+  }
+}
+
+async function sendIndividualRegistrationNotification(userId: string, leagueId: number, amountPaid: number) {
+  try {
+    // Get user information
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('first_name, last_name, email, phone')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error fetching user data for notification:', userError);
+      return;
+    }
+
+    // Get league information
+    const { data: leagueData, error: leagueError } = await supabase
+      .from('leagues')
+      .select('name')
+      .eq('id', leagueId)
+      .single();
+
+    if (leagueError || !leagueData) {
+      console.error('Error fetching league data for notification:', leagueError);
+      return;
+    }
+
+    // Prepare notification data
+    const notificationData = {
+      userId: userId,
+      userName: `${userData.first_name} ${userData.last_name}`,
+      userEmail: userData.email,
+      userPhone: userData.phone,
+      leagueName: leagueData.name,
+      registeredAt: new Date().toISOString(),
+      amountPaid: amountPaid,
+      paymentMethod: 'Stripe'
+    };
+
+    // Get service role key for auth
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Call the notification edge function
+    const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/notify-individual-registration`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`
+      },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to send individual registration notification:', errorText);
+    } else {
+      console.info('Individual registration notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Error sending individual registration notification:', error);
   }
 }
 
