@@ -204,12 +204,13 @@ export function IndividualEditPage() {
       const updatedHistory = [...paymentHistory, newHistoryEntry];
       const updatedNotes = JSON.stringify(updatedHistory);
 
-      // Update payment record with new history
+      // Update payment record with new history and payment method
       const { error: updateError } = await supabase
         .from('league_payments')
         .update({
           amount_paid: newAmountPaid,
           status: newStatus,
+          payment_method: paymentMethod || paymentInfo.payment_method || null,
           notes: updatedNotes
         })
         .eq('id', paymentInfo.id);
@@ -274,12 +275,18 @@ export function IndividualEditPage() {
         newStatus = 'pending';
       }
 
+      // Determine the most recent payment method from history
+      const latestPaymentMethod = updatedHistory
+        .filter(h => h.payment_method)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.payment_method;
+
       // Update payment record
       const { error: paymentError } = await supabase
         .from('league_payments')
         .update({
           amount_paid: newTotalPaid,
           status: newStatus,
+          payment_method: latestPaymentMethod || paymentInfo.payment_method || null,
           notes: JSON.stringify(updatedHistory)
         })
         .eq('id', paymentInfo.id);
