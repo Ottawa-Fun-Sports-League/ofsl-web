@@ -577,7 +577,7 @@ export function TeamRegistrationModal({
                         )}
                       </div>
 
-                      {league && league.deposit_amount && league.deposit_date && (
+                      {league && league.deposit_amount && league.deposit_date ? (
                         <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3">
                           <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                           <div>
@@ -594,7 +594,7 @@ export function TeamRegistrationModal({
                             </p>
                           </div>
                         </div>
-                      )}
+                      ) : null}
 
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <p className="text-sm text-blue-800">
