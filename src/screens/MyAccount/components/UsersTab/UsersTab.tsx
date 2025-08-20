@@ -6,6 +6,7 @@ import { UsersHeader } from './components/UsersHeader';
 import { ImprovedFilters } from './components/ImprovedFilters';
 import { UsersTable } from './components/UsersTable';
 import { EditUserModal } from './components/EditUserModal';
+import { ExportColumnsModal } from './components/ExportColumnsModal';
 import { useUsersData } from './useUsersData';
 import { useUserOperations } from './useUserOperations';
 import { exportUsersToCSV, generateExportFilename } from './utils/exportCsv';
@@ -15,6 +16,7 @@ export function UsersTab() {
   const { userProfile } = useAuth();
   const { showToast } = useToast();
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const {
     filteredUsers,
@@ -45,10 +47,10 @@ export function UsersTab() {
     handleCancelEdit
   } = useUserOperations(loadUsers);
 
-  const handleExportCSV = () => {
+  const handleExportCSV = (selectedColumns: string[]) => {
     try {
       const filename = generateExportFilename();
-      exportUsersToCSV(filteredUsers, filename);
+      exportUsersToCSV(filteredUsers, selectedColumns, filename);
       showToast(`Exported ${filteredUsers.length} users to ${filename}`, 'success');
     } catch (error) {
       console.error('Error exporting CSV:', error);
@@ -77,13 +79,13 @@ export function UsersTab() {
   return (
     <div className="w-full">
       {/* Container with negative margins to extend beyond normal page bounds */}
-      <div className="xl:-mx-16 lg:-mx-8 md:-mx-4 space-y-6">
+      <div className="2xl:-mx-32 xl:-mx-24 lg:-mx-16 md:-mx-8 space-y-6">
         <div className="px-4 md:px-6 lg:px-8">
           <UsersHeader
             userCount={filteredUsers.length}
             onOpenMobileFilter={() => setShowMobileFilterDrawer(true)}
             onRefresh={loadUsers}
-            onExportCSV={handleExportCSV}
+            onExportCSV={() => setShowExportModal(true)}
             activeFilterCount={Object.values(filters).filter(Boolean).length}
           />
 
@@ -130,6 +132,13 @@ export function UsersTab() {
           onSave={handleSaveUser}
           onCancel={handleCancelEdit}
           onResetPassword={handleResetPassword}
+        />
+        
+        <ExportColumnsModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onExport={handleExportCSV}
+          userCount={filteredUsers.length}
         />
       </div>
     </div>

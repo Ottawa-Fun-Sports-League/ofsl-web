@@ -5,14 +5,12 @@ import { PostgrestError } from '@supabase/supabase-js';
 export interface StandingsTeam {
   id: number;
   name: string;
-  captain_name: string | null;
   roster_size: number;
   wins: number;
   losses: number;
   points: number;
   differential: number;
   created_at: string;
-  captain_id: string;
 }
 
 export function useLeagueStandings(leagueId: string | undefined) {
@@ -32,10 +30,8 @@ export function useLeagueStandings(leagueId: string | undefined) {
         .select(`
           id,
           name,
-          captain_id,
           roster,
-          created_at,
-          users:captain_id(name)
+          created_at
         `)
         .eq('league_id', parseInt(leagueId))
         .eq('active', true)
@@ -43,10 +39,8 @@ export function useLeagueStandings(leagueId: string | undefined) {
           data: Array<{
             id: number;
             name: string;
-            captain_id: string;
             roster: string[] | null;
             created_at: string;
-            users: { name: string } | null;
           }> | null;
           error: PostgrestError | null;
         };
@@ -57,8 +51,6 @@ export function useLeagueStandings(leagueId: string | undefined) {
       const standingsData: StandingsTeam[] = (data || []).map(team => ({
         id: team.id,
         name: team.name,
-        captain_name: team.users?.name || null,
-        captain_id: team.captain_id,
         roster_size: team.roster?.length || 0,
         wins: 0, // No game data yet
         losses: 0, // No game data yet

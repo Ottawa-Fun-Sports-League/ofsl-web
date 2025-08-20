@@ -15,38 +15,32 @@ describe('LeagueStandings', () => {
     {
       id: 1,
       name: 'Team Alpha',
-      captain_name: 'John Doe',
       roster_size: 6,
       wins: 0,
       losses: 0,
       points: 0,
       differential: 0,
-      created_at: '2024-01-01T00:00:00Z',
-      captain_id: 'captain-1'
+      created_at: '2024-01-01T00:00:00Z'
     },
     {
       id: 2,
       name: 'Team Beta',
-      captain_name: 'Jane Smith',
       roster_size: 6,
       wins: 0,
       losses: 0,
       points: 0,
       differential: 0,
-      created_at: '2024-01-01T00:00:00Z',
-      captain_id: 'captain-2'
+      created_at: '2024-01-01T00:00:00Z'
     },
     {
       id: 3,
       name: 'Team Gamma',
-      captain_name: null, // Hidden captain
       roster_size: 6,
       wins: 0,
       losses: 0,
       points: 0,
       differential: 0,
-      created_at: '2024-01-01T00:00:00Z',
-      captain_id: 'captain-3'
+      created_at: '2024-01-01T00:00:00Z'
     }
   ];
 
@@ -118,18 +112,18 @@ describe('LeagueStandings', () => {
     // Check table headers
     expect(screen.getByText('#')).toBeInTheDocument();
     expect(screen.getByText('Team')).toBeInTheDocument();
-    expect(screen.getByText('Captain')).toBeInTheDocument();
+    expect(screen.queryByText('Captain')).not.toBeInTheDocument(); // Captain column removed
     expect(screen.getByText('Wins')).toBeInTheDocument();
     expect(screen.getByText('Losses')).toBeInTheDocument();
     expect(screen.getByText('Points')).toBeInTheDocument();
 
     // Check team data
     expect(screen.getByText('Team Alpha')).toBeInTheDocument();
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.queryByText('John Doe')).not.toBeInTheDocument(); // Captain names removed
     expect(screen.getByText('Team Beta')).toBeInTheDocument();
-    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+    expect(screen.queryByText('Jane Smith')).not.toBeInTheDocument(); // Captain names removed
     expect(screen.getByText('Team Gamma')).toBeInTheDocument();
-    expect(screen.getByText('(hidden)')).toBeInTheDocument(); // Hidden captain
+    expect(screen.queryByText('(hidden)')).not.toBeInTheDocument(); // Hidden captain removed
   });
 
   it('shows placeholders for wins, losses, and points', () => {

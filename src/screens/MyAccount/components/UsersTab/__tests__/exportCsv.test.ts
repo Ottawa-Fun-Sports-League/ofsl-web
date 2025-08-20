@@ -34,7 +34,7 @@ describe('CSV Export Functionality', () => {
     document.body.removeChild = mockRemoveChild;
   });
 
-  it('should export users data to CSV with all columns', () => {
+  it('should export users data to CSV with selected columns', () => {
     const users: User[] = [
       {
         id: '1',
@@ -91,7 +91,9 @@ describe('CSV Export Functionality', () => {
       }
     ];
 
-    exportUsersToCSV(users, 'test.csv');
+    // Select all columns for export
+    const selectedColumns = ['name', 'email', 'phone', 'status', 'admin', 'facilitator', 'registrations', 'sports', 'total_owed', 'total_paid', 'balance_due', 'date_created', 'last_sign_in'];
+    exportUsersToCSV(users, selectedColumns, 'test.csv');
 
     // Check that the link was created and clicked
     expect(mockCreateElement).toHaveBeenCalledWith('a');
@@ -129,7 +131,9 @@ describe('CSV Export Functionality', () => {
       }
     ];
 
-    exportUsersToCSV(users, 'test-special-chars.csv');
+    // Select all columns for export
+    const selectedColumns = ['name', 'email', 'phone', 'status', 'admin', 'facilitator', 'registrations', 'sports', 'total_owed', 'total_paid', 'balance_due', 'date_created', 'last_sign_in'];
+    exportUsersToCSV(users, selectedColumns, 'test-special-chars.csv');
 
     // Verify the function completed without errors
     expect(mockCreateElement).toHaveBeenCalled();
@@ -188,7 +192,9 @@ describe('CSV Export Functionality', () => {
       }
     ];
 
-    exportUsersToCSV(users, 'multi-sport.csv');
+    // Select all columns for export
+    const selectedColumns = ['name', 'email', 'phone', 'status', 'admin', 'facilitator', 'registrations', 'sports', 'total_owed', 'total_paid', 'balance_due', 'date_created', 'last_sign_in'];
+    exportUsersToCSV(users, selectedColumns, 'multi-sport.csv');
 
     // Check that export was successful
     expect(mockCreateElement).toHaveBeenCalled();
@@ -198,7 +204,9 @@ describe('CSV Export Functionality', () => {
   it('should handle empty user list', () => {
     const users: User[] = [];
 
-    exportUsersToCSV(users, 'empty.csv');
+    // Select all columns for export
+    const selectedColumns = ['name', 'email', 'phone', 'status', 'admin', 'facilitator', 'registrations', 'sports', 'total_owed', 'total_paid', 'balance_due', 'date_created', 'last_sign_in'];
+    exportUsersToCSV(users, selectedColumns, 'empty.csv');
 
     // Should still create a CSV with headers only
     expect(mockCreateElement).toHaveBeenCalled();

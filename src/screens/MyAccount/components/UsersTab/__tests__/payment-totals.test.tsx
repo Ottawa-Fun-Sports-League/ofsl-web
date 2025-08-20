@@ -162,16 +162,16 @@ describe('Payment Totals Calculation', () => {
     // Check payment totals
     const users = result.current.users;
     
-    // User 1 should have total_owed = 400 and total_paid = 250
+    // User 1 should have total_owed = 400 * 1.13 (13% tax) = 452 and total_paid = 250
     const user1 = users.find(u => u.profile_id === 'user-1');
     expect(user1).toBeDefined();
-    expect(user1?.total_owed).toBe(400);
+    expect(user1?.total_owed).toBeCloseTo(452, 2); // 400 * 1.13 (includes 13% tax)
     expect(user1?.total_paid).toBe(250);
 
-    // User 2 should have total_owed = 300 and total_paid = 0
+    // User 2 should have total_owed = 300 * 1.13 (13% tax) = 339 and total_paid = 0
     const user2 = users.find(u => u.profile_id === 'user-2');
     expect(user2).toBeDefined();
-    expect(user2?.total_owed).toBe(300);
+    expect(user2?.total_owed).toBeCloseTo(339, 2); // 300 * 1.13 (includes 13% tax)
     expect(user2?.total_paid).toBe(0);
   });
 
@@ -309,13 +309,13 @@ describe('Payment Totals Calculation', () => {
     const mockPaymentsData = [
       {
         user_id: 'user-1',
-        amount_due: '100.00',
+        amount_due: '100.00', // Will be 113 with tax
         amount_paid: '50.00',
         status: 'partial'
       },
       {
         user_id: 'user-2',
-        amount_due: '500.00',
+        amount_due: '500.00', // Will be 565 with tax
         amount_paid: '200.00',
         status: 'partial'
       }
