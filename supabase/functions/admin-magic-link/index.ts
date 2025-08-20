@@ -1,46 +1,20 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
-// Get allowed origins from environment variable or use defaults
-const getAllowedOrigins = (): string[] => {
-  const envOrigins = Deno.env.get("ALLOWED_ORIGINS");
-  
-  if (envOrigins) {
-    // Parse comma-separated list of origins from environment variable
-    return envOrigins.split(",").map((origin) => origin.trim());
-  }
-  
-  // Default allowed origins if environment variable is not set
-  // Note: localhost origins should only be included in development
-  const siteUrl = Deno.env.get('SITE_URL') || 'https://ofsl.ca';
-  return [
-    'https://ofsl.ca',
-    'https://www.ofsl.ca',
-    siteUrl,
-  ].filter((url, index, self) => self.indexOf(url) === index); // Remove duplicates
-};
-
-// Production CORS headers with dynamic origin validation
-const getCorsHeaders = (origin: string | null) => {
-  const allowedOrigins = getAllowedOrigins();
-  
-  // Check if the origin is in the allowed list
-  const isAllowed = origin && allowedOrigins.includes(origin);
-  
-  return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
-  };
+// Simple CORS headers that allow the production domain
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
-  const origin = req.headers.get('origin');
-  const corsHeaders = getCorsHeaders(origin);
-  
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { 
+      status: 200,
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -93,14 +67,14 @@ serve(async (req) => {
     );
 
     // First check if the user exists
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: targetUserData, error: targetUserError } = await supabaseAdmin
       .from('users')
       .select('auth_id')
       .eq('email', email)
       .single();
 
-    if (userError || !userData) {
-      console.error('User not found:', email, userError);
+    if (targetUserError || !targetUserData) {
+      console.error('User not found:', email, targetUserError);
       return new Response(
         JSON.stringify({ error: 'User not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
