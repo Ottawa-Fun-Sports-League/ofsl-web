@@ -41,6 +41,7 @@ DECLARE
     old_league_ids BIGINT[];
     new_league_ids BIGINT[];
     added_league_ids BIGINT[];
+    added_league_id BIGINT;
     league_record RECORD;
     user_name TEXT;
 BEGIN
