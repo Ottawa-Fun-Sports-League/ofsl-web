@@ -87,7 +87,6 @@ export function useUsersData() {
         .single();
 
       if (adminError || !adminCheck?.is_admin) {
-        console.error('Error checking admin status:', adminError);
         showToast('You must be an admin to view users', 'error');
         setLoading(false);
         return;
@@ -150,22 +149,8 @@ export function useUsersData() {
       const { data: allUsersData, error: allUsersError } = usersResult;
       const { data: teamsData, error: teamsError } = teamsResult;
 
-      // Debug: RPC response for admin function
-      if (process.env.NODE_ENV === 'development') {
-        console.log('RPC response:', { 
-          allUsersData, 
-          allUsersError,
-          dataLength: allUsersData?.length,
-          isArray: Array.isArray(allUsersData)
-        });
-      }
 
       if (allUsersError || !allUsersData || allUsersData.length === 0) {
-        console.warn('RPC failed or returned empty, using fallback query:', {
-          error: allUsersError,
-          dataLength: allUsersData?.length,
-          isNull: allUsersData === null
-        });
         // Fallback to regular users table if RPC fails
         // This will get all users with profiles
         const { data: fallbackData, error: usersError } = await supabase
@@ -189,22 +174,12 @@ export function useUsersData() {
             auth_created_at: user.date_created
           };
         }).filter(user => user.id); // Only include users with valid IDs
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Using fallback data:', {
-            totalUsers: usersData.length,
-            sampleUser: usersData[0]
-          });
-        }
       } else {
         // Map the RPC response to our User type - Include ALL users, even those missing IDs
         usersData = (allUsersData || []).map((user: UserData) => {
           // RPC returns profile_id directly, use it or fall back to auth_id
           const userId = user.profile_id || user.auth_id || '';
           if (!userId) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('Skipping user without any valid ID from RPC:', user);
-            }
             return null;
           }
           return {
@@ -231,25 +206,9 @@ export function useUsersData() {
         }).filter((user: TransformedUserData | null): user is TransformedUserData => user !== null); // Filter out null users (only those with NO IDs at all)
       }
       
-      // Debug: Processed users data
-      console.log('Processed users data:', {
-        source: allUsersError || !allUsersData || allUsersData.length === 0 ? 'fallback' : 'RPC',
-        totalUsers: usersData.length,
-        usersWithProfileId: usersData.filter(u => u.profile_id).length,
-        usersWithAuthId: usersData.filter(u => u.auth_id).length,
-        first3Users: usersData.slice(0, 3).map(u => ({
-          name: u.name,
-          email: u.email,
-          id: (u as any).id || u.profile_id || u.auth_id,
-          profile_id: u.profile_id,
-          auth_id: u.auth_id?.substring(0, 8) + '...'
-        }))
-      });
-      
       // Teams data already fetched in parallel above
       // Check for errors from the parallel fetch
       if (teamsError) {
-        console.error('Error loading teams:', teamsError);
         // Continue processing with empty teams data
         showToast('Warning: Could not load team data', 'warning');
       }
@@ -266,43 +225,12 @@ export function useUsersData() {
         // Consider a league active if it hasn't ended yet (end_date > today)
         // If no end_date is set, consider it active
         if (!league?.end_date) {
-          console.log('Team has no end date, considering active:', team.name);
           return true;
         }
         const isActive = league.end_date >= today;
-        if (!isActive) {
-          console.log('Team excluded - league ended:', team.name, league.end_date);
-        }
         return isActive;
       }) || [];
       
-      console.log('Teams filtering:', {
-        totalTeams: teamsData?.length || 0,
-        activeTeams: activeTeams.length,
-        today,
-        sampleActiveTeam: activeTeams[0]
-      });
-      
-      // Debug: Check for badminton teams specifically
-      const badmintonTeams = activeTeams.filter(team => {
-        const league = team.leagues as any;
-        return league?.sport_id === SPORT_IDS.BADMINTON || 
-               league?.sports?.name?.toLowerCase().includes('badminton');
-      });
-      
-      // Also check if there are any individual badminton leagues
-      console.log('🏸 Badminton Debug Summary:', {
-        teamLeagues: {
-          active: badmintonTeams.length,
-          total: teamsData?.filter(t => {
-            const l = t.leagues as any;
-            return l?.sport_id === 2 || l?.sports?.name?.toLowerCase().includes('badminton');
-          }).length || 0
-        },
-        explanation: badmintonTeams.length === 0 
-          ? 'No badminton team leagues exist in the database. Badminton might be individual-only sport or no badminton leagues created yet.'
-          : 'Badminton teams found'
-      });
       
       if (activeTeams.length > 0) {
         activeTeams.forEach(team => {
@@ -348,16 +276,6 @@ export function useUsersData() {
         });
       }
       
-      // Debug: Team map details
-      console.log('User teams map details:', {
-        totalMappedUsers: userTeamsMap.size,
-        sampleMappings: Array.from(userTeamsMap.entries()).slice(0, 3).map(([userId, teams]) => ({
-          userId,
-          teamCount: teams.length,
-          teamNames: teams.map(t => t.name)
-        }))
-      });
-      
       // Load individual leagues and payments data in parallel
       const [leaguesResult, paymentsResult] = await Promise.all([
         supabase
@@ -385,33 +303,12 @@ export function useUsersData() {
       let individualLeaguesData: any[] = [];
       if (!leaguesError && leagues) {
         individualLeaguesData = leagues;
-        console.log('🏸 Individual leagues loaded:', {
-          total: leagues.length,
-          badminton: leagues.filter(l => l.sport_id === 2 || (l.sports as any)?.name?.toLowerCase().includes('badminton')).length,
-          samples: leagues.slice(0, 5).map(l => ({
-            id: l.id,
-            name: l.name,
-            sport_id: l.sport_id,
-            sport_name: (l.sports as any)?.name,
-            end_date: l.end_date,
-            team_registration: l.team_registration
-          }))
-        });
-      } else if (leaguesError) {
-        console.error('Error loading individual leagues:', leaguesError);
       }
       
       // Filter individual leagues by end date (only active leagues)
       const activeIndividualLeagues = individualLeaguesData.filter(league => {
         if (!league.end_date) return true; // No end date means active
         return league.end_date >= today;
-      });
-      
-      console.log('🏸 Active individual leagues:', {
-        total: activeIndividualLeagues.length,
-        today,
-        badminton: activeIndividualLeagues.filter(l => l.sport_id === 2 || (l.sports as any)?.name?.toLowerCase().includes('badminton')).length,
-        allIds: activeIndividualLeagues.map(l => l.id)
       });
       
       // Create a map of league_id to league info for quick lookup
@@ -423,18 +320,6 @@ export function useUsersData() {
           league_name: league.name || ''
         });
       });
-      
-      console.log('🏸 League info map:', {
-        size: leagueInfoMap.size,
-        entries: Array.from(leagueInfoMap.entries()).slice(0, 5).map(([id, info]) => ({
-          league_id: id,
-          ...info
-        }))
-      });
-      
-      if (paymentsError) {
-        console.error('Error loading payments:', paymentsError);
-      }
       
       // Create a map of user_id to payment totals
       const userPaymentTotals = new Map<string, { total_owed: number; total_paid: number }>();
@@ -450,14 +335,6 @@ export function useUsersData() {
           existing.total_paid += Number(payment.amount_paid) || 0;
           userPaymentTotals.set(payment.user_id, existing);
         });
-        
-        console.log('Payment totals calculated (with 13% tax):', {
-          totalUsers: userPaymentTotals.size,
-          sample: Array.from(userPaymentTotals.entries()).slice(0, 3).map(([userId, totals]) => ({
-            userId: userId.substring(0, 8) + '...',
-            ...totals
-          }))
-        });
       }
       
       // Process users and add registration data
@@ -467,15 +344,6 @@ export function useUsersData() {
         // IMPORTANT: Only use profile_id, not auth_id, as team rosters contain profile IDs
         const userIdForTeams = user.profile_id || '';  
         const userTeams = userIdForTeams ? userTeamsMap.get(userIdForTeams) || [] : [];
-        
-        // Debug: Log samples of users with and without teams
-        if (index < 5) {
-          if (userTeams.length > 0) {
-            console.log(`✓ User ${user.name} (${userIdForTeams}) has ${userTeams.length} teams:`, userTeams.map(t => t.name));
-          } else if (user.name) {
-            console.log(`✗ User ${user.name} (${userIdForTeams}) has NO teams`);
-          }
-        }
 
         // Map teams to registration format
         // Note: userTeams already only contains teams from leagues that haven't ended
@@ -518,19 +386,6 @@ export function useUsersData() {
         });
 
         // Add individual league registrations (for badminton)
-        // Debug: Log users with league_ids
-        if (user.league_ids && user.league_ids.length > 0) {
-          console.log(`🏸 User ${user.name} has individual leagues:`, {
-            league_ids: user.league_ids,
-            league_ids_type: typeof user.league_ids,
-            first_id_type: typeof user.league_ids[0],
-            parsed_ids: user.league_ids.map(id => {
-              // Handle both string and number types
-              const parsed = typeof id === 'string' ? parseInt(id, 10) : Number(id);
-              return { original: id, parsed, inMap: leagueInfoMap.has(parsed) };
-            })
-          });
-        }
         
         const individualRegistrations = (user.league_ids || [])
           .map(leagueId => {
@@ -538,14 +393,12 @@ export function useUsersData() {
             const leagueIdNum = typeof leagueId === 'string' ? parseInt(leagueId, 10) : Number(leagueId);
             
             if (isNaN(leagueIdNum)) {
-              console.log(`⚠️ Invalid league ID: ${leagueId}`);
               return null;
             }
             
             const leagueInfo = leagueInfoMap.get(leagueIdNum);
             
             if (leagueInfo) {
-              console.log(`✅ Found league info for ${leagueIdNum}:`, leagueInfo);
               return {
                 team_id: 0, // No team for individual registrations
                 team_name: 'Individual Registration',
@@ -554,8 +407,6 @@ export function useUsersData() {
                 sport_id: leagueInfo.sport_id,
                 sport_name: leagueInfo.sport_name
               };
-            } else {
-              console.log(`❌ No league info found for ${leagueIdNum} (original: ${leagueId})`);
             }
             return null;
           })
@@ -564,16 +415,9 @@ export function useUsersData() {
         // Combine team and individual registrations
         const allRegistrations = [...userRegistrations, ...individualRegistrations];
         
-        // Debug: Log if user has individual registrations
-        if (individualRegistrations.length > 0) {
-          console.log(`🏸 User ${user.name} has ${individualRegistrations.length} individual registrations:`, individualRegistrations);
-        }
         
         const finalUserId = user.profile_id || user.auth_id || '';  // Compute the user ID
         if (!finalUserId) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('User missing valid ID:', user);
-          }
           return null; // Skip only users without ANY valid IDs
         }
         
@@ -614,32 +458,8 @@ export function useUsersData() {
         u.current_registrations?.some(r => r.team_name === 'Individual Registration')
       );
       
-      console.log('🏸 Final processed users summary:', {
-        total: processedUsers.length,
-        withProfile: usersWithProfile.length,
-        withoutProfile: usersWithoutProfile.length,
-        withRegistrations: usersWithRegistrations.length,
-        withLeagueIds: usersWithLeagueIds.length,
-        withIndividualRegistrations: usersWithIndividualRegs.length,
-        withSkills: processedUsers.filter(u => u.user_sports_skills && u.user_sports_skills.length > 0).length,
-        first3UsersWithLeagueIds: usersWithLeagueIds.slice(0, 3).map(u => ({
-          name: u.name,
-          email: u.email,
-          league_ids: u.league_ids,
-          individual_regs: u.current_registrations?.filter(r => r.team_name === 'Individual Registration').length
-        })),
-        first3UsersWithReg: usersWithRegistrations.slice(0, 3).map(u => ({
-          name: u.name,
-          email: u.email,
-          profile_id: u.profile_id,
-          registrations: u.current_registrations?.length,
-          types: u.current_registrations?.map(r => r.team_name === 'Individual Registration' ? 'individual' : 'team')
-        }))
-      });
-      
       setUsers(processedUsers);
     } catch (error) {
-      console.error('Error loading users:', error);
       showToast('Failed to load users', 'error');
     } finally {
       setLoading(false);
@@ -680,32 +500,6 @@ export function useUsersData() {
           sportIdCounts.set(key, (sportIdCounts.get(key) || 0) + 1);
         });
       });
-      
-      console.log('Sport Filter Debug:', {
-        activeFilter: filters.activePlayer,
-        badmintonFilter: filters.badmintonPlayersInLeague,
-        volleyballFilter: filters.volleyballPlayersInLeague,
-        totalUsers: users.length,
-        usersWithRegistrations: usersWithRegs.length,
-        badmintonUsers: badmintonUsers.length,
-        volleyballUsers: volleyballUsers.length,
-        uniqueSportIds: Array.from(allSportIds).map(id => ({ value: id, type: typeof id })),
-        uniqueSportNames: Array.from(allSportNames),
-        sportIdDistribution: Array.from(sportIdCounts.entries()).map(([key, count]) => {
-          const [id, type] = key.split('_');
-          return { sport_id: id, type, count };
-        }),
-        EXPECTED_IDS: { VOLLEYBALL: SPORT_IDS.VOLLEYBALL, BADMINTON: SPORT_IDS.BADMINTON },
-        sampleRegistrations: usersWithRegs.slice(0, 3).map(u => ({
-          name: u.name,
-          registrations: u.current_registrations?.slice(0, 2).map(r => ({
-            team: r.team_name,
-            sport_id: r.sport_id,
-            sport_id_type: typeof r.sport_id,
-            sport: r.sport_name
-          }))
-        }))
-      });
     }
     
     // Apply filters
@@ -720,30 +514,6 @@ export function useUsersData() {
       // (current_registrations only includes teams from leagues where end_date >= today)
       filtered = filtered.filter(user => {
         const hasRegistrations = user.current_registrations && user.current_registrations.length > 0;
-        
-        // More detailed logging for debugging
-        if (hasRegistrations && Math.random() < 0.02) { // Log 2% sample
-          console.log('Sample active user:', {
-            name: user.name,
-            email: user.email,
-            profile_id: user.profile_id,
-            team_ids: user.team_ids,
-            registrations: user.current_registrations?.map(r => ({
-              team: r.team_name,
-              league: r.league_name
-            }))
-          });
-        }
-        
-        // Log users without profile but with registrations (shouldn't happen)
-        if (hasRegistrations && !user.profile_id) {
-          console.warn('⚠️ User has registrations but no profile_id:', {
-            name: user.name,
-            email: user.email,
-            registrations: user.current_registrations
-          });
-        }
-        
         return hasRegistrations;
       });
     }
@@ -811,22 +581,6 @@ export function useUsersData() {
           
           return sportIdMatch || sportNameMatch;
         }) || false;
-        
-        // Debug logging for badminton filter
-        if (user.current_registrations && user.current_registrations.length > 0 && Math.random() < 0.05) {
-          console.log('Badminton filter check for user:', {
-            name: user.name,
-            hasBadminton,
-            registrations: user.current_registrations?.map(r => ({
-              team: r.team_name,
-              sport_id: r.sport_id,
-              sport_id_type: typeof r.sport_id,
-              sport: r.sport_name,
-              expected_badminton_id: SPORT_IDS.BADMINTON,
-              expected_type: typeof SPORT_IDS.BADMINTON
-            }))
-          });
-        }
         
         return hasBadminton;
       });

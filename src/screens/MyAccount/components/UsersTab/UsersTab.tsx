@@ -53,7 +53,6 @@ export function UsersTab() {
       exportUsersToCSV(filteredUsers, selectedColumns, filename);
       showToast(`Exported ${filteredUsers.length} users to ${filename}`, 'success');
     } catch (error) {
-      console.error('Error exporting CSV:', error);
       showToast('Failed to export CSV. Please try again.', 'error');
     }
   };
