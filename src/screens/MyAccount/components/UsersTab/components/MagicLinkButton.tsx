@@ -55,16 +55,12 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
           );
         }
         
-        // Also log the link for debugging (remove in production)
-        console.log(`Password reset link for ${displayName}:`, data.link);
-        
         // Reset copied state after 3 seconds
         setTimeout(() => {
           setCopied(false);
         }, 3000);
       }
     } catch (error) {
-      console.error('Error generating magic link:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate magic link';
       showToast(errorMessage, 'error');
     } finally {

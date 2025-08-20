@@ -176,7 +176,6 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
 
       showToast('Password reset email sent successfully!', 'success');
     } catch (error) {
-      console.error('Error resetting password:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
       showToast(errorMessage, 'error');
     } finally {
