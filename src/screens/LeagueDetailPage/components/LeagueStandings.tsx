@@ -76,11 +76,10 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
             <table className="w-full table-fixed">
               <colgroup>
                 <col style={{ width: "10%" }} />
-                <col style={{ width: "40%" }} />
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
+                <col style={{ width: "50%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "14%" }} />
               </colgroup>
               <thead className="bg-gray-50 border-b">
                 <tr>
@@ -89,9 +88,6 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">
                     Team
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">
-                    Captain
                   </th>
                   <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
                     Wins
@@ -121,11 +117,6 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">
                       {team.name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#6F6F6F]">
-                      {team.captain_name || (
-                        <span className="text-gray-400 italic">(hidden)</span>
-                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
                       -

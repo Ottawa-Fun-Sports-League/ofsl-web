@@ -1,52 +1,102 @@
 import { User } from '../types';
 
-export function exportUsersToCSV(users: User[], filename: string = 'users_export.csv') {
-  // Define the columns to export
-  const headers = [
-    'Name',
-    'Email',
-    'Phone',
-    'Status',
-    'Admin',
-    'Facilitator',
-    'Registrations',
-    'Sports',
-    'Total Owed',
-    'Total Paid',
-    'Balance Due',
-    'Date Created',
-    'Last Sign In'
-  ];
+interface ColumnConfig {
+  key: string;
+  header: string;
+  getValue: (user: User) => string;
+}
 
-  // Convert users data to CSV rows
+const COLUMN_CONFIGS: ColumnConfig[] = [
+  {
+    key: 'name',
+    header: 'Name',
+    getValue: (user) => user.name || ''
+  },
+  {
+    key: 'email',
+    header: 'Email',
+    getValue: (user) => user.email || ''
+  },
+  {
+    key: 'phone',
+    header: 'Phone',
+    getValue: (user) => user.phone || ''
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    getValue: (user) => user.status || 'active'
+  },
+  {
+    key: 'admin',
+    header: 'Admin',
+    getValue: (user) => user.is_admin ? 'Yes' : 'No'
+  },
+  {
+    key: 'facilitator',
+    header: 'Facilitator',
+    getValue: (user) => user.is_facilitator ? 'Yes' : 'No'
+  },
+  {
+    key: 'registrations',
+    header: 'Registrations',
+    getValue: (user) => (user.current_registrations?.length || 0).toString()
+  },
+  {
+    key: 'sports',
+    header: 'Sports',
+    getValue: (user) => {
+      const sports = new Set<string>();
+      user.current_registrations?.forEach(reg => {
+        if (reg.sport_name) sports.add(reg.sport_name);
+      });
+      return Array.from(sports).join('; ');
+    }
+  },
+  {
+    key: 'total_owed',
+    header: 'Total Owed (incl. 13% tax)',
+    getValue: (user) => `$${(user.total_owed || 0).toFixed(2)}`
+  },
+  {
+    key: 'total_paid',
+    header: 'Total Paid',
+    getValue: (user) => `$${(user.total_paid || 0).toFixed(2)}`
+  },
+  {
+    key: 'balance_due',
+    header: 'Balance Due',
+    getValue: (user) => {
+      const balanceDue = (user.total_owed || 0) - (user.total_paid || 0);
+      return `$${balanceDue.toFixed(2)}`;
+    }
+  },
+  {
+    key: 'date_created',
+    header: 'Date Created',
+    getValue: (user) => formatDate(user.date_created)
+  },
+  {
+    key: 'last_sign_in',
+    header: 'Last Sign In',
+    getValue: (user) => user.last_sign_in_at ? formatDate(user.last_sign_in_at) : ''
+  }
+];
+
+export function exportUsersToCSV(
+  users: User[], 
+  selectedColumns: string[], 
+  filename: string = 'users_export.csv'
+) {
+  // Filter columns based on selection
+  const columnsToExport = COLUMN_CONFIGS.filter(col => selectedColumns.includes(col.key));
+  
+  // Get headers for selected columns
+  const headers = columnsToExport.map(col => col.header);
+
+  // Convert users data to CSV rows with only selected columns
   const rows = users.map(user => {
-    // Get sports from registrations
-    const sports = new Set<string>();
-    user.current_registrations?.forEach(reg => {
-      if (reg.sport_name) sports.add(reg.sport_name);
-    });
-    
-    // Get registration count
-    const registrationCount = user.current_registrations?.length || 0;
-    
-    // Calculate balance due
-    const balanceDue = (user.total_owed || 0) - (user.total_paid || 0);
-    
-    return [
-      user.name || '',
-      user.email || '',
-      user.phone || '',
-      user.status || 'active',
-      user.is_admin ? 'Yes' : 'No',
-      user.is_facilitator ? 'Yes' : 'No',
-      registrationCount.toString(),
-      Array.from(sports).join('; '),
-      `$${(user.total_owed || 0).toFixed(2)}`,
-      `$${(user.total_paid || 0).toFixed(2)}`,
-      `$${balanceDue.toFixed(2)}`,
-      formatDate(user.date_created),
-      user.last_sign_in_at ? formatDate(user.last_sign_in_at) : ''
-    ];
+    return columnsToExport.map(col => col.getValue(user));
   });
 
   // Combine headers and rows

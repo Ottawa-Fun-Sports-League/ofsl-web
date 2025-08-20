@@ -93,6 +93,8 @@ export function useUsersData() {
         return;
       }
 
+      // Run all data fetches in parallel for better performance
+      
       // Fetch all users including auth-only users using the admin function
       interface UserData {
         profile_id?: string;  // This is the profile ID from users table (returned by RPC)
@@ -119,8 +121,34 @@ export function useUsersData() {
       
       let usersData: TransformedUserData[] = [];
       
-      const { data: allUsersData, error: allUsersError } = await supabase
-        .rpc('get_all_users_admin');
+      // Fetch users and teams data in parallel for better performance
+      const [usersResult, teamsResult] = await Promise.all([
+        supabase.rpc('get_all_users_admin'),
+        supabase
+          .from('teams')
+          .select(`
+            id,
+            name,
+            captain_id,
+            roster,
+            co_captains,
+            league_id,
+            leagues!inner (
+              id,
+              name,
+              sport_id,
+              active,
+              end_date,
+              sports!inner (
+                id,
+                name
+              )
+            )
+          `)
+      ]);
+
+      const { data: allUsersData, error: allUsersError } = usersResult;
+      const { data: teamsData, error: teamsError } = teamsResult;
 
       // Debug: RPC response for admin function
       if (process.env.NODE_ENV === 'development') {
@@ -218,31 +246,8 @@ export function useUsersData() {
         }))
       });
       
-      // Fetch all teams with their roster data
-      // We'll filter by end_date to determine active players
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          captain_id,
-          roster,
-          co_captains,
-          league_id,
-          leagues!inner (
-            id,
-            name,
-            sport_id,
-            active,
-            end_date,
-            sports!inner (
-              id,
-              name
-            )
-          )
-        `);
-        // Note: We removed the active filter here and will check end_date instead
-
+      // Teams data already fetched in parallel above
+      // Check for errors from the parallel fetch
       if (teamsError) {
         console.error('Error loading teams:', teamsError);
         // Continue processing with empty teams data
@@ -353,23 +358,31 @@ export function useUsersData() {
         }))
       });
       
-      // Load individual leagues data for badminton
-      let individualLeaguesData: any[] = [];
-      const { data: leagues, error: leaguesError } = await supabase
-        .from('leagues')
-        .select(`
-          id,
-          name,
-          sport_id,
-          team_registration,
-          end_date,
-          sports!inner (
+      // Load individual leagues and payments data in parallel
+      const [leaguesResult, paymentsResult] = await Promise.all([
+        supabase
+          .from('leagues')
+          .select(`
             id,
-            name
-          )
-        `)
-        .eq('team_registration', false); // Individual registrations only
+            name,
+            sport_id,
+            team_registration,
+            end_date,
+            sports!inner (
+              id,
+              name
+            )
+          `)
+          .eq('team_registration', false), // Individual registrations only
+        supabase
+          .from('league_payments')
+          .select('user_id, amount_due, amount_paid, status')
+      ]);
       
+      const { data: leagues, error: leaguesError } = leaguesResult;
+      const { data: paymentsData, error: paymentsError } = paymentsResult;
+      
+      let individualLeaguesData: any[] = [];
       if (!leaguesError && leagues) {
         individualLeaguesData = leagues;
         console.log('🏸 Individual leagues loaded:', {
@@ -419,27 +432,26 @@ export function useUsersData() {
         }))
       });
       
-      // Fetch payment data for all users
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('league_payments')
-        .select('user_id, amount_due, amount_paid, status');
-      
       if (paymentsError) {
         console.error('Error loading payments:', paymentsError);
       }
       
       // Create a map of user_id to payment totals
       const userPaymentTotals = new Map<string, { total_owed: number; total_paid: number }>();
+      const TAX_RATE = 0.13; // 13% HST
       
       if (paymentsData) {
         paymentsData.forEach(payment => {
           const existing = userPaymentTotals.get(payment.user_id) || { total_owed: 0, total_paid: 0 };
-          existing.total_owed += Number(payment.amount_due) || 0;
+          const amountDue = Number(payment.amount_due) || 0;
+          // Add 13% tax to the amount owed
+          const amountDueWithTax = amountDue * (1 + TAX_RATE);
+          existing.total_owed += amountDueWithTax;
           existing.total_paid += Number(payment.amount_paid) || 0;
           userPaymentTotals.set(payment.user_id, existing);
         });
         
-        console.log('Payment totals calculated:', {
+        console.log('Payment totals calculated (with 13% tax):', {
           totalUsers: userPaymentTotals.size,
           sample: Array.from(userPaymentTotals.entries()).slice(0, 3).map(([userId, totals]) => ({
             userId: userId.substring(0, 8) + '...',
@@ -778,7 +790,7 @@ export function useUsersData() {
         // Also include players currently in volleyball leagues
         return user.current_registrations?.some(reg => {
           const sportIdMatch = reg.sport_id === SPORT_IDS.VOLLEYBALL || 
-                              reg.sport_id === String(SPORT_IDS.VOLLEYBALL) ||
+                              String(reg.sport_id) === String(SPORT_IDS.VOLLEYBALL) ||
                               Number(reg.sport_id) === SPORT_IDS.VOLLEYBALL;
           const sportNameMatch = reg.sport_name?.toLowerCase().includes('volleyball');
           return sportIdMatch || sportNameMatch;
@@ -833,7 +845,7 @@ export function useUsersData() {
         // Also include players currently in badminton leagues
         return user.current_registrations?.some(reg => {
           const sportIdMatch = reg.sport_id === SPORT_IDS.BADMINTON || 
-                              reg.sport_id === String(SPORT_IDS.BADMINTON) ||
+                              String(reg.sport_id) === String(SPORT_IDS.BADMINTON) ||
                               Number(reg.sport_id) === SPORT_IDS.BADMINTON;
           const sportNameMatch = reg.sport_name?.toLowerCase().includes('badminton');
           return sportIdMatch || sportNameMatch;
