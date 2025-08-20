@@ -50,8 +50,9 @@ describe('UserRegistrationsPage', () => {
       leagues: {
         id: 10,
         name: 'Volleyball League',
-        year: 2024,
-        start_date: '2024-12-01',
+        year: 2025,
+        start_date: '2025-09-01',
+        end_date: '2025-12-31',
         sports: { name: 'Volleyball' }
       }
     },
@@ -65,9 +66,26 @@ describe('UserRegistrationsPage', () => {
       leagues: {
         id: 11,
         name: 'Badminton League',
-        year: 2024,
-        start_date: '2024-09-01',
+        year: 2025,
+        start_date: '2025-09-01',
+        end_date: '2025-12-31',
         sports: { name: 'Badminton' }
+      }
+    },
+    {
+      id: 3,
+      name: 'Team C - Roster Only',
+      captain_id: 'another-user',
+      co_captains: [],
+      roster: ['test-user-id', 'other-user'],
+      league_id: 12,
+      leagues: {
+        id: 12,
+        name: 'Mixed League',
+        year: 2025,
+        start_date: '2025-10-01',
+        end_date: '2025-12-31',
+        sports: { name: 'Volleyball' }
       }
     }
   ];
@@ -161,8 +179,7 @@ describe('UserRegistrationsPage', () => {
       
       if (table === 'teams') {
         return {
-          select: vi.fn().mockReturnThis(),
-          in: vi.fn().mockResolvedValue({ 
+          select: vi.fn().mockResolvedValue({ 
             data: mockTeams, 
             error: null 
           })
@@ -195,7 +212,7 @@ describe('UserRegistrationsPage', () => {
     });
   });
 
-  it('should display user registrations for admin', async () => {
+  it('should display user registrations for admin including all team roles', async () => {
     render(
       <BrowserRouter>
         <UserRegistrationsPage />
@@ -209,14 +226,16 @@ describe('UserRegistrationsPage', () => {
 
     // Check header info
     expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
-    expect(screen.getByText(/4 Total Registrations/)).toBeInTheDocument();
+    expect(screen.getByText(/5 Total Registrations/)).toBeInTheDocument(); // 3 teams + 2 individual
 
-    // Check team registrations section
-    expect(screen.getByText('Team Registrations (2)')).toBeInTheDocument();
+    // Check team registrations section - should show all 3 teams
+    expect(screen.getByText('Team Registrations (3)')).toBeInTheDocument();
     expect(screen.getByText('Team A')).toBeInTheDocument();
     expect(screen.getByText('Volleyball League')).toBeInTheDocument();
     expect(screen.getByText('Team B')).toBeInTheDocument();
     expect(screen.getByText('Badminton League')).toBeInTheDocument();
+    expect(screen.getByText('Team C - Roster Only')).toBeInTheDocument();
+    expect(screen.getByText('Mixed League')).toBeInTheDocument();
 
     // Check individual registrations section  
     expect(screen.getByText('Individual Registrations (2)')).toBeInTheDocument();
@@ -230,6 +249,7 @@ describe('UserRegistrationsPage', () => {
     // Check role badges
     expect(screen.getByText('captain')).toBeInTheDocument();
     expect(screen.getByText('co-captain')).toBeInTheDocument();
+    expect(screen.getByText('player')).toBeInTheDocument(); // For Team C where user is only in roster
   });
 
   it('should show access denied for non-admin users', async () => {
@@ -284,9 +304,9 @@ describe('UserRegistrationsPage', () => {
       expect(screen.getByText("Test User's Registrations")).toBeInTheDocument();
     });
 
-    // Check for edit buttons
+    // Check for edit buttons - now 3 teams
     const editButtons = screen.getAllByText('Edit Team');
-    expect(editButtons).toHaveLength(2);
+    expect(editButtons).toHaveLength(3);
 
     const editRegButtons = screen.getAllByText('Edit Registration');
     expect(editRegButtons).toHaveLength(2);

@@ -117,38 +117,57 @@ export function UserRegistrationsPage() {
 
       setUserData(user);
 
-      // Load team registrations
-      if (user.team_ids && user.team_ids.length > 0) {
-        const { data: teams, error: teamsError } = await supabase
-          .from('teams')
-          .select(`
+      // Load ALL team registrations where user is involved
+      // This includes teams where they are captain, co-captain, or roster member
+      const { data: allTeams, error: allTeamsError } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          captain_id,
+          co_captains,
+          roster,
+          league_id,
+          leagues!inner (
             id,
             name,
-            captain_id,
-            co_captains,
-            roster,
-            league_id,
-            leagues!inner (
-              id,
-              name,
-              sport_id,
-              year,
-              start_date,
-              sports!inner (
-                name
-              )
+            sport_id,
+            year,
+            start_date,
+            end_date,
+            sports!inner (
+              name
             )
-          `)
-          .in('id', user.team_ids);
+          )
+        `);
+      
+      // Filter teams to only include those where the user is involved
+      // and the league hasn't ended yet
+      const today = new Date().toISOString().split('T')[0];
+      const teams = allTeams?.filter(team => {
+        const league = team.leagues as any;
+        // Check if league is still active (not ended)
+        if (league?.end_date && league.end_date < today) {
+          return false; // Skip ended leagues
+        }
+        
+        // Check if user is involved in this team
+        return team.captain_id === user.id ||
+               team.co_captains?.includes(user.id) ||
+               team.roster?.includes(user.id);
+      }) || [];
+      
+      if (teams.length > 0) {
 
-        if (teamsError) {
-          console.error('Error loading teams:', teamsError);
-        } else if (teams) {
-          // Load payment data for teams
+        if (allTeamsError) {
+          console.error('Error loading teams:', allTeamsError);
+        } else {
+          // Load payment data for the filtered teams
+          const teamIds = teams.map(t => t.id);
           const { data: payments } = await supabase
             .from('league_payments')
             .select('*')
-            .in('team_id', user.team_ids);
+            .in('team_id', teamIds);
 
           const teamRegs: TeamRegistration[] = teams.map(team => {
             const league = team.leagues as any;

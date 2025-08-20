@@ -72,7 +72,9 @@ serve(async (req) => {
       );
     }
 
-    console.log('Attempting to delete user:', userId);
+    console.log('Attempting to delete user with ID:', userId);
+    console.log('User ID type:', typeof userId);
+    console.log('User ID length:', userId.length);
 
     // Create admin client with service role key
     const supabaseAdmin = createClient(
@@ -80,12 +82,22 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // First, try to get the user from public.users table
-    const { data: targetUser, error: targetFetchError } = await supabaseAdmin
+    // First, try to get the user from public.users table using parameterized query
+    // Try both 'id' and 'auth_id' fields
+    const { data: targetUserById, error: targetFetchErrorById } = await supabaseAdmin
       .from('users')
       .select('auth_id, id')
-      .or(`id.eq.${userId},auth_id.eq.${userId}`)
+      .eq('id', userId)
       .maybeSingle();
+    
+    const { data: targetUserByAuthId, error: targetFetchErrorByAuthId } = await supabaseAdmin
+      .from('users')
+      .select('auth_id, id')
+      .eq('auth_id', userId)
+      .maybeSingle();
+    
+    const targetUser = targetUserById || targetUserByAuthId;
+    const targetFetchError = targetFetchErrorById && targetFetchErrorByAuthId ? targetFetchErrorById : null;
 
     if (targetFetchError) {
       console.error('Error fetching target user from public.users:', targetFetchError);
@@ -103,19 +115,32 @@ serve(async (req) => {
       // The userId might be the auth UUID itself
       console.log('User not found in public.users, checking if it is an auth UUID');
       
-      // Try to get the auth user directly
-      const { data: authUser, error: authFetchError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      // Check if userId looks like a UUID (for auth users)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       
-      if (authFetchError || !authUser) {
-        console.error('User not found in auth.users either:', authFetchError);
+      if (uuidRegex.test(userId)) {
+        // Try to get the auth user directly
+        console.log('User ID looks like UUID, trying auth.admin.getUserById');
+        const { data: authUser, error: authFetchError } = await supabaseAdmin.auth.admin.getUserById(userId);
+        
+        if (authFetchError || !authUser) {
+          console.error('User not found in auth.users either:', authFetchError);
+          return new Response(
+            JSON.stringify({ error: 'User not found in database' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log('Found auth-only user:', authUser.email);
+        authIdToDelete = userId;
+      } else {
+        // ID doesn't look like a UUID and wasn't found in public.users
+        console.error('User ID does not match expected format and not found in public.users:', userId);
         return new Response(
-          JSON.stringify({ error: 'User not found in database' }),
+          JSON.stringify({ error: 'User not found. The user ID format appears to be invalid.' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      console.log('Found auth-only user:', authUser.email);
-      authIdToDelete = userId;
     }
 
     // Delete from auth.users table if we have an auth ID
