@@ -122,10 +122,6 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
-
     setDeleting(userId);
     try {
       const { data: { session } } = await supabase.auth.getSession();

@@ -1,16 +1,17 @@
 import { Button } from '../../../../../components/ui/button';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Download } from 'lucide-react';
 
 interface UsersHeaderProps {
   userCount: number;
   onOpenMobileFilter: () => void;
   onRefresh: () => void;
+  onExportCSV: () => void;
   activeFilterCount?: number;
 }
 
-export function UsersHeader({ userCount, onOpenMobileFilter, onRefresh, activeFilterCount = 0 }: UsersHeaderProps) {
+export function UsersHeader({ userCount, onOpenMobileFilter, onRefresh, onExportCSV, activeFilterCount = 0 }: UsersHeaderProps) {
   return (
-    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pb-4">
       <div className="flex items-center gap-2 justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold text-[#6F6F6F]">Manage Users</h2>
@@ -31,12 +32,22 @@ export function UsersHeader({ userCount, onOpenMobileFilter, onRefresh, activeFi
         <div className="text-sm text-[#6F6F6F]">
           Total Users: {userCount}
         </div>
-        <Button
-          onClick={onRefresh}
-          className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-4 py-2 text-sm"
-        >
-          Refresh Users
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={onExportCSV}
+            className="bg-gray-600 hover:bg-gray-700 text-white rounded-[10px] px-3 md:px-4 py-2 text-sm flex items-center gap-2"
+            disabled={userCount === 0}
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden md:inline">Export CSV</span>
+          </Button>
+          <Button
+            onClick={onRefresh}
+            className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-4 py-2 text-sm"
+          >
+            Refresh Users
+          </Button>
+        </div>
       </div>
     </div>
   );

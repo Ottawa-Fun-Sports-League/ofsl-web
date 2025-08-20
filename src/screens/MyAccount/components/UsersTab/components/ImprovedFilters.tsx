@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { UserFilters } from '../types';
+import { useDebounce } from '../../../../../hooks/useDebounce';
 
 interface ImprovedFiltersProps {
   searchTerm: string;
@@ -55,6 +56,18 @@ export function ImprovedFilters({
 }: ImprovedFiltersProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory | null>(null);
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+  const debouncedSearchTerm = useDebounce(localSearchTerm, 300); // 300ms delay
+
+  // Update parent component with debounced value
+  useEffect(() => {
+    onSearchChange(debouncedSearchTerm);
+  }, [debouncedSearchTerm, onSearchChange]);
+
+  // Sync local state when searchTerm prop changes (e.g., from clear filters)
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+  }, [searchTerm]);
 
   const activeFilters = FILTER_OPTIONS.filter(option => filters[option.key]);
   const filterCount = activeFilters.length;
@@ -81,8 +94,8 @@ export function ImprovedFilters({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
           <Input
             placeholder="Search users by name, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearchTerm}
+            onChange={(e) => setLocalSearchTerm(e.target.value)}
             className="pl-10 w-full h-10"
           />
         </div>

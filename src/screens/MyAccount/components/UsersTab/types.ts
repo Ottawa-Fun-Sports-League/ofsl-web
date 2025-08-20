@@ -18,7 +18,7 @@ export interface User {
   date_created: string;
   date_modified: string;
   team_ids: string[] | null;  // Stored as text array in DB
-  league_ids?: string[] | null;  // Individual league registrations, stored as text array
+  league_ids?: (string | number)[] | null;  // Individual league registrations, stored as bigint array in DB
   user_sports_skills?: UserSportSkill[] | null;
   current_registrations?: {
     team_id: number;
@@ -32,9 +32,12 @@ export interface User {
   status?: 'active' | 'pending' | 'unconfirmed' | 'confirmed_no_profile' | 'profile_incomplete';
   confirmed_at?: string | null;
   last_sign_in_at?: string | null;
+  // Payment fields
+  total_owed?: number;
+  total_paid?: number;
 }
 
-export type SortField = 'name' | 'email' | 'phone' | 'date_created' | 'is_admin' | 'is_facilitator' | 'team_count' | 'status';
+export type SortField = 'name' | 'email' | 'phone' | 'date_created' | 'is_admin' | 'is_facilitator' | 'team_count' | 'status' | 'total_owed' | 'total_paid';
 export type SortDirection = 'asc' | 'desc';
 
 export interface UserFilters {

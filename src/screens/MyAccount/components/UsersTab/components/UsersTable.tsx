@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { Edit2, Trash2, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
@@ -5,6 +6,7 @@ import { User, SortField, SortDirection } from '../types';
 import { Link } from 'react-router-dom';
 import { UserStatusBadge } from './UserStatusBadge';
 import { MagicLinkButton } from './MagicLinkButton';
+import { ConfirmationDialog } from '../../../../../components/ui/confirmation-dialog';
 
 interface UsersTableProps {
   users: User[];
@@ -27,6 +29,9 @@ export function UsersTable({
   onDeleteUser,
   searchTerm
 }: UsersTableProps) {
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string | null; email: string } | null>(null);
+
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? 
@@ -42,15 +47,33 @@ export function UsersTable({
     });
   };
 
+  const handleDeleteClick = (user: User) => {
+    const deleteId = user.auth_id || user.profile_id || user.id;
+    setUserToDelete({
+      id: deleteId,
+      name: user.name || null,
+      email: user.email || ''
+    });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (userToDelete) {
+      onDeleteUser(userToDelete.id);
+      setUserToDelete(null);
+    }
+  };
+
   return (
-    <Card>
+    <>
+    <Card className="shadow-sm">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[1400px]">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 rounded-tl-lg"
+                  className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 rounded-tl-lg w-[200px]"
                   onClick={() => onSort('name')}
                 >
                   <div className="flex items-center">
@@ -59,7 +82,7 @@ export function UsersTable({
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[220px]"
                   onClick={() => onSort('email')}
                 >
                   <div className="flex items-center">
@@ -68,7 +91,7 @@ export function UsersTable({
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[120px]"
                   onClick={() => onSort('status')}
                 >
                   <div className="flex items-center">
@@ -77,16 +100,34 @@ export function UsersTable({
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[110px]"
                   onClick={() => onSort('team_count')}
                 >
                   <div className="flex items-center">
-                    Registrations
+                    Reg.
                     {getSortIcon('team_count')}
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[140px]"
+                  onClick={() => onSort('total_owed')}
+                >
+                  <div className="flex items-center">
+                    Owed
+                    {getSortIcon('total_owed')}
+                  </div>
+                </th>
+                <th 
+                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[140px]"
+                  onClick={() => onSort('total_paid')}
+                >
+                  <div className="flex items-center">
+                    Paid
+                    {getSortIcon('total_paid')}
+                  </div>
+                </th>
+                <th 
+                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[100px]"
                   onClick={() => onSort('date_created')}
                 >
                   <div className="flex items-center">
@@ -94,7 +135,7 @@ export function UsersTable({
                     {getSortIcon('date_created')}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider">
+                <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider w-[150px]">
                   <div className="flex items-center">
                     Actions
                   </div>
@@ -104,7 +145,7 @@ export function UsersTable({
             <tbody className="bg-white divide-y divide-gray-200">
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -135,7 +176,7 @@ export function UsersTable({
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="space-y-1">
                       {user.email && (
                         <div className="flex items-center gap-1 text-sm text-[#6F6F6F]">
@@ -151,10 +192,10 @@ export function UsersTable({
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <UserStatusBadge status={user.status} confirmedAt={user.confirmed_at} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
+                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
                     {(() => {
                       // Use current_registrations which includes all active team memberships
                       // (captain, roster member, co-captain) in leagues that haven't ended
@@ -174,13 +215,31 @@ export function UsersTable({
                       );
                     })()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm">
+                    <div className="text-[#6F6F6F]">
+                      ${((user.total_owed || 0)).toFixed(2)}
+                      {(user.total_owed || 0) > (user.total_paid || 0) && (
+                        <span className="text-xs text-orange-600 ml-1">
+                          (${((user.total_owed || 0) - (user.total_paid || 0)).toFixed(2)} due)
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm">
+                    <div className="text-[#6F6F6F]">
+                      ${((user.total_paid || 0)).toFixed(2)}
+                      {(user.total_paid || 0) >= (user.total_owed || 0) && (user.total_owed || 0) > 0 && (
+                        <span className="text-xs text-green-600 ml-1">✓</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1 text-sm text-[#6F6F6F]">
                       <Calendar className="h-3 w-3" />
                       {formatDate(user.date_created)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       {user.email && (
                         <MagicLinkButton 
@@ -197,11 +256,11 @@ export function UsersTable({
                         <Edit2 className="h-3 w-3" />
                       </Button>
                       <Button
-                        onClick={() => onDeleteUser(user.id)}
-                        disabled={deleting === user.id}
+                        onClick={() => handleDeleteClick(user)}
+                        disabled={deleting === (user.auth_id || user.profile_id || user.id)}
                         className="bg-transparent hover:bg-red-50 text-red-500 hover:text-red-600 rounded-lg p-2 transition-colors" 
                       >
-                        {deleting === user.id ? (
+                        {deleting === (user.auth_id || user.profile_id || user.id) ? (
                           <div className="h-3 w-3 border-t-2 border-red-500 rounded-full animate-spin"></div>
                         ) : (
                           <Trash2 className="h-3 w-3" />
@@ -225,5 +284,24 @@ export function UsersTable({
         )}
       </CardContent>
     </Card>
+
+    {/* Delete Confirmation Dialog */}
+    <ConfirmationDialog
+      open={deleteConfirmOpen}
+      onOpenChange={setDeleteConfirmOpen}
+      title="Delete User"
+      description={
+        userToDelete
+          ? `Are you sure you want to delete ${
+              userToDelete.name || userToDelete.email
+            }? This action cannot be undone.`
+          : 'Are you sure you want to delete this user? This action cannot be undone.'
+      }
+      confirmText="Delete"
+      cancelText="Cancel"
+      onConfirm={handleConfirmDelete}
+      variant="destructive"
+    />
+  </>
   );
 }
