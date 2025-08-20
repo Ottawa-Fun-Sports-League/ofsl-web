@@ -44,15 +44,7 @@ export function MissingSkillLevelPrompt({
   const currentRegistration = missingSkillRegistrations[currentIndex];
   const isLastRegistration = currentIndex === missingSkillRegistrations.length - 1;
 
-  const handleSkip = () => {
-    if (isLastRegistration) {
-      setIsOpen(false);
-      onComplete();
-    } else {
-      setCurrentIndex(currentIndex + 1);
-      setSelectedSkillId(null);
-    }
-  };
+  // Removed handleSkip - users must set their skill level
 
   const handleUpdate = async () => {
     if (!selectedSkillId) {
@@ -104,7 +96,7 @@ export function MissingSkillLevelPrompt({
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div
           className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
-          onClick={() => {}}
+          aria-hidden="true"
         />
 
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen">
@@ -118,15 +110,15 @@ export function MissingSkillLevelPrompt({
             </div>
             <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Set Your Skill Level
+                Skill Level Required
               </h3>
               <div className="mt-2">
                 <p className="text-sm text-gray-500">
-                  Please set your skill level for:{" "}
+                  You must set your skill level for:{" "}
                   <strong>{currentRegistration.leagueName}</strong>
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {currentIndex + 1} of {missingSkillRegistrations.length} registrations need skill levels
+                  {currentIndex + 1} of {missingSkillRegistrations.length} registration{missingSkillRegistrations.length > 1 ? 's' : ''} need{missingSkillRegistrations.length === 1 ? 's' : ''} skill level
                 </p>
               </div>
 
@@ -170,14 +162,6 @@ export function MissingSkillLevelPrompt({
               className="w-full sm:w-auto"
             >
               {isUpdating ? "Updating..." : "Set Skill Level"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSkip}
-              disabled={isUpdating}
-              className="w-full sm:w-auto mt-2 sm:mt-0"
-            >
-              Skip for Now
             </Button>
           </div>
         </div>
