@@ -202,6 +202,47 @@ serve(async (req: Request) => {
       );
     }
 
+    // Send cancellation notification
+    try {
+      // Get captain details for notification
+      const { data: captainData } = await supabase
+        .from("users")
+        .select("id, name, email, phone")
+        .eq("id", team.captain_id)
+        .single();
+
+      if (captainData) {
+        // Call the cancellation notification function
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-cancellation-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          },
+          body: JSON.stringify({
+            userId: captainData.id,
+            userName: captainData.name || "Team Captain",
+            userEmail: captainData.email || "Unknown",
+            userPhone: captainData.phone,
+            leagueName: leagueName,
+            isTeamRegistration: true,
+            teamName: team.name,
+            cancelledAt: new Date().toISOString()
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Failed to send cancellation notification:", errorText);
+          warnings.push("Cancellation notification could not be sent");
+        }
+      }
+    } catch (notificationError) {
+      console.error("Error sending cancellation notification:", notificationError);
+      warnings.push("Cancellation notification could not be sent");
+      // Don't block the deletion due to notification failure
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
