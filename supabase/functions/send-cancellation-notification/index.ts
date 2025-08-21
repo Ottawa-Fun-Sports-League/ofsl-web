@@ -370,9 +370,12 @@ serve(async (req: Request) => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
       // eslint-disable-next-line no-console
-      console.error("RESEND_API_KEY not found");
+      console.error("[Cancellation Notification] RESEND_API_KEY not configured");
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
+        JSON.stringify({ 
+          error: "Email service not configured",
+          errorType: "CONFIGURATION_ERROR"
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -380,57 +383,89 @@ serve(async (req: Request) => {
       );
     }
 
-    // Send both emails
-    const emailPromises = [
-      // User email
-      fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "OFSL <noreply@ofsl.ca>",
-          ...userEmailContent,
-        }),
-      }),
-      // Admin email
-      fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "OFSL System <noreply@ofsl.ca>",
-          ...adminEmailContent,
-        }),
-      }),
-    ];
+    // Helper function to send email with retry logic
+    async function sendEmailWithRetry(
+      emailType: 'user' | 'admin',
+      emailContent: any,
+      maxRetries: number = 3
+    ): Promise<{ success: boolean; result?: any; error?: string }> {
+      let lastError: string = '';
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          // Add exponential backoff for retries
+          if (attempt > 1) {
+            const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+            // eslint-disable-next-line no-console
+            console.log(`[Cancellation Notification] Retrying ${emailType} email (attempt ${attempt}/${maxRetries}) after ${backoffMs}ms`);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+          }
 
-    const [userEmailResponse, adminEmailResponse] = await Promise.all(emailPromises);
+          const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: emailType === 'user' ? "OFSL <noreply@ofsl.ca>" : "OFSL System <noreply@ofsl.ca>",
+              ...emailContent,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            // eslint-disable-next-line no-console
+            console.log(`[Cancellation Notification] ${emailType} email sent successfully (attempt ${attempt}/${maxRetries}):`, result.id);
+            return { success: true, result: { type: emailType, emailId: result.id } };
+          }
+
+          const errorText = await response.text();
+          lastError = `HTTP ${response.status}: ${errorText}`;
+          
+          // Don't retry on 4xx errors (client errors)
+          if (response.status >= 400 && response.status < 500) {
+            // eslint-disable-next-line no-console
+            console.error(`[Cancellation Notification] ${emailType} email failed with client error (not retrying):`, lastError);
+            break;
+          }
+          
+          // Log retry attempts
+          // eslint-disable-next-line no-console
+          console.warn(`[Cancellation Notification] ${emailType} email attempt ${attempt} failed:`, lastError);
+          
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : String(error);
+          // eslint-disable-next-line no-console
+          console.error(`[Cancellation Notification] ${emailType} email attempt ${attempt} error:`, lastError);
+        }
+      }
+      
+      return { 
+        success: false, 
+        error: `Failed to send ${emailType} notification after ${maxRetries} attempts: ${lastError}` 
+      };
+    }
+
+    // Send both emails with retry logic
+    const [userEmailResult, adminEmailResult] = await Promise.all([
+      sendEmailWithRetry('user', userEmailContent),
+      sendEmailWithRetry('admin', adminEmailContent)
+    ]);
 
     const errors = [];
     const results = [];
 
-    if (!userEmailResponse.ok) {
-      const errorText = await userEmailResponse.text();
-      // eslint-disable-next-line no-console
-      console.error("Failed to send user email:", errorText);
-      errors.push("Failed to send user notification");
+    if (userEmailResult.success) {
+      results.push(userEmailResult.result);
     } else {
-      const userResult = await userEmailResponse.json();
-      results.push({ type: 'user', emailId: userResult.id });
+      errors.push(userEmailResult.error);
     }
 
-    if (!adminEmailResponse.ok) {
-      const errorText = await adminEmailResponse.text();
-      // eslint-disable-next-line no-console
-      console.error("Failed to send admin email:", errorText);
-      errors.push("Failed to send admin notification");
+    if (adminEmailResult.success) {
+      results.push(adminEmailResult.result);
     } else {
-      const adminResult = await adminEmailResponse.json();
-      results.push({ type: 'admin', emailId: adminResult.id });
+      errors.push(adminEmailResult.error);
     }
 
     // Return partial success if at least one email was sent
@@ -451,6 +486,7 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: "Failed to send any notification emails",
+          errorType: "EMAIL_SEND_FAILED",
           details: errors,
         }),
         {
@@ -461,10 +497,17 @@ serve(async (req: Request) => {
     }
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error("Error in send-cancellation-notification function:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[Cancellation Notification] Unexpected error in function:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: "Internal server error",
+        errorType: "INTERNAL_ERROR",
+        details: error instanceof Error ? error.message : String(error)
+      }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
