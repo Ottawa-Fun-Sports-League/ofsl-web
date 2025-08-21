@@ -79,12 +79,23 @@ export function useTeamOperations() {
 
       setUnregisteringPayment(paymentId);
       try {
-        // Get payment details for league_id
+        // Get payment details for league_id and user info
         const { data: payment } = await supabase
           .from('league_payments')
           .select('league_id, user_id')
           .eq('id', paymentId)
           .single();
+        
+        // Get user details for the notification
+        let userDetails = null;
+        if (payment) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('id, name, email, phone')
+            .eq('id', payment.user_id)
+            .single();
+          userDetails = userData;
+        }
 
         // Delete the payment record
         const { error: deletePaymentError } = await supabase
@@ -113,6 +124,37 @@ export function useTeamOperations() {
             if (updateError) {
               console.error('Error updating user league_ids:', updateError);
             }
+          }
+        }
+
+        // Send cancellation notification
+        if (userDetails) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              const notificationResponse = await supabase.functions.invoke(
+                "send-cancellation-notification",
+                {
+                  body: {
+                    userId: userDetails.id,
+                    userName: userDetails.name || "Unknown",
+                    userEmail: userDetails.email || "Unknown",
+                    userPhone: userDetails.phone,
+                    leagueName: leagueName,
+                    isTeamRegistration: false,
+                    cancelledAt: new Date().toISOString(),
+                  },
+                },
+              );
+              
+              if (notificationResponse.error) {
+                console.error("Failed to send cancellation notification:", notificationResponse.error);
+                // Don't throw - notification failure shouldn't block cancellation
+              }
+            }
+          } catch (notificationError) {
+            console.error("Error sending cancellation notification:", notificationError);
+            // Don't throw - notification failure shouldn't block cancellation
           }
         }
 
