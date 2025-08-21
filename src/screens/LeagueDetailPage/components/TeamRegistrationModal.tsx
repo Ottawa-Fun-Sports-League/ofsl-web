@@ -180,6 +180,36 @@ export function TeamRegistrationModal({
           }
           throw new Error(paymentError.message || 'Failed to create payment record');
         }
+        
+        // Send notification to info@ofsl.ca for individual registration
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const notificationResponse = await supabase.functions.invoke(
+              "notify-individual-registration",
+              {
+                body: {
+                  userId: userProfile.id,
+                  userName: userProfile.name || "Unknown",
+                  userEmail: user?.email || userProfile.email || "Unknown",
+                  userPhone: userProfile.phone,
+                  leagueName: leagueName,
+                  registeredAt: new Date().toISOString(),
+                  amountPaid: 0, // Will be updated when payment is made
+                  paymentMethod: "Pending"
+                },
+              },
+            );
+            
+            if (notificationResponse.error) {
+              console.error("Failed to send individual registration notification:", notificationResponse.error);
+              // Don't throw - notification failure shouldn't block registration
+            }
+          }
+        } catch (notificationError) {
+          console.error("Error sending individual registration notification:", notificationError);
+          // Don't throw - notification failure shouldn't block registration
+        }
       } else if (isTeamRegistration) {
         // For team registrations, create team as before
         // Get the highest display_order for this league to add new team at the end
