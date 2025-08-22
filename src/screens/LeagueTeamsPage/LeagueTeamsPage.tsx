@@ -643,7 +643,7 @@ export function LeagueTeamsPage() {
             .eq('user_id', teamId)
             .eq('league_id', leagueId)
             .is('team_id', null)
-            .single();
+            .maybeSingle(); // Use maybeSingle to handle cases where no record exists
           
           const amountPaid = currentPayment?.amount_paid || 0;
           if (amountPaid >= league.cost) {
@@ -653,16 +653,27 @@ export function LeagueTeamsPage() {
           } else {
             updateData.status = 'pending';
           }
+          
+          console.log('Moving player to active:', {
+            teamId,
+            leagueCost: league.cost,
+            amountPaid,
+            updateData
+          });
         }
         
-        const { error: updateError } = await supabase
+        const { data: updatedPayment, error: updateError } = await supabase
           .from('league_payments')
           .update(updateData)
           .eq('user_id', teamId)
           .eq('league_id', leagueId)
-          .is('team_id', null);
+          .is('team_id', null)
+          .select()
+          .single();
           
         if (updateError) throw updateError;
+        
+        console.log('Payment record after update:', updatedPayment);
         
         // Also update user's league_ids
         const leagueIdNum = parseInt(leagueId!);
