@@ -88,11 +88,7 @@ export function IndividualEditPage() {
 
       if (userError) throw userError;
 
-      // Verify user is registered for this league
       const leagueIdNum = parseInt(leagueId!);
-      if (!userData.league_ids || !userData.league_ids.includes(leagueIdNum)) {
-        throw new Error('User is not registered for this league');
-      }
 
       // Load league data
       const { data: leagueData, error: leagueError } = await supabase
@@ -103,13 +99,7 @@ export function IndividualEditPage() {
 
       if (leagueError) throw leagueError;
 
-      setIndividual({
-        ...userData,
-        league_name: leagueData.name,
-        league_cost: leagueData.cost
-      });
-
-      // Load or create payment record
+      // Check if user has a payment record for this league (either active or waitlisted)
       let { data: payment, error: paymentError } = await supabase
         .from('league_payments')
         .select('*')
@@ -119,6 +109,20 @@ export function IndividualEditPage() {
         .maybeSingle();
 
       if (paymentError) throw paymentError;
+
+      // Verify user is registered for this league (either in league_ids or has a payment record)
+      const isInLeagueIds = userData.league_ids && userData.league_ids.includes(leagueIdNum);
+      const hasPaymentRecord = !!payment;
+      
+      if (!isInLeagueIds && !hasPaymentRecord) {
+        throw new Error('User is not registered for this league');
+      }
+
+      setIndividual({
+        ...userData,
+        league_name: leagueData.name,
+        league_cost: leagueData.cost
+      });
 
       if (!payment) {
         // Create payment record if it doesn't exist

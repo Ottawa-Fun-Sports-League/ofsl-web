@@ -869,7 +869,7 @@ export function LeagueTeamsPage() {
           <div className={`flex justify-between items-center pt-2 border-t border-gray-100 ${dragEnabled ? 'ml-6' : ''}`}>
             <div className="flex items-center gap-2">
               <Link 
-                to={team.isIndividual && team.payment_id ? `/my-account/individual/edit/${team.payment_id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+                to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors inline-flex items-center ${
                 isWaitlisted 
                   ? 'border-gray-300 text-gray-600 hover:text-gray-800' 
@@ -1042,7 +1042,7 @@ export function LeagueTeamsPage() {
                     <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-0.5">
                         <Link 
-                          to={team.isIndividual && team.payment_id ? `/my-account/individual/edit/${team.payment_id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+                          to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
                           className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
                           title={team.isIndividual ? "Edit payment" : "Edit team"}
                         >
