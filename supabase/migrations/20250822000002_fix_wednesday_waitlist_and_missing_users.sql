@@ -12,12 +12,13 @@ DECLARE
     v_capacity INTEGER;
 BEGIN
     -- Find the Wednesday badminton league
-    SELECT id INTO v_wednesday_league_id
-    FROM leagues
-    WHERE name LIKE '%Wednesday%'
-      AND sport = 'badminton'
-      AND team_registration = false
-    ORDER BY created_at DESC
+    SELECT l.id INTO v_wednesday_league_id
+    FROM leagues l
+    LEFT JOIN sports s ON l.sport_id = s.id
+    WHERE l.name LIKE '%Wednesday%'
+      AND (s.name = 'Badminton' OR l.name LIKE '%Badminton%')
+      AND l.team_registration = false
+    ORDER BY l.created_at DESC
     LIMIT 1;
     
     -- Exit if league not found
