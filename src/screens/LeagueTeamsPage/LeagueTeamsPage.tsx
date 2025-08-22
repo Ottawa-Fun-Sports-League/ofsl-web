@@ -622,15 +622,79 @@ export function LeagueTeamsPage() {
       setMovingTeam(teamId);
       
       if (isIndividual) {
-        // For individual registrations, update the is_waitlisted field in league_payments
+        // For individual registrations, update the is_waitlisted field and amount_due in league_payments
+        // currentlyActive means the player is currently active (not waitlisted)
+        // So we're moving them to the opposite state
+        const movingToWaitlist = currentlyActive;
+        const updateData: any = { is_waitlisted: movingToWaitlist };
+        
+        // If moving to waitlist, set amount_due to 0 since waitlisted players don't owe yet
+        if (movingToWaitlist) {
+          updateData.amount_due = 0;
+          updateData.status = 'paid'; // No payment needed for waitlist
+        }
+        // If moving to active, set amount_due to the league cost
+        else if (league?.cost) {
+          updateData.amount_due = league.cost;
+          // Check if they've already paid something
+          const { data: currentPayment } = await supabase
+            .from('league_payments')
+            .select('amount_paid')
+            .eq('user_id', teamId)
+            .eq('league_id', leagueId)
+            .is('team_id', null)
+            .single();
+          
+          const amountPaid = currentPayment?.amount_paid || 0;
+          if (amountPaid >= league.cost) {
+            updateData.status = 'paid';
+          } else if (amountPaid > 0) {
+            updateData.status = 'partial';
+          } else {
+            updateData.status = 'pending';
+          }
+        }
+        
         const { error: updateError } = await supabase
           .from('league_payments')
-          .update({ is_waitlisted: currentlyActive })
+          .update(updateData)
           .eq('user_id', teamId)
           .eq('league_id', leagueId)
           .is('team_id', null);
           
         if (updateError) throw updateError;
+        
+        // Also update user's league_ids
+        const leagueIdNum = parseInt(leagueId!);
+        const { data: userData } = await supabase
+          .from('users')
+          .select('league_ids')
+          .eq('id', teamId)
+          .single();
+        
+        if (userData) {
+          const currentLeagueIds = userData.league_ids || [];
+          let updatedLeagueIds;
+          
+          if (movingToWaitlist) {
+            // Remove from league_ids when moving to waitlist
+            updatedLeagueIds = currentLeagueIds.filter((id: number) => id !== leagueIdNum);
+          } else {
+            // Add to league_ids when moving to active (if not already there)
+            if (!currentLeagueIds.includes(leagueIdNum)) {
+              updatedLeagueIds = [...currentLeagueIds, leagueIdNum];
+            } else {
+              updatedLeagueIds = currentLeagueIds;
+            }
+          }
+          
+          if (updatedLeagueIds !== currentLeagueIds) {
+            await supabase
+              .from('users')
+              .update({ league_ids: updatedLeagueIds })
+              .eq('id', teamId);
+          }
+        }
       } else {
         // For team registrations, update the active status in teams table
         const { error: updateError } = await supabase
