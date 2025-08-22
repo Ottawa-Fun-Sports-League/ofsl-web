@@ -358,23 +358,7 @@ export function LeagueTeamsPage() {
       setLoading(true);
       setError(null);
       
-      // Get users registered for this league
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, name, email, league_ids')
-        .contains('league_ids', [parseInt(leagueId!)]);
-      
-      if (usersError) throw usersError;
-      
-      if (!users || users.length === 0) {
-        setActiveTeams([]);
-        setWaitlistedTeams([]);
-        setLoading(false);
-        return;
-      }
-      
-      // Get payment information for these users including skill level and waitlist status
-      const userIds = users.map(u => u.id);
+      // Get ALL payment records for this league (both active and waitlisted)
       const { data: payments, error: paymentsError } = await supabase
         .from('league_payments')
         .select(`
@@ -387,23 +371,37 @@ export function LeagueTeamsPage() {
           created_at,
           skills!skill_level_id(id, name)
         `)
-        .in('user_id', userIds)
         .eq('league_id', parseInt(leagueId!))
         .is('team_id', null);
       
-      if (paymentsError) {
-        console.error('Error fetching payments:', paymentsError);
+      if (paymentsError) throw paymentsError;
+      
+      if (!payments || payments.length === 0) {
+        setActiveTeams([]);
+        setWaitlistedTeams([]);
+        setLoading(false);
+        return;
       }
       
-      // Create payment map
-      const paymentMap = new Map();
-      payments?.forEach(payment => {
-        paymentMap.set(payment.user_id, payment);
+      // Get user details for all users with payments
+      const userIds = [...new Set(payments.map(p => p.user_id))];
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, name, email, league_ids')
+        .in('id', userIds);
+      
+      if (usersError) throw usersError;
+      
+      // Create user map for easy lookup
+      const userMap = new Map();
+      users?.forEach(user => {
+        userMap.set(user.id, user);
       });
       
-      // Transform users to TeamData format for compatibility
-      const allIndividualTeams: TeamData[] = users.map((user, index) => {
-        const payment = paymentMap.get(user.id);
+      // Transform payments to TeamData format for compatibility
+      const allIndividualTeams: TeamData[] = payments.map((payment, index) => {
+        const user = userMap.get(payment.user_id);
+        
         // Handle skills which might be an array or object
         const skillData = payment?.skills;
         const skillName = Array.isArray(skillData) && skillData.length > 0 
@@ -411,21 +409,21 @@ export function LeagueTeamsPage() {
           : (skillData?.name || null);
         
         return {
-          id: user.id,  // Using user ID as team ID
-          name: user.name || 'Unknown',
-          captain_id: user.id,  // Individual is their own "captain"
-          roster: [user.id],  // Single member roster
-          created_at: payment?.created_at || new Date().toISOString(),
-          skill_level_id: payment?.skill_level_id || null,
+          id: payment.user_id,  // Using user ID as team ID
+          name: user?.name || 'Unknown',
+          captain_id: payment.user_id,  // Individual is their own "captain"
+          roster: [payment.user_id],  // Single member roster
+          created_at: payment.created_at || new Date().toISOString(),
+          skill_level_id: payment.skill_level_id || null,
           display_order: index,
-          captain_name: user.name,
+          captain_name: user?.name || 'Unknown',
           skill_name: skillName,
-          payment_status: payment?.status || null,
-          amount_due: payment?.amount_due || null,
-          amount_paid: payment?.amount_paid || null,
-          email: user.email,
+          payment_status: payment.status || null,
+          amount_due: payment.amount_due || null,
+          amount_paid: payment.amount_paid || null,
+          email: user?.email || '',
           isIndividual: true,
-          is_waitlisted: payment?.is_waitlisted || false,
+          is_waitlisted: payment.is_waitlisted || false,
           league: {
             id: parseInt(leagueId!),
             name: league?.name || '',

@@ -60,7 +60,7 @@ export function LeagueInfo({
     interval: string | null;
     league_id: number | null;
   } | null>(null);
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [isTeamCaptain, setIsTeamCaptain] = useState(false);
   const [_matchingProduct, setMatchingProduct] = useState<{
     id: string;

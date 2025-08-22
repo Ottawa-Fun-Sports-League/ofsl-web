@@ -143,19 +143,23 @@ export function TeamsTab() {
     setLeaveConfirmation(null);
     
     try {
-      // Get current league_ids
+      // Check if user is in league_ids (active) or just in league_payments (waitlisted)
       const currentLeagueIds = userProfile.league_ids || [];
-      const updatedLeagueIds = currentLeagueIds.filter(id => id !== leagueId);
+      const isInLeagueIds = currentLeagueIds.includes(leagueId);
       
-      // Update user's league_ids
-      const { error } = await supabase
-        .from('users')
-        .update({ league_ids: updatedLeagueIds })
-        .eq('id', userProfile.id);
+      // Only update league_ids if the user is currently in it (active registration)
+      if (isInLeagueIds) {
+        const updatedLeagueIds = currentLeagueIds.filter(id => id !== leagueId);
+        
+        const { error } = await supabase
+          .from('users')
+          .update({ league_ids: updatedLeagueIds })
+          .eq('id', userProfile.id);
+        
+        if (error) throw error;
+      }
       
-      if (error) throw error;
-      
-      // Delete any payment records for this individual registration
+      // Delete any payment records for this individual registration (both active and waitlisted)
       await supabase
         .from('league_payments')
         .delete()

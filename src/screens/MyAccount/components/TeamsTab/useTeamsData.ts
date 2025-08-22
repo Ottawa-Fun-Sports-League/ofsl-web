@@ -20,6 +20,8 @@ interface IndividualLeague {
     locations: string[] | null;
   }>;
   created_at?: string;
+  is_waitlisted?: boolean;
+  payment_id?: number;
 }
 
 export function useTeamsData(userId?: string) {
@@ -114,36 +116,43 @@ export function useTeamsData(userId?: string) {
       // Add a small delay to ensure database consistency
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // First, fetch the latest user profile to get current league_ids
-      const { data: profileData, error: profileError } = await supabase
-        .from('users')
-        .select('league_ids')
-        .eq('id', userId)
-        .single();
+      // Query from league_payments to include both active and waitlisted registrations
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('league_payments')
+        .select(`
+          id,
+          league_id,
+          is_waitlisted,
+          leagues!inner(
+            id,
+            name,
+            location,
+            cost,
+            sport_id,
+            start_date,
+            gym_ids
+          )
+        `)
+        .eq('user_id', userId)
+        .is('team_id', null);
       
-      if (profileError || !profileData?.league_ids || profileData.league_ids.length === 0) {
+      if (paymentsError) {
+        console.error('Error fetching individual league payments:', paymentsError);
         setIndividualLeagues([]);
         return [];
       }
       
-      // Fetch the leagues the user is individually registered for
-      const { data, error } = await supabase
-        .from('leagues')
-        .select(`
-          id,
-          name,
-          location,
-          cost,
-          sport_id,
-          start_date,
-          gym_ids
-        `)
-        .in('id', profileData.league_ids)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
+      if (!paymentsData || paymentsData.length === 0) {
+        setIndividualLeagues([]);
+        return [];
+      }
       
-      const leaguesData = data || [];
+      // Transform the data to match IndividualLeague structure
+      const leaguesData = paymentsData.map(payment => ({
+        ...payment.leagues,
+        is_waitlisted: payment.is_waitlisted || false,
+        payment_id: payment.id
+      }));
       
       // Fetch gyms if there are gym_ids
       const allGymIds = new Set<number>();
