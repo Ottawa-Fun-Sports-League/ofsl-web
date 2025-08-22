@@ -68,6 +68,7 @@ interface TeamData {
   email?: string;
   isIndividual?: boolean;
   is_waitlisted?: boolean;
+  payment_id?: number;  // For individual registrations to track payment record
 }
 
 interface ExtendedTeam {
@@ -362,6 +363,7 @@ export function LeagueTeamsPage() {
       const { data: payments, error: paymentsError } = await supabase
         .from('league_payments')
         .select(`
+          id,
           user_id, 
           status, 
           amount_due, 
@@ -424,6 +426,7 @@ export function LeagueTeamsPage() {
           email: user?.email || '',
           isIndividual: true,
           is_waitlisted: payment.is_waitlisted || false,
+          payment_id: payment.id,  // Store payment ID for edit link
           league: {
             id: parseInt(leagueId!),
             name: league?.name || '',
@@ -456,14 +459,18 @@ export function LeagueTeamsPage() {
   
   // Payment loading is handled within loadIndividualRegistrations for individual leagues
 
-  const handleDeleteTeam = async (teamId: number | string, teamName: string, isIndividual?: boolean) => {
-    const confirmDelete = confirm(
-      isIndividual 
-        ? `Are you sure you want to remove "${teamName}" from this league? This action cannot be undone.`
-        : `Are you sure you want to delete the team "${teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`
-    );
-    
-    if (!confirmDelete) return;
+  const handleDeleteTeam = (teamId: number | string, teamName: string, isIndividual?: boolean) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      teamId,
+      teamName,
+      isIndividual: isIndividual || false
+    });
+  };
+  
+  const confirmDeleteTeam = async () => {
+    const { teamId, teamName, isIndividual } = deleteConfirmation;
+    if (!teamId) return;
     
     try {
       setDeleting(teamId);
@@ -552,26 +559,47 @@ export function LeagueTeamsPage() {
         
       if (deleteError) throw deleteError;
       
-      showToast('Team deleted successfully', 'success');
+      showToast(
+        isIndividual 
+          ? `${teamName} has been removed from the league`
+          : `Team "${teamName}" has been deleted successfully`,
+        'success'
+      );
       
-      // Reload teams to update the UI
-      await loadTeams();
+      // Reload data to update the UI
+      if (isIndividual) {
+        await loadIndividualRegistrations();
+      } else {
+        await loadTeams();
+      }
+      
+      setDeleteConfirmation({ isOpen: false, teamId: null, teamName: '', isIndividual: false });
       
     } catch (error) {
-      console.error('Error deleting team:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete team';
+      console.error('Error deleting:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete';
       showToast(errorMessage, 'error');
     } finally {
       setDeleting(null);
+      setDeleteConfirmation({ isOpen: false, teamId: null, teamName: '', isIndividual: false });
     }
   };
 
-  const handleMoveTeam = async (teamId: number | string, teamName: string, currentlyActive: boolean, isIndividual: boolean = false) => {
-    const entityType = isIndividual ? 'player' : 'team';
-    const actionText = currentlyActive ? `move to waitlist` : `activate from waitlist`;
-    const confirmMove = confirm(`Are you sure you want to ${actionText} the ${entityType} "${teamName}"?`);
+  const handleMoveTeam = (teamId: number | string, teamName: string, currentlyActive: boolean, isIndividual: boolean = false) => {
+    setMoveConfirmation({
+      isOpen: true,
+      teamId,
+      teamName,
+      currentlyActive,
+      isIndividual
+    });
+  };
+  
+  const confirmMoveTeam = async () => {
+    const { teamId, teamName, currentlyActive, isIndividual } = moveConfirmation;
+    if (!teamId) return;
     
-    if (!confirmMove) return;
+    const entityType = isIndividual ? 'player' : 'team';
     
     try {
       setMovingTeam(teamId);
@@ -602,8 +630,12 @@ export function LeagueTeamsPage() {
       
       showToast(successMessage, 'success');
       
-      // Reload teams to update the UI
-      await loadTeams();
+      // Reload data to update the UI
+      if (isIndividual) {
+        await loadIndividualRegistrations();
+      } else {
+        await loadTeams();
+      }
       
     } catch (error) {
       console.error(`Error moving ${entityType}:`, error);
@@ -611,6 +643,7 @@ export function LeagueTeamsPage() {
       showToast(errorMessage, 'error');
     } finally {
       setMovingTeam(null);
+      setMoveConfirmation({ isOpen: false, teamId: null, teamName: '', currentlyActive: false, isIndividual: false });
     }
   };
 
@@ -819,7 +852,7 @@ export function LeagueTeamsPage() {
           <div className={`flex justify-between items-center pt-2 border-t border-gray-100 ${dragEnabled ? 'ml-6' : ''}`}>
             <div className="flex items-center gap-2">
               <Link 
-                to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+                to={team.isIndividual && team.payment_id ? `/my-account/individual/edit/${team.payment_id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors inline-flex items-center ${
                 isWaitlisted 
                   ? 'border-gray-300 text-gray-600 hover:text-gray-800' 
@@ -992,9 +1025,9 @@ export function LeagueTeamsPage() {
                     <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-0.5">
                         <Link 
-                          to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+                          to={team.isIndividual && team.payment_id ? `/my-account/individual/edit/${team.payment_id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
                           className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                          title="Edit team"
+                          title={team.isIndividual ? "Edit payment" : "Edit team"}
                         >
                           <Edit className="h-3.5 w-3.5" />
                         </Link>
@@ -1287,6 +1320,35 @@ export function LeagueTeamsPage() {
           </div>
         )}
       </div>
+      
+      {/* Move Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={moveConfirmation.isOpen}
+        onClose={() => setMoveConfirmation({ isOpen: false, teamId: null, teamName: '', currentlyActive: false, isIndividual: false })}
+        onConfirm={confirmMoveTeam}
+        title={moveConfirmation.currentlyActive ? 'Move to Waitlist' : 'Activate from Waitlist'}
+        message={`Are you sure you want to ${moveConfirmation.currentlyActive ? 'move' : 'activate'} ${moveConfirmation.isIndividual ? 'the player' : 'the team'} "${moveConfirmation.teamName}" ${moveConfirmation.currentlyActive ? 'to the waitlist' : 'from the waitlist'}?`}
+        confirmText={moveConfirmation.currentlyActive ? 'Move to Waitlist' : 'Activate'}
+        cancelText="Cancel"
+        variant="warning"
+        isLoading={movingTeam === moveConfirmation.teamId}
+      />
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, teamId: null, teamName: '', isIndividual: false })}
+        onConfirm={confirmDeleteTeam}
+        title={deleteConfirmation.isIndividual ? 'Remove Player' : 'Delete Team'}
+        message={deleteConfirmation.isIndividual 
+          ? `Are you sure you want to remove "${deleteConfirmation.teamName}" from this league? This action cannot be undone.`
+          : `Are you sure you want to delete the team "${deleteConfirmation.teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`
+        }
+        confirmText={deleteConfirmation.isIndividual ? 'Remove Player' : 'Delete Team'}
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleting === deleteConfirmation.teamId}
+      />
     </div>
   );
 }
