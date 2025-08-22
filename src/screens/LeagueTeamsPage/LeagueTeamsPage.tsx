@@ -568,26 +568,39 @@ export function LeagueTeamsPage() {
     }
   };
 
-  const handleMoveTeam = async (teamId: number | string, teamName: string, currentlyActive: boolean) => {
-    const actionText = currentlyActive ? 'move to waitlist' : 'activate from waitlist';
-    const confirmMove = confirm(`Are you sure you want to ${actionText} the team "${teamName}"?`);
+  const handleMoveTeam = async (teamId: number | string, teamName: string, currentlyActive: boolean, isIndividual: boolean = false) => {
+    const entityType = isIndividual ? 'player' : 'team';
+    const actionText = currentlyActive ? `move to waitlist` : `activate from waitlist`;
+    const confirmMove = confirm(`Are you sure you want to ${actionText} the ${entityType} "${teamName}"?`);
     
     if (!confirmMove) return;
     
     try {
       setMovingTeam(teamId);
       
-      // Update the team's active status
-      const { error: updateError } = await supabase
-        .from('teams')
-        .update({ active: !currentlyActive })
-        .eq('id', teamId);
-        
-      if (updateError) throw updateError;
+      if (isIndividual) {
+        // For individual registrations, update the is_waitlisted field in league_payments
+        const { error: updateError } = await supabase
+          .from('league_payments')
+          .update({ is_waitlisted: currentlyActive })
+          .eq('user_id', teamId)
+          .eq('league_id', leagueId)
+          .is('team_id', null);
+          
+        if (updateError) throw updateError;
+      } else {
+        // For team registrations, update the active status in teams table
+        const { error: updateError } = await supabase
+          .from('teams')
+          .update({ active: !currentlyActive })
+          .eq('id', teamId);
+          
+        if (updateError) throw updateError;
+      }
       
       const successMessage = currentlyActive 
-        ? `Team "${teamName}" moved to waitlist` 
-        : `Team "${teamName}" activated from waitlist`;
+        ? `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} "${teamName}" moved to waitlist` 
+        : `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} "${teamName}" activated from waitlist`;
       
       showToast(successMessage, 'success');
       
@@ -595,8 +608,8 @@ export function LeagueTeamsPage() {
       await loadTeams();
       
     } catch (error) {
-      console.error('Error moving team:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to move team';
+      console.error(`Error moving ${entityType}:`, error);
+      const errorMessage = error instanceof Error ? error.message : `Failed to move ${entityType}`;
       showToast(errorMessage, 'error');
     } finally {
       setMovingTeam(null);
@@ -818,16 +831,15 @@ export function LeagueTeamsPage() {
                 Edit {team.isIndividual ? 'payment' : 'registration'}
               </Link>
               
-              {!team.isIndividual && (
-                <button
-                onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
-                disabled={movingTeam === team.id || team.isIndividual}
+              <button
+                onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
+                disabled={movingTeam === team.id}
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   isWaitlisted 
                     ? 'border-green-300 text-green-700 hover:text-green-800' 
                     : 'border-yellow-300 text-yellow-700 hover:text-yellow-800'
                 }`}
-                title={isWaitlisted ? 'Move team to active registration' : 'Move team to waitlist'}
+                title={isWaitlisted ? `Move ${team.isIndividual ? 'player' : 'team'} to active registration` : `Move ${team.isIndividual ? 'player' : 'team'} to waitlist`}
               >
                 {movingTeam === team.id ? (
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></div>
@@ -836,8 +848,7 @@ export function LeagueTeamsPage() {
                   ) : (
                     'Move to Waitlist'
                   )}
-                </button>
-              )}
+              </button>
             </div>
             
             <Button
@@ -990,7 +1001,7 @@ export function LeagueTeamsPage() {
                           <Edit className="h-3.5 w-3.5" />
                         </Link>
                         <button
-                          onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted)}
+                          onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
                           disabled={movingTeam === team.id}
                           className={`p-1 rounded transition-colors disabled:opacity-50 ${
                             isWaitlisted 
@@ -1072,7 +1083,7 @@ export function LeagueTeamsPage() {
             <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
               <div>
                 <h1 className="text-3xl font-bold text-[#6F6F6F] mb-2">
-                  {league?.name} - Teams Management
+                  {league?.name} - {league?.team_registration === false ? 'Registered Players' : 'Teams Management'}
                 </h1>
                 <p className="text-[#6F6F6F] mb-2">
                   Sport: {league?.sport_name} | Location: {league?.location}
@@ -1088,14 +1099,25 @@ export function LeagueTeamsPage() {
                 )}
               </div>
               
-              {/* Edit League Button */}
+              {/* Admin Actions */}
               {userProfile?.is_admin && league?.id && (
-                <Link
-                  to={`/my-account/leagues/edit/${league.id}`}
-                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                >
-                  Edit league
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    to={`/my-account/leagues/edit/${league.id}`}
+                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                  >
+                    Edit league
+                  </Link>
+                  {league?.team_registration === false && (
+                    <Link
+                      to={`/leagues/${league.id}`}
+                      state={{ openWaitlistModal: true }}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium whitespace-nowrap"
+                    >
+                      Add to Waitlist
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
             
@@ -1112,7 +1134,7 @@ export function LeagueTeamsPage() {
               </div>
               
               <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
-                {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} teams
+                {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} {league?.team_registration === false ? 'players' : 'teams'}
               </div>
             </div>
           </div>
@@ -1137,7 +1159,7 @@ export function LeagueTeamsPage() {
             {filteredActiveTeams.length > 0 && (
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-[#6F6F6F]">Registered Teams</h2>
+                  <h2 className="text-2xl font-bold text-[#6F6F6F]">{league?.team_registration === false ? 'Registered Players' : 'Registered Teams'}</h2>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center bg-gray-100 rounded-lg p-1">
                       <button
@@ -1164,7 +1186,7 @@ export function LeagueTeamsPage() {
                       </button>
                     </div>
                     <div className="text-sm text-[#6F6F6F]">
-                      {searchTerm ? `${filteredActiveTeams.length} of ${activeTeams.length}` : `${activeTeams.length}`} Active Teams
+                      {searchTerm ? `${filteredActiveTeams.length} of ${activeTeams.length}` : `${activeTeams.length}`} Active {league?.team_registration === false ? 'Players' : 'Teams'}
                     </div>
                   </div>
                 </div>
@@ -1222,7 +1244,7 @@ export function LeagueTeamsPage() {
                       </div>
                     )}
                     <div className="text-sm text-gray-500">
-                      {searchTerm ? `${filteredWaitlistedTeams.length} of ${waitlistedTeams.length}` : `${waitlistedTeams.length}`} Waitlisted Teams
+                      {searchTerm ? `${filteredWaitlistedTeams.length} of ${waitlistedTeams.length}` : `${waitlistedTeams.length}`} Waitlisted {league?.team_registration === false ? 'Players' : 'Teams'}
                     </div>
                   </div>
                 </div>

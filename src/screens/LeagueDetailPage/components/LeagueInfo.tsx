@@ -37,6 +37,7 @@ interface LeagueInfoProps {
   sport: string;
   skillLevels?: string[];
   onSpotsUpdate?: (spots: number) => void;
+  openWaitlistModal?: boolean;
 }
 
 export function LeagueInfo({
@@ -44,6 +45,7 @@ export function LeagueInfo({
   sport,
   skillLevels,
   onSpotsUpdate,
+  openWaitlistModal = false,
 }: LeagueInfoProps) {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [actualSpotsRemaining, setActualSpotsRemaining] = useState(0);
@@ -80,6 +82,13 @@ export function LeagueInfo({
     loadProductInfo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [league.id]);
+
+  // Open waitlist modal if requested (e.g., from admin navigation)
+  useEffect(() => {
+    if (openWaitlistModal && userProfile?.is_admin) {
+      setShowRegistrationModal(true);
+    }
+  }, [openWaitlistModal, userProfile?.is_admin]);
 
   const loadStripeProduct = async () => {
     try {
