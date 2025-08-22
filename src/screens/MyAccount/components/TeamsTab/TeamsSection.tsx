@@ -436,8 +436,12 @@ export function TeamsSection({
                     </div>
 
                     <div className="flex items-center gap-2 mt-3 sm:mt-0 sm:ml-4">
-                      <span className="bg-green-100 text-green-800 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium">
-                        Active
+                      <span className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium ${
+                        league.is_waitlisted 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {league.is_waitlisted ? 'Waitlisted' : 'Active'}
                       </span>
 
                       <span className="bg-purple-100 text-purple-800 flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium">
@@ -582,19 +586,13 @@ export function TeamsSection({
                         );
                       }
 
-                      // For individual registrations, we need to handle deletion differently
-                      // since they might not have a payment record
+                      // For individual registrations, both active and waitlisted
                       return (
                         <Button
                           onClick={() => {
-                            if (leaguePayment) {
-                              // If there's a payment record, delete it
-                              onUnregister(leaguePayment.id, league.name);
-                            } else {
-                              // If no payment record, need to remove from league_ids
-                              // This would require a different handler
-                              onLeaveIndividualLeague?.(league.id, league.name);
-                            }
+                            // Always use onLeaveIndividualLeague for individual registrations
+                            // The handler will take care of both league_ids and league_payments
+                            onLeaveIndividualLeague?.(league.id, league.name);
                           }}
                           disabled={unregisteringPayment === leaguePayment?.id}
                           size="sm"
