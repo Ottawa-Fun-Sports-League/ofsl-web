@@ -17,6 +17,7 @@ interface IndividualRegistrationNotification {
   registeredAt: string;
   amountPaid: number;
   paymentMethod: string;
+  isWaitlisted?: boolean;
 }
 
 serve(async (req: Request) => {
@@ -45,6 +46,7 @@ serve(async (req: Request) => {
       registeredAt,
       amountPaid,
       paymentMethod,
+      isWaitlisted = false,
     }: IndividualRegistrationNotification = await req.json();
 
     if (!userId || !userName || !userEmail || !leagueName) {
@@ -97,7 +99,9 @@ serve(async (req: Request) => {
     }
 
     // Create the notification email content
-    const emailSubject = `New Individual Registration: ${userName} in ${leagueName}`;
+    const emailSubject = isWaitlisted 
+      ? `New Waitlist Registration: ${userName} in ${leagueName}`
+      : `New Individual Registration: ${userName} in ${leagueName}`;
     const registrationDate = new Date(registeredAt).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -118,9 +122,9 @@ serve(async (req: Request) => {
               <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff;">
                 <!-- Header -->
                 <tr>
-                  <td align="center" style="background-color: #B20000; padding: 30px 20px;">
+                  <td align="center" style="background-color: ${isWaitlisted ? '#f59e0b' : '#B20000'}; padding: 30px 20px;">
                     <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-family: Arial, sans-serif;">
-                      New Individual Registration
+                      ${isWaitlisted ? 'New Waitlist Registration' : 'New Individual Registration'}
                     </h1>
                   </td>
                 </tr>
@@ -132,12 +136,14 @@ serve(async (req: Request) => {
                       <!-- Alert Message -->
                       <tr>
                         <td style="padding-bottom: 25px;">
-                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #e8f5e9; border: 1px solid #a5d6a7;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: ${isWaitlisted ? '#fef3c7' : '#e8f5e9'}; border: 1px solid ${isWaitlisted ? '#fbbf24' : '#a5d6a7'};">
                             <tr>
                               <td style="padding: 20px;">
-                                <p style="color: #2e7d32; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
-                                  <strong>🎉 A new individual has registered!</strong><br>
-                                  The following player has just signed up for a league.
+                                <p style="color: ${isWaitlisted ? '#d97706' : '#2e7d32'}; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                  <strong>${isWaitlisted ? '⏳ A new individual has joined the waitlist!' : '🎉 A new individual has registered!'}</strong><br>
+                                  ${isWaitlisted 
+                                    ? 'The following player has been added to the waitlist and will be automatically promoted when a spot becomes available.'
+                                    : 'The following player has just signed up for a league.'}
                                 </p>
                               </td>
                             </tr>
@@ -300,6 +306,124 @@ serve(async (req: Request) => {
     const emailResult = await emailResponse.json();
     // eslint-disable-next-line no-console
     console.log("Individual registration notification email sent successfully:", emailResult);
+
+    // Send confirmation email to the user if they're on the waitlist
+    if (isWaitlisted && userEmail) {
+      const userEmailContent = {
+        to: [userEmail],
+        subject: `Waitlist Confirmation: ${leagueName}`,
+        html: `
+          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
+            <tr>
+              <td align="center" style="padding: 20px 0;">
+                <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff;">
+                  <!-- Header -->
+                  <tr>
+                    <td align="center" style="background-color: #f59e0b; padding: 30px 20px;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-family: Arial, sans-serif;">
+                        You're on the Waitlist!
+                      </h1>
+                    </td>
+                  </tr>
+                  
+                  <!-- Main Content -->
+                  <tr>
+                    <td style="padding: 40px 30px; background-color: #ffffff;">
+                      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                        <tr>
+                          <td style="padding-bottom: 20px;">
+                            <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                              Hi ${userName},
+                            </p>
+                          </td>
+                        </tr>
+                        
+                        <tr>
+                          <td style="padding-bottom: 20px;">
+                            <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                              You have been successfully added to the waitlist for <strong>${leagueName}</strong>.
+                            </p>
+                          </td>
+                        </tr>
+                        
+                        <tr>
+                          <td style="padding-bottom: 20px;">
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fef3c7; border: 1px solid #fbbf24;">
+                              <tr>
+                                <td style="padding: 20px;">
+                                  <p style="color: #d97706; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                    <strong>What happens next?</strong><br><br>
+                                    • You are currently on the waitlist<br>
+                                    • If a spot becomes available, you will be automatically promoted<br>
+                                    • You will receive an email notification when you are moved to active registration<br>
+                                    • No payment is required while on the waitlist
+                                  </p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                        
+                        <tr>
+                          <td style="padding-bottom: 20px;">
+                            <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                              If you have any questions, please contact us at <a href="mailto:info@ofsl.ca" style="color: #1976d2;">info@ofsl.ca</a>.
+                            </p>
+                          </td>
+                        </tr>
+                        
+                        <tr>
+                          <td style="padding-top: 20px;">
+                            <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                              Best regards,<br>
+                              OFSL Team
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td align="center" style="background-color: #2c3e50; padding: 20px;">
+                      <p style="color: #bdc3c7; font-size: 12px; margin: 0; font-family: Arial, sans-serif;">
+                        Ottawa Fun Sports League | info@ofsl.ca
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        `,
+      };
+
+      try {
+        const userEmailResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "OFSL System <noreply@ofsl.ca>",
+            ...userEmailContent,
+          }),
+        });
+
+        if (!userEmailResponse.ok) {
+          const errorText = await userEmailResponse.text();
+          console.error("Failed to send waitlist confirmation to user:", errorText);
+        } else {
+          const userEmailResult = await userEmailResponse.json();
+          console.log("Waitlist confirmation sent to user:", userEmailResult);
+        }
+      } catch (error) {
+        console.error("Error sending waitlist confirmation:", error);
+        // Don't fail the whole function if user email fails
+      }
+    }
 
     return new Response(
       JSON.stringify({
