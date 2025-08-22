@@ -148,28 +148,32 @@ export function TeamRegistrationModal({
       const isTeamRegistration = leagueData.team_registration !== false;
 
       // For individual registrations, update user's league_ids
-      if (!isWaitlist && !isTeamRegistration) {
-        // Update user's league_ids array for individual registration
-        const currentLeagueIds = userProfile.league_ids || [];
-        const updatedLeagueIds = [...currentLeagueIds, leagueId];
+      if (!isTeamRegistration) {
+        // Only update league_ids if not on waitlist
+        if (!isWaitlist) {
+          // Update user's league_ids array for individual registration
+          const currentLeagueIds = userProfile.league_ids || [];
+          const updatedLeagueIds = [...currentLeagueIds, leagueId];
 
-        const { error: userError } = await supabase
-          .from("users")
-          .update({ league_ids: updatedLeagueIds })
-          .eq("id", userProfile.id);
+          const { error: userError } = await supabase
+            .from("users")
+            .update({ league_ids: updatedLeagueIds })
+            .eq("id", userProfile.id);
 
-        if (userError) throw new Error(userError.message || 'Failed to update user');
+          if (userError) throw new Error(userError.message || 'Failed to update user');
+        }
 
         // Create payment record for individual registration with skill level
+        // Note: is_waitlisted will be automatically set by the database trigger if league is full
         const { error: paymentError } = await supabase
           .from("league_payments")
           .insert({
             league_id: leagueId,
             user_id: userProfile.id,
             team_id: null, // No team for individual registration
-            amount_due: leagueData.cost || 0,
+            amount_due: isWaitlist ? 0 : (leagueData.cost || 0), // No payment due if waitlisted
             amount_paid: 0,
-            status: "pending",
+            status: isWaitlist ? "pending" : "pending",
             skill_level_id: skillLevelId, // Save skill level for individual registration
           });
 
@@ -182,6 +186,7 @@ export function TeamRegistrationModal({
         }
         
         // Send notification to info@ofsl.ca for individual registration
+        // Include waitlist status in the notification
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
@@ -196,7 +201,8 @@ export function TeamRegistrationModal({
                   leagueName: leagueName,
                   registeredAt: new Date().toISOString(),
                   amountPaid: 0, // Will be updated when payment is made
-                  paymentMethod: "Pending"
+                  paymentMethod: "Pending",
+                  isWaitlisted: isWaitlist // Include waitlist status
                 },
               },
             );
