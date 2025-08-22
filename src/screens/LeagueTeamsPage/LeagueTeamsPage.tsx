@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { PaymentStatusBadge } from '../../components/ui/payment-status-badge';
+import { ConfirmationModal } from '../../components/ui/confirmation-modal';
 import { useViewPreference } from '../../hooks/useViewPreference';
 import { 
   Users, 
