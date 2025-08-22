@@ -67,6 +67,7 @@ interface TeamData {
   // Additional fields for individual registrations
   email?: string;
   isIndividual?: boolean;
+  is_waitlisted?: boolean;
 }
 
 interface ExtendedTeam {
@@ -372,7 +373,7 @@ export function LeagueTeamsPage() {
         return;
       }
       
-      // Get payment information for these users including skill level
+      // Get payment information for these users including skill level and waitlist status
       const userIds = users.map(u => u.id);
       const { data: payments, error: paymentsError } = await supabase
         .from('league_payments')
@@ -382,6 +383,8 @@ export function LeagueTeamsPage() {
           amount_due, 
           amount_paid,
           skill_level_id,
+          is_waitlisted,
+          created_at,
           skills!skill_level_id(id, name)
         `)
         .in('user_id', userIds)
@@ -399,7 +402,7 @@ export function LeagueTeamsPage() {
       });
       
       // Transform users to TeamData format for compatibility
-      const individualTeams: TeamData[] = users.map((user, index) => {
+      const allIndividualTeams: TeamData[] = users.map((user, index) => {
         const payment = paymentMap.get(user.id);
         // Handle skills which might be an array or object
         const skillData = payment?.skills;
@@ -412,7 +415,7 @@ export function LeagueTeamsPage() {
           name: user.name || 'Unknown',
           captain_id: user.id,  // Individual is their own "captain"
           roster: [user.id],  // Single member roster
-          created_at: new Date().toISOString(),
+          created_at: payment?.created_at || new Date().toISOString(),
           skill_level_id: payment?.skill_level_id || null,
           display_order: index,
           captain_name: user.name,
@@ -422,6 +425,7 @@ export function LeagueTeamsPage() {
           amount_paid: payment?.amount_paid || null,
           email: user.email,
           isIndividual: true,
+          is_waitlisted: payment?.is_waitlisted || false,
           league: {
             id: parseInt(leagueId!),
             name: league?.name || '',
@@ -432,8 +436,17 @@ export function LeagueTeamsPage() {
         };
       });
       
-      setActiveTeams(individualTeams);
-      setWaitlistedTeams([]);  // No waitlist for individual registrations
+      // Separate active and waitlisted individual registrations
+      const activeIndividuals = allIndividualTeams
+        .filter(team => !team.is_waitlisted)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      
+      const waitlistedIndividuals = allIndividualTeams
+        .filter(team => team.is_waitlisted)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      
+      setActiveTeams(activeIndividuals);
+      setWaitlistedTeams(waitlistedIndividuals);
       setDragEnabled(false);  // Disable drag for individual registrations
     } catch (err) {
       console.error('Error loading individual registrations:', err);
