@@ -14,11 +14,48 @@ CREATE INDEX IF NOT EXISTS idx_league_payments_waitlist
 ON league_payments(league_id, is_waitlisted) 
 WHERE team_id IS NULL;
 
--- 3. Mark the 29th registrant for Sunday league as waitlisted
--- Randy Tri registered last and the league only has 28 spots
-UPDATE league_payments
-SET is_waitlisted = true
-WHERE id = 372; -- Randy Tri's registration for Sunday league
+-- 3. Mark oversubscribed registrants as waitlisted for Sunday league
+DO $$
+DECLARE
+    v_sunday_league_id BIGINT;
+BEGIN
+    -- Find the Sunday badminton league
+    SELECT id INTO v_sunday_league_id
+    FROM leagues
+    WHERE name LIKE '%Sunday%'
+      AND sport = 'badminton'
+      AND team_registration = false
+    ORDER BY created_at DESC
+    LIMIT 1;
+    
+    -- Exit if league not found
+    IF v_sunday_league_id IS NULL THEN
+        RAISE NOTICE 'Sunday badminton league not found - skipping Randy Tri update';
+        RETURN;
+    END IF;
+    
+    -- Mark oversubscribed registrants as waitlisted based on capacity
+    WITH league_info AS (
+        SELECT max_teams
+        FROM leagues
+        WHERE id = v_sunday_league_id
+    ),
+    ranked_registrations AS (
+        SELECT id,
+               ROW_NUMBER() OVER (ORDER BY created_at ASC) as registration_order
+        FROM league_payments
+        WHERE league_id = v_sunday_league_id
+          AND team_id IS NULL
+    )
+    UPDATE league_payments lp
+    SET is_waitlisted = true
+    FROM ranked_registrations rr, league_info li
+    WHERE lp.id = rr.id
+      AND rr.registration_order > li.max_teams
+      AND li.max_teams IS NOT NULL;
+      
+    RAISE NOTICE 'Updated Sunday league waitlist based on capacity';
+END $$;
 
 -- 4. Create a function to check if a league is full for individual registrations
 CREATE OR REPLACE FUNCTION is_individual_league_full(p_league_id BIGINT)
