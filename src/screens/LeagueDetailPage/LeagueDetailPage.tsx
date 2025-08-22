@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -27,6 +27,7 @@ import { LeagueGyms } from "./components/LeagueGyms";
 export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { userProfile } = useAuth();
   const [league, setLeague] = useState<League | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,6 +40,9 @@ export function LeagueDetailPage() {
     instructions: string | null;
     locations: string[] | null;
   }> | null>(null);
+  
+  // Check if we should open the waitlist modal
+  const shouldOpenWaitlistModal = location.state?.openWaitlistModal || false;
 
   // Get initial view from URL search params
   const tabParam = searchParams.get('tab');
@@ -178,6 +182,7 @@ export function LeagueDetailPage() {
               sport={league.sport_name || ""}
               skillLevels={league.skill_names || undefined}
               onSpotsUpdate={handleSpotsUpdate}
+              openWaitlistModal={shouldOpenWaitlistModal}
             />
           </div>
 
