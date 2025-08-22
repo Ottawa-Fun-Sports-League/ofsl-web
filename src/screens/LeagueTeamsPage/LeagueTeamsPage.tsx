@@ -122,6 +122,22 @@ export function LeagueTeamsPage() {
   }) as ['card' | 'table', (view: 'card' | 'table') => void];
   const { showToast } = useToast();
   const { userProfile } = useAuth();
+  
+  // Confirmation modal states
+  const [moveConfirmation, setMoveConfirmation] = useState<{
+    isOpen: boolean;
+    teamId: number | string | null;
+    teamName: string;
+    currentlyActive: boolean;
+    isIndividual: boolean;
+  }>({ isOpen: false, teamId: null, teamName: '', currentlyActive: false, isIndividual: false });
+  
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    teamId: number | string | null;
+    teamName: string;
+    isIndividual: boolean;
+  }>({ isOpen: false, teamId: null, teamName: '', isIndividual: false });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
