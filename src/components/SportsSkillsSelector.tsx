@@ -54,7 +54,9 @@ export function SportsSkillsSelector({
   const [showAddInterface, setShowAddInterface] = useState(false);
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingSportSkill, setEditingSportSkill] = useState<SportSkill | null>(null);
+  const [editingSportSkill, setEditingSportSkill] = useState<SportSkill | null>(
+    null,
+  );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalValue, setOriginalValue] = useState<SportSkill[]>(value);
   const [justSaved, setJustSaved] = useState(false);
@@ -65,7 +67,11 @@ export function SportsSkillsSelector({
 
   // Initialize originalValue when component first receives a non-empty value
   useEffect(() => {
-    if (!hasUnsavedChanges && JSON.stringify(originalValue) === '[]' && value.length > 0) {
+    if (
+      !hasUnsavedChanges &&
+      JSON.stringify(originalValue) === "[]" &&
+      value.length > 0
+    ) {
       setOriginalValue(value);
     }
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -75,7 +81,7 @@ export function SportsSkillsSelector({
     // Only reset if the value actually changed (not just a re-render)
     const valueStr = JSON.stringify(value);
     const originalStr = JSON.stringify(originalValue);
-    
+
     if (valueStr !== originalStr) {
       if (justSaved) {
         // This was a save operation, reset the flags
@@ -93,21 +99,28 @@ export function SportsSkillsSelector({
     try {
       setLoadingSportsSkills(true);
       setLoadError(null);
-      
+
       // Load sports and skills in parallel
       const [sportsResponse, skillsResponse] = await Promise.all([
-        supabase.from('sports').select('id, name').eq('active', true).order('name'),
-        supabase.from('skills').select('id, name, description').order('order_index')
+        supabase
+          .from("sports")
+          .select("id, name")
+          .eq("active", true)
+          .order("name"),
+        supabase
+          .from("skills")
+          .select("id, name, description")
+          .order("order_index"),
       ]);
-      
+
       if (sportsResponse.error) throw new Error(sportsResponse.error.message);
       if (skillsResponse.error) throw new Error(skillsResponse.error.message);
-      
+
       setSports(sportsResponse.data || []);
       setSkills(skillsResponse.data || []);
     } catch (error) {
-      logger.error('Error loading sports and skills', error);
-      setLoadError('Failed to load sports and skills. Please try again.');
+      logger.error("Error loading sports and skills", error);
+      setLoadError("Failed to load sports and skills. Please try again.");
     } finally {
       setLoadingSportsSkills(false);
     }
@@ -141,7 +154,7 @@ export function SportsSkillsSelector({
     const sportSkill = value[index];
     setEditingIndex(index);
     setEditingSportSkill(sportSkill);
-    const sport = sports.find(s => s.id === sportSkill.sport_id);
+    const sport = sports.find((s) => s.id === sportSkill.sport_id);
     if (sport) {
       setSelectedSport(sport);
     }
@@ -199,8 +212,10 @@ export function SportsSkillsSelector({
     const selectedSportIds = value.map((item: SportSkill) => item.sport_id);
     // When editing, include the currently edited sport in available sports
     if (editingIndex !== null && editingSportSkill) {
-      return sports.filter((sport) => 
-        sport.id === editingSportSkill.sport_id || !selectedSportIds.includes(sport.id)
+      return sports.filter(
+        (sport) =>
+          sport.id === editingSportSkill.sport_id ||
+          !selectedSportIds.includes(sport.id),
       );
     }
     return sports.filter((sport) => !selectedSportIds.includes(sport.id));
@@ -248,8 +263,8 @@ export function SportsSkillsSelector({
     return (
       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
         <p>{loadError}</p>
-        <Button 
-          onClick={loadSportsAndSkills} 
+        <Button
+          onClick={loadSportsAndSkills}
           className="mt-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm px-3 py-1 rounded"
         >
           Try Again
@@ -259,7 +274,9 @@ export function SportsSkillsSelector({
   }
 
   return (
-    <div className={`bg-white ${showTitle ? 'border border-gray-200 rounded-lg p-6' : ''} ${className}`}>
+    <div
+      className={`bg-white ${showTitle ? "border border-gray-200 rounded-lg p-6" : ""} ${className}`}
+    >
       {showTitle && (
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
@@ -288,7 +305,7 @@ export function SportsSkillsSelector({
                   disabled={saving}
                   className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-4 py-2 flex items-center gap-2"
                 >
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? "Saving..." : "Save Changes"}
                 </Button>
               </>
             )}
@@ -325,16 +342,13 @@ export function SportsSkillsSelector({
             </div>
           </div>
           <p className="text-xs text-gray-500">
-            Select the sports you&apos;re interested in playing and your skill level for each one.
+            Select the sports you&apos;re interested in playing and your skill
+            level for each one.
           </p>
         </div>
       )}
 
-      {error && (
-        <div className="text-red-600 text-sm mb-4">
-          {error}
-        </div>
-      )}
+      {error && <div className="text-red-600 text-sm mb-4">{error}</div>}
 
       {loadingSportsSkills ? (
         <div className="flex justify-center items-center py-4">
@@ -391,7 +405,7 @@ export function SportsSkillsSelector({
             <div className="bg-white border-2 border-[#B20000] rounded-md p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-[#6F6F6F]">
-                  {editingIndex !== null ? 'Edit' : 'Add'} Sport & Skill Level
+                  {editingIndex !== null ? "Edit" : "Add"} Sport & Skill Level
                 </h3>
                 <Button
                   type="button"
@@ -443,7 +457,7 @@ export function SportsSkillsSelector({
                             <Button
                               type="button"
                               onClick={() =>
-                                editingIndex !== null 
+                                editingIndex !== null
                                   ? handleUpdateSportSkill(selectedSport, skill)
                                   : handleAddSportSkill(selectedSport, skill)
                               }
@@ -469,10 +483,9 @@ export function SportsSkillsSelector({
       ) : (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <p className="text-[#6F6F6F] mb-4">
-            {showTitle 
-              ? "You haven&apos;t selected any sports or skill levels yet."
-              : "Please select at least one sport you&apos;re interested in and your skill level."
-            }
+            {showTitle
+              ? "You haven't selected any sports or skill levels yet."
+              : "Please select at least one sport you're interested in and your skill level."}
           </p>
           {!showAddInterface && getAvailableSports().length > 0 && (
             <Button
@@ -488,7 +501,7 @@ export function SportsSkillsSelector({
             <div className="bg-white border-2 border-[#B20000] rounded-md p-4 max-w-md mx-auto">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-[#6F6F6F]">
-                  {editingIndex !== null ? 'Edit' : 'Add'} Sport & Skill Level
+                  {editingIndex !== null ? "Edit" : "Add"} Sport & Skill Level
                 </h3>
                 <Button
                   type="button"
@@ -540,7 +553,7 @@ export function SportsSkillsSelector({
                             <Button
                               type="button"
                               onClick={() =>
-                                editingIndex !== null 
+                                editingIndex !== null
                                   ? handleUpdateSportSkill(selectedSport, skill)
                                   : handleAddSportSkill(selectedSport, skill)
                               }
@@ -564,12 +577,14 @@ export function SportsSkillsSelector({
           )}
         </div>
       )}
-      
+
       {!showTitle && (
         <p className="text-xs text-gray-500 mt-4">
-          This information helps us match you with appropriate leagues and teams based on your interests and skill level.
+          This information helps us match you with appropriate leagues and teams
+          based on your interests and skill level.
         </p>
       )}
     </div>
   );
 }
+
