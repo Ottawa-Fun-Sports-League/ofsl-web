@@ -29,3 +29,10 @@ dist-ssr
 
 # Test files
 test-email-*.js
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/blob-report/
+/test-results-*
