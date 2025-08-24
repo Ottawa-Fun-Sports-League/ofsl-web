@@ -14,7 +14,7 @@ export interface TurnstileHandle {
 
 const TurnstileWidgetComponent = forwardRef<TurnstileHandle, TurnstileProps>(
   ({ onVerify, onError, onExpire, className }, ref) => {
-    const widgetRef = useRef<any>(null);
+    const widgetRef = useRef<{ reset?: () => void } | null>(null);
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
     useImperativeHandle(ref, () => ({

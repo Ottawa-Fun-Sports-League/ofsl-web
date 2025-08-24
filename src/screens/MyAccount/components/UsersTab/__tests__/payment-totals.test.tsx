@@ -6,6 +6,12 @@ import { AuthProvider } from '../../../../../contexts/AuthContext';
 import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
 
+// Define interfaces for mock data
+interface MockRpcResponse<T> {
+  data: T;
+  error: null;
+}
+
 // Mock supabase
 vi.mock('../../../../../lib/supabase', () => ({
   supabase: {
@@ -113,7 +119,7 @@ describe('Payment Totals Calculation', () => {
     vi.mocked(supabase.rpc).mockResolvedValueOnce({
       data: mockUsersData,
       error: null
-    } as any);
+    } as MockRpcResponse<unknown>);
 
     // Teams query
     fromMock.mockImplementationOnce(() => ({
@@ -205,12 +211,12 @@ describe('Payment Totals Calculation', () => {
           })
         }))
       }))
-    } as any));
+    } as MockRpcResponse<unknown>));
 
     vi.mocked(supabase.rpc).mockResolvedValue({
       data: mockUsersData,
       error: null
-    } as any);
+    } as MockRpcResponse<unknown>);
 
     // Mock empty responses for teams, leagues, and payments
     const fromMock = vi.fn();
@@ -331,12 +337,12 @@ describe('Payment Totals Calculation', () => {
           })
         }))
       }))
-    } as any));
+    } as MockRpcResponse<unknown>));
 
     vi.mocked(supabase.rpc).mockResolvedValue({
       data: mockUsersData,
       error: null
-    } as any);
+    } as MockRpcResponse<unknown>);
 
     const fromMock = vi.fn();
     fromMock

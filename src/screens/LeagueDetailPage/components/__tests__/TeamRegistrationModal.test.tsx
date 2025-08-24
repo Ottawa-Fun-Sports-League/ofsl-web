@@ -6,6 +6,37 @@ import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useToast } from '../../../../components/ui/toast';
 
+// Define interfaces for mock types
+interface MockAuthReturn {
+  userProfile: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+  };
+  user: {
+    email: string;
+  };
+}
+
+interface _MockSessionData {
+  data: {
+    session: {
+      access_token: string;
+      user: { id: string };
+    };
+  };
+  error: null;
+}
+
+interface MockSupabaseChain {
+  select?: () => MockSupabaseChain;
+  order?: () => Promise<{ data: unknown[] | null; error: null }>;
+  eq?: () => MockSupabaseChain;
+  single?: () => Promise<{ data: unknown | null; error: null }>;
+  insert?: () => Promise<{ data: unknown[] | null; error: null }>;
+}
+
 // Mock dependencies
 vi.mock('../../../../lib/supabase', () => ({
   supabase: {
@@ -63,7 +94,7 @@ describe('TeamRegistrationModal', () => {
       user: {
         email: 'test@example.com',
       },
-    } as any);
+    } as MockAuthReturn);
 
     // Mock skills loading
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -78,9 +109,9 @@ describe('TeamRegistrationModal', () => {
             ],
             error: null,
           }),
-        } as any;
+        } as MockSupabaseChain;
       }
-      return {} as any;
+      return {} as MockSupabaseChain;
     });
   });
 
@@ -104,7 +135,7 @@ describe('TeamRegistrationModal', () => {
               ],
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'leagues') {
           return {
@@ -114,13 +145,13 @@ describe('TeamRegistrationModal', () => {
               data: { cost: 100, team_registration: false },
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'users') {
           return {
             update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockResolvedValue({ error: null }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'league_payments') {
           return {
@@ -130,9 +161,9 @@ describe('TeamRegistrationModal', () => {
                 message: 'duplicate key value violates unique constraint "idx_unique_user_league_payment"',
               },
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
-        return {} as any;
+        return {} as MockSupabaseChain;
       });
 
       render(
@@ -188,7 +219,7 @@ describe('TeamRegistrationModal', () => {
               ],
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'leagues') {
           return {
@@ -198,7 +229,7 @@ describe('TeamRegistrationModal', () => {
               data: { cost: 100, team_registration: true },
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'teams') {
           return {
@@ -216,9 +247,9 @@ describe('TeamRegistrationModal', () => {
                 message: 'duplicate key value violates unique constraint',
               },
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
-        return {} as any;
+        return {} as MockSupabaseChain;
       });
 
       render(
@@ -278,7 +309,7 @@ describe('TeamRegistrationModal', () => {
               ],
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'leagues') {
           return {
@@ -288,13 +319,13 @@ describe('TeamRegistrationModal', () => {
               data: { cost: 100, team_registration: false },
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'users') {
           return {
             update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockResolvedValue({ error: null }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'league_payments') {
           return {
@@ -303,9 +334,9 @@ describe('TeamRegistrationModal', () => {
                 message: 'Database connection error',
               },
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
-        return {} as any;
+        return {} as MockSupabaseChain;
       });
 
       render(

@@ -6,6 +6,45 @@ import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useToast } from '../../../../components/ui/toast';
 
+// Define interfaces for mock types
+interface MockAuthReturn {
+  userProfile: {
+    id: string;
+    name: string;
+    team_ids: string[];
+    league_ids: string[];
+    email: string;
+    birthdate: string;
+    gender: string;
+    phone: string;
+    pronouns: string;
+    user_sports_skills: string[];
+    profile_completed: boolean;
+  };
+  user: {
+    email: string;
+  };
+}
+
+interface MockSessionData {
+  data: {
+    session: {
+      access_token: string;
+      user: { id: string };
+    };
+  };
+  error: null;
+}
+
+interface MockSupabaseChain {
+  select?: () => MockSupabaseChain;
+  order?: () => Promise<{ data: unknown[] | null; error: null }>;
+  eq?: () => MockSupabaseChain;
+  single?: () => Promise<{ data: unknown | null; error: null }>;
+  update?: () => MockSupabaseChain;
+  insert?: () => Promise<{ error: null }>;
+}
+
 // Mock dependencies
 vi.mock('../../../../lib/supabase', () => ({
   supabase: {
@@ -64,7 +103,7 @@ describe('Individual Registration Notification', () => {
       user: {
         email: 'test@example.com',
       },
-    } as any);
+    } as MockAuthReturn);
 
     // Mock supabase functions.invoke
     vi.mocked(supabase.functions.invoke).mockImplementation(mockInvoke);
@@ -78,7 +117,7 @@ describe('Individual Registration Notification', () => {
         },
       },
       error: null,
-    } as any);
+    } as MockSessionData);
 
     // Mock skills loading
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -92,7 +131,7 @@ describe('Individual Registration Notification', () => {
             ],
             error: null,
           }),
-        } as any;
+        } as MockSupabaseChain;
       }
       if (table === 'leagues') {
         return {
@@ -102,20 +141,20 @@ describe('Individual Registration Notification', () => {
             data: { cost: 100, team_registration: false }, // Individual registration
             error: null,
           }),
-        } as any;
+        } as MockSupabaseChain;
       }
       if (table === 'users') {
         return {
           update: vi.fn().mockReturnThis(),
           eq: vi.fn().mockResolvedValue({ error: null }),
-        } as any;
+        } as MockSupabaseChain;
       }
       if (table === 'league_payments') {
         return {
           insert: vi.fn().mockResolvedValue({ error: null }),
-        } as any;
+        } as MockSupabaseChain;
       }
-      return {} as any;
+      return {} as MockSupabaseChain;
     });
   });
 

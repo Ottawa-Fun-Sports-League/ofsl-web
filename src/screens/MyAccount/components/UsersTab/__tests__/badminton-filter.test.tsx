@@ -6,6 +6,12 @@ import { AuthProvider } from '../../../../../contexts/AuthContext';
 import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
 
+// Define interfaces for mock data
+interface MockRpcResponse<T> {
+  data: T;
+  error: null;
+}
+
 // Mock supabase
 vi.mock('../../../../../lib/supabase', () => ({
   supabase: {
@@ -291,12 +297,12 @@ describe('Badminton Filter - Individual Registrations', () => {
           })
         }))
       }))
-    } as any));
+    } as MockRpcResponse<unknown>));
 
     vi.mocked(supabase.rpc).mockResolvedValue({
       data: mockUsersData,
       error: null
-    } as any);
+    } as MockRpcResponse<unknown>);
 
     // Mock teams query
     const fromMock = vi.fn();

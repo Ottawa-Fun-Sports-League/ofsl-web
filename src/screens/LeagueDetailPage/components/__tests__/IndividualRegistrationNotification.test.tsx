@@ -1,6 +1,14 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { supabase } from '../../../../lib/supabase';
 
+// Define interface for mock Supabase chain
+interface MockSupabaseChain {
+  update?: () => MockSupabaseChain;
+  insert?: () => MockSupabaseChain;
+  select?: () => MockSupabaseChain;
+  eq?: () => MockSupabaseChain;
+}
+
 // Mock Supabase
 vi.mock('../../../../lib/supabase', () => ({
   supabase: {
@@ -59,19 +67,19 @@ describe('Individual Registration Email Notifications', () => {
       })
     }));
 
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
+    vi.mocked(supabase.from).mockImplementation((table: string): MockSupabaseChain => {
       if (table === 'users') {
         return {
           update: updateUserMock
-        } as any;
+        } as MockSupabaseChain;
       }
       if (table === 'individual_registration_notifications') {
         return {
           insert: notificationInsertMock,
           select: vi.fn().mockReturnThis()
-        } as any;
+        } as MockSupabaseChain;
       }
-      return {} as any;
+      return {} as MockSupabaseChain;
     });
 
     // Simulate registering for a league
@@ -111,9 +119,9 @@ describe('Individual Registration Email Notifications', () => {
       if (table === 'users') {
         return {
           update: updateUserMock
-        } as any;
+        } as MockSupabaseChain;
       }
-      return {} as any;
+      return {} as MockSupabaseChain;
     });
 
     // Simulate registering for multiple leagues
@@ -160,9 +168,9 @@ describe('Individual Registration Email Notifications', () => {
       if (table === 'users') {
         return {
           update: updateUserMock
-        } as any;
+        } as MockSupabaseChain;
       }
-      return {} as any;
+      return {} as MockSupabaseChain;
     });
 
     const { data, error } = await supabase
@@ -218,9 +226,9 @@ describe('Individual Registration Email Notifications', () => {
         return {
           select: selectMock,
           update: updateMock
-        } as any;
+        } as MockSupabaseChain;
       }
-      return {} as any;
+      return {} as MockSupabaseChain;
     });
 
     // Simulate cron job processing

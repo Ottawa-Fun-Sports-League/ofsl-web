@@ -6,6 +6,45 @@ import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useToast } from '../../../../components/ui/toast';
 
+// Define interfaces for mock types
+interface MockAuthReturn {
+  userProfile: {
+    id: string;
+    name: string;
+    team_ids: string[];
+    league_ids: string[];
+    email: string;
+    birthdate: string;
+    gender: string;
+    phone: string;
+    pronouns: string;
+    user_sports_skills: string[];
+    profile_completed: boolean;
+  };
+  user: {
+    email: string;
+  };
+}
+
+interface MockSessionData {
+  data: {
+    session: {
+      access_token: string;
+      user: { id: string };
+    };
+  };
+  error: null;
+}
+
+interface MockSupabaseChain {
+  select?: () => MockSupabaseChain;
+  order?: () => Promise<{ data: unknown[] | null; error: null }>;
+  eq?: () => MockSupabaseChain;
+  single?: () => Promise<{ data: unknown | null; error: null }>;
+  update?: () => MockSupabaseChain;
+  insert?: () => Promise<{ error: null }>;
+}
+
 // Mock modules
 vi.mock('../../../../lib/supabase', () => ({
   supabase: {
@@ -68,11 +107,11 @@ describe('Individual Registration Waitlist', () => {
       userProfile: mockUserProfile,
       loading: false,
       signOut: vi.fn(),
-    } as any);
+    } as MockAuthReturn);
 
     vi.mocked(useToast).mockReturnValue({
       showToast: mockShowToast,
-    } as any);
+    } as { showToast: typeof mockShowToast });
 
     // Mock session
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
@@ -83,7 +122,7 @@ describe('Individual Registration Waitlist', () => {
         },
       },
       error: null,
-    } as any);
+    } as MockSessionData);
   });
 
   describe('Waitlist Registration for Full League', () => {
@@ -103,7 +142,7 @@ describe('Individual Registration Waitlist', () => {
               ],
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'leagues') {
           return {
@@ -113,27 +152,27 @@ describe('Individual Registration Waitlist', () => {
               data: mockLeague,
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'league_payments') {
           return {
             insert: mockInsert,
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'users') {
           return {
             update: mockUpdate,
             eq: vi.fn().mockReturnThis(),
-          } as any;
+          } as MockSupabaseChain;
         }
-        return {} as any;
+        return {} as MockSupabaseChain;
       });
 
       // Mock notification function
       vi.mocked(supabase.functions.invoke).mockResolvedValue({
         data: { success: true },
         error: null,
-      } as any);
+      } as MockSessionData);
 
       render(
         <BrowserRouter>
@@ -212,7 +251,7 @@ describe('Individual Registration Waitlist', () => {
               data: [{ id: 1, name: 'Beginner', order_index: 1 }],
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'leagues') {
           return {
@@ -222,20 +261,20 @@ describe('Individual Registration Waitlist', () => {
               data: mockLeague,
               error: null,
             }),
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'league_payments') {
           return {
             insert: mockInsert,
-          } as any;
+          } as MockSupabaseChain;
         }
         if (table === 'users') {
           return {
             update: vi.fn().mockReturnThis(),
             eq: vi.fn().mockResolvedValue({ error: null }),
-          } as any;
+          } as MockSupabaseChain;
         }
-        return {} as any;
+        return {} as MockSupabaseChain;
       });
 
       render(
@@ -300,9 +339,9 @@ describe('Individual Registration Waitlist', () => {
             delete: mockDelete,
             eq: vi.fn().mockReturnThis(),
             is: vi.fn().mockReturnThis(),
-          } as any;
+          } as MockSupabaseChain;
         }
-        return {} as any;
+        return {} as MockSupabaseChain;
       });
 
       // In reality, the database trigger would automatically call promote_from_waitlist

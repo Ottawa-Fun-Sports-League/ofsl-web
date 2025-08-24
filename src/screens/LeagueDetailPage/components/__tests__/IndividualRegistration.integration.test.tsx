@@ -63,7 +63,12 @@ describe('Individual Registration Tests', () => {
     vi.clearAllMocks();
     
     // Mock skills fetch
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
+    interface MockSupabaseChain {
+      select: () => MockSupabaseChain;
+      order: () => Promise<{ data: unknown[] | null; error: null }>;
+    }
+
+    vi.mocked(supabase.from).mockImplementation((table: string): MockSupabaseChain => {
       if (table === 'skills') {
         return {
           select: vi.fn().mockReturnThis(),
@@ -75,9 +80,9 @@ describe('Individual Registration Tests', () => {
             ],
             error: null
           })
-        } as any;
+        } as MockSupabaseChain;
       }
-      return {} as any;
+      return {} as MockSupabaseChain;
     });
   });
 

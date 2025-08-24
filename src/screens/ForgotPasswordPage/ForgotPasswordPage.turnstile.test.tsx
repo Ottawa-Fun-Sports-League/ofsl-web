@@ -18,8 +18,15 @@ vi.mock('../../contexts/AuthContext', () => ({
 }));
 
 // Mock Turnstile widget
+interface MockTurnstileProps {
+  onVerify: (token: string) => void;
+  onError?: () => void;
+  onExpire?: () => void;
+  className?: string;
+}
+
 vi.mock('../../components/ui/turnstile', () => ({
-  TurnstileWidget: vi.fn(({ onVerify }: any) => {
+  TurnstileWidget: vi.fn(({ onVerify }: MockTurnstileProps) => {
     // Auto-verify after mount
     setTimeout(() => onVerify('test-turnstile-token'), 100);
     return <div data-testid="turnstile-widget">Turnstile Widget</div>;

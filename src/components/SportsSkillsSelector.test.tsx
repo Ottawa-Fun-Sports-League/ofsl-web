@@ -17,6 +17,13 @@ vi.mock('../lib/logger', () => ({
   },
 }));
 
+// Define types for the mock responses
+interface MockSupabaseChain {
+  select: () => MockSupabaseChain;
+  eq: () => MockSupabaseChain;
+  order: () => Promise<{ data: unknown[] | null; error: null }>;
+}
+
 describe('SportsSkillsSelector', () => {
   const mockSports = [
     { id: 1, name: 'Volleyball' },
@@ -34,7 +41,7 @@ describe('SportsSkillsSelector', () => {
     vi.clearAllMocks();
 
     // Setup default successful responses
-    const fromMock = vi.fn((table) => {
+    const fromMock = vi.fn((table: string): MockSupabaseChain => {
       if (table === 'sports') {
         return {
           select: vi.fn().mockReturnThis(),
@@ -43,7 +50,7 @@ describe('SportsSkillsSelector', () => {
             data: mockSports,
             error: null,
           }),
-        };
+        } as MockSupabaseChain;
       }
       if (table === 'skills') {
         return {
@@ -52,12 +59,12 @@ describe('SportsSkillsSelector', () => {
             data: mockSkills,
             error: null,
           }),
-        };
+        } as MockSupabaseChain;
       }
-      return {};
+      return {} as MockSupabaseChain;
     });
 
-    (supabase.from as any).mockImplementation(fromMock);
+    (supabase.from as unknown as typeof fromMock).mockImplementation(fromMock);
   });
 
   it('should allow adding multiple sports without saving', async () => {

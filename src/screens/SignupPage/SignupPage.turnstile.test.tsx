@@ -5,12 +5,27 @@ import { SignupPage } from './SignupPage';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
+// Define interfaces for mock types
+interface TurnstileProps {
+  onSuccess?: (token: string) => void;
+  onError?: () => void;
+  onExpire?: () => void;
+}
+
+interface WindowWithTurnstile {
+  __turnstileCallbacks?: {
+    onSuccess?: (token: string) => void;
+    onError?: () => void;
+    onExpire?: () => void;
+  };
+}
+
 // Mock dependencies
 vi.mock('../../lib/supabase');
 vi.mock('@marsidev/react-turnstile', () => ({
-  Turnstile: ({ onSuccess, onError, onExpire }: any) => {
+  Turnstile: ({ onSuccess, onError, onExpire }: TurnstileProps) => {
     // Store callbacks for testing
-    (window as any).__turnstileCallbacks = { onSuccess, onError, onExpire };
+    (window as WindowWithTurnstile).__turnstileCallbacks = { onSuccess, onError, onExpire };
     return <div data-testid="turnstile-widget">Turnstile Widget</div>;
   }
 }));
@@ -77,7 +92,7 @@ describe('SignupPage with Turnstile', () => {
     expect(submitButton).toBeDisabled();
 
     // Simulate successful Turnstile verification
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as WindowWithTurnstile).__turnstileCallbacks;
     callbacks.onSuccess('test-token');
 
     // Wait for React to re-render
@@ -90,7 +105,7 @@ describe('SignupPage with Turnstile', () => {
     renderSignupPage();
     
     // Simulate Turnstile error
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as WindowWithTurnstile).__turnstileCallbacks;
     callbacks.onError();
 
     // Wait for error message to appear
@@ -107,7 +122,7 @@ describe('SignupPage with Turnstile', () => {
     renderSignupPage();
     
     // First verify successfully
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as WindowWithTurnstile).__turnstileCallbacks;
     callbacks.onSuccess('test-token');
     
     const submitButton = screen.getByRole('button', { name: /create account/i });
@@ -158,7 +173,7 @@ describe('SignupPage with Turnstile', () => {
       insert: vi.fn().mockReturnValue({
         error: null
       })
-    } as any);
+    } as { insert: () => { error: null } });
     vi.mocked(supabase.auth).getSession = vi.fn().mockResolvedValue({
       data: { session: { access_token: 'test-token' } }
     });
@@ -173,7 +188,7 @@ describe('SignupPage with Turnstile', () => {
     renderSignupPage();
     
     // Simulate Turnstile verification
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as WindowWithTurnstile).__turnstileCallbacks;
     callbacks.onSuccess('test-turnstile-token');
 
     // Fill in form fields
