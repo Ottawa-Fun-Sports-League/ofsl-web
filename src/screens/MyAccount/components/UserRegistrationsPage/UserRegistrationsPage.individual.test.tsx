@@ -38,7 +38,7 @@ describe('UserRegistrationsPage Individual Leagues', () => {
     vi.mocked(useAuth).mockReturnValue({
       userProfile: mockAdminProfile,
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
   });
 
   it('should display individual league registrations correctly', async () => {
@@ -115,7 +115,7 @@ describe('UserRegistrationsPage Individual Leagues', () => {
               })
             };
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -125,7 +125,7 @@ describe('UserRegistrationsPage Individual Leagues', () => {
             data: mockIndividualLeagues,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -142,10 +142,10 @@ describe('UserRegistrationsPage Individual Leagues', () => {
             }
             return Promise.resolve({ data: [], error: null });
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -215,10 +215,10 @@ describe('UserRegistrationsPage Individual Leagues', () => {
               })
             };
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -301,7 +301,7 @@ describe('UserRegistrationsPage Individual Leagues', () => {
               })
             };
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -311,7 +311,7 @@ describe('UserRegistrationsPage Individual Leagues', () => {
             data: mockLeagues,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -323,10 +323,10 @@ describe('UserRegistrationsPage Individual Leagues', () => {
             data: [],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(

@@ -92,7 +92,7 @@ describe('Individual Registration Skill Level', () => {
               order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -103,7 +103,7 @@ describe('Individual Registration Skill Level', () => {
               error: null 
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       if (table === 'leagues') {
@@ -116,7 +116,7 @@ describe('Individual Registration Skill Level', () => {
               }),
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       if (table === 'users') {
@@ -129,7 +129,7 @@ describe('Individual Registration Skill Level', () => {
               }),
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       if (table === 'gyms') {
@@ -140,14 +140,14 @@ describe('Individual Registration Skill Level', () => {
               error: null 
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       return {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
-      } as any;
+      } as unknown as ReturnType<typeof supabase.from>;
     });
 
     const { container } = render(
@@ -212,7 +212,7 @@ describe('Individual Registration Skill Level', () => {
               order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -223,7 +223,7 @@ describe('Individual Registration Skill Level', () => {
               error: null 
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       if (table === 'leagues') {
@@ -236,7 +236,7 @@ describe('Individual Registration Skill Level', () => {
               }),
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       if (table === 'users') {
@@ -249,7 +249,7 @@ describe('Individual Registration Skill Level', () => {
               }),
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       if (table === 'gyms') {
@@ -260,14 +260,14 @@ describe('Individual Registration Skill Level', () => {
               error: null 
             }),
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
 
       return {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
-      } as any;
+      } as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(

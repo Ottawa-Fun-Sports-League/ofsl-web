@@ -61,7 +61,7 @@ describe('ManageTeamsTab', () => {
             ],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -76,7 +76,7 @@ describe('ManageTeamsTab', () => {
               ],
               error: null
             })
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         } else {
           // Second call for individual leagues
           return {
@@ -87,7 +87,7 @@ describe('ManageTeamsTab', () => {
               ],
               error: null
             })
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         }
       }
       
@@ -105,7 +105,7 @@ describe('ManageTeamsTab', () => {
             ],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -126,10 +126,10 @@ describe('ManageTeamsTab', () => {
             ],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(<ManageTeamsTab />);
@@ -178,7 +178,7 @@ describe('ManageTeamsTab', () => {
             ],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -190,7 +190,7 @@ describe('ManageTeamsTab', () => {
               data: [{ id: 1, name: 'Team League' }],
               error: null
             })
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         } else {
           // Second call for individual leagues
           return {
@@ -199,7 +199,7 @@ describe('ManageTeamsTab', () => {
               data: [],
               error: null
             })
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         }
       }
       
@@ -210,7 +210,7 @@ describe('ManageTeamsTab', () => {
             data: [],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -221,10 +221,10 @@ describe('ManageTeamsTab', () => {
             data: [],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(<ManageTeamsTab />);

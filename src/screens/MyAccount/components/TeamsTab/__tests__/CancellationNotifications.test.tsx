@@ -34,7 +34,7 @@ describe('Cancellation Notifications', () => {
         },
       },
       error: null,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
   });
 
   describe('Individual Registration Cancellation', () => {
@@ -56,7 +56,7 @@ describe('Cancellation Notifications', () => {
               error: null,
             }),
             delete: vi.fn().mockReturnThis(),
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         }
         if (table === 'users') {
           return {
@@ -69,7 +69,7 @@ describe('Cancellation Notifications', () => {
               );
               
               if (selectMock) {
-                const selectCall = (supabase.from('users') as any).select.mock.calls;
+                const selectCall = vi.mocked(supabase.from('users')).select.mock.calls;
                 const lastCall = selectCall[selectCall.length - 1];
                 
                 if (lastCall && lastCall[0]?.includes('name')) {
@@ -95,9 +95,9 @@ describe('Cancellation Notifications', () => {
               return Promise.resolve({ data: null, error: null });
             }),
             update: vi.fn().mockReturnThis(),
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         }
-        return {} as any;
+        return {} as unknown as ReturnType<typeof supabase.from>;
       });
       
       // Mock successful notification
@@ -161,7 +161,7 @@ describe('Cancellation Notifications', () => {
               error: null,
             }),
             delete: vi.fn().mockReturnThis(),
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         }
         if (table === 'users') {
           return {
@@ -173,7 +173,7 @@ describe('Cancellation Notifications', () => {
               );
               
               if (selectMock) {
-                const selectCall = (supabase.from('users') as any).select.mock.calls;
+                const selectCall = vi.mocked(supabase.from('users')).select.mock.calls;
                 const lastCall = selectCall[selectCall.length - 1];
                 
                 if (lastCall && lastCall[0]?.includes('name')) {
@@ -197,9 +197,9 @@ describe('Cancellation Notifications', () => {
               return Promise.resolve({ data: null, error: null });
             }),
             update: vi.fn().mockReturnThis(),
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         }
-        return {} as any;
+        return {} as unknown as ReturnType<typeof supabase.from>;
       });
       
       // Mock notification failure
@@ -259,13 +259,13 @@ describe('Cancellation Notifications', () => {
               },
               error: null,
             }),
-          } as any;
+          } as unknown as ReturnType<typeof supabase.from>;
         }
-        return {} as any;
+        return {} as unknown as ReturnType<typeof supabase.from>;
       });
       
       // Mock delete-registration endpoint response
-      (global.fetch as any).mockResolvedValue({
+      vi.mocked(global.fetch).mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,

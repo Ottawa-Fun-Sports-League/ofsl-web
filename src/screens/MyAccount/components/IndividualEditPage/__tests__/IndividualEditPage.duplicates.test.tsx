@@ -58,7 +58,7 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -73,7 +73,7 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -91,10 +91,10 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             data: mockPaymentData,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
   });
 
@@ -134,7 +134,7 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             data: mockPaymentData,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       // Return default mocks for other tables
@@ -151,7 +151,7 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -166,10 +166,10 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -218,7 +218,7 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             error: null
           }),
           insert: insertMock
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       // Return default mocks for other tables
@@ -235,7 +235,7 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -250,10 +250,10 @@ describe('IndividualEditPage Duplicate Payment Handling', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(

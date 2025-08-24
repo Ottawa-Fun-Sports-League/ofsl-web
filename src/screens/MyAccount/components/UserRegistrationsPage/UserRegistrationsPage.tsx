@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Button } from '../../../../components/ui/button';
 import { ArrowLeft, Edit2, DollarSign, Users, User, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { useToast } from '../../../../components/ui/toast';
+import { LeagueWithSport } from '../../../../types/test-mocks';
 
 interface UserData {
   id: string;
@@ -145,7 +146,7 @@ export function UserRegistrationsPage() {
       // and the league hasn't ended yet
       const today = new Date().toISOString().split('T')[0];
       const teams = allTeams?.filter(team => {
-        const league = team.leagues as any;
+        const league = team.leagues as LeagueWithSport;
         // Check if league is still active (not ended)
         if (league?.end_date && league.end_date < today) {
           return false; // Skip ended leagues
@@ -170,7 +171,7 @@ export function UserRegistrationsPage() {
             .in('team_id', teamIds);
 
           const teamRegs: TeamRegistration[] = teams.map(team => {
-            const league = team.leagues as any;
+            const league = team.leagues as LeagueWithSport;
             const sport = league?.sports;
             const payment = payments?.find(p => p.team_id === team.id);
             
@@ -267,7 +268,7 @@ export function UserRegistrationsPage() {
             .in('league_id', individualLeagues.map(l => l.id));
 
           const individualRegs: IndividualRegistration[] = individualLeagues.map(league => {
-            const sport = (league as any).sports;
+            const sport = league?.sports;
             const payment = payments?.find(p => p.league_id === league.id);
             
             // Calculate payment status
@@ -407,7 +408,7 @@ export function UserRegistrationsPage() {
               </Button>
               <div className="flex-1">
                 <CardTitle className="text-xl sm:text-2xl font-bold text-[#6F6F6F]">
-                  {userData.name || 'Unnamed User'}'s Registrations
+                  {userData.name || 'Unnamed User'}&apos;s Registrations
                 </CardTitle>
                 <p className="text-sm text-gray-500 mt-1">
                   {userData.email} • {totalRegistrations} Total Registration{totalRegistrations !== 1 ? 's' : ''}

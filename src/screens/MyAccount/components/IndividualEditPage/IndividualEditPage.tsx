@@ -100,7 +100,7 @@ export function IndividualEditPage() {
       if (leagueError) throw leagueError;
 
       // Check if user has a payment record for this league (either active or waitlisted)
-      let { data: payment, error: paymentError } = await supabase
+      const { data: payment, error: paymentError } = await supabase
         .from('league_payments')
         .select('*')
         .eq('user_id', userId)
@@ -234,7 +234,7 @@ export function IndividualEditPage() {
     }
   };
 
-  const handleEditPayment = (entry: any) => {
+  const handleEditPayment = (entry: { id: string | number; amount: number; payment_method: string | null; date: string; notes?: string }) => {
     setEditingPayment({
       id: entry.id,
       amount: entry.amount.toString(),
@@ -310,7 +310,7 @@ export function IndividualEditPage() {
     setEditingPayment({ id: null, amount: '', payment_method: null, date: '', notes: '' });
   };
 
-  const handleDeletePayment = async (entry: any) => {
+  const handleDeletePayment = async (entry: { id: string | number; amount: number; payment_method: string | null; date: string; notes?: string }) => {
     if (!paymentInfo) return;
 
     const confirmDelete = confirm(`Are you sure you want to delete this payment of $${entry.amount.toFixed(2)}?`);
@@ -354,7 +354,7 @@ export function IndividualEditPage() {
   if (!userProfile?.is_admin) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">You don't have permission to view this page.</p>
+        <p className="text-gray-500">You don&apos;t have permission to view this page.</p>
       </div>
     );
   }

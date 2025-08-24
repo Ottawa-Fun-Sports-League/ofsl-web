@@ -3,12 +3,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { LoginPage } from './LoginPage';
 import { useAuth } from '../../contexts/AuthContext';
+import { MockWindow } from '../../types/test-mocks';
 
 // Mock dependencies
 vi.mock('@marsidev/react-turnstile', () => ({
-  Turnstile: ({ onSuccess, onError, onExpire }: any) => {
+  Turnstile: ({ onSuccess, onError, onExpire }: { onSuccess: (token: string) => void; onError: (error: string) => void; onExpire: () => void }) => {
     // Store callbacks for testing
-    (window as any).__turnstileCallbacks = { onSuccess, onError, onExpire };
+    (window as MockWindow).__turnstileCallbacks = { onSuccess, onError, onExpire };
     return <div data-testid="turnstile-widget">Turnstile Widget</div>;
   }
 }));
@@ -78,7 +79,7 @@ describe('LoginPage with Turnstile', () => {
     expect(submitButton).toBeDisabled();
 
     // Simulate successful Turnstile verification
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as MockWindow).__turnstileCallbacks;
     callbacks.onSuccess('test-token');
 
     // Wait for React to re-render
@@ -91,7 +92,7 @@ describe('LoginPage with Turnstile', () => {
     renderLoginPage();
     
     // Simulate Turnstile error
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as MockWindow).__turnstileCallbacks;
     callbacks.onError();
 
     // Wait for error message to appear
@@ -108,7 +109,7 @@ describe('LoginPage with Turnstile', () => {
     renderLoginPage();
     
     // First verify successfully
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as MockWindow).__turnstileCallbacks;
     callbacks.onSuccess('test-token');
     
     const submitButton = screen.getByRole('button', { name: /^login$/i });
@@ -149,7 +150,7 @@ describe('LoginPage with Turnstile', () => {
     renderLoginPage();
     
     // Simulate Turnstile verification
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as MockWindow).__turnstileCallbacks;
     callbacks.onSuccess('test-turnstile-token');
 
     // Fill in form fields
@@ -172,7 +173,7 @@ describe('LoginPage with Turnstile', () => {
     renderLoginPage();
     
     // Simulate Turnstile verification
-    const callbacks = (window as any).__turnstileCallbacks;
+    const callbacks = (window as MockWindow).__turnstileCallbacks;
     callbacks.onSuccess('test-turnstile-token');
 
     // Fill in form fields

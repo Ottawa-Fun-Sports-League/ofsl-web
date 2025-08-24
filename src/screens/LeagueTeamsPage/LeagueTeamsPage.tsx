@@ -281,7 +281,7 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', true)
-          .order('created_at', { ascending: false })) as { data: ExtendedTeam[] | null; error: any };
+          .order('created_at', { ascending: false })) as { data: ExtendedTeam[] | null; error: Error | null };
 
         waitlistResult = (await supabase
           .from('teams')
@@ -298,7 +298,7 @@ export function LeagueTeamsPage() {
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', false)
-          .order('created_at', { ascending: false })) as { data: ExtendedTeam[] | null; error: any };
+          .order('created_at', { ascending: false })) as { data: ExtendedTeam[] | null; error: Error | null };
       }
 
       if (activeResult.error) throw activeResult.error;

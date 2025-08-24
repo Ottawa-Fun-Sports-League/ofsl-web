@@ -112,10 +112,10 @@ describe('LeagueTeamsPage - Individual Skill Levels', () => {
 
     // Setup mock implementations
     vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'leagues') return mockLeagueQuery as any;
-      if (table === 'users') return mockUsersQuery as any;
-      if (table === 'league_payments') return mockPaymentsQuery as any;
-      return {} as any;
+      if (table === 'leagues') return mockLeagueQuery as unknown as ReturnType<typeof supabase.from>;
+      if (table === 'users') return mockUsersQuery as unknown as ReturnType<typeof supabase.from>;
+      if (table === 'league_payments') return mockPaymentsQuery as unknown as ReturnType<typeof supabase.from>;
+      return {} as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -197,10 +197,10 @@ describe('LeagueTeamsPage - Individual Skill Levels', () => {
 
     // Setup mock implementations
     vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'leagues') return mockLeagueQuery as any;
-      if (table === 'users') return mockUsersQuery as any;
-      if (table === 'league_payments') return mockPaymentsQuery as any;
-      return {} as any;
+      if (table === 'leagues') return mockLeagueQuery as unknown as ReturnType<typeof supabase.from>;
+      if (table === 'users') return mockUsersQuery as unknown as ReturnType<typeof supabase.from>;
+      if (table === 'league_payments') return mockPaymentsQuery as unknown as ReturnType<typeof supabase.from>;
+      return {} as ReturnType<typeof supabase.from>;
     });
 
     render(

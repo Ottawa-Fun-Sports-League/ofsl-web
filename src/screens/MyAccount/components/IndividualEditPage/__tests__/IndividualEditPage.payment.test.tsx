@@ -58,7 +58,7 @@ describe('IndividualEditPage Payment Method', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -73,7 +73,7 @@ describe('IndividualEditPage Payment Method', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -91,10 +91,10 @@ describe('IndividualEditPage Payment Method', () => {
             data: mockPaymentData,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
   });
 
@@ -116,9 +116,9 @@ describe('IndividualEditPage Payment Method', () => {
             data: { ...mockPaymentData, payment_method: 'e_transfer' },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -189,9 +189,9 @@ describe('IndividualEditPage Payment Method', () => {
             data: { ...mockPaymentWithHistory, payment_method: 'e_transfer' },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(

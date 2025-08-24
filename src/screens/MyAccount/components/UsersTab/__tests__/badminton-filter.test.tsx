@@ -143,7 +143,7 @@ describe('Badminton Filter - Individual Registrations', () => {
     const fromMock = vi.fn().mockReturnThis();
     const selectMock = vi.fn().mockReturnThis();
     const eqMock = vi.fn().mockReturnThis();
-    const orderMock = vi.fn().mockReturnThis();
+    const _orderMock = vi.fn().mockReturnThis();
     const singleMock = vi.fn();
     
     // Admin check
@@ -239,7 +239,7 @@ describe('Badminton Filter - Individual Registrations', () => {
   });
 
   it('should not include expired individual leagues in badminton filter', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const _today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 

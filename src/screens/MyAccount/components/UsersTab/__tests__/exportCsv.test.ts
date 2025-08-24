@@ -142,7 +142,7 @@ describe('CSV Export Functionality', () => {
 
   it('should generate filename with current timestamp', () => {
     const mockDate = new Date('2024-03-15T14:30:00');
-    vi.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+    vi.spyOn(global, 'Date').mockImplementation(() => mockDate as unknown as Date);
 
     const filename = generateExportFilename();
     

@@ -34,7 +34,7 @@ describe('Skill Level Editing', () => {
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
         }),
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       render(
         <SkillLevelEditModal
@@ -70,7 +70,7 @@ describe('Skill Level Editing', () => {
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
         }),
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       render(
         <SkillLevelEditModal
@@ -158,7 +158,7 @@ describe('Skill Level Editing', () => {
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
         }),
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       render(
         <MissingSkillLevelPrompt
@@ -224,7 +224,7 @@ describe('Skill Level Editing', () => {
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
         }),
-      } as any);
+      } as unknown as ReturnType<typeof supabase.from>);
 
       render(
         <MissingSkillLevelPrompt

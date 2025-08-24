@@ -147,7 +147,7 @@ describe('UserRegistrationsPage', () => {
     
     vi.mocked(useAuth).mockReturnValue({
       userProfile: mockUserProfile,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Setup supabase mocks
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -174,7 +174,7 @@ describe('UserRegistrationsPage', () => {
             return { maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
           }),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'teams') {
@@ -183,7 +183,7 @@ describe('UserRegistrationsPage', () => {
             data: mockTeams, 
             error: null 
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -193,7 +193,7 @@ describe('UserRegistrationsPage', () => {
             data: mockIndividualLeagues, 
             error: null 
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -205,10 +205,10 @@ describe('UserRegistrationsPage', () => {
           }),
           eq: vi.fn().mockReturnThis(),
           is: vi.fn().mockReturnThis(),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
   });
 
@@ -255,7 +255,7 @@ describe('UserRegistrationsPage', () => {
   it('should show access denied for non-admin users', async () => {
     vi.mocked(useAuth).mockReturnValue({
       userProfile: { ...mockUserProfile, is_admin: false },
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     render(
       <BrowserRouter>
@@ -277,9 +277,9 @@ describe('UserRegistrationsPage', () => {
               error: { message: 'User not found' } 
             })
           }))
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -336,9 +336,9 @@ describe('UserRegistrationsPage', () => {
             }
             return { maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(

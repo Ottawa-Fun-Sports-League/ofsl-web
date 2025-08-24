@@ -1125,9 +1125,9 @@ export function useUsersData() {
       );
       
       // Get all unique sport IDs and names to see what's actually in the data
-      const allSportIds = new Set<any>();
+      const allSportIds = new Set<number | string>();
       const allSportNames = new Set<string>();
-      const sportIdCounts = new Map<any, number>();
+      const sportIdCounts = new Map<number | string, number>();
       
       usersWithRegs.forEach(u => {
         u.current_registrations?.forEach(r => {

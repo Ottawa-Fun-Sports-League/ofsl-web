@@ -158,7 +158,7 @@ describe('TeamsTab - Cancellation Updates', () => {
       }
     });
     
-    (supabase.from as any).mockImplementation(mockFrom);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
   });
 
   it('should update UI immediately after cancelling individual registration', async () => {

@@ -39,7 +39,7 @@ describe('UserRegistrationsPage Null Checks', () => {
         email: 'admin@test.com'
       },
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Mock supabase to return null user
     vi.mocked(supabase.from).mockImplementation(() => ({
@@ -73,7 +73,7 @@ describe('UserRegistrationsPage Null Checks', () => {
         email: 'admin@test.com'
       },
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Mock successful user data fetch
     const mockUserData = {
@@ -94,7 +94,7 @@ describe('UserRegistrationsPage Null Checks', () => {
             data: mockUserData,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       return {
         select: vi.fn().mockReturnThis(),
@@ -102,7 +102,7 @@ describe('UserRegistrationsPage Null Checks', () => {
         in: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-      } as any;
+      } as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -129,7 +129,7 @@ describe('UserRegistrationsPage Null Checks', () => {
         email: 'admin@test.com'
       },
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Mock user not found
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -141,9 +141,9 @@ describe('UserRegistrationsPage Null Checks', () => {
             data: null,
             error: { message: 'User not found', code: 'PGRST116' }
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -168,7 +168,7 @@ describe('UserRegistrationsPage Null Checks', () => {
         email: 'admin@test.com'
       },
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Mock user with null name
     const mockUserData = {
@@ -189,7 +189,7 @@ describe('UserRegistrationsPage Null Checks', () => {
             data: mockUserData,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       return {
         select: vi.fn().mockReturnThis(),
@@ -197,7 +197,7 @@ describe('UserRegistrationsPage Null Checks', () => {
         in: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-      } as any;
+      } as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(

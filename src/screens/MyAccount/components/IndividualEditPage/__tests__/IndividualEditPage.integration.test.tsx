@@ -141,7 +141,7 @@ describe('IndividualEditPage Integration', () => {
       return {};
     });
 
-    (supabase.from as any).mockImplementation(mockFrom);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
 
     render(
       <BrowserRouter>
@@ -233,7 +233,7 @@ describe('IndividualEditPage Integration', () => {
       return {};
     });
 
-    (supabase.from as any).mockImplementation(mockFrom);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
 
     render(
       <BrowserRouter>
@@ -322,7 +322,7 @@ describe('IndividualEditPage Integration', () => {
       return {};
     });
 
-    (supabase.from as any).mockImplementation(mockFrom);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
 
     render(
       <BrowserRouter>
@@ -379,7 +379,7 @@ describe('IndividualEditPage Integration', () => {
       return {};
     });
 
-    (supabase.from as any).mockImplementation(mockFrom);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
 
     render(
       <BrowserRouter>

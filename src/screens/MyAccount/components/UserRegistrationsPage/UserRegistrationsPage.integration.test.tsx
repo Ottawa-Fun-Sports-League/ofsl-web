@@ -34,7 +34,7 @@ describe('UserRegistrationsPage Integration', () => {
     vi.mocked(useAuth).mockReturnValue({
       userProfile: null,
       loading: true,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     const { rerender } = render(
       <BrowserRouter>
@@ -54,7 +54,7 @@ describe('UserRegistrationsPage Integration', () => {
         email: 'admin@test.com'
       },
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Mock successful user data fetch
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -73,9 +73,9 @@ describe('UserRegistrationsPage Integration', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     rerender(
@@ -105,7 +105,7 @@ describe('UserRegistrationsPage Integration', () => {
         email: 'user@test.com'
       },
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     render(
       <BrowserRouter>
@@ -122,7 +122,7 @@ describe('UserRegistrationsPage Integration', () => {
     vi.mocked(useAuth).mockReturnValue({
       userProfile: null,
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     render(
       <BrowserRouter>
@@ -145,7 +145,7 @@ describe('UserRegistrationsPage Integration', () => {
         email: 'admin@test.com'
       },
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     // Mock user with registrations
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -164,7 +164,7 @@ describe('UserRegistrationsPage Integration', () => {
             },
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'teams') {
@@ -187,7 +187,7 @@ describe('UserRegistrationsPage Integration', () => {
             }],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -207,7 +207,7 @@ describe('UserRegistrationsPage Integration', () => {
             }],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -216,10 +216,10 @@ describe('UserRegistrationsPage Integration', () => {
           in: vi.fn().mockResolvedValue({ data: [], error: null }),
           eq: vi.fn().mockReturnThis(),
           is: vi.fn().mockReturnThis(),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(

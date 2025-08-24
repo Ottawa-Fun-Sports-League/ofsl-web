@@ -40,7 +40,7 @@ describe('UserRegistrationsPage ID Lookup', () => {
     vi.mocked(useAuth).mockReturnValue({
       userProfile: mockAdminProfile,
       loading: false,
-    } as any);
+    } as unknown as ReturnType<typeof supabase.from>);
   });
 
   it('should find user by profile ID (users.id)', async () => {
@@ -78,9 +78,9 @@ describe('UserRegistrationsPage ID Lookup', () => {
             };
           }),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -143,9 +143,9 @@ describe('UserRegistrationsPage ID Lookup', () => {
             };
           }),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -174,9 +174,9 @@ describe('UserRegistrationsPage ID Lookup', () => {
             data: null,
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
@@ -238,7 +238,7 @@ describe('UserRegistrationsPage ID Lookup', () => {
               })
             };
           }),
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'leagues') {
@@ -257,7 +257,7 @@ describe('UserRegistrationsPage ID Lookup', () => {
             }],
             error: null
           })
-        } as any;
+        } as unknown as ReturnType<typeof supabase.from>;
       }
       
       if (table === 'league_payments') {
@@ -276,7 +276,7 @@ describe('UserRegistrationsPage ID Lookup', () => {
         return mockChain;
       }
       
-      return {} as any;
+      return {} as unknown as ReturnType<typeof supabase.from>;
     });
 
     render(
