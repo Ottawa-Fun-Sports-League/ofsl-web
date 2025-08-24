@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { AboutUsPage } from "./AboutUsPage";
 import { BrowserRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/ui/toast";
@@ -92,7 +92,7 @@ describe("AboutUsPage - Contact Form", () => {
     });
     
     // Mock successful direct fetch response
-    (global.fetch as unknown as vi.Mock).mockResolvedValueOnce({
+    (global.fetch as unknown as Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ message: "Email sent successfully" }),
     });
@@ -169,7 +169,7 @@ describe("AboutUsPage - Contact Form", () => {
     });
     
     // Mock failed fetch response
-    (global.fetch as unknown as vi.Mock).mockResolvedValueOnce({
+    (global.fetch as unknown as Mock).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Failed to send email" }),
     });
@@ -220,7 +220,7 @@ describe("AboutUsPage - Contact Form", () => {
       data: null,
       error: new Error("Network error")
     });
-    (global.fetch as unknown as vi.Mock).mockRejectedValueOnce(new Error("Network error"));
+    (global.fetch as unknown as Mock).mockRejectedValueOnce(new Error("Network error"));
 
     render(
       <BrowserRouter>

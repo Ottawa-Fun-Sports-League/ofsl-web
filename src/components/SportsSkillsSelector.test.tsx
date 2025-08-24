@@ -55,6 +55,7 @@ describe('SportsSkillsSelector', () => {
       if (table === 'skills') {
         return {
           select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
           order: vi.fn().mockResolvedValue({
             data: mockSkills,
             error: null,

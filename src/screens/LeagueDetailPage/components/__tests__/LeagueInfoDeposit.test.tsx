@@ -53,6 +53,7 @@ describe('LeagueInfo Deposit Display', () => {
     day_of_week: 1,
     start_date: '2025-01-01',
     end_date: '2025-03-31',
+    team_registration: false,
     cost: 250,
     max_teams: 20,
     gym_ids: [1],

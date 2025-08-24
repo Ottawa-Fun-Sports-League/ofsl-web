@@ -3,6 +3,7 @@
  */
 
 import { Database } from './supabase';
+import type { MockedFunction } from 'vitest';
 
 // Supabase mock types
 export type MockUserProfile = Database['public']['Tables']['users']['Row'];
@@ -75,12 +76,12 @@ export interface MockStripePaymentIntent {
 }
 
 export interface MockStripeElement {
-  mount: jest.MockedFunction<(domElement: string | Element) => void>;
-  unmount: jest.MockedFunction<() => void>;
-  destroy: jest.MockedFunction<() => void>;
-  update: jest.MockedFunction<(options: Record<string, unknown>) => void>;
-  on: jest.MockedFunction<(event: string, handler: (...args: unknown[]) => void) => void>;
-  off: jest.MockedFunction<(event: string, handler: (...args: unknown[]) => void) => void>;
+  mount: MockedFunction<(domElement: string | Element) => void>;
+  unmount: MockedFunction<() => void>;
+  destroy: MockedFunction<() => void>;
+  update: MockedFunction<(options: Record<string, unknown>) => void>;
+  on: MockedFunction<(event: string, handler: (...args: unknown[]) => void) => void>;
+  off: MockedFunction<(event: string, handler: (...args: unknown[]) => void) => void>;
 }
 
 // Mock auth types
@@ -118,15 +119,138 @@ export interface MockApiError {
 
 export type MockApiResponse<T = unknown> = MockApiSuccess<T> | MockApiError;
 
+// Mock Supabase query chain types
+export interface MockSupabaseChain {
+  select?: (columns?: string) => MockSupabaseChain;
+  insert?: (values: Record<string, unknown>) => MockSupabaseChain;
+  update?: (values: Record<string, unknown>) => MockSupabaseChain;
+  delete?: () => MockSupabaseChain;
+  upsert?: (values: Record<string, unknown>) => MockSupabaseChain;
+  from?: (table: string) => MockSupabaseChain;
+  eq?: (column: string, value: unknown) => MockSupabaseChain;
+  neq?: (column: string, value: unknown) => MockSupabaseChain;
+  gt?: (column: string, value: unknown) => MockSupabaseChain;
+  gte?: (column: string, value: unknown) => MockSupabaseChain;
+  lt?: (column: string, value: unknown) => MockSupabaseChain;
+  lte?: (column: string, value: unknown) => MockSupabaseChain;
+  like?: (column: string, pattern: string) => MockSupabaseChain;
+  ilike?: (column: string, pattern: string) => MockSupabaseChain;
+  is?: (column: string, value: unknown) => MockSupabaseChain;
+  in?: (column: string, values: unknown[]) => MockSupabaseChain;
+  contains?: (column: string, value: unknown) => MockSupabaseChain;
+  containedBy?: (column: string, value: unknown) => MockSupabaseChain;
+  rangeGt?: (column: string, value: string) => MockSupabaseChain;
+  rangeGte?: (column: string, value: string) => MockSupabaseChain;
+  rangeLt?: (column: string, value: string) => MockSupabaseChain;
+  rangeLte?: (column: string, value: string) => MockSupabaseChain;
+  rangeAdjacent?: (column: string, value: string) => MockSupabaseChain;
+  overlaps?: (column: string, value: unknown) => MockSupabaseChain;
+  textSearch?: (column: string, query: string, options?: Record<string, unknown>) => MockSupabaseChain;
+  match?: (query: Record<string, unknown>) => MockSupabaseChain;
+  not?: (column: string, operator: string, value: unknown) => MockSupabaseChain;
+  or?: (filters: string) => MockSupabaseChain;
+  filter?: (column: string, operator: string, value: unknown) => MockSupabaseChain;
+  order?: (column: string, options?: { ascending?: boolean }) => MockSupabaseChain;
+  limit?: (count: number, options?: { foreignTable?: string }) => MockSupabaseChain;
+  range?: (from: number, to: number, options?: { foreignTable?: string }) => MockSupabaseChain;
+  abortSignal?: (signal: AbortSignal) => MockSupabaseChain;
+  single?: () => Promise<MockSupabaseResponse<unknown>>;
+  maybeSingle?: () => Promise<MockSupabaseResponse<unknown>>;
+  csv?: () => Promise<MockSupabaseResponse<string>>;
+  geojson?: () => Promise<MockSupabaseResponse<Record<string, unknown>>>;
+  explain?: (options?: { analyze?: boolean; verbose?: boolean; settings?: boolean; buffers?: boolean; wal?: boolean; format?: 'text' | 'xml' | 'json' | 'yaml' }) => Promise<MockSupabaseResponse<string>>;
+  then?: <T>(onfulfilled?: ((value: MockSupabaseResponse<unknown>) => T) | null, onrejected?: ((reason: unknown) => T) | null) => Promise<T>;
+  // PostgrestQueryBuilder required properties
+  url?: string | URL;
+  headers?: Record<string, string>;
+}
+
+// Mock Supabase query chain with generic type support
+export interface MockSupabaseQueryChain<T> extends MockSupabaseChain {
+  then?: <TResult>(onfulfilled?: ((value: MockSupabaseResponse<T>) => TResult) | null, onrejected?: ((reason: unknown) => TResult) | null) => Promise<TResult>;
+  single?: () => Promise<MockSupabaseResponse<T>>;
+  maybeSingle?: () => Promise<MockSupabaseResponse<T>>;
+}
+
+// Mock Supabase client
+export interface MockSupabaseClient {
+  from: (table: string) => MockSupabaseChain;
+  rpc: (fn: string, params?: Record<string, unknown>) => Promise<MockSupabaseResponse<unknown>>;
+  auth: {
+    getSession: () => Promise<MockSupabaseResponse<{ session: MockAuthSession | null }>>;
+    getUser: () => Promise<MockSupabaseResponse<MockAuthUser>>;
+    signUp: (credentials: { email: string; password: string; options?: Record<string, unknown> }) => Promise<MockSupabaseResponse<{ user: MockAuthUser; session: MockAuthSession | null }>>;
+    signInWithPassword: (credentials: { email: string; password: string }) => Promise<MockSupabaseResponse<{ user: MockAuthUser; session: MockAuthSession }>>;
+    signOut: () => Promise<{ error: Error | null }>;
+    onAuthStateChange: (callback: (event: string, session: MockAuthSession | null) => void) => { data: { subscription: { unsubscribe: () => void } } };
+  };
+}
+
+// Sports and skills mock data
+export interface MockSportsData {
+  id: string;
+  name: string;
+  description?: string;
+  active?: boolean;
+}
+
+export interface MockSkillsData {
+  id: string;
+  sport_id: string;
+  level: number;
+  name: string;
+  description: string;
+}
+
+// Mock auth context return type
+export interface MockAuthReturn {
+  user: MockAuthUser | null;
+  session: MockAuthSession | null;
+  userProfile: MockUserProfile | null;
+  loading: boolean;
+  profileComplete: boolean;
+  emailVerified: boolean;
+  isNewUser: boolean;
+  signIn: MockedFunction<(email: string, password: string) => Promise<void>>;
+  signUp: MockedFunction<(email: string, password: string) => Promise<void>>;
+  signOut: MockedFunction<() => Promise<void>>;
+  signInWithGoogle: MockedFunction<() => Promise<void>>;
+  createProfile: MockedFunction<(profileData: Partial<MockUserProfile>) => Promise<void>>;
+  setUserProfile: MockedFunction<(profile: MockUserProfile) => void>;
+  setIsNewUser: MockedFunction<(isNew: boolean) => void>;
+  checkProfileCompletion: MockedFunction<(profile?: MockUserProfile | null) => boolean>;
+  refreshUserProfile: MockedFunction<() => Promise<void>>;
+}
+
+// Mock session data for auth tests
+export interface MockSessionData {
+  data: {
+    session: {
+      access_token: string;
+      user: {
+        id: string;
+      };
+    } | null;
+  };
+  error: Error | null;
+}
+
+// Type-safe casting utility
+export type TestMockCast<T> = T;
+
 // Mock Turnstile types
 export interface MockTurnstileInstance {
-  render: jest.MockedFunction<(container: string | Element, options: Record<string, unknown>) => string>;
-  reset: jest.MockedFunction<(widgetId?: string) => void>;
-  remove: jest.MockedFunction<(widgetId: string) => void>;
-  getResponse: jest.MockedFunction<(widgetId?: string) => string>;
+  render: MockedFunction<(container: string | Element, options: Record<string, unknown>) => string>;
+  reset: MockedFunction<(widgetId?: string) => void>;
+  remove: MockedFunction<(widgetId: string) => void>;
+  getResponse: MockedFunction<(widgetId?: string) => string>;
+  ready: MockedFunction<(callback: () => void) => void>;
+  execute: MockedFunction<(container: string | Element, options: Record<string, unknown>) => void>;
+  isExpired: MockedFunction<(widgetId?: string) => boolean>;
 }
 
 // Mock window.turnstile
+// @ts-expect-error - MockWindow interface compatibility issue with Turnstile types
 export interface MockWindow extends Window {
   turnstile?: MockTurnstileInstance;
   __turnstileCallbacks?: {
@@ -138,9 +262,9 @@ export interface MockWindow extends Window {
 
 // Generic mock function types  
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MockFunction<T extends (...args: any[]) => any> = jest.MockedFunction<T>;
+export type MockFunction<T extends (...args: any[]) => any> = MockedFunction<T>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MockAsyncFunction<T extends (...args: any[]) => Promise<any>> = jest.MockedFunction<T>;
+export type MockAsyncFunction<T extends (...args: any[]) => Promise<any>> = MockedFunction<T>;
 
 // Mock event types for form interactions
 export interface MockChangeEvent {
@@ -153,7 +277,7 @@ export interface MockChangeEvent {
 }
 
 export interface MockSubmitEvent {
-  preventDefault: jest.MockedFunction<() => void>;
+  preventDefault: MockedFunction<() => void>;
 }
 
 // Mock skills data

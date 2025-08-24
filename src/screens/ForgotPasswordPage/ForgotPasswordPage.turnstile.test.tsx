@@ -40,12 +40,10 @@ describe('ForgotPasswordPage with Turnstile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Enable Turnstile for these tests
-    // @ts-expect-error - we need to modify env for testing
     import.meta.env.VITE_TURNSTILE_SITE_KEY = 'test-site-key';
   });
 
   afterEach(() => {
-    // @ts-expect-error - we need to restore env for testing
     if (originalEnv !== undefined) {
       import.meta.env.VITE_TURNSTILE_SITE_KEY = originalEnv;
     } else {
