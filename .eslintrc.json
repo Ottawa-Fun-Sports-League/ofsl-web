@@ -54,5 +54,13 @@
     "*.mjs",
     "supabase/functions/**/deno.json",
     "supabase/functions/**/deno.lock"
+  ],
+  "overrides": [
+    {
+      "files": ["supabase/functions/**/*.ts"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
   ]
 }

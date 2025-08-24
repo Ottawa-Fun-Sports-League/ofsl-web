@@ -150,7 +150,7 @@ describe('Individual Registration Skill Level', () => {
       } as unknown as ReturnType<typeof supabase.from>;
     });
 
-    const { container } = render(
+    const { container: _container } = render(
       <BrowserRouter>
         <TeamsTab />
       </BrowserRouter>
