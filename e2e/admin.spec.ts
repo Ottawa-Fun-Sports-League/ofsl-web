@@ -95,7 +95,7 @@ test.describe('Admin User Management', () => {
     await page.locator('text=John Doe').click();
     
     // Should navigate to user details
-    await expect(page).toHaveURL(/.*#\/users.*registrations);
+    await expect(page).toHaveURL(/.*#\/users.*registrations/);
     
     // Mock user registrations
     await page.route('**/rest/v1/registrations*', async route => {
