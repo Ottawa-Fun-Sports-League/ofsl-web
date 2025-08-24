@@ -2,7 +2,7 @@ import { test, expect } from './fixtures/auth.fixture';
 
 test.describe('Payment Workflows', () => {
   test('should display payment page for team registration', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/1/payment');
+    await page.goto('/#/my-account/teams/1/payment');
     
     // Should show payment details
     await expect(page.locator('h1:has-text("Team Payment")')).toBeVisible();
@@ -15,7 +15,7 @@ test.describe('Payment Workflows', () => {
   });
 
   test('should process full payment with Stripe', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/1/payment');
+    await page.goto('/#/my-account/teams/1/payment');
     
     // Click pay full amount
     await page.locator('button:has-text("Pay Full Amount")').click();
@@ -36,7 +36,7 @@ test.describe('Payment Workflows', () => {
   });
 
   test('should process deposit payment', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/1/payment');
+    await page.goto('/#/my-account/teams/1/payment');
     
     // Click pay deposit
     await page.locator('button:has-text("Pay Deposit ($100)")').click();
@@ -61,7 +61,7 @@ test.describe('Payment Workflows', () => {
 
   test('should handle payment success callback', async ({ authenticatedPage: page }) => {
     // Simulate returning from Stripe with success
-    await page.goto('/payment/success?session_id=cs_test_123');
+    await page.goto('/#/payment/success?session_id=cs_test_123');
     
     // Mock payment verification
     await page.route('**/verify-payment*', async route => {
@@ -82,7 +82,7 @@ test.describe('Payment Workflows', () => {
 
   test('should handle payment cancellation', async ({ authenticatedPage: page }) => {
     // Simulate returning from Stripe with cancellation
-    await page.goto('/payment/cancelled');
+    await page.goto('/#/payment/cancelled');
     
     // Should show cancellation message
     await expect(page.locator('h1:has-text("Payment Cancelled")')).toBeVisible();
@@ -114,7 +114,7 @@ test.describe('Payment Workflows', () => {
       });
     });
     
-    await page.goto('/my-account/teams/1/payment');
+    await page.goto('/#/my-account/teams/1/payment');
     
     // Should show payment history section
     await expect(page.locator('h2:has-text("Payment History")')).toBeVisible();
@@ -128,7 +128,7 @@ test.describe('Payment Workflows', () => {
   });
 
   test('should handle admin payment recording', async ({ adminPage: page }) => {
-    await page.goto('/admin/teams/1/payment');
+    await page.goto('/#/admin/teams/1/payment');
     
     // Admin should see record payment option
     await expect(page.locator('button:has-text("Record Manual Payment")')).toBeVisible();
@@ -162,7 +162,7 @@ test.describe('Payment Workflows', () => {
   });
 
   test('should generate and download receipts', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/1/payment');
+    await page.goto('/#/my-account/teams/1/payment');
     
     // Mock receipt generation
     const downloadPromise = page.waitForEvent('download');

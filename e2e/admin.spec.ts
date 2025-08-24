@@ -2,7 +2,7 @@ import { test, expect } from './fixtures/auth.fixture';
 
 test.describe('Admin User Management', () => {
   test('should display admin dashboard', async ({ adminPage: page }) => {
-    await page.goto('/my-account');
+    await page.goto('/#/my-account');
     
     // Admin should see admin-only sections
     await expect(page.locator('text=Admin Dashboard')).toBeVisible();
@@ -23,7 +23,7 @@ test.describe('Admin User Management', () => {
       });
     });
     
-    await page.goto('/my-account/users');
+    await page.goto('/#/my-account/users');
     
     // Should show users table
     await expect(page.locator('h1:has-text("Manage Users")')).toBeVisible();
@@ -36,7 +36,7 @@ test.describe('Admin User Management', () => {
   });
 
   test('should search and filter users', async ({ adminPage: page }) => {
-    await page.goto('/my-account/users');
+    await page.goto('/#/my-account/users');
     
     // Search by name
     await page.fill('input[placeholder="Search users..."]', 'John');
@@ -65,7 +65,7 @@ test.describe('Admin User Management', () => {
   });
 
   test('should export users to CSV', async ({ adminPage: page }) => {
-    await page.goto('/my-account/users');
+    await page.goto('/#/my-account/users');
     
     // Click export button
     const downloadPromise = page.waitForEvent('download');
@@ -89,13 +89,13 @@ test.describe('Admin User Management', () => {
   });
 
   test('should view user registrations', async ({ adminPage: page }) => {
-    await page.goto('/my-account/users');
+    await page.goto('/#/my-account/users');
     
     // Click on a user
     await page.locator('text=John Doe').click();
     
     // Should navigate to user details
-    await expect(page).toHaveURL(/.*users.*registrations/);
+    await expect(page).toHaveURL(/.*#\/users.*registrations);
     
     // Mock user registrations
     await page.route('**/rest/v1/registrations*', async route => {
@@ -124,7 +124,7 @@ test.describe('Admin User Management', () => {
   });
 
   test('should edit user payment', async ({ adminPage: page }) => {
-    await page.goto('/my-account/individual/edit/user1/league1');
+    await page.goto('/#/my-account/individual/edit/user1/league1');
     
     // Should show payment edit form
     await expect(page.locator('h1:has-text("Edit Payment")')).toBeVisible();
@@ -154,7 +154,7 @@ test.describe('Admin User Management', () => {
   });
 
   test('should manage league settings', async ({ adminPage: page }) => {
-    await page.goto('/my-account/leagues/1/edit');
+    await page.goto('/#/my-account/leagues/1/edit');
     
     // Should show league edit form
     await expect(page.locator('h1:has-text("Edit League")')).toBeVisible();
@@ -183,7 +183,7 @@ test.describe('Admin User Management', () => {
   });
 
   test('should send bulk emails', async ({ adminPage: page }) => {
-    await page.goto('/my-account/users');
+    await page.goto('/#/my-account/users');
     
     // Select users for bulk email
     await page.locator('input[type="checkbox"][name="user-1"]').check();

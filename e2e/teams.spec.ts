@@ -29,7 +29,7 @@ test.describe('Team Management', () => {
   });
 
   test('should display my teams', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams');
+    await page.goto('/#/my-account/teams');
     
     // Should show teams section
     await expect(page.locator('h2:has-text("My Teams")')).toBeVisible();
@@ -43,7 +43,7 @@ test.describe('Team Management', () => {
   });
 
   test('should allow captain to edit team', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/edit/1');
+    await page.goto('/#/my-account/teams/edit/1');
     
     // Should show edit form
     await expect(page.locator('h1:has-text("Edit Team")')).toBeVisible();
@@ -69,7 +69,7 @@ test.describe('Team Management', () => {
   });
 
   test('should manage team roster', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/edit/1');
+    await page.goto('/#/my-account/teams/edit/1');
     
     // Should show roster management section
     await expect(page.locator('h2:has-text("Team Roster")')).toBeVisible();
@@ -99,7 +99,7 @@ test.describe('Team Management', () => {
   });
 
   test('should remove player from roster', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/edit/1');
+    await page.goto('/#/my-account/teams/edit/1');
     
     // Find remove button for a player
     const playerRow = page.locator('text=player2@example.com').locator('..');
@@ -126,7 +126,7 @@ test.describe('Team Management', () => {
   });
 
   test('should transfer captain role', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams/edit/1');
+    await page.goto('/#/my-account/teams/edit/1');
     
     // Click transfer captain button
     await page.locator('button:has-text("Transfer Captain Role")').click();
@@ -154,7 +154,7 @@ test.describe('Team Management', () => {
   });
 
   test('should leave team as non-captain', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account/teams');
+    await page.goto('/#/my-account/teams');
     
     // Find team where user is not captain
     const teamCard = page.locator('text=Another Team').locator('..');
@@ -196,7 +196,7 @@ test.describe('Team Management', () => {
       });
     });
     
-    await page.goto('/my-account/teams');
+    await page.goto('/#/my-account/teams');
     
     // Should show payment status badge
     await expect(page.locator('text=My Volleyball Team').locator('..').locator('text=Partial Payment')).toBeVisible();

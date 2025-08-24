@@ -2,7 +2,7 @@ import { test, expect } from './fixtures/auth.fixture';
 
 test.describe('League Management', () => {
   test('should display list of leagues', async ({ page }) => {
-    await page.goto('/leagues');
+    await page.goto('/#/leagues');
     
     // Check that leagues page loads
     await expect(page.locator('h1')).toContainText('Leagues');
@@ -16,7 +16,7 @@ test.describe('League Management', () => {
   });
 
   test('should filter leagues by sport', async ({ page }) => {
-    await page.goto('/leagues');
+    await page.goto('/#/leagues');
     
     // Mock leagues data
     await page.route('**/rest/v1/leagues*', async route => {
@@ -63,7 +63,7 @@ test.describe('League Management', () => {
       }
     });
     
-    await page.goto('/leagues/1');
+    await page.goto('/#/leagues/1');
     
     // Check league details are displayed
     await expect(page.locator('h1')).toContainText('Summer Volleyball League');
@@ -76,7 +76,7 @@ test.describe('League Management', () => {
   });
 
   test('should handle team registration', async ({ authenticatedPage: page }) => {
-    await page.goto('/leagues/1');
+    await page.goto('/#/leagues/1');
     
     // Click register button
     await page.locator('button:has-text("Register Team")').click();
@@ -116,7 +116,7 @@ test.describe('League Management', () => {
       });
     });
     
-    await page.goto('/leagues/2');
+    await page.goto('/#/leagues/2');
     
     // Click register button for individual
     await page.locator('button:has-text("Register")').click();
@@ -154,7 +154,7 @@ test.describe('League Management', () => {
       });
     });
     
-    await page.goto('/leagues/1/teams');
+    await page.goto('/#/leagues/1/teams');
     
     // Should display registered teams
     await expect(page.locator('h1')).toContainText('Registered Teams');
