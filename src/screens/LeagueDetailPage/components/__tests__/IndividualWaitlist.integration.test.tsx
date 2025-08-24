@@ -30,7 +30,7 @@ vi.mock('../../../../components/ui/toast', () => ({
 describe('Individual Registration Waitlist', () => {
   const mockCloseModal = vi.fn();
   const mockShowToast = vi.fn();
-  const mockNavigate = vi.fn();
+  const _mockNavigate = vi.fn();
 
   const mockUserProfile = {
     id: 'user-123',

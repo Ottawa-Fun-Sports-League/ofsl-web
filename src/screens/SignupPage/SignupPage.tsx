@@ -38,7 +38,7 @@ export function SignupPage() {
     
     // Check localStorage for auth error messages
     const authErrorMessage = localStorage.getItem('auth_error_message');
-    const authErrorAction = localStorage.getItem('auth_error_action');
+    const _authErrorAction = localStorage.getItem('auth_error_action');
     
     if (authErrorMessage) {
       setExpiredLinkMessage(authErrorMessage);

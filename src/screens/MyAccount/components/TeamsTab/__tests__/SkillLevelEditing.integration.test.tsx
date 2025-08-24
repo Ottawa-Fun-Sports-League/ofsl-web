@@ -5,7 +5,6 @@ import { TeamsSection } from '../TeamsSection';
 import { SkillLevelEditModal } from '../SkillLevelEditModal';
 import { MissingSkillLevelPrompt } from '../MissingSkillLevelPrompt';
 import { supabase } from '../../../../../lib/supabase';
-import { useToast } from '../../../../../components/ui/toast';
 
 // Mock dependencies
 vi.mock('../../../../../lib/supabase', () => ({

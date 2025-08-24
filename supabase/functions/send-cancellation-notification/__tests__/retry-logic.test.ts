@@ -13,11 +13,11 @@ globalThis.Deno = {
       return envVars[key];
     },
   },
-} as any;
+} as ReturnType<typeof supabase.from>;
 
 describe('Cancellation Notification Retry Logic', () => {
-  let fetchMock: any;
-  let consoleSpy: any;
+  let fetchMock: vi.MockedFunction<typeof fetch>;
+  let consoleSpy: vi.SpyInstance;
 
   beforeEach(() => {
     vi.clearAllMocks();

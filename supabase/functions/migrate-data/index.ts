@@ -124,7 +124,7 @@ serve(async (req) => {
   }
 })
 
-async function getMaxId(client: any, table: string): Promise<number> {
+async function getMaxId(client: ReturnType<typeof createClient>, table: string): Promise<number> {
   const { data, error } = await client
     .from(table)
     .select('id')
