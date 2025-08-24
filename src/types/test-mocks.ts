@@ -79,8 +79,8 @@ export interface MockStripeElement {
   unmount: jest.MockedFunction<() => void>;
   destroy: jest.MockedFunction<() => void>;
   update: jest.MockedFunction<(options: Record<string, unknown>) => void>;
-  on: jest.MockedFunction<(event: string, handler: (...args: any[]) => void) => void>;
-  off: jest.MockedFunction<(event: string, handler: (...args: any[]) => void) => void>;
+  on: jest.MockedFunction<(event: string, handler: (...args: unknown[]) => void) => void>;
+  off: jest.MockedFunction<(event: string, handler: (...args: unknown[]) => void) => void>;
 }
 
 // Mock auth types

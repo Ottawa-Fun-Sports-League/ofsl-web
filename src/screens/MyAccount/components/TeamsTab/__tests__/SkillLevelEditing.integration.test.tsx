@@ -26,7 +26,7 @@ describe('Skill Level Editing', () => {
 
   describe('SkillLevelEditModal', () => {
     it('should update team skill level successfully', async () => {
-      const mockUpdate = vi.fn().mockResolvedValue({ error: null });
+      const _mockUpdate = vi.fn().mockResolvedValue({ error: null });
       const mockOnUpdate = vi.fn();
       const mockOnClose = vi.fn();
 
@@ -99,7 +99,7 @@ describe('Skill Level Editing', () => {
     });
 
     it('should disable update button when no skill level is selected', async () => {
-      const { container } = render(
+      const { container: _container } = render(
         <SkillLevelEditModal
           isOpen={true}
           onClose={vi.fn()}
@@ -219,7 +219,7 @@ describe('Skill Level Editing', () => {
         { paymentId: 1, leagueName: 'Team 1', isTeam: true, teamId: 123 },
       ];
 
-      const mockUpdate = vi.fn().mockResolvedValue({ error: null });
+      const _mockUpdate = vi.fn().mockResolvedValue({ error: null });
       vi.mocked(supabase.from).mockReturnValue({
         update: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue(Promise.resolve({ error: null })),

@@ -86,7 +86,7 @@ describe('TeamsTab - Registration Refresh', () => {
       error: null,
     });
     
-    (supabase.from as any).mockImplementation(fromMock);
+    vi.mocked(supabase.from).mockImplementation(fromMock);
   });
 
   it('should refresh data when registration_completed flag is set', async () => {

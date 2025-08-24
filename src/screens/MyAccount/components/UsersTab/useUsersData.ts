@@ -708,17 +708,7 @@ export function useUsersData() {
           const league = team.leagues as LeagueWithSport | undefined;
           const sport = league?.sports;
           
-          // Debug sport IDs for first few users with teams - especially badminton
-          if (sport?.name?.toLowerCase().includes('badminton') || league?.sport_id === 2) {
-            console.log(`🏸 Badminton team found for ${user.name}:`, {
-              team_name: team.name,
-              league_sport_id: league?.sport_id,
-              sport_obj_id: sport?.id,
-              sport_name: sport?.name,
-              full_league: league,
-              expected_badminton_id: SPORT_IDS.BADMINTON
-            });
-          }
+          // Debug logic removed - was used for badminton sport ID debugging
           
           return {
             team_id: team.id,

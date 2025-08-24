@@ -110,7 +110,7 @@ describe('UserRegistrationsPage ID Lookup', () => {
       league_ids: []
     };
 
-    let queryCount = 0;
+    const _queryCount = 0;
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === 'users') {
         return {
@@ -206,7 +206,7 @@ describe('UserRegistrationsPage ID Lookup', () => {
       league_ids: [1]
     };
 
-    const paymentQueries: any[] = [];
+    const paymentQueries: { field: string; value: unknown }[] = [];
 
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === 'users') {
@@ -261,7 +261,7 @@ describe('UserRegistrationsPage ID Lookup', () => {
       }
       
       if (table === 'league_payments') {
-        const mockChain: any = {
+        const mockChain: MockSupabaseChain = {
           select: vi.fn().mockImplementation(() => mockChain),
           eq: vi.fn().mockImplementation((field, value) => {
             paymentQueries.push({ field, value });

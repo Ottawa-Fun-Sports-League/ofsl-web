@@ -48,7 +48,7 @@ describe('UserRegistrationsPage Null Checks', () => {
       in: vi.fn().mockReturnThis(),
       is: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-    } as any));
+    } as unknown as ReturnType<typeof supabase.from>));
 
     // Should not throw error
     expect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { supabase } from '../../../../lib/supabase';
@@ -73,9 +73,9 @@ export function IndividualEditPage() {
     if (userId && leagueId && userProfile?.is_admin) {
       loadData();
     }
-  }, [userId, leagueId, userProfile]);
+  }, [userId, leagueId, userProfile, loadData]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -172,7 +172,7 @@ export function IndividualEditPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, leagueId, showToast]);
 
   const handleProcessPayment = async () => {
     if (!paymentInfo || !depositAmount || parseFloat(depositAmount) <= 0) {

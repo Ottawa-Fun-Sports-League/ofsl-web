@@ -24,7 +24,7 @@ export function ProfileTab() {
       email: userProfile.email || undefined,
       user_sports_skills: userProfile.user_sports_skills
     };
-  }, [userProfile?.id, userProfile?.name, userProfile?.phone, userProfile?.email, userProfile?.user_sports_skills]);
+  }, [userProfile]);
 
   const {
     profile,
