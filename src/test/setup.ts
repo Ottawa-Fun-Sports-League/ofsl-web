@@ -3,6 +3,14 @@ import { vi, afterEach } from 'vitest';
 import React from 'react';
 import './mocks/setup-supabase';
 
+// Global mock for toast components
+vi.mock('../components/ui/toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => React.createElement('div', { 'data-testid': 'toast-provider' }, children),
+  useToast: () => ({
+    showToast: vi.fn(),
+  }),
+}));
+
 // Mock window.location methods
 Object.defineProperty(window, 'location', {
   value: {

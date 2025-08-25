@@ -218,12 +218,11 @@ describe('IndividualEditPage Integration', () => {
       }
       if (table === 'league_payments') {
         return {
-          select: vi.fn().mockReturnThis(),
+          select: selectMock,
           eq: vi.fn().mockReturnThis(),
           is: vi.fn().mockReturnThis(),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           insert: insertMock,
-          select: selectMock,
           single: singleMock
         };
       }
@@ -308,11 +307,10 @@ describe('IndividualEditPage Integration', () => {
       if (table === 'league_payments') {
         return {
           select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
+          eq: eqMock,
           is: vi.fn().mockReturnThis(),
           maybeSingle: vi.fn().mockResolvedValue({ data: mockPaymentData, error: null }),
-          update: updateMock,
-          eq: eqMock
+          update: updateMock
         };
       }
       if (table === 'payment_history') {

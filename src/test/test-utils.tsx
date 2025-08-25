@@ -3,7 +3,6 @@ import { render, RenderOptions } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { vi } from 'vitest';
 import { AuthProvider } from '../contexts/AuthContext';
-import { ToastProvider } from '../components/ui/toast';
 import userEvent from '@testing-library/user-event';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '../types/auth';
@@ -118,6 +117,11 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   userProfile?: UserProfile | null;
 }
 
+// Simple mock ToastProvider component for tests
+const MockToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <div data-testid="toast-provider">{children}</div>;
+};
+
 const AllTheProviders = ({ 
   children, 
   initialRoute = '/',
@@ -127,13 +131,13 @@ const AllTheProviders = ({
 }) => {
   return (
     <MemoryRouter initialEntries={[initialRoute]}>
-      <ToastProvider>
+      <MockToastProvider>
         <AuthProvider>
           <Routes>
             <Route path="*" element={children} />
           </Routes>
         </AuthProvider>
-      </ToastProvider>
+      </MockToastProvider>
     </MemoryRouter>
   );
 };
@@ -226,6 +230,20 @@ export const waitForLoadingToFinish = async () => {
     const loaders = document.querySelectorAll('[class*="animate-spin"]');
     expect(loaders.length).toBe(0);
   });
+};
+
+// Utility to wait for auth to initialize
+export const waitForAuthToLoad = async () => {
+  const { waitFor } = await import('@testing-library/react');
+  
+  await waitFor(
+    () => {
+      const authLoading = document.querySelector('[aria-label="Loading"]');
+      const initText = document.body.textContent?.includes('Initializing authentication');
+      return !authLoading && !initText;
+    },
+    { timeout: 5000 }
+  );
 };
 
 // Mock Stripe

@@ -23,5 +23,17 @@ export default defineConfig({
     alias: {
       '@/': new URL('./src/', import.meta.url).pathname,
     },
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      'e2e/**',
+      'supabase/**',
+      '**/*.e2e.spec.ts',
+      '**/*.spec.ts',
+    ],
+    include: [
+      'src/**/*.test.{js,ts,jsx,tsx}',
+      'src/**/*.{test,integration}.{js,ts,jsx,tsx}',
+    ],
   }
 });
