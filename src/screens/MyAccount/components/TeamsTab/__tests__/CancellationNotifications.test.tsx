@@ -3,7 +3,7 @@
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act, waitFor } from '../../../../../test/test-utils';
 import { useTeamOperations } from '../useTeamOperations';
 import { supabase } from '../../../../../lib/supabase';
 

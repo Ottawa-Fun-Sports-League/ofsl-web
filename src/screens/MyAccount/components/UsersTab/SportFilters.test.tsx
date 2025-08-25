@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import React from 'react';
 import { useUsersData } from './useUsersData';
 import { supabase } from '../../../../lib/supabase';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -8,8 +9,14 @@ import { useSearchParams } from 'react-router-dom';
 
 // Mock dependencies
 vi.mock('../../../../lib/supabase');
-vi.mock('../../../../contexts/AuthContext');
-vi.mock('../../../../components/ui/toast');
+vi.mock('../../../../contexts/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  useAuth: vi.fn(),
+}));
+vi.mock('../../../../components/ui/toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
+  useToast: vi.fn(),
+}));
 vi.mock('react-router-dom');
 
 describe('SportFilters', () => {

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, render } from '../../test/test-utils';
 import userEvent from '@testing-library/user-event';
-import { render } from '../../test/test-utils';
 import { mockSupabase } from '../../test/mocks/supabase-enhanced';
 
 // Mock the league functions
@@ -28,6 +27,15 @@ vi.mock('../../lib/leagues', () => ({
     });
     return groups;
   }),
+  getOrderedDayNames: vi.fn(() => [
+    "Monday",
+    "Tuesday", 
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+  ]),
   LeagueWithTeamCount: {},
 }));
 

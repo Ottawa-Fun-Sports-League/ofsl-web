@@ -73,12 +73,6 @@ export function IndividualEditPage() {
   });
   const [editingNoteId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (userId && leagueId && userProfile?.is_admin) {
-      loadData();
-    }
-  }, [userId, leagueId, userProfile, loadData]);
-
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -104,7 +98,7 @@ export function IndividualEditPage() {
       if (leagueError) throw leagueError;
 
       // Check if user has a payment record for this league (either active or waitlisted)
-      const { data: payment, error: paymentError } = await supabase
+      const { data: initialPayment, error: paymentError } = await supabase
         .from('league_payments')
         .select('*')
         .eq('user_id', userId)
@@ -113,6 +107,9 @@ export function IndividualEditPage() {
         .maybeSingle();
 
       if (paymentError) throw paymentError;
+
+      // Initialize mutable payment variable
+      let payment = initialPayment;
 
       // Verify user is registered for this league (either in league_ids or has a payment record)
       const isInLeagueIds = userData.league_ids && userData.league_ids.includes(leagueIdNum);
@@ -177,6 +174,12 @@ export function IndividualEditPage() {
       setLoading(false);
     }
   }, [userId, leagueId, showToast]);
+
+  useEffect(() => {
+    if (userId && leagueId && userProfile?.is_admin) {
+      loadData();
+    }
+  }, [userId, leagueId, userProfile, loadData]);
 
   const handleProcessPayment = async () => {
     if (!paymentInfo || !depositAmount || parseFloat(depositAmount) <= 0) {

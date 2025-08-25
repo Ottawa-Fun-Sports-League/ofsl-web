@@ -3,7 +3,7 @@
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '../../../../../test/test-utils';
 import { BrowserRouter } from 'react-router-dom';
 import { TeamsSection } from '../TeamsSection';
 import { SkillLevelEditModal } from '../SkillLevelEditModal';
@@ -13,11 +13,19 @@ import { supabase } from '../../../../../lib/supabase';
 // Mock dependencies
 vi.mock('../../../../../lib/supabase', () => ({
   supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+      signOut: vi.fn(),
+    },
     from: vi.fn(),
   },
 }));
 
 vi.mock('../../../../../components/ui/toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
   useToast: vi.fn(() => ({
     showToast: vi.fn(),
   })),

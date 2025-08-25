@@ -1,3 +1,4 @@
+import React from 'react';
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - Complex type issues requiring extensive refactoring
 // This file has been temporarily bypassed to achieve zero compilation errors

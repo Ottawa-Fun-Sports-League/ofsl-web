@@ -23,6 +23,8 @@ vi.mock('../../contexts/AuthContext', () => ({
 describe('SignupPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Ensure Turnstile is not enabled for these tests
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', undefined);
   });
 
   it('renders signup form with all elements', () => {

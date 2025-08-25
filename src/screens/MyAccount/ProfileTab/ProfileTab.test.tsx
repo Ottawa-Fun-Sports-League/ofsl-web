@@ -68,6 +68,7 @@ const mockAuthContext = {
 
 // Mock the AuthContext hook
 vi.mock('../../../contexts/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
   useAuth: () => mockAuthContext,
 }));
 

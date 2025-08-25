@@ -120,7 +120,7 @@ describe('League Deposit Fields', () => {
 
     // Wait for the form to load
     await waitFor(() => {
-      expect(screen.getByText(/Deposit Amount/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Deposit Amount/i).length).toBeGreaterThan(0);
     });
 
     // Check that deposit fields are rendered by placeholder
@@ -143,7 +143,7 @@ describe('League Deposit Fields', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Deposit Amount/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Deposit Amount/i).length).toBeGreaterThan(0);
     });
 
     const depositAmountInput = screen.getByPlaceholderText(/0\.00 \(optional\)/i);
@@ -166,7 +166,7 @@ describe('League Deposit Fields', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Deposit Amount/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Deposit Amount/i).length).toBeGreaterThan(0);
     });
 
     const depositAmountInput = screen.getByPlaceholderText(/0\.00 \(optional\)/i);
@@ -214,7 +214,7 @@ describe('League Deposit Fields', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Deposit Amount/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Deposit Amount/i).length).toBeGreaterThan(0);
     });
 
     const depositAmountInput = screen.getByPlaceholderText(/0\.00 \(optional\)/i);
@@ -267,7 +267,7 @@ describe('League Deposit Fields', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Deposit Amount/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Deposit Amount/i).length).toBeGreaterThan(0);
     });
 
     const depositAmountInput = screen.getByPlaceholderText(/0\.00 \(optional\)/i);

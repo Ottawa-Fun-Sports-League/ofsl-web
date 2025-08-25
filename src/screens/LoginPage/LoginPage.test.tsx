@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, render } from '../../test/test-utils';
 import userEvent from '@testing-library/user-event';
 import { LoginPage } from './LoginPage';
-import { render } from '../../test/test-utils';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Mock auth context to prevent loading state

@@ -1,12 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { TeamsSection } from './TeamsSection';
 import { describe, it, expect, vi } from 'vitest';
 import { Team, LeaguePayment } from './types';
-
-const renderWithRouter = (component: React.ReactElement) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>);
-};
+import { ToastProvider } from '../../../../components/ui/toast';
 
 describe('TeamsSection - Payment Status Display', () => {
   const mockOnUnregister = vi.fn();
@@ -52,17 +49,21 @@ describe('TeamsSection - Payment Status Display', () => {
       payment_method: null
     };
 
-    renderWithRouter(
-      <TeamsSection
-        teams={[baseTeam]}
-        currentUserId="user123"
-        leaguePayments={[partialPayment]}
-        unregisteringPayment={null}
-        leavingTeam={null}
-        onUnregister={mockOnUnregister}
-        onLeaveTeam={mockOnLeaveTeam}
-        onManageTeammates={mockOnManageTeammates}
-      />
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <TeamsSection
+            teams={[baseTeam]}
+            currentUserId="user123"
+            leaguePayments={[partialPayment]}
+            unregisteringPayment={null}
+            leavingTeam={null}
+            onUnregister={mockOnUnregister}
+            onLeaveTeam={mockOnLeaveTeam}
+            onManageTeammates={mockOnManageTeammates}
+          />
+        </ToastProvider>
+      </MemoryRouter>
     );
 
     // Check that team information is displayed
@@ -77,8 +78,10 @@ describe('TeamsSection - Payment Status Display', () => {
       due_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     };
 
-    renderWithRouter(
-      <TeamsSection
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <TeamsSection
         teams={[baseTeam]}
         currentUserId="user123"
         leaguePayments={[overduePayment]}
@@ -88,6 +91,8 @@ describe('TeamsSection - Payment Status Display', () => {
         onLeaveTeam={mockOnLeaveTeam}
         onManageTeammates={mockOnManageTeammates}
       />
+        </ToastProvider>
+      </MemoryRouter>
     );
 
     expect(screen.getByText(/Overdue since/)).toBeInTheDocument();
@@ -100,8 +105,10 @@ describe('TeamsSection - Payment Status Display', () => {
       status: 'paid' as const
     };
 
-    renderWithRouter(
-      <TeamsSection
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <TeamsSection
         teams={[baseTeam]}
         currentUserId="user123"
         leaguePayments={[paidPayment]}
@@ -111,6 +118,8 @@ describe('TeamsSection - Payment Status Display', () => {
         onLeaveTeam={mockOnLeaveTeam}
         onManageTeammates={mockOnManageTeammates}
       />
+        </ToastProvider>
+      </MemoryRouter>
     );
 
     expect(screen.getByText('Fully paid - Thank you!')).toBeInTheDocument();
@@ -123,8 +132,10 @@ describe('TeamsSection - Payment Status Display', () => {
       status: 'partial'
     };
 
-    renderWithRouter(
-      <TeamsSection
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <TeamsSection
         teams={[baseTeam]}
         currentUserId="user123" // Captain
         leaguePayments={[partialPayment]}
@@ -134,6 +145,8 @@ describe('TeamsSection - Payment Status Display', () => {
         onLeaveTeam={mockOnLeaveTeam}
         onManageTeammates={mockOnManageTeammates}
       />
+        </ToastProvider>
+      </MemoryRouter>
     );
 
     expect(screen.getByText(/As team captain, you are responsible/)).toBeInTheDocument();
@@ -146,8 +159,10 @@ describe('TeamsSection - Payment Status Display', () => {
       status: 'partial'
     };
 
-    renderWithRouter(
-      <TeamsSection
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <TeamsSection
         teams={[baseTeam]}
         currentUserId="user456" // Not captain
         leaguePayments={[partialPayment]}
@@ -157,14 +172,18 @@ describe('TeamsSection - Payment Status Display', () => {
         onLeaveTeam={mockOnLeaveTeam}
         onManageTeammates={mockOnManageTeammates}
       />
+        </ToastProvider>
+      </MemoryRouter>
     );
 
     expect(screen.queryByText(/As team captain, you are responsible/)).not.toBeInTheDocument();
   });
 
   it('shows payment status even when no payment record exists', () => {
-    renderWithRouter(
-      <TeamsSection
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <TeamsSection
         teams={[baseTeam]}
         currentUserId="user123"
         leaguePayments={[]} // No payment record
@@ -174,6 +193,8 @@ describe('TeamsSection - Payment Status Display', () => {
         onLeaveTeam={mockOnLeaveTeam}
         onManageTeammates={mockOnManageTeammates}
       />
+        </ToastProvider>
+      </MemoryRouter>
     );
 
     // Should show payment balance based on league cost

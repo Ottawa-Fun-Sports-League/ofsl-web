@@ -1,7 +1,6 @@
-import { render, waitFor, fireEvent, screen } from '@testing-library/react';
+import { render, waitFor, fireEvent, screen } from '../../../../../test/test-utils';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { TeamsTab } from '../TeamsTab';
-import { BrowserRouter } from 'react-router-dom';
 import { supabase } from '../../../../../lib/supabase';
 
 // Mock AuthContext
@@ -36,6 +35,7 @@ const mockAuthContext = {
 
 vi.mock('../../../../../contexts/AuthContext', () => ({
   useAuth: () => mockAuthContext,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Mock supabase
@@ -162,11 +162,7 @@ describe('TeamsTab - Cancellation Updates', () => {
   });
 
   it('should update UI immediately after cancelling individual registration', async () => {
-    render(
-      <BrowserRouter>
-        <TeamsTab />
-      </BrowserRouter>
-    );
+    render(<TeamsTab />);
     
     // Wait for initial load - should show 2 leagues
     await waitFor(() => {

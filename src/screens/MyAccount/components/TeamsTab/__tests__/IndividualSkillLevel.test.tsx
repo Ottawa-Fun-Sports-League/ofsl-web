@@ -3,7 +3,7 @@
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '../../../../../test/test-utils';
 import { BrowserRouter } from 'react-router-dom';
 import { TeamsTab } from '../TeamsTab';
 import { useAuth } from '../../../../../contexts/AuthContext';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, render } from '@testing-library/react';
+import { screen, render } from '../../test/test-utils';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+// Router is handled by test-utils
 import { CancelPage } from './CancelPage';
 
 // Mock navigation
@@ -16,11 +16,7 @@ vi.mock('react-router-dom', async () => {
 
 // Simple render without AuthProvider for public pages
 const renderCancelPage = () => {
-  return render(
-    <MemoryRouter>
-      <CancelPage />
-    </MemoryRouter>
-  );
+  return render(<CancelPage />);
 };
 
 describe('CancelPage', () => {
