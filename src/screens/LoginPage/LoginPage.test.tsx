@@ -88,6 +88,11 @@ describe('LoginPage', () => {
 
   it('handles successful login', async () => {
     const user = userEvent.setup();
+    
+    // Remove Turnstile env var for this test to simplify
+    const originalEnv = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '');
+    
     const mockSignIn = vi.fn().mockResolvedValue({ error: null });
     
     vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
@@ -107,10 +112,18 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123', undefined);
     });
+    
+    // Restore env
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', originalEnv);
   });
 
   it('handles login error', async () => {
     const user = userEvent.setup();
+    
+    // Remove Turnstile env var for this test to simplify
+    const originalEnv = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '');
+    
     const mockSignIn = vi.fn().mockResolvedValue({ 
       error: { message: 'Invalid credentials' } 
     });
@@ -132,6 +145,9 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
     });
+    
+    // Restore env
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', originalEnv);
   });
 
   it('toggles password visibility', async () => {
@@ -182,6 +198,11 @@ describe('LoginPage', () => {
 
   it('shows loading state during submission', async () => {
     const user = userEvent.setup();
+    
+    // Remove Turnstile env var for this test to simplify
+    const originalEnv = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '');
+    
     const mockSignIn = vi.fn().mockImplementation(() => new Promise(() => {})); // Never resolves
     
     vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
@@ -200,5 +221,8 @@ describe('LoginPage', () => {
     
     expect(screen.getByText('Logging in...')).toBeInTheDocument();
     expect(submitButton).toBeDisabled();
+    
+    // Restore env
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', originalEnv);
   });
 });

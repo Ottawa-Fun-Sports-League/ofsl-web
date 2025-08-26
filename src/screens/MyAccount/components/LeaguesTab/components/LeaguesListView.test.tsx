@@ -144,7 +144,7 @@ describe('LeaguesListView', () => {
     expect(screen.getByText('Location')).toBeInTheDocument();
     expect(screen.getByText('Price')).toBeInTheDocument();
     expect(screen.getByText('Availability')).toBeInTheDocument();
-    expect(screen.getByText('Teams')).toBeInTheDocument();
+    expect(screen.getByText('Registrations')).toBeInTheDocument();
     expect(screen.getByText('Actions')).toBeInTheDocument();
 
     // Check first league data

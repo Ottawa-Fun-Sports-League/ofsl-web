@@ -171,16 +171,23 @@ export const customRender = (
   
   if (user) {
     // Mock user profile fetch
-    mockSupabase.from('users').select().eq().single.mockResolvedValue({
+    const userProfileResult = Promise.resolve({
       data: userProfile || mockUserProfile,
       error: null,
     });
+    mockSupabase.from('users').select.mockReturnThis();
+    mockSupabase.from('users').eq.mockReturnThis();
+    // @ts-expect-error - Mock type mismatch after enhanced type safety
+    mockSupabase.from('users').single.mockReturnValue(userProfileResult);
   } else {
     // Mock no user profile
-    mockSupabase.from('users').select().eq().single.mockResolvedValue({
+    const noUserResult = Promise.resolve({
       data: null,
       error: { code: 'PGRST116', message: 'User not found' },
     });
+    mockSupabase.from('users').select.mockReturnThis();
+    mockSupabase.from('users').eq.mockReturnThis();
+    mockSupabase.from('users').single.mockReturnValue(noUserResult as never);
   }
 
   // Mock auth state change subscription

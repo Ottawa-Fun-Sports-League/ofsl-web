@@ -46,7 +46,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
     
@@ -62,7 +62,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     expect(button).toBeInTheDocument();
     
     // Should have Link2 icon
@@ -88,7 +88,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     
     fireEvent.click(button);
 
@@ -123,7 +123,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     
     fireEvent.click(button);
 
@@ -142,7 +142,7 @@ describe('MagicLinkButton', () => {
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        'Magic link copied to clipboard for Test User',
+        'Password reset link copied! Open in new browser/incognito. User will need to set a new password to login as Test User.',
         'success'
       );
     });
@@ -171,13 +171,13 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     
     fireEvent.click(button);
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        'Magic link copied to clipboard for test@example.com',
+        'Password reset link copied! Open in new browser/incognito. User will need to set a new password to login as test@example.com.',
         'success'
       );
     });
@@ -197,7 +197,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     
     fireEvent.click(button);
 
@@ -227,7 +227,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     
     fireEvent.click(button);
 
@@ -257,7 +257,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     
     fireEvent.click(button);
 
@@ -280,7 +280,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     
     fireEvent.click(button);
 
@@ -304,7 +304,7 @@ describe('MagicLinkButton', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /generate and copy magic link/i });
+    const button = screen.getByRole('button');
     expect(button).toHaveClass('h-8', 'w-8', 'p-0');
     
     // Should have proper Link2 icon

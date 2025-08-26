@@ -36,23 +36,21 @@ const createSupabaseMockData = () => ({
   ]
 });
 
-export const createSupabaseMock = (customData?: any) => {
+export const createSupabaseMock = (customData?: Record<string, unknown>) => {
   const mockData = { ...createSupabaseMockData(), ...customData };
   // Store query state for realistic filtering
   let currentTable = '';
-  let queryFilters: Record<string, any> = {};
-  let isSelectAll = false;
+  let queryFilters: Record<string, unknown> = {};
 
   const chainableMethods = {
-    select: vi.fn((columns?: string) => {
-      isSelectAll = columns === '*' || !columns;
+    select: vi.fn((_columns?: string) => {
       return chainableMethods;
     }),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     upsert: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
-    eq: vi.fn((column: string, value: any) => {
+    eq: vi.fn((column: string, value: unknown) => {
       queryFilters[column] = value;
       return chainableMethods;
     }),
@@ -63,11 +61,11 @@ export const createSupabaseMock = (customData?: any) => {
     lte: vi.fn().mockReturnThis(),
     like: vi.fn().mockReturnThis(),
     ilike: vi.fn().mockReturnThis(),
-    in: vi.fn((column: string, values: any[]) => {
+    in: vi.fn((column: string, values: unknown[]) => {
       queryFilters[column] = { $in: values };
       return chainableMethods;
     }),
-    is: vi.fn((column: string, value: any) => {
+    is: vi.fn((column: string, value: unknown) => {
       queryFilters[column] = value;
       return chainableMethods;
     }),
@@ -82,9 +80,9 @@ export const createSupabaseMock = (customData?: any) => {
     range: vi.fn().mockReturnThis(),
     single: vi.fn(() => {
       const tableData = mockData[currentTable as keyof typeof mockData] || [];
-      const filtered = (Array.isArray(tableData) ? tableData : [tableData]).filter((item: any) => {
+      const filtered = (Array.isArray(tableData) ? tableData : [tableData]).filter((item: Record<string, unknown>) => {
         return Object.entries(queryFilters).every(([key, value]) => {
-          if (value && typeof value === 'object' && value.$in) {
+          if (value && typeof value === 'object' && '$in' in value && Array.isArray(value.$in)) {
             return value.$in.includes(item[key]);
           }
           return item[key] === value;
@@ -97,10 +95,10 @@ export const createSupabaseMock = (customData?: any) => {
     }),
     maybeSingle: vi.fn(() => {
       const tableData = mockData[currentTable as keyof typeof mockData] || [];
-      const filtered = (Array.isArray(tableData) ? tableData : [tableData]).filter((item: any) => {
+      const filtered = (Array.isArray(tableData) ? tableData : [tableData]).filter((item: Record<string, unknown>) => {
         return Object.entries(queryFilters).every(([key, value]) => {
           if (value === null) return item[key] === null;
-          if (value && typeof value === 'object' && value.$in) {
+          if (value && typeof value === 'object' && '$in' in value && Array.isArray(value.$in)) {
             return value.$in.includes(item[key]);
           }
           return item[key] === value;

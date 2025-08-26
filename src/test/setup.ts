@@ -118,7 +118,7 @@ export const createToastMock = () => ({
   }),
 });
 
-export const createAuthMock = (overrides?: any) => ({
+export const createAuthMock = (overrides?: Record<string, unknown>) => ({
   useAuth: () => ({
     user: null,
     userProfile: null,
@@ -131,7 +131,7 @@ export const createAuthMock = (overrides?: any) => ({
   })
 });
 
-export const createNavigationMock = (overrides?: any) => ({
+export const createNavigationMock = (overrides?: Record<string, unknown>) => ({
   useNavigate: () => vi.fn(),
   useParams: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '', state: null, key: 'default' }),
@@ -159,13 +159,13 @@ export const createLeaguesMock = async () => {
 };
 
 // Enhanced mock data filtering utilities
-export const filterUsersBySport = (users: any[], sport: string, leagues: any[]) => {
+export const filterUsersBySport = (users: Record<string, unknown>[], sport: string, leagues: Record<string, unknown>[]) => {
   const sportLeagues = leagues.filter(l => l.sport === sport).map(l => l.id);
-  return users.filter(u => u.league_ids?.some((lid: number) => sportLeagues.includes(lid)));
+  return users.filter(u => (u.league_ids as number[])?.some((lid: number) => sportLeagues.includes(lid)));
 };
 
-export const filterUsersByLeague = (users: any[], leagueId: number) => {
-  return users.filter(u => u.league_ids?.includes(leagueId));
+export const filterUsersByLeague = (users: Record<string, unknown>[], leagueId: number) => {
+  return users.filter(u => (u.league_ids as number[])?.includes(leagueId));
 };
 
 // Reset mocks after each test

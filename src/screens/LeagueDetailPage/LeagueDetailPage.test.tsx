@@ -88,20 +88,24 @@ describe("LeagueDetailPage", () => {
     name: "Spring Volleyball League",
     sport_id: 1,
     skill_id: 1,
+    skill_ids: [1],
     location: "Community Center",
     description: "Join our fun volleyball league!",
+    additional_info: null,
+    league_type: "regular_season" as const,
+    gender: "Mixed" as const,
     start_date: "2024-03-01",
+    year: "2024",
     end_date: "2024-05-01",
-    registration_deadline: "2024-02-15",
+    payment_due_date: "2024-02-15",
+    deposit_amount: 60,
+    deposit_date: "2024-02-01",
+    team_registration: true,
     cost: 120,
     max_teams: 12,
     active: true,
-    schedule_day: "Wednesday",
-    schedule_time: "7:00 PM",
+    hide_day: false,
     day_of_week: 3,
-    time_of_day: "19:00",
-    sports: { name: "Volleyball" },
-    skills: { name: "Recreational" },
     gyms: [],
     gym_ids: [],
     skill_names: ["Recreational"],
@@ -110,7 +114,6 @@ describe("LeagueDetailPage", () => {
     spots_remaining: 10,
     team_count: 2,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   };
 
   const mockTeams = [
@@ -149,35 +152,7 @@ describe("LeagueDetailPage", () => {
     // Mock fetchLeagueById to return our mock league
     mockFetchLeagueById.mockResolvedValue(mockLeague);
 
-    // Mock teams count - registrations table with teams joined
-    mockSupabase.from("registrations").select.mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        then: vi.fn().mockResolvedValue({
-          data: mockTeams.map((team) => ({ id: team.id, teams: team })),
-          error: null,
-        }),
-      }),
-    });
-
-    // Mock gyms fetch
-    mockSupabase.from("gyms").select.mockReturnValue({
-      in: vi.fn().mockReturnValue({
-        then: vi.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
-      }),
-    });
-
-    // Mock stripe products fetch
-    mockSupabase.from("stripe_products").select.mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      }),
-    });
+    // These will be handled by the mockImplementation below
 
     // Also return proper mocks for all tables
     mockSupabase.from.mockImplementation((table: string) => {
@@ -226,7 +201,9 @@ describe("LeagueDetailPage", () => {
         };
       };
 
-      if (table === "gyms") {
+      if (table === "registrations") {
+        return createMockQueryBuilder(mockTeams.map((team) => ({ id: team.id, teams: team })));
+      } else if (table === "gyms") {
         return createMockQueryBuilder([]);
       } else if (table === "teams") {
         const teamsMock = createMockQueryBuilder([]);
@@ -336,7 +313,7 @@ describe("LeagueDetailPage", () => {
     await waitFor(() => {
       // Should show register button since we mocked 0 teams in beforeEach
       const registerButton = screen.getByRole("button", {
-        name: /register team/i,
+        name: /register/i,
       });
       expect(registerButton).toBeInTheDocument();
     });
@@ -348,12 +325,12 @@ describe("LeagueDetailPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /register team/i }),
+        screen.getByRole("button", { name: /register/i }),
       ).toBeInTheDocument();
     });
 
     const registerButton = screen.getByRole("button", {
-      name: /register team/i,
+      name: /register/i,
     });
     await user.click(registerButton);
 
@@ -369,7 +346,7 @@ describe("LeagueDetailPage", () => {
 
     await waitFor(() => {
       const registerButton = screen.getByRole("button", {
-        name: /register team/i,
+        name: /register/i,
       });
       expect(registerButton).toBeInTheDocument();
     });
@@ -386,18 +363,18 @@ describe("LeagueDetailPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /register team/i }),
+        screen.getByRole("button", { name: /register/i }),
       ).toBeInTheDocument();
     });
 
     const registerButton = screen.getByRole("button", {
-      name: /register team/i,
+      name: /register/i,
     });
     await user.click(registerButton);
 
     // Should show team name modal - look for the modal header specifically
     const modalHeader = await screen.findByRole("heading", {
-      name: /register team/i,
+      name: /register/i,
     });
     expect(modalHeader).toBeInTheDocument();
 
@@ -411,7 +388,7 @@ describe("LeagueDetailPage", () => {
     // Verify modal closed
     await waitFor(() => {
       expect(
-        screen.queryByRole("heading", { name: /register team/i }),
+        screen.queryByRole("heading", { name: /register/i }),
       ).not.toBeInTheDocument();
     });
   });
@@ -607,7 +584,7 @@ describe("LeagueDetailPage", () => {
       // Should show register button even without profile
       // The profile completion check happens after clicking register
       const registerButton = screen.getByRole("button", {
-        name: /register team/i,
+        name: /register/i,
       });
       expect(registerButton).toBeInTheDocument();
     });

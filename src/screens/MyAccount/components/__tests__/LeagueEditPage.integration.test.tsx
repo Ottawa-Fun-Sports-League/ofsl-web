@@ -1,4 +1,3 @@
-import React from 'react';
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - Complex type issues requiring extensive refactoring
 // This file has been temporarily bypassed to achieve zero compilation errors
@@ -64,6 +63,9 @@ describe('LeagueEditPage Integration Tests', () => {
     max_teams: 20,
     gym_ids: [1, 2],
     payment_due_date: '2025-01-15',
+    deposit_amount: 50,
+    deposit_date: '2024-12-15',
+    team_registration: true,
     active: true,
     created_at: '2024-01-01',
     year: '2025',
