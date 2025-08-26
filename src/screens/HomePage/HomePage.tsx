@@ -500,7 +500,7 @@ export const HomePage = (): React.ReactElement => {
             <img
               className="w-full h-[250px] sm:h-[300px] md:h-[438px] object-cover mb-6 md:mb-8 rounded-lg"
               alt="About us"
-              src="/group-2.png"
+              src="/OFSL wed league winner 2025.png"
             />
             <div>
               <h2 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[32px] leading-7 mb-4 md:mb-6">
