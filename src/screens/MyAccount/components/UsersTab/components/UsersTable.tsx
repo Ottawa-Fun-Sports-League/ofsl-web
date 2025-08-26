@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { Edit2, Trash2, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
-import { User, SortField, SortDirection } from '../types';
+import { User, SortField, SortDirection, PaginationState } from '../types';
 import { Link } from 'react-router-dom';
 import { UserStatusBadge } from './UserStatusBadge';
 import { MagicLinkButton } from './MagicLinkButton';
 import { ConfirmationDialog } from '../../../../../components/ui/confirmation-dialog';
+import { Pagination } from './Pagination';
 
 interface UsersTableProps {
   users: User[];
@@ -17,6 +18,10 @@ interface UsersTableProps {
   onEditUser: (user: User) => void;
   onDeleteUser: (userId: string) => void;
   searchTerm: string;
+  pagination: PaginationState;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  loading?: boolean;
 }
 
 export function UsersTable({
@@ -27,7 +32,11 @@ export function UsersTable({
   onSort,
   onEditUser,
   onDeleteUser,
-  searchTerm
+  searchTerm,
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  loading = false
 }: UsersTableProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string | null; email: string } | null>(null);
@@ -274,7 +283,7 @@ export function UsersTable({
           </table>
         </div>
 
-        {users.length === 0 && (
+        {users.length === 0 && !loading && (
           <div className="text-center py-12">
             <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p className="text-[#6F6F6F] text-lg">
@@ -282,7 +291,20 @@ export function UsersTable({
             </p>
           </div>
         )}
+        
+        {loading && users.length === 0 && (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#B20000]"></div>
+          </div>
+        )}
       </CardContent>
+      
+      <Pagination
+        pagination={pagination}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        loading={loading}
+      />
     </Card>
 
     {/* Delete Confirmation Dialog */}

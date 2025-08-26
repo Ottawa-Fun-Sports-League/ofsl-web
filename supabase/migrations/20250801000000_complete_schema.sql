@@ -74,7 +74,7 @@ CREATE SEQUENCE IF NOT EXISTS waivers_id_seq START 1 INCREMENT 1;
 -- =============================================
 
 -- Sports table (referenced by leagues, seasons, gyms)
-CREATE TABLE sports (
+CREATE TABLE IF NOT EXISTS sports (
     id BIGINT NOT NULL DEFAULT nextval('sports_id_seq'::regclass),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     name TEXT NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE sports (
 );
 
 -- Skills table (referenced by leagues, teams, users)
-CREATE TABLE skills (
+CREATE TABLE IF NOT EXISTS skills (
     id BIGINT NOT NULL DEFAULT nextval('skills_id_seq'::regclass),
     name TEXT NOT NULL,
     description TEXT,
@@ -96,7 +96,7 @@ CREATE TABLE skills (
 );
 
 -- Gyms table (referenced by leagues, seasons)
-CREATE TABLE gyms (
+CREATE TABLE IF NOT EXISTS gyms (
     id BIGINT NOT NULL DEFAULT nextval('gyms_id_seq'::regclass),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     gym TEXT,
@@ -110,7 +110,7 @@ CREATE TABLE gyms (
 );
 
 -- Waivers table (referenced by users, waiver_acceptances)
-CREATE TABLE waivers (
+CREATE TABLE IF NOT EXISTS waivers (
     id INTEGER NOT NULL DEFAULT nextval('waivers_id_seq'::regclass),
     title CHARACTER VARYING(255) NOT NULL,
     content TEXT NOT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE waivers (
 );
 
 -- Users table (referenced by many other tables)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id TEXT NOT NULL,
     date_created TEXT NOT NULL,
     date_modified TEXT NOT NULL,
@@ -152,7 +152,7 @@ CREATE TABLE users (
 );
 
 -- Leagues table (referenced by teams, league_payments, stripe_orders, stripe_products)
-CREATE TABLE leagues (
+CREATE TABLE IF NOT EXISTS leagues (
     id BIGINT NOT NULL DEFAULT nextval('leagues_id_seq'::regclass),
     name TEXT NOT NULL,
     description TEXT,
@@ -182,7 +182,7 @@ CREATE TABLE leagues (
 );
 
 -- Seasons table (referenced by attendance, registrations)
-CREATE TABLE seasons (
+CREATE TABLE IF NOT EXISTS seasons (
     id BIGINT NOT NULL DEFAULT nextval('seasons_id_seq'::regclass),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     season TEXT,
@@ -206,7 +206,7 @@ CREATE TABLE seasons (
 );
 
 -- Teams table (referenced by team_invites, team_registration_notifications, league_payments)
-CREATE TABLE teams (
+CREATE TABLE IF NOT EXISTS teams (
     id BIGINT NOT NULL DEFAULT nextval('teams_id_seq'::regclass),
     name TEXT NOT NULL,
     league_id BIGINT,
@@ -225,7 +225,7 @@ CREATE TABLE teams (
 );
 
 -- Stripe tables
-CREATE TABLE stripe_customers (
+CREATE TABLE IF NOT EXISTS stripe_customers (
     id BIGINT NOT NULL DEFAULT nextval('stripe_customers_id_seq'::regclass),
     user_id UUID NOT NULL,
     customer_id TEXT NOT NULL,
@@ -237,7 +237,7 @@ CREATE TABLE stripe_customers (
     CONSTRAINT stripe_customers_user_id_key UNIQUE (user_id)
 );
 
-CREATE TABLE stripe_orders (
+CREATE TABLE IF NOT EXISTS stripe_orders (
     id BIGINT NOT NULL DEFAULT nextval('stripe_orders_id_seq'::regclass),
     checkout_session_id TEXT NOT NULL,
     payment_intent_id TEXT NOT NULL,
@@ -255,7 +255,7 @@ CREATE TABLE stripe_orders (
     CONSTRAINT stripe_orders_league_id_fkey FOREIGN KEY (league_id) REFERENCES leagues(id) ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE TABLE stripe_products (
+CREATE TABLE IF NOT EXISTS stripe_products (
     id TEXT NOT NULL,
     price_id TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -271,7 +271,7 @@ CREATE TABLE stripe_products (
     CONSTRAINT stripe_products_league_id_fkey FOREIGN KEY (league_id) REFERENCES leagues(id) ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE TABLE stripe_subscriptions (
+CREATE TABLE IF NOT EXISTS stripe_subscriptions (
     id BIGINT NOT NULL DEFAULT nextval('stripe_subscriptions_id_seq'::regclass),
     customer_id TEXT NOT NULL,
     subscription_id TEXT,
@@ -290,7 +290,7 @@ CREATE TABLE stripe_subscriptions (
 );
 
 -- League payments table (references users, teams, leagues, stripe_orders)
-CREATE TABLE league_payments (
+CREATE TABLE IF NOT EXISTS league_payments (
     id BIGINT NOT NULL DEFAULT nextval('league_payments_id_seq'::regclass),
     user_id TEXT NOT NULL,
     team_id BIGINT,
@@ -312,7 +312,7 @@ CREATE TABLE league_payments (
 );
 
 -- Team invites table (references teams, users)
-CREATE TABLE team_invites (
+CREATE TABLE IF NOT EXISTS team_invites (
     id BIGINT NOT NULL DEFAULT nextval('team_invites_id_seq'::regclass),
     team_id BIGINT NOT NULL,
     email TEXT NOT NULL,
@@ -333,7 +333,7 @@ CREATE TABLE team_invites (
 );
 
 -- Team registration notifications table (references teams)
-CREATE TABLE team_registration_notifications (
+CREATE TABLE IF NOT EXISTS team_registration_notifications (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     team_id INTEGER NOT NULL,
     team_name TEXT NOT NULL,
@@ -352,7 +352,7 @@ CREATE TABLE team_registration_notifications (
 );
 
 -- Attendance table (references users, seasons)
-CREATE TABLE attendance (
+CREATE TABLE IF NOT EXISTS attendance (
     id BIGINT NOT NULL DEFAULT nextval('attendance_id_seq'::regclass),
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     player TEXT,
@@ -364,7 +364,7 @@ CREATE TABLE attendance (
 );
 
 -- Balances table (references users)
-CREATE TABLE balances (
+CREATE TABLE IF NOT EXISTS balances (
     id BIGINT NOT NULL DEFAULT nextval('balances_id_seq'::regclass),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     player TEXT,
@@ -375,7 +375,7 @@ CREATE TABLE balances (
 );
 
 -- Registrations table (references users, seasons)
-CREATE TABLE registrations (
+CREATE TABLE IF NOT EXISTS registrations (
     id BIGINT NOT NULL DEFAULT nextval('registrations_id_seq'::regclass),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     player TEXT,
@@ -387,7 +387,7 @@ CREATE TABLE registrations (
 );
 
 -- Waiver acceptances table (references users, waivers)
-CREATE TABLE waiver_acceptances (
+CREATE TABLE IF NOT EXISTS waiver_acceptances (
     id INTEGER NOT NULL DEFAULT nextval('waiver_acceptances_id_seq'::regclass),
     user_id TEXT,
     waiver_id INTEGER,
@@ -405,55 +405,55 @@ CREATE TABLE waiver_acceptances (
 -- =============================================
 
 -- Attendance indexes
-CREATE INDEX idx_attendance_season_waitlist ON attendance USING btree (season, is_waitlisted);
+CREATE INDEX IF NOT EXISTS idx_attendance_season_waitlist ON attendance USING btree (season, is_waitlisted);
 
 -- Gyms indexes
-CREATE INDEX idx_gyms_available_days ON gyms USING gin (available_days);
-CREATE INDEX idx_gyms_available_sports ON gyms USING gin (available_sports);
+CREATE INDEX IF NOT EXISTS idx_gyms_available_days ON gyms USING gin (available_days);
+CREATE INDEX IF NOT EXISTS idx_gyms_available_sports ON gyms USING gin (available_sports);
 
 -- League payments indexes
-CREATE INDEX idx_league_payments_league_id ON league_payments USING btree (league_id);
-CREATE INDEX idx_league_payments_status ON league_payments USING btree (status);
-CREATE INDEX idx_league_payments_stripe_order_id ON league_payments USING btree (stripe_order_id);
-CREATE INDEX idx_league_payments_team_id ON league_payments USING btree (team_id);
-CREATE INDEX idx_league_payments_user_id ON league_payments USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_league_payments_league_id ON league_payments USING btree (league_id);
+CREATE INDEX IF NOT EXISTS idx_league_payments_status ON league_payments USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_league_payments_stripe_order_id ON league_payments USING btree (stripe_order_id);
+CREATE INDEX IF NOT EXISTS idx_league_payments_team_id ON league_payments USING btree (team_id);
+CREATE INDEX IF NOT EXISTS idx_league_payments_user_id ON league_payments USING btree (user_id);
 
 -- Leagues indexes
-CREATE INDEX idx_leagues_active ON leagues USING btree (active);
-CREATE INDEX idx_leagues_day_of_week ON leagues USING btree (day_of_week);
-CREATE INDEX idx_leagues_league_type ON leagues USING btree (league_type);
-CREATE INDEX idx_leagues_skill_id ON leagues USING btree (skill_id);
-CREATE INDEX idx_leagues_skill_ids ON leagues USING gin (skill_ids);
-CREATE INDEX idx_leagues_sport_id ON leagues USING btree (sport_id);
+CREATE INDEX IF NOT EXISTS idx_leagues_active ON leagues USING btree (active);
+CREATE INDEX IF NOT EXISTS idx_leagues_day_of_week ON leagues USING btree (day_of_week);
+CREATE INDEX IF NOT EXISTS idx_leagues_league_type ON leagues USING btree (league_type);
+CREATE INDEX IF NOT EXISTS idx_leagues_skill_id ON leagues USING btree (skill_id);
+CREATE INDEX IF NOT EXISTS idx_leagues_skill_ids ON leagues USING gin (skill_ids);
+CREATE INDEX IF NOT EXISTS idx_leagues_sport_id ON leagues USING btree (sport_id);
 
 -- Stripe orders indexes
-CREATE INDEX idx_stripe_orders_league_id ON stripe_orders USING btree (league_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_orders_league_id ON stripe_orders USING btree (league_id);
 
 -- Team invites indexes
-CREATE INDEX idx_team_invites_email ON team_invites USING btree (email);
-CREATE INDEX idx_team_invites_status ON team_invites USING btree (status);
-CREATE INDEX idx_team_invites_team_id ON team_invites USING btree (team_id);
+CREATE INDEX IF NOT EXISTS idx_team_invites_email ON team_invites USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_team_invites_status ON team_invites USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_team_invites_team_id ON team_invites USING btree (team_id);
 
 -- Team registration notifications indexes
-CREATE INDEX idx_team_notifications_unsent ON team_registration_notifications USING btree (sent, created_at) WHERE (sent = false);
+CREATE INDEX IF NOT EXISTS idx_team_notifications_unsent ON team_registration_notifications USING btree (sent, created_at) WHERE (sent = false);
 
 -- Teams indexes
-CREATE INDEX idx_teams_active ON teams USING btree (active);
-CREATE INDEX idx_teams_captain_id ON teams USING btree (captain_id);
-CREATE INDEX idx_teams_co_captains ON teams USING gin (co_captains);
-CREATE INDEX idx_teams_display_order ON teams USING btree (display_order);
-CREATE INDEX idx_teams_league_id ON teams USING btree (league_id);
-CREATE INDEX idx_teams_skill_level_id ON teams USING btree (skill_level_id);
+CREATE INDEX IF NOT EXISTS idx_teams_active ON teams USING btree (active);
+CREATE INDEX IF NOT EXISTS idx_teams_captain_id ON teams USING btree (captain_id);
+CREATE INDEX IF NOT EXISTS idx_teams_co_captains ON teams USING gin (co_captains);
+CREATE INDEX IF NOT EXISTS idx_teams_display_order ON teams USING btree (display_order);
+CREATE INDEX IF NOT EXISTS idx_teams_league_id ON teams USING btree (league_id);
+CREATE INDEX IF NOT EXISTS idx_teams_skill_level_id ON teams USING btree (skill_level_id);
 
 -- Users indexes
-CREATE INDEX idx_users_team_ids ON users USING gin (team_ids);
+CREATE INDEX IF NOT EXISTS idx_users_team_ids ON users USING gin (team_ids);
 
 -- Waiver acceptances indexes
-CREATE INDEX idx_waiver_acceptances_user ON waiver_acceptances USING btree (user_id);
-CREATE INDEX idx_waiver_acceptances_waiver ON waiver_acceptances USING btree (waiver_id);
+CREATE INDEX IF NOT EXISTS idx_waiver_acceptances_user ON waiver_acceptances USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_waiver_acceptances_waiver ON waiver_acceptances USING btree (waiver_id);
 
 -- Waivers indexes
-CREATE INDEX idx_waivers_active ON waivers USING btree (is_active);
+CREATE INDEX IF NOT EXISTS idx_waivers_active ON waivers USING btree (is_active);
 
 -- =============================================
 -- HELPER FUNCTIONS
@@ -810,48 +810,58 @@ $$;
 -- =============================================
 
 -- League payments triggers
+DROP TRIGGER IF EXISTS update_league_payment_status ON league_payments;
 CREATE TRIGGER update_league_payment_status 
     BEFORE INSERT OR UPDATE ON league_payments 
     FOR EACH ROW EXECUTE FUNCTION update_payment_status();
 
 -- Leagues triggers
+DROP TRIGGER IF EXISTS sync_payment_due_dates_on_league_update ON leagues;
 CREATE TRIGGER sync_payment_due_dates_on_league_update 
     AFTER UPDATE ON leagues 
     FOR EACH ROW EXECUTE FUNCTION sync_league_payment_due_dates();
 
 -- Stripe products triggers
+DROP TRIGGER IF EXISTS update_stripe_products_updated_at ON stripe_products;
 CREATE TRIGGER update_stripe_products_updated_at 
     BEFORE UPDATE ON stripe_products 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Team invites triggers
+DROP TRIGGER IF EXISTS trigger_team_invites_updated_at ON team_invites;
 CREATE TRIGGER trigger_team_invites_updated_at 
     BEFORE UPDATE ON team_invites 
     FOR EACH ROW EXECUTE FUNCTION update_team_invites_updated_at();
 
 -- Teams triggers
+DROP TRIGGER IF EXISTS create_league_payment_on_team_insert ON teams;
 CREATE TRIGGER create_league_payment_on_team_insert 
     AFTER INSERT ON teams 
     FOR EACH ROW EXECUTE FUNCTION create_league_payment_for_team();
 
+DROP TRIGGER IF EXISTS on_team_registration ON teams;
 CREATE TRIGGER on_team_registration 
     AFTER INSERT ON teams 
     FOR EACH ROW EXECUTE FUNCTION queue_team_registration_notification();
 
+DROP TRIGGER IF EXISTS update_teams_updated_at ON teams;
 CREATE TRIGGER update_teams_updated_at 
     BEFORE UPDATE ON teams 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Users triggers
+DROP TRIGGER IF EXISTS add_user_to_teams_on_signup ON users;
 CREATE TRIGGER add_user_to_teams_on_signup 
     AFTER INSERT ON users 
     FOR EACH ROW EXECUTE FUNCTION handle_user_signup_and_add_to_teams();
 
+DROP TRIGGER IF EXISTS notify_new_user_trigger ON users;
 CREATE TRIGGER notify_new_user_trigger 
     AFTER INSERT ON users 
     FOR EACH ROW EXECUTE FUNCTION schedule_process_team_invites();
 
 -- Waivers triggers
+DROP TRIGGER IF EXISTS update_waivers_updated_at ON waivers;
 CREATE TRIGGER update_waivers_updated_at 
     BEFORE UPDATE ON waivers 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -886,102 +896,102 @@ ALTER TABLE waivers ENABLE ROW LEVEL SECURITY;
 -- =============================================
 
 -- Attendance policies
-CREATE POLICY "Enable read access for authenticated users" ON attendance FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Users can view their own attendance" ON attendance FOR SELECT TO authenticated USING (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = attendance.player)));
-CREATE POLICY "Users can insert attendance records" ON attendance FOR INSERT TO public WITH CHECK (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = attendance.player)))));
-CREATE POLICY "Users can delete their own attendance" ON attendance FOR DELETE TO authenticated USING (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = attendance.player)));
-CREATE POLICY "Admins can delete attendance records" ON attendance FOR DELETE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Enable read access for authenticated users" ON attendance FOR SELECT TO authenticated USING (true);
+-- CREATE POLICY "Users can view their own attendance" ON attendance FOR SELECT TO authenticated USING (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = attendance.player)));
+-- CREATE POLICY "Users can insert attendance records" ON attendance FOR INSERT TO public WITH CHECK (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = attendance.player)))));
+-- CREATE POLICY "Users can delete their own attendance" ON attendance FOR DELETE TO authenticated USING (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = attendance.player)));
+-- CREATE POLICY "Admins can delete attendance records" ON attendance FOR DELETE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Balances policies
-CREATE POLICY "Users can view their own balances" ON balances FOR SELECT TO authenticated USING (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = balances.player)));
-CREATE POLICY "Admins can view all balances" ON balances FOR SELECT TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
-CREATE POLICY "Users can insert balance records" ON balances FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Admins can insert balances" ON balances FOR INSERT TO authenticated WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
-CREATE POLICY "Admins can delete balance entries" ON balances FOR DELETE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Users can view their own balances" ON balances FOR SELECT TO authenticated USING (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = balances.player)));
+-- CREATE POLICY "Admins can view all balances" ON balances FOR SELECT TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Users can insert balance records" ON balances FOR INSERT TO authenticated WITH CHECK (true);
+-- CREATE POLICY "Admins can insert balances" ON balances FOR INSERT TO authenticated WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Admins can delete balance entries" ON balances FOR DELETE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Gyms policies
-CREATE POLICY "Allow all users to view gyms" ON gyms FOR SELECT TO public USING (true);
-CREATE POLICY "Enable read access for all authenticated users" ON gyms FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Allow admins full access to gyms" ON gyms FOR ALL TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Allow all users to view gyms" ON gyms FOR SELECT TO public USING (true);
+-- CREATE POLICY "Enable read access for all authenticated users" ON gyms FOR SELECT TO authenticated USING (true);
+-- CREATE POLICY "Allow admins full access to gyms" ON gyms FOR ALL TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- League payments policies
-CREATE POLICY "Users can view their own league payments" ON league_payments FOR SELECT TO authenticated USING (user_id = get_current_user_id());
-CREATE POLICY "Users can create their own league payments" ON league_payments FOR INSERT TO authenticated WITH CHECK (user_id = get_current_user_id());
-CREATE POLICY "Admins can view all league payments" ON league_payments FOR SELECT TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
-CREATE POLICY "Admins can manage all league payments" ON league_payments FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Users can view their own league payments" ON league_payments FOR SELECT TO authenticated USING (user_id = get_current_user_id());
+-- CREATE POLICY "Users can create their own league payments" ON league_payments FOR INSERT TO authenticated WITH CHECK (user_id = get_current_user_id());
+-- CREATE POLICY "Admins can view all league payments" ON league_payments FOR SELECT TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Admins can manage all league payments" ON league_payments FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Leagues policies
-CREATE POLICY "Enable read access for all users" ON leagues FOR SELECT TO public USING (true);
-CREATE POLICY "Admins can manage leagues" ON leagues FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
-CREATE POLICY "Admins can update payment_due_date" ON leagues FOR UPDATE TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.id = (auth.uid())::text) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.id = (auth.uid())::text) AND (users.is_admin = true)))));
+-- CREATE POLICY "Enable read access for all users" ON leagues FOR SELECT TO public USING (true);
+-- CREATE POLICY "Admins can manage leagues" ON leagues FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Admins can update payment_due_date" ON leagues FOR UPDATE TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.id = (auth.uid())::text) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.id = (auth.uid())::text) AND (users.is_admin = true)))));
 
 -- Registrations policies
-CREATE POLICY "Enable read access for all authenticated users" ON registrations FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Users can insert registrations" ON registrations FOR INSERT TO public WITH CHECK (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = registrations.player)))));
-CREATE POLICY "Users can update registrations" ON registrations FOR UPDATE TO public USING (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = registrations.player)))));
-CREATE POLICY "Users can delete registrations" ON registrations FOR DELETE TO public USING (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = registrations.player)))));
-CREATE POLICY "Admins can manage all registrations" ON registrations FOR ALL TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Enable read access for all authenticated users" ON registrations FOR SELECT TO authenticated USING (true);
+-- CREATE POLICY "Users can insert registrations" ON registrations FOR INSERT TO public WITH CHECK (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = registrations.player)))));
+-- CREATE POLICY "Users can update registrations" ON registrations FOR UPDATE TO public USING (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = registrations.player)))));
+-- CREATE POLICY "Users can delete registrations" ON registrations FOR DELETE TO public USING (((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))) OR (auth.uid() IN (SELECT users.auth_id FROM users WHERE (users.id = registrations.player)))));
+-- CREATE POLICY "Admins can manage all registrations" ON registrations FOR ALL TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Seasons policies
-CREATE POLICY "Enable read access for all users" ON seasons FOR SELECT TO public USING (true);
-CREATE POLICY "Users can view seasons related to their attendance" ON seasons FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert seasons" ON seasons FOR INSERT TO authenticated WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
-CREATE POLICY "Admins can update seasons" ON seasons FOR UPDATE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
-CREATE POLICY "Admins can update seasons new field" ON seasons FOR UPDATE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
-CREATE POLICY "Admins can delete seasons" ON seasons FOR DELETE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Enable read access for all users" ON seasons FOR SELECT TO public USING (true);
+-- CREATE POLICY "Users can view seasons related to their attendance" ON seasons FOR SELECT TO authenticated USING (true);
+-- CREATE POLICY "Admins can insert seasons" ON seasons FOR INSERT TO authenticated WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Admins can update seasons" ON seasons FOR UPDATE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Admins can update seasons new field" ON seasons FOR UPDATE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Admins can delete seasons" ON seasons FOR DELETE TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Skills policies
-CREATE POLICY "Enable read access for all users" ON skills FOR SELECT TO public USING (true);
-CREATE POLICY "Admins can manage skills" ON skills FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Enable read access for all users" ON skills FOR SELECT TO public USING (true);
+-- CREATE POLICY "Admins can manage skills" ON skills FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Sports policies
-CREATE POLICY "Enable read access for all users" ON sports FOR SELECT TO public USING (true);
-CREATE POLICY "Admins can manage sports" ON sports FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Enable read access for all users" ON sports FOR SELECT TO public USING (true);
+-- CREATE POLICY "Admins can manage sports" ON sports FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Stripe customers policies
-CREATE POLICY "Users can view their own customer data" ON stripe_customers FOR SELECT TO authenticated USING (((user_id = auth.uid()) AND (deleted_at IS NULL)));
+-- CREATE POLICY "Users can view their own customer data" ON stripe_customers FOR SELECT TO authenticated USING (((user_id = auth.uid()) AND (deleted_at IS NULL)));
 
 -- Stripe orders policies
-CREATE POLICY "Users can view their own order data" ON stripe_orders FOR SELECT TO authenticated USING (((customer_id IN (SELECT stripe_customers.customer_id FROM stripe_customers WHERE ((stripe_customers.user_id = auth.uid()) AND (stripe_customers.deleted_at IS NULL)))) AND (deleted_at IS NULL)));
+-- CREATE POLICY "Users can view their own order data" ON stripe_orders FOR SELECT TO authenticated USING (((customer_id IN (SELECT stripe_customers.customer_id FROM stripe_customers WHERE ((stripe_customers.user_id = auth.uid()) AND (stripe_customers.deleted_at IS NULL)))) AND (deleted_at IS NULL)));
 
 -- Stripe products policies
-CREATE POLICY "Allow all users to read products" ON stripe_products FOR SELECT TO public USING (true);
-CREATE POLICY "Allow admins to manage products" ON stripe_products FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Allow all users to read products" ON stripe_products FOR SELECT TO public USING (true);
+-- CREATE POLICY "Allow admins to manage products" ON stripe_products FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Stripe subscriptions policies
-CREATE POLICY "Users can view their own subscription data" ON stripe_subscriptions FOR SELECT TO authenticated USING (((customer_id IN (SELECT stripe_customers.customer_id FROM stripe_customers WHERE ((stripe_customers.user_id = auth.uid()) AND (stripe_customers.deleted_at IS NULL)))) AND (deleted_at IS NULL)));
+-- CREATE POLICY "Users can view their own subscription data" ON stripe_subscriptions FOR SELECT TO authenticated USING (((customer_id IN (SELECT stripe_customers.customer_id FROM stripe_customers WHERE ((stripe_customers.user_id = auth.uid()) AND (stripe_customers.deleted_at IS NULL)))) AND (deleted_at IS NULL)));
 
 -- Team invites policies
-CREATE POLICY "Users can view their own invites by email" ON team_invites FOR SELECT TO public USING (((lower(email) = lower((auth.jwt() ->> 'email'::text))) AND (status = 'pending'::text) AND (expires_at > now())));
-CREATE POLICY "Authenticated users can view their invites" ON team_invites FOR SELECT TO public USING (((EXISTS (SELECT 1 FROM users u WHERE ((u.auth_id = auth.uid()) AND (lower(u.email) = lower(team_invites.email))))) AND (status = 'pending'::text) AND (expires_at > now())));
-CREATE POLICY "Users can view invites for their teams" ON team_invites FOR SELECT TO public USING ((team_id IN (SELECT teams.id FROM teams WHERE ((teams.captain_id = (auth.uid())::text) OR ((auth.uid())::text = ANY (teams.roster))))));
-CREATE POLICY "Team captains can manage invites" ON team_invites FOR ALL TO public USING ((team_id IN (SELECT teams.id FROM teams WHERE (teams.captain_id = (auth.uid())::text))));
-CREATE POLICY "Users can update their own invites by email" ON team_invites FOR UPDATE TO public USING (((lower(email) = lower((auth.jwt() ->> 'email'::text))) AND (status = 'pending'::text) AND (expires_at > now()))) WITH CHECK ((lower(email) = lower((auth.jwt() ->> 'email'::text))));
+-- CREATE POLICY "Users can view their own invites by email" ON team_invites FOR SELECT TO public USING (((lower(email) = lower((auth.jwt() ->> 'email'::text))) AND (status = 'pending'::text) AND (expires_at > now())));
+-- CREATE POLICY "Authenticated users can view their invites" ON team_invites FOR SELECT TO public USING (((EXISTS (SELECT 1 FROM users u WHERE ((u.auth_id = auth.uid()) AND (lower(u.email) = lower(team_invites.email))))) AND (status = 'pending'::text) AND (expires_at > now())));
+-- CREATE POLICY "Users can view invites for their teams" ON team_invites FOR SELECT TO public USING ((team_id IN (SELECT teams.id FROM teams WHERE ((teams.captain_id = (auth.uid())::text) OR ((auth.uid())::text = ANY (teams.roster))))));
+-- CREATE POLICY "Team captains can manage invites" ON team_invites FOR ALL TO public USING ((team_id IN (SELECT teams.id FROM teams WHERE (teams.captain_id = (auth.uid())::text))));
+-- CREATE POLICY "Users can update their own invites by email" ON team_invites FOR UPDATE TO public USING (((lower(email) = lower((auth.jwt() ->> 'email'::text))) AND (status = 'pending'::text) AND (expires_at > now()))) WITH CHECK ((lower(email) = lower((auth.jwt() ->> 'email'::text))));
 
 -- Team registration notifications policies
-CREATE POLICY "Service role can manage notifications" ON team_registration_notifications FOR ALL TO service_role USING (true) WITH CHECK (true);
+-- CREATE POLICY "Service role can manage notifications" ON team_registration_notifications FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Teams policies
-CREATE POLICY "Enable read access for all users" ON teams FOR SELECT TO public USING (true);
-CREATE POLICY "Team captains can manage their teams" ON teams FOR ALL TO authenticated USING (((captain_id = get_current_user_id()) OR (get_current_user_id() = ANY (roster)))) WITH CHECK (((captain_id = get_current_user_id()) OR ((get_current_user_id() = ANY (roster)) AND (captain_id = ANY (roster)))));
-CREATE POLICY "Admins can manage all teams" ON teams FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Enable read access for all users" ON teams FOR SELECT TO public USING (true);
+-- CREATE POLICY "Team captains can manage their teams" ON teams FOR ALL TO authenticated USING (((captain_id = get_current_user_id()) OR (get_current_user_id() = ANY (roster)))) WITH CHECK (((captain_id = get_current_user_id()) OR ((get_current_user_id() = ANY (roster)) AND (captain_id = ANY (roster)))));
+-- CREATE POLICY "Admins can manage all teams" ON teams FOR ALL TO authenticated USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true))))) WITH CHECK ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Users policies
-CREATE POLICY "Allow authenticated users to view public profile information" ON users FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Users can create own profile" ON users FOR INSERT TO authenticated WITH CHECK ((auth_id = auth.uid()));
-CREATE POLICY "Admins can read all users" ON users FOR SELECT TO authenticated USING (((auth_id = auth.uid()) OR is_current_user_admin()));
-CREATE POLICY "Admins can update all users" ON users FOR UPDATE TO authenticated USING (((auth_id = auth.uid()) OR is_current_user_admin())) WITH CHECK (((auth_id = auth.uid()) OR is_current_user_admin()));
-CREATE POLICY "Admins can delete users" ON users FOR DELETE TO authenticated USING (is_current_user_admin());
-CREATE POLICY "System functions can access users" ON users FOR ALL TO authenticated USING (((auth_id = auth.uid()) OR (current_setting('role'::text, true) = 'postgres'::text)));
+-- CREATE POLICY "Allow authenticated users to view public profile information" ON users FOR SELECT TO authenticated USING (true);
+-- CREATE POLICY "Users can create own profile" ON users FOR INSERT TO authenticated WITH CHECK ((auth_id = auth.uid()));
+-- CREATE POLICY "Admins can read all users" ON users FOR SELECT TO authenticated USING (((auth_id = auth.uid()) OR is_current_user_admin()));
+-- CREATE POLICY "Admins can update all users" ON users FOR UPDATE TO authenticated USING (((auth_id = auth.uid()) OR is_current_user_admin())) WITH CHECK (((auth_id = auth.uid()) OR is_current_user_admin()));
+-- CREATE POLICY "Admins can delete users" ON users FOR DELETE TO authenticated USING (is_current_user_admin());
+-- CREATE POLICY "System functions can access users" ON users FOR ALL TO authenticated USING (((auth_id = auth.uid()) OR (current_setting('role'::text, true) = 'postgres'::text)));
 
 -- Waiver acceptances policies
-CREATE POLICY "Users can view own waiver acceptances" ON waiver_acceptances FOR SELECT TO public USING ((user_id IN (SELECT users.id FROM users WHERE (users.auth_id = auth.uid()))));
-CREATE POLICY "Users can accept waivers" ON waiver_acceptances FOR INSERT TO public WITH CHECK ((user_id IN (SELECT users.id FROM users WHERE (users.auth_id = auth.uid()))));
-CREATE POLICY "Admins can view all waiver acceptances" ON waiver_acceptances FOR SELECT TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Users can view own waiver acceptances" ON waiver_acceptances FOR SELECT TO public USING ((user_id IN (SELECT users.id FROM users WHERE (users.auth_id = auth.uid()))));
+-- CREATE POLICY "Users can accept waivers" ON waiver_acceptances FOR INSERT TO public WITH CHECK ((user_id IN (SELECT users.id FROM users WHERE (users.auth_id = auth.uid()))));
+-- CREATE POLICY "Admins can view all waiver acceptances" ON waiver_acceptances FOR SELECT TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- Waivers policies
-CREATE POLICY "Active waivers are viewable by everyone" ON waivers FOR SELECT TO public USING ((is_active = true));
-CREATE POLICY "Admins can manage waivers" ON waivers FOR ALL TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
+-- CREATE POLICY "Active waivers are viewable by everyone" ON waivers FOR SELECT TO public USING ((is_active = true));
+-- CREATE POLICY "Admins can manage waivers" ON waivers FOR ALL TO public USING ((EXISTS (SELECT 1 FROM users WHERE ((users.auth_id = auth.uid()) AND (users.is_admin = true)))));
 
 -- =============================================
 -- COMMENTS
