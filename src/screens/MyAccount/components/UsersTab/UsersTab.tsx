@@ -25,12 +25,15 @@ export function UsersTab() {
     sortField,
     sortDirection,
     filters,
+    pagination,
     setSearchTerm,
     loadUsers,
     handleSort,
     handleFilterChange,
     clearFilters,
-    isAnyFilterActive
+    isAnyFilterActive,
+    handlePageChange,
+    handlePageSizeChange
   } = useUsersData();
 
   const {
@@ -47,11 +50,15 @@ export function UsersTab() {
     handleCancelEdit
   } = useUserOperations(loadUsers);
 
-  const handleExportCSV = (selectedColumns: string[]) => {
+  const handleExportCSV = async (selectedColumns: string[]) => {
     try {
+      showToast('Preparing export...', 'info');
+      
+      // For now, export current page data
+      // TODO: Implement server-side export for all filtered data
       const filename = generateExportFilename();
       exportUsersToCSV(filteredUsers, selectedColumns, filename);
-      showToast(`Exported ${filteredUsers.length} users to ${filename}`, 'success');
+      showToast(`Exported ${filteredUsers.length} users from current page to ${filename}`, 'success');
     } catch (error) {
       showToast('Failed to export CSV. Please try again.', 'error');
     }
@@ -81,7 +88,7 @@ export function UsersTab() {
       <div className="2xl:-mx-32 xl:-mx-24 lg:-mx-16 md:-mx-8 space-y-6">
         <div className="px-4 md:px-6 lg:px-8">
           <UsersHeader
-            userCount={filteredUsers.length}
+            userCount={pagination.totalItems}
             onOpenMobileFilter={() => setShowMobileFilterDrawer(true)}
             onRefresh={loadUsers}
             onExportCSV={() => setShowExportModal(true)}
@@ -118,6 +125,10 @@ export function UsersTab() {
             onEditUser={handleEditUser}
             onDeleteUser={handleDeleteUser}
             searchTerm={searchTerm}
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            loading={loading}
           />
         </div>
 
@@ -137,7 +148,7 @@ export function UsersTab() {
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
           onExport={handleExportCSV}
-          userCount={filteredUsers.length}
+          userCount={pagination.totalItems}
         />
       </div>
     </div>
