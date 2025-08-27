@@ -1,8 +1,10 @@
 import { Button } from '../../../../../components/ui/button';
 import { MapPin } from 'lucide-react';
 import { Gym, Sport, DayOfWeek, NewGymForm, EditGymForm } from '../types';
+import { PaginationState } from '../../UsersTab/types';
 import { GymCard } from './GymCard';
 import { GymForm } from './GymForm';
+import { Pagination } from '../../UsersTab/components/Pagination';
 
 interface GymsListProps {
   filteredGyms: Gym[];
@@ -15,6 +17,7 @@ interface GymsListProps {
   saving: boolean;
   deleting: number | null;
   isAnyFilterActive: boolean;
+  pagination: PaginationState;
   onEditGym: (gym: Gym) => void;
   onEditGymChange: (gym: EditGymForm) => void;
   onDayToggle: (dayId: number, isNewGym?: boolean) => void;
@@ -24,6 +27,8 @@ interface GymsListProps {
   onCancelEdit: () => void;
   onDeleteGym: (gymId: number) => void;
   onClearFilters: () => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
 export function GymsList({
@@ -37,6 +42,7 @@ export function GymsList({
   saving,
   deleting,
   isAnyFilterActive,
+  pagination,
   onEditGym,
   onEditGymChange,
   onDayToggle,
@@ -45,7 +51,9 @@ export function GymsList({
   onUpdateGym,
   onCancelEdit,
   onDeleteGym,
-  onClearFilters
+  onClearFilters,
+  onPageChange,
+  onPageSizeChange
 }: GymsListProps) {
   if (filteredGyms.length === 0 && !loading) {
     return (
@@ -67,37 +75,51 @@ export function GymsList({
   }
 
   return (
-    <div className="space-y-6">
-      {filteredGyms.map(gym => (
-        <div key={gym.id}>
-          {editingGym === gym.id ? (
-            <GymForm
-              isEdit={true}
-              title="Edit School/Gym"
-              gym={editGym as unknown as (NewGymForm | EditGymForm)}
-              sports={sports}
-              daysOfWeek={daysOfWeek}
-              locations={locations}
-              saving={saving}
-              onGymChange={onEditGymChange as unknown as (gym: NewGymForm | EditGymForm) => void}
-              onDayToggle={(dayId) => onDayToggle(dayId, false)}
-              onSportToggle={(sportId) => onSportToggle(sportId, false)}
-              onLocationToggle={(location) => onLocationToggle(location, false)}
-              onSave={onUpdateGym}
-              onCancel={onCancelEdit}
-            />
-          ) : (
-            <GymCard
-              gym={gym}
-              sports={sports}
-              daysOfWeek={daysOfWeek}
-              deleting={deleting === gym.id}
-              onEdit={() => onEditGym(gym)}
-              onDelete={() => onDeleteGym(gym.id)}
-            />
-          )}
+    <div>
+      <div className="space-y-6">
+        {filteredGyms.map(gym => (
+          <div key={gym.id}>
+            {editingGym === gym.id ? (
+              <GymForm
+                isEdit={true}
+                title="Edit School/Gym"
+                gym={editGym as unknown as (NewGymForm | EditGymForm)}
+                sports={sports}
+                daysOfWeek={daysOfWeek}
+                locations={locations}
+                saving={saving}
+                onGymChange={onEditGymChange as unknown as (gym: NewGymForm | EditGymForm) => void}
+                onDayToggle={(dayId) => onDayToggle(dayId, false)}
+                onSportToggle={(sportId) => onSportToggle(sportId, false)}
+                onLocationToggle={(location) => onLocationToggle(location, false)}
+                onSave={onUpdateGym}
+                onCancel={onCancelEdit}
+              />
+            ) : (
+              <GymCard
+                gym={gym}
+                sports={sports}
+                daysOfWeek={daysOfWeek}
+                deleting={deleting === gym.id}
+                onEdit={() => onEditGym(gym)}
+                onDelete={() => onDeleteGym(gym.id)}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      
+      {pagination.totalItems > 0 && (
+        <div className="mt-6">
+          <Pagination
+            pagination={pagination}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+            loading={loading}
+            itemName="schools"
+          />
         </div>
-      ))}
+      )}
     </div>
   );
 }
