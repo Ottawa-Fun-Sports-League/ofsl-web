@@ -131,10 +131,22 @@ serve(async (req: Request) => {
     const isTeamCaptain = userProfileData.id === captainId;
     const isAdmin = userProfileData.is_admin === true;
     const isRemovingSelf = action === 'remove' && userProfileData.id === userId;
+    const isRemoveInviteAction = action === 'remove-invite';
     
-    if (!isTeamCaptain && !isAdmin && !isRemovingSelf) {
+    if (!isTeamCaptain && !isAdmin && !isRemovingSelf && !isRemoveInviteAction) {
       return new Response(
         JSON.stringify({ error: "Only team captains, admins can manage teammates, or users can remove themselves" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    // For remove-invite action, only team captains and admins can remove invites
+    if (isRemoveInviteAction && !isTeamCaptain && !isAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Only team captains and admins can remove invites" }),
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
