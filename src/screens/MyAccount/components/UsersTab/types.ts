@@ -21,7 +21,12 @@ export interface User {
   league_ids?: (string | number)[] | null;  // Individual league registrations, stored as bigint array in DB
   user_sports_skills?: UserSportSkill[] | null;
   current_registrations?: {
+    team_id?: number;
+    team_name?: string;
+    league_id?: number;
     league_name: string;
+    sport_id?: number;
+    sport_name?: string;
     amount_due: number;
     amount_paid: number;
     status: string;

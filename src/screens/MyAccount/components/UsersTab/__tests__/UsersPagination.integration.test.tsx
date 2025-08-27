@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { UsersTab } from '../UsersTab';
-import { AuthContext } from '../../../../../contexts/AuthContext';
-import { ToastContext } from '../../../../../components/ui/toast';
 import { supabase } from '../../../../../lib/supabase';
 
 // Mock Supabase
@@ -14,31 +12,35 @@ vi.mock('../../../../../lib/supabase', () => ({
   }
 }));
 
-// Mock auth context
-const mockAuthContext = {
-  user: { id: 'admin-user-id' },
-  userProfile: { 
-    id: 'admin-user-id', 
-    is_admin: true,
-    name: 'Admin User',
-    email: 'admin@test.com'
-  },
-  signIn: vi.fn(),
-  signOut: vi.fn(),
-  signUp: vi.fn(),
-  signInWithGoogle: vi.fn(),
-  loading: false,
-  setUserProfile: vi.fn(),
-  setIsNewUser: vi.fn(),
-  isNewUser: false,
-  checkProfileCompletion: vi.fn(),
-  refreshUserProfile: vi.fn()
-};
+// Mock AuthContext
+vi.mock('../../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'admin-user-id' },
+    userProfile: { 
+      id: 'admin-user-id', 
+      is_admin: true,
+      name: 'Admin User',
+      email: 'admin@test.com'
+    },
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    signUp: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    loading: false,
+    setUserProfile: vi.fn(),
+    setIsNewUser: vi.fn(),
+    isNewUser: false,
+    checkProfileCompletion: vi.fn(),
+    refreshUserProfile: vi.fn()
+  })
+}));
 
 // Mock toast context
-const mockToastContext = {
-  showToast: vi.fn()
-};
+vi.mock('../../../../../components/ui/toast', () => ({
+  useToast: () => ({
+    showToast: vi.fn()
+  })
+}));
 
 // Mock paginated user data
 const createMockUsers = (page: number, pageSize: number, totalCount: number) => {
@@ -75,11 +77,7 @@ const createMockUsers = (page: number, pageSize: number, totalCount: number) => 
 
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>
-    <AuthContext.Provider value={mockAuthContext}>
-      <ToastContext.Provider value={mockToastContext}>
-        {children}
-      </ToastContext.Provider>
-    </AuthContext.Provider>
+    {children}
   </BrowserRouter>
 );
 
