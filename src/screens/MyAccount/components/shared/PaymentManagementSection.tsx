@@ -5,6 +5,7 @@ import { PaymentStatusBadge } from '../../../../components/ui/payment-status-bad
 import { Clock, DollarSign, Trash2, CreditCard, Plus } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { useToast } from '../../../../components/ui/toast';
+import { ConfirmationDialog } from '../../../../components/ui/confirmation-dialog';
 import { useAuth } from '../../../../contexts/AuthContext';
 
 interface LeaguePayment {
@@ -60,6 +61,20 @@ export function PaymentManagementSection({
     due_date: '',
     payment_method: '',
     notes: ''
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: '',
+    onConfirm: () => {},
   });
   const { showToast } = useToast();
   const { userProfile } = useAuth();
@@ -166,9 +181,18 @@ export function PaymentManagementSection({
   };
 
   const handleDeletePayment = async (paymentId: number, leagueName: string) => {
-    if (!confirm(`Are you sure you want to delete the payment for ${leagueName}? This action cannot be undone.`)) {
-      return;
-    }
+    // Show confirmation dialog before deleting payment
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Payment',
+      description: `Are you sure you want to delete the payment for ${leagueName}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      variant: 'destructive',
+      onConfirm: () => performDeletePayment(paymentId),
+    });
+  };
+
+  const performDeletePayment = async (paymentId: number) => {
 
     try {
       setDeletingPayment(paymentId);
@@ -516,6 +540,16 @@ export function PaymentManagementSection({
           </div>
         ))}
       </div>
+
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        variant={confirmDialog.variant}
+      />
     </div>
   );
 }
