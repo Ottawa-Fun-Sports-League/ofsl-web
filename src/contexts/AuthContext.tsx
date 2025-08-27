@@ -337,6 +337,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (
             needsProfileCompletion &&
             currentPathNow !== "/complete-profile" &&
+            currentPathNow !== "/reset-password" &&
             !isRedirecting &&
             lastRedirectPath !== "/complete-profile" &&
             redirectingRef.current !== "/complete-profile"
@@ -375,7 +376,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // Always redirect to profile completion if no profile exists
           const currentPathNow = getCurrentPath();
-          if (currentPathNow !== "/complete-profile" && !isRedirecting && lastRedirectPath !== "/complete-profile" && redirectingRef.current !== "/complete-profile") {
+          if (currentPathNow !== "/complete-profile" && currentPathNow !== "/reset-password" && !isRedirecting && lastRedirectPath !== "/complete-profile" && redirectingRef.current !== "/complete-profile") {
             // Set ref immediately to prevent race condition
             redirectingRef.current = "/complete-profile";
             setIsRedirecting(true);
