@@ -320,14 +320,27 @@ export function TeammateManagementModal({
         throw new Error('No authentication session found');
       }
 
-      // Cancel the pending invite using the inviteId
+      // Use the manage-teammates Edge Function to remove the invite
       if (teammate.inviteId) {
-        const { error } = await supabase
-          .from('team_invites')
-          .delete()
-          .eq('id', teammate.inviteId);
+        const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            action: 'remove-invite',
+            teamId: teamId.toString(),
+            inviteId: teammate.inviteId,
+            captainId: captainId
+          }),
+        });
 
-        if (error) throw error;
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to remove invite');
+        }
       }
       
       // Reload the teammates list to reflect the removal

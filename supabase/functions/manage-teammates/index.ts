@@ -8,9 +8,10 @@ const corsHeaders = {
 }
 
 interface ManageTeammatesRequest {
-  action: 'add' | 'remove'
+  action: 'add' | 'remove' | 'remove-invite'
   teamId: string
-  userId: string
+  userId?: string
+  inviteId?: number
   captainId: string
 }
 
@@ -46,12 +47,12 @@ serve(async (req: Request) => {
       )
     }
 
-    const { action, teamId, userId, captainId }: ManageTeammatesRequest = await req.json()
+    const { action, teamId, userId, inviteId, captainId }: ManageTeammatesRequest = await req.json()
 
     // Validate required fields
-    if (!action || !teamId || !userId || !captainId) {
+    if (!action || !teamId || !captainId) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: action, teamId, userId, captainId" }),
+        JSON.stringify({ error: "Missing required fields: action, teamId, captainId" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,9 +60,30 @@ serve(async (req: Request) => {
       )
     }
 
-    if (!['add', 'remove'].includes(action)) {
+    if (!['add', 'remove', 'remove-invite'].includes(action)) {
       return new Response(
-        JSON.stringify({ error: "Action must be 'add' or 'remove'" }),
+        JSON.stringify({ error: "Action must be 'add', 'remove', or 'remove-invite'" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    // Validate action-specific required fields
+    if ((action === 'add' || action === 'remove') && !userId) {
+      return new Response(
+        JSON.stringify({ error: "userId is required for add/remove actions" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    if (action === 'remove-invite' && !inviteId) {
+      return new Response(
+        JSON.stringify({ error: "inviteId is required for remove-invite action" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -298,6 +320,29 @@ serve(async (req: Request) => {
           success: true,
           message: "Teammate removed successfully",
           data 
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    
+    } else if (action === 'remove-invite') {
+      // Remove pending invite
+      const { error } = await supabase
+        .from('team_invites')
+        .delete()
+        .eq('id', inviteId!)
+        .eq('team_id', teamId) // Extra safety check
+
+      if (error) {
+        throw error
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: "Invite removed successfully"
         }),
         {
           status: 200,

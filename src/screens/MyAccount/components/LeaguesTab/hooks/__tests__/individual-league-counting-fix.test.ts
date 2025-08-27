@@ -31,6 +31,7 @@ describe('Individual League Registration Counting Fix', () => {
     vi.clearAllMocks();
     
     // Mock the chain of supabase calls
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSupabaseFrom.mockImplementation((table: string): any => {
       if (table === 'gyms') {
         return {
