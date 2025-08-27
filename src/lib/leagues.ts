@@ -257,13 +257,14 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
       logger.error("Error fetching team counts", teamCountsError);
     }
     
-    // Get individual registration counts for individual leagues
-    const { data: users, error: usersError } = await supabase
-      .from("users")
-      .select("league_ids");
+    // Get individual registration counts from payment records (team_id is null for individual registrations)
+    const { data: individualPayments, error: individualPaymentsError } = await supabase
+      .from("league_payments")
+      .select("league_id")
+      .is("team_id", null);
     
-    if (usersError) {
-      logger.error("Error fetching user registrations", usersError);
+    if (individualPaymentsError) {
+      logger.error("Error fetching individual registration payments", individualPaymentsError);
     }
 
     // Get all unique gym IDs
@@ -312,14 +313,10 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
       teamCountsMap.set(team.league_id, currentCount + 1);
     });
     
-    // Count individual registrations per league
-    users?.forEach((user) => {
-      if (user.league_ids && Array.isArray(user.league_ids)) {
-        user.league_ids.forEach((leagueId: number) => {
-          const currentCount = individualCountsMap.get(leagueId) || 0;
-          individualCountsMap.set(leagueId, currentCount + 1);
-        });
-      }
+    // Count individual registrations per league from payment records
+    individualPayments?.forEach((payment) => {
+      const currentCount = individualCountsMap.get(payment.league_id) || 0;
+      individualCountsMap.set(payment.league_id, currentCount + 1);
     });
 
     // Transform the data
