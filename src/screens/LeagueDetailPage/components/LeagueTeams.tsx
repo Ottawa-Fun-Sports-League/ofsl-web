@@ -6,6 +6,7 @@ import { supabase } from '../../../lib/supabase';
 import { Crown, Users, Calendar, DollarSign, Trash2, GripVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../../../components/ui/toast';
+import { ConfirmationDialog } from '../../../components/ui/confirmation-dialog';
 import {
   DndContext,
   closestCenter,
@@ -84,6 +85,20 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
   const [movingTeam, setMovingTeam] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragEnabled, setDragEnabled] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: '',
+    onConfirm: () => {},
+  });
   const { showToast } = useToast();
 
   const sensors = useSensors(
@@ -257,9 +272,18 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
   };
 
   const handleDeleteTeam = async (teamId: number, teamName: string) => {
-    const confirmDelete = confirm(`Are you sure you want to delete the team "${teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`);
-    
-    if (!confirmDelete) return;
+    // Show confirmation dialog before deleting team
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Team',
+      description: `Are you sure you want to delete the team "${teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`,
+      confirmText: 'Delete',
+      variant: 'destructive',
+      onConfirm: () => performDeleteTeam(teamId, teamName),
+    });
+  };
+
+  const performDeleteTeam = async (teamId: number, _teamName: string) => {
     
     try {
       setDeleting(teamId);
@@ -330,9 +354,19 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
 
   const handleMoveTeam = async (teamId: number, teamName: string, currentlyActive: boolean) => {
     const actionText = currentlyActive ? 'move to waitlist' : 'activate from waitlist';
-    const confirmMove = confirm(`Are you sure you want to ${actionText} the team "${teamName}"?`);
     
-    if (!confirmMove) return;
+    // Show confirmation dialog before moving team
+    setConfirmDialog({
+      open: true,
+      title: currentlyActive ? 'Move to Waitlist' : 'Activate Team',
+      description: `Are you sure you want to ${actionText} the team "${teamName}"?`,
+      confirmText: currentlyActive ? 'Move to Waitlist' : 'Activate',
+      variant: 'default',
+      onConfirm: () => performMoveTeam(teamId, teamName, currentlyActive),
+    });
+  };
+
+  const performMoveTeam = async (teamId: number, teamName: string, currentlyActive: boolean) => {
     
     try {
       setMovingTeam(teamId);
@@ -712,6 +746,16 @@ export function LeagueTeams({ leagueId, onTeamsUpdate }: LeagueTeamsProps) {
           </div>
         </div>
       )}
+
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        variant={confirmDialog.variant}
+      />
     </div>
   );
 }

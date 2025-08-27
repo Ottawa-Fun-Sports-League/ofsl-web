@@ -3,6 +3,7 @@ import { supabase } from '../../../../lib/supabase';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { useToast } from '../../../../components/ui/toast';
+import { ConfirmationDialog } from '../../../../components/ui/confirmation-dialog';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { X, UserPlus, Trash2, Mail, Phone, User, Send } from 'lucide-react';
 
@@ -50,6 +51,20 @@ export function TeammateManagementModal({
   const [addingTeammate, setAddingTeammate] = useState(false);
   const [removingTeammate, setRemovingTeammate] = useState<string | null>(null);
   const [reassigningCaptain, setReassigningCaptain] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: '',
+    onConfirm: () => {},
+  });
   const { showToast } = useToast();
   const { userProfile } = useAuth();
 
@@ -304,11 +319,18 @@ export function TeammateManagementModal({
   };
 
   const removePendingInvite = async (teammate: User) => {
-    // Confirmation dialog before canceling invite
-    const confirmMessage = `Are you sure you want to cancel the pending invite for ${teammate.email}?\n\nThis will remove the invitation and they will no longer be able to join the team using this invite.`;
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    // Show confirmation dialog before canceling invite
+    setConfirmDialog({
+      open: true,
+      title: 'Cancel Pending Invite',
+      description: `Are you sure you want to cancel the pending invite for ${teammate.email}? This will remove the invitation and they will no longer be able to join the team using this invite.`,
+      confirmText: 'Cancel Invite',
+      variant: 'destructive',
+      onConfirm: () => performRemovePendingInvite(teammate),
+    });
+  };
+
+  const performRemovePendingInvite = async (teammate: User) => {
 
     try {
       setRemovingTeammate(teammate.id);
@@ -320,14 +342,27 @@ export function TeammateManagementModal({
         throw new Error('No authentication session found');
       }
 
-      // Cancel the pending invite using the inviteId
+      // Use the manage-teammates Edge Function to remove the invite
       if (teammate.inviteId) {
-        const { error } = await supabase
-          .from('team_invites')
-          .delete()
-          .eq('id', teammate.inviteId);
+        const response = await fetch('https://api.ofsl.ca/functions/v1/manage-teammates', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            action: 'remove-invite',
+            teamId: teamId.toString(),
+            inviteId: teammate.inviteId,
+            captainId: captainId
+          }),
+        });
 
-        if (error) throw error;
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to remove invite');
+        }
       }
       
       // Reload the teammates list to reflect the removal
@@ -356,12 +391,18 @@ export function TeammateManagementModal({
       return removePendingInvite(teammate);
     }
 
-    // Confirmation dialog before removing teammate
-    const confirmMessage = `Are you sure you want to remove ${teammate?.name || 'this teammate'} from the team?\n\nThis action cannot be undone.`;
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    // Show confirmation dialog before removing teammate
+    setConfirmDialog({
+      open: true,
+      title: 'Remove Teammate',
+      description: `Are you sure you want to remove ${teammate?.name || 'this teammate'} from the team? This action cannot be undone.`,
+      confirmText: 'Remove',
+      variant: 'destructive',
+      onConfirm: () => performRemoveTeammate(userId, teammate),
+    });
+  };
 
+  const performRemoveTeammate = async (userId: string, _teammate?: User) => {
     // Handle registered user removal
     try {
       setRemovingTeammate(userId);
@@ -422,10 +463,18 @@ export function TeammateManagementModal({
       return;
     }
 
-    if (!confirm(`Are you sure you want to make ${newCaptain.name} the new team captain? This will remove captain privileges from the current captain.`)) {
-      return;
-    }
+    // Show confirmation dialog before reassigning captain
+    setConfirmDialog({
+      open: true,
+      title: 'Reassign Team Captain',
+      description: `Are you sure you want to make ${newCaptain.name} the new team captain? This will remove captain privileges from the current captain.`,
+      confirmText: 'Reassign Captain',
+      variant: 'default',
+      onConfirm: () => performReassignCaptain(newCaptainId, newCaptain),
+    });
+  };
 
+  const performReassignCaptain = async (newCaptainId: string, newCaptain: User) => {
     try {
       setReassigningCaptain(newCaptainId);
       
@@ -719,6 +768,16 @@ export function TeammateManagementModal({
           </Button>
         </div>
       </div>
+
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        variant={confirmDialog.variant}
+      />
     </div>
   );
 }

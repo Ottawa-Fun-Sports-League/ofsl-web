@@ -6,6 +6,7 @@ import { Users, X, Trash2, Search, UserPlus, CreditCard, Crown } from 'lucide-re
 import { LeagueWithTeamCount } from '../types';
 import { supabase } from '../../../../../lib/supabase';
 import { useToast } from '../../../../../components/ui/toast';
+import { ConfirmationDialog } from '../../../../../components/ui/confirmation-dialog';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import { PaymentManagementSection } from '../../shared/PaymentManagementSection';
 
@@ -68,6 +69,20 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
   const [loading, setLoading] = useState(false);
   const [deletingTeamId, setDeletingTeamId] = useState<number | null>(null);
   const [expandedPayments, setExpandedPayments] = useState<Set<number>>(new Set());
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: '',
+    onConfirm: () => {},
+  });
   const { showToast } = useToast();
   const { userProfile } = useAuth();
 
@@ -170,12 +185,23 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
     }
 
     const confirmMessage = isUserCaptain 
-      ? `Are you sure you want to delete your team "${team.name}"? This will:\n\n• Remove all team members\n• Delete payment records\n• Cancel your league registration\n\nThis action cannot be undone.`
+      ? `Are you sure you want to delete your team "${team.name}"? This will remove all team members, delete payment records, and cancel your league registration. This action cannot be undone.`
       : `Are you sure you want to delete team "${team.name}"? This action cannot be undone.`;
     
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    // Show confirmation dialog before deleting team
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Team',
+      description: confirmMessage,
+      confirmText: 'Delete Team',
+      variant: 'destructive',
+      onConfirm: () => performDeleteTeam(teamId),
+    });
+  };
+
+  const performDeleteTeam = async (teamId: number) => {
+    const team = teams.find(t => t.id === teamId);
+    if (!team) return;
 
     try {
       setDeletingTeamId(teamId);
@@ -432,6 +458,16 @@ export function LeagueTeamsModal({ isOpen, onClose, league }: LeagueTeamsModalPr
           )}
         </div>
       </div>
+
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText={confirmDialog.confirmText}
+        onConfirm={confirmDialog.onConfirm}
+        variant={confirmDialog.variant}
+      />
     </div>
   );
 }
