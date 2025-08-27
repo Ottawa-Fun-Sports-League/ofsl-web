@@ -87,7 +87,7 @@ serve(async (req) => {
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${siteUrl}/#/reset-password`,
+        redirectTo: `${siteUrl}/auth-redirect?page=reset-password`,
       }
     });
 

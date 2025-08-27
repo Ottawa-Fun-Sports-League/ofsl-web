@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Authentication Redirect - Ottawa Fun Sports League</title>
+    <script>
+        // This page handles auth redirects from Supabase and forwards to the correct hash route
+        (function() {
+            console.log('🔀 Auth redirect handler loaded');
+            
+            // Get the current URL and parse parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            
+            // Get the target page from URL parameters
+            const targetPage = urlParams.get('page') || 'reset-password';
+            
+            // Get auth tokens from URL hash (Supabase appends them as fragments)
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+            const tokenType = hashParams.get('token_type');
+            const type = hashParams.get('type');
+            const expiresIn = hashParams.get('expires_in');
+            
+            console.log('🔍 Auth redirect params:', {
+                targetPage,
+                hasAccessToken: !!accessToken,
+                type,
+                currentUrl: window.location.href
+            });
+            
+            // Build the target hash URL with auth tokens
+            let targetUrl = `/#/${targetPage}`;
+            
+            // If we have auth tokens, append them to the hash route
+            if (accessToken) {
+                const authParams = new URLSearchParams();
+                authParams.set('access_token', accessToken);
+                authParams.set('token_type', tokenType || 'bearer');
+                authParams.set('expires_in', expiresIn || '3600');
+                if (refreshToken) authParams.set('refresh_token', refreshToken);
+                if (type) authParams.set('type', type);
+                
+                targetUrl += '#' + authParams.toString();
+                console.log('✅ Built target URL with tokens:', targetUrl);
+            } else {
+                console.log('⚠️  No access token found, redirecting without tokens');
+            }
+            
+            console.log('🔄 Redirecting to:', targetUrl);
+            
+            // Add a small delay to see what happens
+            setTimeout(function() {
+                window.location.replace(targetUrl);
+                console.log('✅ Redirect executed');
+            }, 1000);
+        })();
+    </script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2>Redirecting...</h2>
+        <p>Please wait while we redirect you to complete your password reset.</p>
+        <p>If you are not redirected automatically, <a href="/#/reset-password">click here</a>.</p>
+    </div>
+</body>
+</html>
