@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { MobileFilterDrawer } from './components/MobileFilterDrawer';
 import { MobileHeader } from './components/MobileHeader';
@@ -7,13 +7,21 @@ import { GymForm } from './components/GymForm';
 import { GymsList } from './components/GymsList';
 import { useSchoolsData } from './useSchoolsData';
 import { useGymOperations } from './useGymOperations';
-import { SchoolFilters } from './types';
+import { SchoolFilters, Gym } from './types';
 import { DAYS_OF_WEEK, GYM_LOCATIONS } from './constants';
+import { PaginationState } from '../UsersTab/types';
 
 export function SchoolsTab() {
   const { userProfile } = useAuth();
   const [showNewGymForm, setShowNewGymForm] = useState(false);
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
+  const [gymsPagination, setGymsPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: 25,
+    totalItems: 0,
+    totalPages: 0
+  });
+  const [paginatedGyms, setPaginatedGyms] = useState<Gym[]>([]);
 
   const {
     gyms,
@@ -78,6 +86,50 @@ export function SchoolsTab() {
       setShowNewGymForm(false);
     }
   };
+
+  const handleGymsPageChange = (page: number) => {
+    const updatedPagination = {
+      ...gymsPagination,
+      currentPage: page
+    };
+    setGymsPagination(updatedPagination);
+    const startIndex = (page - 1) * gymsPagination.pageSize;
+    const endIndex = startIndex + gymsPagination.pageSize;
+    setPaginatedGyms(filteredGyms.slice(startIndex, endIndex));
+  };
+
+  const handleGymsPageSizeChange = (pageSize: number) => {
+    const updatedPagination = {
+      ...gymsPagination,
+      currentPage: 1,
+      pageSize,
+      totalItems: filteredGyms.length,
+      totalPages: Math.ceil(filteredGyms.length / pageSize)
+    };
+    setGymsPagination(updatedPagination);
+    setPaginatedGyms(filteredGyms.slice(0, pageSize));
+  };
+
+  useEffect(() => {
+    setGymsPagination((prevPagination: PaginationState) => {
+      const totalItems = filteredGyms.length;
+      const totalPages = Math.ceil(totalItems / prevPagination.pageSize);
+      const currentPage = Math.min(prevPagination.currentPage, totalPages || 1);
+      
+      const updatedPagination = {
+        ...prevPagination,
+        currentPage,
+        totalItems,
+        totalPages
+      };
+      
+      const startIndex = (currentPage - 1) * prevPagination.pageSize;
+      const endIndex = startIndex + prevPagination.pageSize;
+      setPaginatedGyms(filteredGyms.slice(startIndex, endIndex));
+      
+      return updatedPagination;
+    });
+  }, [filteredGyms]);
 
   if (!userProfile?.is_admin) {
     return (
@@ -154,7 +206,7 @@ export function SchoolsTab() {
       )}
 
       <GymsList
-        filteredGyms={filteredGyms}
+        filteredGyms={paginatedGyms}
         sports={sports}
         daysOfWeek={DAYS_OF_WEEK}
         locations={[...GYM_LOCATIONS]}
@@ -173,6 +225,9 @@ export function SchoolsTab() {
         onCancelEdit={handleCancelEdit}
         onDeleteGym={handleDeleteGym}
         onClearFilters={clearFilters}
+        pagination={gymsPagination}
+        onPageChange={handleGymsPageChange}
+        onPageSizeChange={handleGymsPageSizeChange}
       />
     </div>
   );

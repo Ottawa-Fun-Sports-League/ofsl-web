@@ -29,6 +29,7 @@ export function ProfileTab() {
   const {
     profile,
     notifications,
+    notificationsSaving,
     sports: _sports,
     skills: _skills,
     loadingSportsSkills: _loadingSportsSkills,
@@ -120,6 +121,7 @@ export function ProfileTab() {
       <NotificationPreferences
         notifications={notifications}
         onNotificationToggle={handleNotificationToggle}
+        saving={notificationsSaving}
       />
 
       <WaiverStatus />

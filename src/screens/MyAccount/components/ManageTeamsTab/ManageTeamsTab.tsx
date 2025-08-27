@@ -7,6 +7,8 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { Search, Edit, Users, Calendar, User, LayoutGrid, Table } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ManageTeamsTableView } from './ManageTeamsTableView';
+import { Pagination } from '../UsersTab/components/Pagination';
+import { PaginationState } from '../UsersTab/types';
 
 interface Team {
   id: number;
@@ -42,8 +44,10 @@ export function ManageTeamsTab() {
   const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
+  const [paginatedTeams, setPaginatedTeams] = useState<Team[]>([]);
   const [individualRegistrations, setIndividualRegistrations] = useState<IndividualRegistration[]>([]);
   const [filteredIndividuals, setFilteredIndividuals] = useState<IndividualRegistration[]>([]);
+  const [paginatedIndividuals, setPaginatedIndividuals] = useState<IndividualRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
@@ -52,6 +56,18 @@ export function ManageTeamsTab() {
     return (saved as 'card' | 'table') || 'card';
   });
   const [activeTab, setActiveTab] = useState<'teams' | 'individuals'>('teams');
+  const [teamsPagination, setTeamsPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: 25,
+    totalItems: 0,
+    totalPages: 0
+  });
+  const [individualsPagination, setIndividualsPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: 25,
+    totalItems: 0,
+    totalPages: 0
+  });
 
   useEffect(() => {
     if (userProfile?.is_admin) {
@@ -82,6 +98,60 @@ export function ManageTeamsTab() {
       setFilteredIndividuals(filteredIndividualsList);
     }
   }, [searchTerm, teams, individualRegistrations]);
+
+  // Update teams pagination when filtered teams change
+  useEffect(() => {
+    setTeamsPagination(prevPagination => {
+      const totalItems = filteredTeams.length;
+      const pageSize = prevPagination.pageSize;
+      const currentPage = prevPagination.currentPage;
+      const totalPages = Math.ceil(totalItems / pageSize);
+      
+      // Reset to page 1 if current page is beyond total pages
+      const adjustedCurrentPage = currentPage > totalPages && totalPages > 0 ? 1 : currentPage;
+      
+      const updatedPagination = {
+        currentPage: adjustedCurrentPage,
+        pageSize,
+        totalItems,
+        totalPages
+      };
+      
+      // Calculate paginated data
+      const startIndex = (adjustedCurrentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      setPaginatedTeams(filteredTeams.slice(startIndex, endIndex));
+      
+      return updatedPagination;
+    });
+  }, [filteredTeams]);
+
+  // Update pagination when filtered individuals change
+  useEffect(() => {
+    setIndividualsPagination(prevPagination => {
+      const totalItems = filteredIndividuals.length;
+      const pageSize = prevPagination.pageSize;
+      const currentPage = prevPagination.currentPage;
+      const totalPages = Math.ceil(totalItems / pageSize);
+      
+      // Reset to page 1 if current page is beyond total pages
+      const adjustedCurrentPage = currentPage > totalPages && totalPages > 0 ? 1 : currentPage;
+      
+      const updatedPagination = {
+        currentPage: adjustedCurrentPage,
+        pageSize,
+        totalItems,
+        totalPages
+      };
+      
+      // Calculate paginated data
+      const startIndex = (adjustedCurrentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      setPaginatedIndividuals(filteredIndividuals.slice(startIndex, endIndex));
+      
+      return updatedPagination;
+    });
+  }, [filteredIndividuals]);
 
   const fetchAllData = async () => {
     try {
@@ -250,6 +320,58 @@ export function ManageTeamsTab() {
     navigate(`/leagues/${team.league_id}/teams`);
   };
 
+  const handleIndividualsPageChange = (page: number) => {
+    const updatedPagination = {
+      ...individualsPagination,
+      currentPage: page
+    };
+    setIndividualsPagination(updatedPagination);
+    
+    // Update paginated data
+    const startIndex = (page - 1) * individualsPagination.pageSize;
+    const endIndex = startIndex + individualsPagination.pageSize;
+    setPaginatedIndividuals(filteredIndividuals.slice(startIndex, endIndex));
+  };
+
+  const handleIndividualsPageSizeChange = (pageSize: number) => {
+    const updatedPagination = {
+      ...individualsPagination,
+      currentPage: 1,
+      pageSize,
+      totalPages: Math.ceil(filteredIndividuals.length / pageSize)
+    };
+    setIndividualsPagination(updatedPagination);
+    
+    // Update paginated data
+    setPaginatedIndividuals(filteredIndividuals.slice(0, pageSize));
+  };
+
+  const handleTeamsPageChange = (page: number) => {
+    const updatedPagination = {
+      ...teamsPagination,
+      currentPage: page
+    };
+    setTeamsPagination(updatedPagination);
+    
+    // Update paginated data
+    const startIndex = (page - 1) * teamsPagination.pageSize;
+    const endIndex = startIndex + teamsPagination.pageSize;
+    setPaginatedTeams(filteredTeams.slice(startIndex, endIndex));
+  };
+
+  const handleTeamsPageSizeChange = (pageSize: number) => {
+    const updatedPagination = {
+      ...teamsPagination,
+      currentPage: 1,
+      pageSize,
+      totalPages: Math.ceil(filteredTeams.length / pageSize)
+    };
+    setTeamsPagination(updatedPagination);
+    
+    // Update paginated data
+    setPaginatedTeams(filteredTeams.slice(0, pageSize));
+  };
+
   if (!userProfile?.is_admin) {
     return (
       <div className="text-center py-8">
@@ -353,87 +475,100 @@ export function ManageTeamsTab() {
 
       {/* Content based on active tab */}
       {activeTab === 'teams' ? (
-        // Teams List
-        filteredTeams.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-gray-500">
-              {searchTerm ? 'No teams found matching your search.' : 'No teams registered yet.'}
-            </p>
-          </CardContent>
-        </Card>
-      ) : viewMode === 'card' ? (
-        <div className="space-y-4">
-          {filteredTeams.map((team) => (
-            <Card key={team.id} className={!team.active ? 'opacity-60' : ''}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{team.name}</h3>
-                      {!team.active && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <User className="h-4 w-4" />
-                          <span>Captain: {team.captain_name}</span>
+        <>
+          {/* Teams List */}
+          {filteredTeams.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-gray-500">
+                  {searchTerm ? 'No teams found matching your search.' : 'No teams registered yet.'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : viewMode === 'card' ? (
+            <div className="space-y-4">
+              {paginatedTeams.map((team) => (
+                <Card key={team.id} className={!team.active ? 'opacity-60' : ''}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{team.name}</h3>
+                          {!team.active && (
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                              Inactive
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <span className="ml-6">{team.captain_email}</span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <User className="h-4 w-4" />
+                              <span>Captain: {team.captain_name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <span className="ml-6">{team.captain_email}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Calendar className="h-4 w-4" />
+                              <span>League: {team.league_name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Users className="h-4 w-4" />
+                              <span>{team.roster_count} players</span>
+                            </div>
+                            {team.skill_level_name && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  Skill: {team.skill_level_name}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="mt-2 text-xs text-gray-500">
+                          Registered: {new Date(team.created_at).toLocaleDateString()}
                         </div>
                       </div>
                       
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Calendar className="h-4 w-4" />
-                          <span>League: {team.league_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Users className="h-4 w-4" />
-                          <span>{team.roster_count} players</span>
-                        </div>
-                        {team.skill_level_name && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              Skill: {team.skill_level_name}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                      <Button
+                        onClick={() => handleEditTeam(team)}
+                        size="sm"
+                        variant="outline"
+                        className="ml-4"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
                     </div>
-                    
-                    <div className="mt-2 text-xs text-gray-500">
-                      Registered: {new Date(team.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  
-                  <Button
-                    onClick={() => handleEditTeam(team)}
-                    size="sm"
-                    variant="outline"
-                    className="ml-4"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <ManageTeamsTableView
+              teams={paginatedTeams}
+              onEditTeam={handleEditTeam}
+            />
+          )}
+          
+          {/* Teams Pagination */}
+          {filteredTeams.length > 0 && (
+            <Pagination
+              pagination={teamsPagination}
+              onPageChange={handleTeamsPageChange}
+              onPageSizeChange={handleTeamsPageSizeChange}
+              loading={loading}
+              itemName="teams"
+            />
+          )}
+        </>
       ) : (
-        <ManageTeamsTableView
-          teams={filteredTeams}
-          onEditTeam={handleEditTeam}
-        />
-      )
-    ) : (
       // Individual Registrations List
       filteredIndividuals.length === 0 ? (
         <Card>
@@ -512,8 +647,10 @@ export function ManageTeamsTab() {
         </div>
       ) : (
         // Table view for individuals
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <Card className="shadow-sm">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -540,7 +677,7 @@ export function ManageTeamsTab() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredIndividuals.map((individual) => (
+              {paginatedIndividuals.map((individual) => (
                 <tr key={`${individual.id}_${individual.league_id}`}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {individual.name}
@@ -597,7 +734,26 @@ export function ManageTeamsTab() {
               ))}
             </tbody>
           </table>
+          
+          {paginatedIndividuals.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-[#6F6F6F] text-lg">
+                {searchTerm ? 'No individual registrations found matching your search' : 'No individual registrations found'}
+              </p>
+            </div>
+          )}
         </div>
+        
+        <Pagination
+          pagination={individualsPagination}
+          onPageChange={handleIndividualsPageChange}
+          onPageSizeChange={handleIndividualsPageSizeChange}
+          loading={loading}
+          itemName="registrations"
+        />
+      </CardContent>
+    </Card>
       )
     )}
     </div>
