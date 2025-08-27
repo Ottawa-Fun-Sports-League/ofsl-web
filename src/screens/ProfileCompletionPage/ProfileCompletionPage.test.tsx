@@ -59,13 +59,16 @@ describe('ProfileCompletionPage', () => {
     });
     
     // Mock user has no profile yet
-    mockSupabase.from('users').select().eq().single().then = vi.fn().mockResolvedValue({
+    const userResult = Promise.resolve({
       data: null,
-      error: { code: 'PGRST116' }, // Not found error
+      error: { code: 'PGRST116', message: 'Not found' },
     });
+    mockSupabase.from('users').select.mockReturnThis();
+    mockSupabase.from('users').eq.mockReturnThis();
+    mockSupabase.from('users').single.mockReturnValue(userResult as never);
     
     // Mock waiver fetch
-    mockSupabase.from('waivers').select().eq().single = vi.fn().mockResolvedValue({
+    const waiverResult = Promise.resolve({
       data: {
         id: 1,
         title: 'Test Waiver',
@@ -79,6 +82,10 @@ describe('ProfileCompletionPage', () => {
       },
       error: null,
     });
+    mockSupabase.from('waivers').select.mockReturnThis();
+    mockSupabase.from('waivers').eq.mockReturnThis();
+    // @ts-expect-error - Mock type mismatch after enhanced type safety
+    mockSupabase.from('waivers').single.mockReturnValue(waiverResult);
   });
 
   it('renders profile completion form', async () => {

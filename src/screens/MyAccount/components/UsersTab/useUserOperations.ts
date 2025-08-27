@@ -36,7 +36,7 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
     });
     
     // Use current_registrations instead of team_ids to show all active team memberships
-    const teamIds = user.current_registrations?.map(r => r.team_id.toString()) || [];
+    const teamIds = user.current_registrations?.map(r => r.team_id?.toString()).filter((id): id is string => id !== undefined) || [];
     await loadUserRegistrations(teamIds);
   };
 

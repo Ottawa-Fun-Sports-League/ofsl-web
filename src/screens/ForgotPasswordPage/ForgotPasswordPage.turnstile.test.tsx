@@ -18,8 +18,15 @@ vi.mock('../../contexts/AuthContext', () => ({
 }));
 
 // Mock Turnstile widget
+interface MockTurnstileProps {
+  onVerify: (token: string) => void;
+  onError?: () => void;
+  onExpire?: () => void;
+  className?: string;
+}
+
 vi.mock('../../components/ui/turnstile', () => ({
-  TurnstileWidget: vi.fn(({ onVerify }: any) => {
+  TurnstileWidget: vi.fn(({ onVerify }: MockTurnstileProps) => {
     // Auto-verify after mount
     setTimeout(() => onVerify('test-turnstile-token'), 100);
     return <div data-testid="turnstile-widget">Turnstile Widget</div>;
@@ -33,12 +40,10 @@ describe('ForgotPasswordPage with Turnstile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Enable Turnstile for these tests
-    // @ts-ignore - we need to modify env for testing
     import.meta.env.VITE_TURNSTILE_SITE_KEY = 'test-site-key';
   });
 
   afterEach(() => {
-    // @ts-ignore - we need to restore env for testing
     if (originalEnv !== undefined) {
       import.meta.env.VITE_TURNSTILE_SITE_KEY = originalEnv;
     } else {

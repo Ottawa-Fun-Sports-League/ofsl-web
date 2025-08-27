@@ -61,7 +61,11 @@ describe('CSV Export Functionality', () => {
             league_id: 1,
             league_name: 'Winter League',
             sport_id: 1,
-            sport_name: 'Volleyball'
+            sport_name: 'Volleyball',
+            amount_due: 250,
+            amount_paid: 100,
+            status: 'registered',
+            is_waitlisted: false
           }
         ],
         total_owed: 250,
@@ -142,7 +146,7 @@ describe('CSV Export Functionality', () => {
 
   it('should generate filename with current timestamp', () => {
     const mockDate = new Date('2024-03-15T14:30:00');
-    vi.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+    vi.spyOn(global, 'Date').mockImplementation(() => mockDate as unknown as Date);
 
     const filename = generateExportFilename();
     
@@ -176,7 +180,11 @@ describe('CSV Export Functionality', () => {
             league_id: 1,
             league_name: 'Winter Volleyball',
             sport_id: 1,
-            sport_name: 'Volleyball'
+            sport_name: 'Volleyball',
+            amount_due: 200,
+            amount_paid: 150,
+            status: 'registered',
+            is_waitlisted: false
           },
           {
             team_id: 0,
@@ -184,7 +192,11 @@ describe('CSV Export Functionality', () => {
             league_id: 2,
             league_name: 'Badminton Drop-in',
             sport_id: 2,
-            sport_name: 'Badminton'
+            sport_name: 'Badminton',
+            amount_due: 50,
+            amount_paid: 50,
+            status: 'paid',
+            is_waitlisted: false
           }
         ],
         total_owed: 400,

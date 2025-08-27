@@ -1,17 +1,13 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck - Complex type issues requiring extensive refactoring
-// This file has been temporarily bypassed to achieve zero compilation errors
-// while maintaining functionality and test coverage.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LoginPage } from './LoginPage';
 import { useAuth } from '../../contexts/AuthContext';
 import { MockWindow } from '../../types/test-mocks';
 
 // Mock dependencies
 vi.mock('@marsidev/react-turnstile', () => ({
-  Turnstile: ({ onSuccess, onError, onExpire }: { onSuccess: (token: string) => void; onError: (error: string) => void; onExpire: () => void }) => {
+  Turnstile: ({ onSuccess, onError, onExpire }: { onSuccess: (token: string) => void; onError?: (error?: string) => void; onExpire: () => void }) => {
     // Store callbacks for testing
     (window as MockWindow).__turnstileCallbacks = { onSuccess, onError, onExpire };
     return <div data-testid="turnstile-widget">Turnstile Widget</div>;
@@ -57,7 +53,7 @@ describe('LoginPage with Turnstile', () => {
     // Set environment variable
     vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'test-site-key');
     // Mock useAuth to return our mock context
-    vi.mocked(useAuth).mockReturnValue(mockAuthContext);
+    vi.mocked(useAuth).mockReturnValue(mockAuthContext as unknown as ReturnType<typeof useAuth>);
   });
 
   afterEach(() => {
@@ -84,7 +80,7 @@ describe('LoginPage with Turnstile', () => {
 
     // Simulate successful Turnstile verification
     const callbacks = (window as MockWindow).__turnstileCallbacks;
-    callbacks.onSuccess('test-token');
+    callbacks?.onSuccess('test-token');
 
     // Wait for React to re-render
     await waitFor(() => {
@@ -97,7 +93,7 @@ describe('LoginPage with Turnstile', () => {
     
     // Simulate Turnstile error
     const callbacks = (window as MockWindow).__turnstileCallbacks;
-    callbacks.onError();
+    callbacks?.onError();
 
     // Wait for error message to appear
     await waitFor(() => {
@@ -114,7 +110,7 @@ describe('LoginPage with Turnstile', () => {
     
     // First verify successfully
     const callbacks = (window as MockWindow).__turnstileCallbacks;
-    callbacks.onSuccess('test-token');
+    callbacks?.onSuccess('test-token');
     
     const submitButton = screen.getByRole('button', { name: /^login$/i });
     
@@ -155,7 +151,7 @@ describe('LoginPage with Turnstile', () => {
     
     // Simulate Turnstile verification
     const callbacks = (window as MockWindow).__turnstileCallbacks;
-    callbacks.onSuccess('test-turnstile-token');
+    callbacks?.onSuccess('test-turnstile-token');
 
     // Fill in form fields
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
@@ -178,7 +174,7 @@ describe('LoginPage with Turnstile', () => {
     
     // Simulate Turnstile verification
     const callbacks = (window as MockWindow).__turnstileCallbacks;
-    callbacks.onSuccess('test-turnstile-token');
+    callbacks?.onSuccess('test-turnstile-token');
 
     // Fill in form fields
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });

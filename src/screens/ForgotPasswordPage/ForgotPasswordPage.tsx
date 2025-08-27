@@ -35,7 +35,7 @@ export function ForgotPasswordPage() {
     setLoading(true);
     
     try {
-      const options: any = {
+      const options: { redirectTo: string; captchaToken?: string } = {
         redirectTo: `${window.location.origin}/#/reset-password?type=recovery`
       };
       

@@ -1,25 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, render } from '../../test/test-utils-simple';
 import { LoginPage } from './LoginPage';
-import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
-// Get the mocked supabase
-const mockSupabase = supabase as typeof supabase & {
-  auth: {
-    getSession: ReturnType<typeof vi.fn>;
-    signInWithPassword: ReturnType<typeof vi.fn>;
+// Mock the AuthContext instead of Supabase directly
+vi.mock('../../contexts/AuthContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../contexts/AuthContext')>();
+  return {
+    ...actual,
+    useAuth: vi.fn(),
   };
-};
+});
 
 describe('LoginPage Simple Test', () => {
+  const createMockAuthContext = (overrides: Partial<ReturnType<typeof useAuth>> = {}): ReturnType<typeof useAuth> => ({
+    user: null,
+    session: null,
+    loading: false,
+    profileComplete: false,
+    userProfile: null,
+    refreshUserProfile: vi.fn(),
+    signIn: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    checkProfileCompletion: vi.fn(),
+    emailVerified: false,
+    isNewUser: false,
+    setIsNewUser: vi.fn(),
+    ...overrides,
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Reset default mocks
-    mockSupabase.auth.getSession.mockResolvedValue({
-      data: { session: null },
-      error: null,
-    });
+    // Setup default mock for useAuth
+    vi.mocked(useAuth).mockReturnValue(createMockAuthContext());
   });
 
   it('renders login form with all elements', async () => {
@@ -38,28 +54,20 @@ describe('LoginPage Simple Test', () => {
   });
 
   it('handles successful login', async () => {
+    // Remove Turnstile env var for this test to simplify
+    const originalEnv = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '');
+    
+    const mockSignIn = vi.fn().mockResolvedValue({ error: null });
+    vi.mocked(useAuth).mockReturnValue(createMockAuthContext({
+      signIn: mockSignIn,
+    }));
+    
     const { user } = render(<LoginPage />);
     
     // Wait for auth to initialize
     await waitFor(() => {
       expect(screen.queryByText(/initializing/i)).not.toBeInTheDocument();
-    });
-    
-    const mockUser = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-    };
-    
-    mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({
-      data: { 
-        user: mockUser, 
-        session: { 
-          access_token: 'token',
-          refresh_token: 'refresh',
-          user: mockUser 
-        } 
-      },
-      error: null,
     });
     
     const emailInput = screen.getByLabelText(/email/i);
@@ -71,10 +79,10 @@ describe('LoginPage Simple Test', () => {
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'password123',
-      });
+      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123', undefined);
     });
+    
+    // Restore env
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', originalEnv);
   });
 });

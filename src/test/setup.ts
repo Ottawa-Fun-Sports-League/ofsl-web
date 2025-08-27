@@ -1,6 +1,15 @@
 import '@testing-library/jest-dom';
 import { vi, afterEach } from 'vitest';
+import React from 'react';
 import './mocks/setup-supabase';
+
+// Global mock for toast components
+vi.mock('../components/ui/toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => React.createElement('div', { 'data-testid': 'toast-provider' }, children),
+  useToast: () => ({
+    showToast: vi.fn(),
+  }),
+}));
 
 // Mock window.location methods
 Object.defineProperty(window, 'location', {
@@ -100,6 +109,64 @@ if (!global.crypto) {
     configurable: true,
   });
 }
+
+// Common mock factories for consistent usage across tests
+export const createToastMock = () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
+  useToast: () => ({
+    showToast: vi.fn(),
+  }),
+});
+
+export const createAuthMock = (overrides?: Record<string, unknown>) => ({
+  useAuth: () => ({
+    user: null,
+    userProfile: null,
+    loading: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+    resetPassword: vi.fn(),
+    ...overrides
+  })
+});
+
+export const createNavigationMock = (overrides?: Record<string, unknown>) => ({
+  useNavigate: () => vi.fn(),
+  useParams: () => ({}),
+  useLocation: () => ({ pathname: '/', search: '', hash: '', state: null, key: 'default' }),
+  ...overrides
+});
+
+
+export const createLeaguesMock = async () => {
+  const actual = await vi.importActual('../lib/leagues');
+  return {
+    ...actual,
+    getOrderedDayNames: vi.fn(() => [
+      "Monday",
+      "Tuesday", 
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday"
+    ]),
+    fetchLeagues: vi.fn(() => Promise.resolve([])),
+    fetchSports: vi.fn(() => Promise.resolve([])),
+    fetchSkills: vi.fn(() => Promise.resolve([])),
+  };
+};
+
+// Enhanced mock data filtering utilities
+export const filterUsersBySport = (users: Record<string, unknown>[], sport: string, leagues: Record<string, unknown>[]) => {
+  const sportLeagues = leagues.filter(l => l.sport === sport).map(l => l.id);
+  return users.filter(u => (u.league_ids as number[])?.some((lid: number) => sportLeagues.includes(lid)));
+};
+
+export const filterUsersByLeague = (users: Record<string, unknown>[], leagueId: number) => {
+  return users.filter(u => (u.league_ids as number[])?.includes(leagueId));
+};
 
 // Reset mocks after each test
 afterEach(() => {

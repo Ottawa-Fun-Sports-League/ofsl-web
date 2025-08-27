@@ -89,15 +89,7 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
         lastSavedProfile.current = newProfile;
       }
     }
-  }, [
-    userProfile?.name,
-    userProfile?.phone, 
-    userProfile?.email,
-    // Use JSON.stringify to compare arrays deeply
-    JSON.stringify(userProfile?.user_sports_skills),
-    sports.length,
-    skills.length
-  ]);
+  }, [userProfile, sports, skills]);
 
   const handleNotificationToggle = (key: keyof typeof notifications) => {
     setNotifications(prev => ({

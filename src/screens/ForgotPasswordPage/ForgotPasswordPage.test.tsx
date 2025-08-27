@@ -30,12 +30,10 @@ describe('ForgotPasswordPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Disable Turnstile for these tests by deleting the key
-    // @ts-ignore - we need to modify env for testing
     delete import.meta.env.VITE_TURNSTILE_SITE_KEY;
   });
 
   afterEach(() => {
-    // @ts-ignore - we need to restore env for testing
     if (originalEnv !== undefined) {
       import.meta.env.VITE_TURNSTILE_SITE_KEY = originalEnv;
     }

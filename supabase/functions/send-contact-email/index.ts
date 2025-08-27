@@ -111,7 +111,7 @@ function isValidEmail(email: string): boolean {
 }
 
 // Contact form validation
-interface ContactFormData {
+interface _ContactFormData {
   name: string;
   email: string;
   subject: string;
@@ -123,7 +123,7 @@ interface ValidationResult {
   errors: string[];
 }
 
-function validateContactForm(data: any): ValidationResult {
+function validateContactForm(data: unknown): ValidationResult {
   const errors: string[] = [];
 
   // Check required fields

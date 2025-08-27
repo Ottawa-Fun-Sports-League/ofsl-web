@@ -157,7 +157,11 @@ describe('TeamsTab', () => {
 
   it('shows loading state', () => {
     // Make the promise hang
-    mockSupabase.from('teams').select().in().order().then = vi.fn(() => new Promise(() => {}));
+    // Mock a hanging promise for loading state
+    const hangingPromise = new Promise(() => {});
+    mockSupabase.from('teams').select.mockReturnThis();
+    mockSupabase.from('teams').in.mockReturnThis();
+    mockSupabase.from('teams').order.mockReturnValue(hangingPromise);
     
     render(<TeamsTab />, {
       user: mockUser,
@@ -169,10 +173,13 @@ describe('TeamsTab', () => {
   });
 
   it('handles error when fetching teams', async () => {
-    mockSupabase.from('teams').select().in().order().then = vi.fn().mockResolvedValue({
+    const errorResult = Promise.resolve({
       data: null,
       error: { message: 'Failed to fetch teams' },
     });
+    mockSupabase.from('teams').select.mockReturnThis();
+    mockSupabase.from('teams').in.mockReturnThis();
+    mockSupabase.from('teams').order.mockReturnValue(errorResult);
     
     render(<TeamsTab />, {
       user: mockUser,
@@ -227,10 +234,13 @@ describe('TeamsTab', () => {
       },
     ];
     
-    mockSupabase.from('teams').select().in().order().then = vi.fn().mockResolvedValue({
+    const successResult = Promise.resolve({
       data: teamsWithMissingData,
       error: null,
     });
+    mockSupabase.from('teams').select.mockReturnThis();
+    mockSupabase.from('teams').in.mockReturnThis();
+    mockSupabase.from('teams').order.mockReturnValue(successResult);
     
     render(<TeamsTab />, {
       user: mockUser,

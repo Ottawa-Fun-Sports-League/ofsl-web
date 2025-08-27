@@ -16,7 +16,7 @@ test.describe('Waitlist Management', () => {
       });
     });
     
-    await page.goto('/leagues/1');
+    await page.goto('/#/leagues/1');
     
     // Should show league is full
     await expect(page.locator('text=League Full')).toBeVisible();
@@ -27,7 +27,7 @@ test.describe('Waitlist Management', () => {
   });
 
   test('should join team waitlist', async ({ authenticatedPage: page }) => {
-    await page.goto('/leagues/1');
+    await page.goto('/#/leagues/1');
     
     // Click join waitlist
     await page.locator('button:has-text("Join Waitlist")').click();
@@ -74,7 +74,7 @@ test.describe('Waitlist Management', () => {
       });
     });
     
-    await page.goto('/leagues/2');
+    await page.goto('/#/leagues/2');
     
     // Should show join waitlist for individuals
     await page.locator('button:has-text("Join Waitlist")').click();
@@ -129,7 +129,7 @@ test.describe('Waitlist Management', () => {
       });
     });
     
-    await page.goto('/my-account');
+    await page.goto('/#/my-account');
     
     // Should show both active and waitlisted leagues
     await expect(page.locator('text=Active League')).toBeVisible();
@@ -140,7 +140,7 @@ test.describe('Waitlist Management', () => {
   });
 
   test('should allow cancelling waitlist registration', async ({ authenticatedPage: page }) => {
-    await page.goto('/my-account');
+    await page.goto('/#/my-account');
     
     // Find waitlisted registration
     const waitlistedCard = page.locator('text=Waitlisted League').locator('..');
@@ -176,7 +176,7 @@ test.describe('Waitlist Management', () => {
       });
     });
     
-    await page.goto('/leagues/1/teams');
+    await page.goto('/#/leagues/1/teams');
     
     // Should show waitlist section
     await expect(page.locator('h2:has-text("Waitlist")')).toBeVisible();
@@ -205,7 +205,7 @@ test.describe('Waitlist Management', () => {
   });
 
   test('admin should move active to waitlist', async ({ adminPage: page }) => {
-    await page.goto('/leagues/1/teams');
+    await page.goto('/#/leagues/1/teams');
     
     // Find active team
     const activeCard = page.locator('text=Active Team').locator('..');
@@ -249,7 +249,7 @@ test.describe('Waitlist Management', () => {
       }
     });
     
-    await page.goto('/leagues/2/teams'); // Individual league
+    await page.goto('/#/leagues/2/teams'); // Individual league
     
     // Find waitlisted player
     const playerCard = page.locator('text=John Doe').locator('..');
@@ -290,7 +290,7 @@ test.describe('Waitlist Management', () => {
       });
     });
     
-    await page.goto('/my-account');
+    await page.goto('/#/my-account');
     
     // Should show waitlist position
     const waitlistedCard = page.locator('text=Waitlisted League').locator('..');

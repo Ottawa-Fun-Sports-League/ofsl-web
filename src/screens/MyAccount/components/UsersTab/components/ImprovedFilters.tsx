@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
@@ -58,15 +58,23 @@ export function ImprovedFilters({
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory | null>(null);
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   const debouncedSearchTerm = useDebounce(localSearchTerm, 300); // 300ms delay
+  const lastSentSearchTerm = useRef(searchTerm); // Track what we last sent to parent
 
-  // Update parent component with debounced value
+  // Update parent component with debounced value - but only if it actually changed
   useEffect(() => {
-    onSearchChange(debouncedSearchTerm);
-  }, [debouncedSearchTerm, onSearchChange]);
+    // Only call onSearchChange if the debounced term is different from what we last sent
+    // This prevents unnecessary calls that reset pagination
+    if (debouncedSearchTerm !== lastSentSearchTerm.current) {
+      lastSentSearchTerm.current = debouncedSearchTerm;
+      onSearchChange(debouncedSearchTerm);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchTerm]); // Removed onSearchChange from dependencies to prevent pagination resets
 
   // Sync local state when searchTerm prop changes (e.g., from clear filters)
   useEffect(() => {
     setLocalSearchTerm(searchTerm);
+    lastSentSearchTerm.current = searchTerm; // Also update our tracking ref
   }, [searchTerm]);
 
   const activeFilters = FILTER_OPTIONS.filter(option => filters[option.key]);

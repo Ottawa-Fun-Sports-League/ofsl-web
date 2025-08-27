@@ -1,4 +1,4 @@
-import { Turnstile } from '@marsidev/react-turnstile';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { forwardRef, useImperativeHandle, useRef, memo } from 'react';
 
 interface TurnstileProps {
@@ -14,7 +14,7 @@ export interface TurnstileHandle {
 
 const TurnstileWidgetComponent = forwardRef<TurnstileHandle, TurnstileProps>(
   ({ onVerify, onError, onExpire, className }, ref) => {
-    const widgetRef = useRef<any>(null);
+    const widgetRef = useRef<TurnstileInstance | null>(null);
     const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
     useImperativeHandle(ref, () => ({

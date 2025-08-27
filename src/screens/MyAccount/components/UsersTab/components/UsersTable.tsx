@@ -75,7 +75,7 @@ export function UsersTable({
 
   return (
     <>
-    <Card className="shadow-sm">
+    <Card className="shadow-sm" data-testid="users-table">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1400px]">
