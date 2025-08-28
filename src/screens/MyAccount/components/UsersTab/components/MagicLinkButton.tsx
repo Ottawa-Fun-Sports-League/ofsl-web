@@ -37,12 +37,34 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
       
 
       // Call our admin Edge Function to generate magic link (without sending email)
-      const { data, error } = await supabase.functions.invoke('admin-magic-link', {
-        body: { email: userEmail, sendEmail: false },
+      // Using fetch directly instead of supabase.functions.invoke to ensure headers work properly
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/admin-magic-link`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
         },
+        body: JSON.stringify({ email: userEmail, sendEmail: false }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Failed to generate magic link';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      const error = !data.success ? new Error(data.error || 'Failed to generate magic link') : null;
 
       if (error) {
         console.error('Edge function error:', error);
@@ -64,16 +86,22 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
             
             
             // Retry the request with refreshed token
-            const { data: retryData, error: retryError } = await supabase.functions.invoke('admin-magic-link', {
-              body: { email: userEmail, sendEmail: false },
+            const retryResponse = await fetch(`${supabaseUrl}/functions/v1/admin-magic-link`, {
+              method: 'POST',
               headers: {
-                Authorization: `Bearer ${refreshData.session.access_token}`,
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${refreshData.session.access_token}`,
+                'apikey': supabaseAnonKey,
               },
+              body: JSON.stringify({ email: userEmail, sendEmail: false }),
             });
-            
-            if (retryError) {
-              throw new Error(`Authentication failed after refresh: ${retryError.message}`);
+
+            if (!retryResponse.ok) {
+              const retryErrorText = await retryResponse.text();
+              throw new Error(`Authentication failed after refresh: ${retryErrorText}`);
             }
+
+            const retryData = await retryResponse.json();
             
             if (!retryData.success) {
               throw new Error(retryData.error || 'Failed to generate magic link after retry');

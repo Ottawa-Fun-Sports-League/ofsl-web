@@ -106,15 +106,18 @@ describe('MagicLinkButton', () => {
   });
 
   it('should generate magic link successfully and show success toast', async () => {
-    // Mock successful session and Edge Function call
+    // Mock successful session
     (supabase.auth.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { session: { access_token: 'test-token' } },
       error: null
     });
-    (supabase.functions.invoke as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { success: true, link: 'https://example.com/magic-link' },
-      error: null
+
+    // Mock fetch for direct API call
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, link: 'https://example.com/magic-link' })
     });
+    global.fetch = mockFetch;
 
     render(
       <MagicLinkButton 
@@ -128,12 +131,18 @@ describe('MagicLinkButton', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(supabase.functions.invoke).toHaveBeenCalledWith('admin-magic-link', {
-        body: { email: 'test@example.com', sendEmail: false },
-        headers: {
-          Authorization: 'Bearer test-token',
-        },
-      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.ofsl.ca/functions/v1/admin-magic-link',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer test-token',
+            'apikey': 'sb_publishable_pfqYEC8xmRm0x3Jup_j4TA_dUomhwtv',
+          },
+          body: JSON.stringify({ email: 'test@example.com', sendEmail: false })
+        }
+      );
     });
 
     await waitFor(() => {
@@ -155,15 +164,18 @@ describe('MagicLinkButton', () => {
   });
 
   it('should use email as fallback when userName is not provided', async () => {
-    // Mock successful session and Edge Function call
+    // Mock successful session
     (supabase.auth.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { session: { access_token: 'test-token' } },
       error: null
     });
-    (supabase.functions.invoke as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { success: true, link: 'https://example.com/magic-link' },
-      error: null
+    
+    // Mock fetch for direct API call
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, link: 'https://example.com/magic-link' })
     });
+    global.fetch = mockFetch;
 
     render(
       <MagicLinkButton 
@@ -215,10 +227,13 @@ describe('MagicLinkButton', () => {
       data: { session: { access_token: 'test-token' } },
       error: null
     });
-    (supabase.functions.invoke as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: null,
-      error: new Error('Edge Function failed')
+    
+    // Mock fetch with error response
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: () => Promise.resolve('Edge Function failed')
     });
+    global.fetch = mockFetch;
 
     render(
       <MagicLinkButton 
@@ -245,10 +260,13 @@ describe('MagicLinkButton', () => {
       data: { session: { access_token: 'test-token' } },
       error: null
     });
-    (supabase.functions.invoke as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { success: false, error: 'Custom error message' },
-      error: null
+    
+    // Mock fetch with success false response
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: false, error: 'Custom error message' })
     });
+    global.fetch = mockFetch;
 
     render(
       <MagicLinkButton 
