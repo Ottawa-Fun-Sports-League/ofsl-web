@@ -203,7 +203,7 @@ describe('MagicLinkButton', () => {
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        'No active session',
+        'No active session. Please log out and log back in.',
         'error'
       );
     });
