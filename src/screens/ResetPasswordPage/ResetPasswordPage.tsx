@@ -48,8 +48,9 @@ export function ResetPasswordPage() {
           hasAccessToken: !!accessToken
         });
         
-        // Check if this is a password reset flow
-        if (typeFromSearch === 'recovery' || typeFromHash === 'recovery' || accessToken) {
+        // Check if this is a password reset flow (accept both recovery and invite types)
+        if (typeFromSearch === 'recovery' || typeFromHash === 'recovery' || 
+            typeFromSearch === 'invite' || typeFromHash === 'invite' || accessToken) {
           // If we have an access token in the URL, we need to let Supabase process it
           if (accessToken) {
             logger.info('Found access token in URL, attempting session exchange');
@@ -97,8 +98,8 @@ export function ResetPasswordPage() {
               setTimeout(checkSession, 500);
             }
           } else {
-            // No access token but type=recovery - this might be an edge case
-            logger.info('Recovery type detected but no access token');
+            // No access token but type=recovery/invite - this might be an edge case
+            logger.info('Auth type detected but no access token', { typeFromSearch, typeFromHash });
             setTokenValid(true);
           }
         } else {

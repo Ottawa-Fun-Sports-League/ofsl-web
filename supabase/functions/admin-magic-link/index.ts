@@ -66,7 +66,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // First check if the user exists
+    // First check if the user exists in our users table
     const { data: targetUserData, error: targetUserError } = await supabaseAdmin
       .from('users')
       .select('auth_id')
@@ -74,14 +74,27 @@ serve(async (req) => {
       .single();
 
     if (targetUserError || !targetUserData) {
-      console.error('User not found:', email, targetUserError);
+      console.error('User not found in users table:', email, targetUserError);
       return new Response(
-        JSON.stringify({ error: 'User not found' }),
+        JSON.stringify({ error: 'User not found in database' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Generate a recovery link (magic links require password reset)
+    // Also verify the user exists in Supabase auth
+    const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(targetUserData.auth_id);
+    
+    if (authUserError || !authUser.user) {
+      console.error('User not found in auth:', email, authUserError);
+      return new Response(
+        JSON.stringify({ error: 'User not found in authentication system' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('User found in both database and auth:', { email, auth_id: targetUserData.auth_id });
+
+    // Generate a recovery link for existing user password reset
     const siteUrl = Deno.env.get('SITE_URL') || 'https://ofsl.ca';
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
