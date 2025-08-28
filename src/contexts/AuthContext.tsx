@@ -34,6 +34,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   checkProfileCompletion: (profile?: UserProfile | null) => boolean;
   refreshUserProfile: () => Promise<void>;
+  validateSession: () => Promise<boolean>;
   emailVerified: boolean;
   isNewUser: boolean;
   setIsNewUser: (isNew: boolean) => void;
@@ -114,6 +115,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       const profile = await fetchUserProfile(user);
       setUserProfile(profile);
+    }
+  };
+
+  // Function to validate current session and redirect to login if invalid
+  const validateSession = async (): Promise<boolean> => {
+    try {
+      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        logger.warn('Session validation error', { error: error.message });
+        return false;
+      }
+      
+      if (!currentSession) {
+        logger.warn('No active session found during validation');
+        return false;
+      }
+      
+      // Check if token is expired (add some buffer time)
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = currentSession.expires_at || 0;
+      const bufferTime = 60; // 1 minute buffer
+      
+      if (now >= (expiresAt - bufferTime)) {
+        logger.warn('Session token is expired or about to expire', { 
+          now, 
+          expiresAt,
+          expired: now >= expiresAt 
+        });
+        
+        // Try to refresh the token
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData.session) {
+          logger.warn('Token refresh failed during validation', refreshError ? { error: refreshError.message } : {});
+          
+          // Store current path for redirect after login
+          const currentPath = window.location.hash.replace("#", "") || "/";
+          if (currentPath !== '/login' && currentPath !== '/signup') {
+            localStorage.setItem('redirectAfterLogin', currentPath);
+          }
+          
+          // Clear auth state and redirect
+          setSession(null);
+          setUser(null);
+          setUserProfile(null);
+          window.location.hash = '#/login';
+          return false;
+        }
+        
+        logger.info('Session refreshed successfully during validation');
+        return true;
+      }
+      
+      return true;
+    } catch (error) {
+      logger.error('Error validating session', error);
+      return false;
     }
   };
 
@@ -212,6 +271,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Store the current path for potential redirect after profile completion
     const currentPath = getCurrentPath();
+
+    // Handle token refresh failures - redirect to login if refresh failed
+    if (event === 'TOKEN_REFRESHED' && !session) {
+      logger.warn('Token refresh failed, redirecting to login', { currentPath });
+      
+      // Store current path for redirect after login (if it's not login/signup)
+      if (currentPath !== '/login' && currentPath !== '/signup') {
+        localStorage.setItem('redirectAfterLogin', currentPath);
+      }
+      
+      // Clear all auth state
+      setSession(null);
+      setUser(null);
+      setUserProfile(null);
+      setIsNewUser(false);
+      setIsRedirecting(false);
+      setLastRedirectPath(null);
+      redirectingRef.current = null;
+      setLoading(false);
+      
+      // Redirect to login page
+      window.location.hash = '#/login';
+      return;
+    }
 
 
     // If we're already redirecting to complete-profile, skip redirect logic
@@ -636,6 +719,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signOut,
         checkProfileCompletion,
         refreshUserProfile,
+        validateSession,
       }}
     >
       {children}

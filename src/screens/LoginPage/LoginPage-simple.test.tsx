@@ -25,6 +25,7 @@ describe('LoginPage Simple Test', () => {
     signUp: vi.fn(),
     signOut: vi.fn(),
     checkProfileCompletion: vi.fn(),
+    validateSession: vi.fn().mockResolvedValue(true),
     emailVerified: false,
     isNewUser: false,
     setIsNewUser: vi.fn(),

@@ -20,10 +20,25 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-// Set up auth state change handler
+// Set up auth state change handler for the global supabase instance
 supabase.auth.onAuthStateChange((event, session) => {
-  // Only keep critical warnings
+  // Handle token refresh failures at the global level
   if (event === 'TOKEN_REFRESHED' && !session) {
-    console.warn('Token refresh failed, user will need to sign in again');
+    console.warn('Global: Token refresh failed, user will need to sign in again');
+    
+    // Store current path for redirect after login
+    const currentPath = window.location.hash.replace("#", "") || "/";
+    if (currentPath !== '/login' && currentPath !== '/signup') {
+      localStorage.setItem('redirectAfterLogin', currentPath);
+    }
+    
+    // Clear any stored data and redirect to login
+    localStorage.removeItem('supabase.auth.token');
+    window.location.hash = '#/login';
+  }
+  
+  // Handle successful token refresh
+  if (event === 'TOKEN_REFRESHED' && session) {
+    // Token refresh successful - no action needed
   }
 });
