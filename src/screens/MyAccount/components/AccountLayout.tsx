@@ -61,6 +61,20 @@ export function AccountLayout() {
               Account
             </Link>
 
+            <Link
+              to="/my-account/spares"
+              className={`flex items-center gap-2.5 px-5 py-3 text-base cursor-pointer relative transition-all whitespace-nowrap ${
+                isActive("/my-account/spares")
+                  ? "text-[#B20000] font-semibold border-b-2 border-[#B20000]"
+                  : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
+              }`}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M17,13H13V17H11V13H7V11H11V7H13V11H17V13Z" />
+              </svg>
+              Spares
+            </Link>
+
             {/* Visual Separator */}
             {userProfile?.is_admin && (
               <>

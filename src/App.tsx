@@ -30,6 +30,7 @@ import {
   UsersTab,
   WaiversTab,
   ManageTeamsTab,
+  SparesTab,
   LeagueEditPage,
   TeamEditPage,
   IndividualEditPage,
@@ -115,6 +116,7 @@ export function App() {
             >
               <Route path="teams" element={<TeamsTab />} />
               <Route path="profile" element={<ProfileTab />} />
+              <Route path="spares" element={<SparesTab />} />
               <Route
                 path="leagues"
                 element={

@@ -1,0 +1,1 @@
+export { VolleyballSparesTab } from './VolleyballSparesTab';
