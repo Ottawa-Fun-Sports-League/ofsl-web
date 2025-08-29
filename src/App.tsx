@@ -236,6 +236,14 @@ export function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/spares"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/my-account/spares" replace />
+                </ProtectedRoute>
+              }
+            />
           </Route>
         </Routes>
       </AuthProvider>
