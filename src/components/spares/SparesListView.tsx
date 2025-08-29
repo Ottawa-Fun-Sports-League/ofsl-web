@@ -21,7 +21,13 @@ interface Spare {
   user_id: string;
   sport_id: number;
   skill_level: 'beginner' | 'intermediate' | 'advanced' | 'competitive' | 'elite';
-  availability_notes: string | null;
+  available_monday: boolean;
+  available_tuesday: boolean;
+  available_wednesday: boolean;
+  available_thursday: boolean;
+  available_friday: boolean;
+  available_saturday: boolean;
+  available_sunday: boolean;
   share_phone: boolean;
   created_at: string;
   users: {
@@ -157,7 +163,13 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
             user_id,
             sport_id,
             skill_level,
-            availability_notes,
+            available_monday,
+            available_tuesday,
+            available_wednesday,
+            available_thursday,
+            available_friday,
+            available_saturday,
+            available_sunday,
             share_phone,
             created_at,
             users!user_id (
@@ -272,6 +284,21 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const getAvailableDays = (spare: Spare) => {
+    const days = [];
+    if (spare.available_monday) days.push('Mon');
+    if (spare.available_tuesday) days.push('Tue');
+    if (spare.available_wednesday) days.push('Wed');
+    if (spare.available_thursday) days.push('Thu');
+    if (spare.available_friday) days.push('Fri');
+    if (spare.available_saturday) days.push('Sat');
+    if (spare.available_sunday) days.push('Sun');
+    
+    if (days.length === 0) return 'No days selected';
+    if (days.length === 7) return 'All days';
+    return days.join(', ');
   };
 
   if (!user) {
@@ -411,13 +438,11 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
                           </div>
                         </div>
 
-                        {spare.availability_notes && (
-                          <div className="bg-gray-50 rounded p-3 mt-2">
-                            <p className="text-sm text-[#6F6F6F]">
-                              <strong>Availability:</strong> {spare.availability_notes}
-                            </p>
-                          </div>
-                        )}
+                        <div className="bg-gray-50 rounded p-3 mt-2">
+                          <p className="text-sm text-[#6F6F6F]">
+                            <strong>Available:</strong> {getAvailableDays(spare)}
+                          </p>
+                        </div>
                       </div>
 
                       {/* Contact Actions */}

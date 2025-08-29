@@ -23,7 +23,13 @@ interface SparesRegistration {
   user_id: string;
   sport_id: number;
   skill_level: 'beginner' | 'intermediate' | 'advanced' | 'competitive' | 'elite';
-  availability_notes: string | null;
+  available_monday: boolean;
+  available_tuesday: boolean;
+  available_wednesday: boolean;
+  available_thursday: boolean;
+  available_friday: boolean;
+  available_saturday: boolean;
+  available_sunday: boolean;
   share_phone: boolean;
   is_active: boolean;
   created_at: string;
@@ -38,13 +44,11 @@ interface SparesRegistration {
 
 interface MySparesRegistrationsProps {
   className?: string;
-  onEditRegistration?: (registration: SparesRegistration) => void;
   onSparesChange?: () => void;
 }
 
 export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({ 
   className = '',
-  onEditRegistration,
   onSparesChange
 }) => {
   const { user } = useAuth();
@@ -68,7 +72,6 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     }
 
     try {
-      console.log('🔍 Fetching spares for current user (relying on RLS)');
       
       // Let RLS handle the user filtering - it should match auth.uid() to the user_id
       // Only fetch active registrations since inactive ones are now deleted
@@ -79,7 +82,13 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
           user_id,
           sport_id,
           skill_level,
-          availability_notes,
+          available_monday,
+          available_tuesday,
+          available_wednesday,
+          available_thursday,
+          available_friday,
+          available_saturday,
+          available_sunday,
           share_phone,
           is_active,
           created_at,
@@ -93,8 +102,6 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
-
-      console.log('📊 Fetch spares result:', { data, error, count: data?.length });
 
       if (error) {
         logger.error('Error fetching spares registrations', error);
@@ -118,13 +125,6 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
 
   // Fetch user's spares registrations on component mount
   useEffect(() => {
-    if (user) {
-      console.log('🔑 Current user info:', { 
-        id: user.id, 
-        email: user.email, 
-        auth_id: user.id 
-      });
-    }
     fetchRegistrations();
   }, [fetchRegistrations, user]);
 
@@ -164,8 +164,6 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     setDeletingId(registrationId);
 
     try {
-      console.log('🗑️ Deleting registration entirely:', registrationId);
-
       // Delete the record entirely to avoid unique constraint issues
       // For spares registration, we don't need to keep historical inactive records
       const { data, error } = await supabase
@@ -173,8 +171,6 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
         .delete()
         .eq('id', registrationId)
         .select();
-
-      console.log('📝 Delete registration result:', { data, error });
 
       if (error) {
         logger.error('Error deleting spares registration', error);
@@ -221,6 +217,21 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const getAvailableDays = (registration: SparesRegistration) => {
+    const days = [];
+    if (registration.available_monday) days.push('Mon');
+    if (registration.available_tuesday) days.push('Tue');
+    if (registration.available_wednesday) days.push('Wed');
+    if (registration.available_thursday) days.push('Thu');
+    if (registration.available_friday) days.push('Fri');
+    if (registration.available_saturday) days.push('Sat');
+    if (registration.available_sunday) days.push('Sun');
+    
+    if (days.length === 0) return 'No days selected';
+    if (days.length === 7) return 'All days';
+    return days.join(', ');
   };
 
   if (!user) {
@@ -321,13 +332,14 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
                         )}
                       </div>
 
-                      {registration.availability_notes && (
-                        <div className="bg-gray-50 rounded p-3 mt-2">
+                      <div className="bg-gray-50 rounded p-3 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-[#6F6F6F]" />
                           <p className="text-sm text-[#6F6F6F]">
-                            <strong>Your Availability:</strong> {registration.availability_notes}
+                            <strong>Available:</strong> {getAvailableDays(registration)}
                           </p>
                         </div>
-                      )}
+                      </div>
 
                       {/* Status indicator */}
                       <div className="space-y-2">
