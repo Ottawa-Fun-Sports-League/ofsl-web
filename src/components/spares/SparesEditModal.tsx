@@ -17,7 +17,13 @@ interface SparesRegistration {
   user_id: string;
   sport_id: number;
   skill_level: 'beginner' | 'intermediate' | 'advanced' | 'competitive' | 'elite';
-  availability_notes: string | null;
+  available_monday: boolean;
+  available_tuesday: boolean;
+  available_wednesday: boolean;
+  available_thursday: boolean;
+  available_friday: boolean;
+  available_saturday: boolean;
+  available_sunday: boolean;
   share_phone: boolean;
   is_active: boolean;
   created_at: string;
@@ -48,7 +54,15 @@ export const SparesEditModal: React.FC<SparesEditModalProps> = ({
   
   const [skills, setSkills] = useState<Skill[]>([]);
   const [skillLevel, setSkillLevel] = useState<string>('');
-  const [availabilityNotes, setAvailabilityNotes] = useState<string>('');
+  const [availability, setAvailability] = useState({
+    monday: false,
+    tuesday: false,
+    wednesday: false,
+    thursday: false,
+    friday: false,
+    saturday: false,
+    sunday: false
+  });
   const [sharePhone, setSharePhone] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [loadingSkills, setLoadingSkills] = useState(true);
@@ -57,12 +71,28 @@ export const SparesEditModal: React.FC<SparesEditModalProps> = ({
   useEffect(() => {
     if (isOpen && registration) {
       setSkillLevel(registration.skill_level);
-      setAvailabilityNotes(registration.availability_notes || '');
+      setAvailability({
+        monday: registration.available_monday,
+        tuesday: registration.available_tuesday,
+        wednesday: registration.available_wednesday,
+        thursday: registration.available_thursday,
+        friday: registration.available_friday,
+        saturday: registration.available_saturday,
+        sunday: registration.available_sunday
+      });
       setSharePhone(registration.share_phone);
     } else if (!isOpen) {
       // Reset form when modal closes
       setSkillLevel('');
-      setAvailabilityNotes('');
+      setAvailability({
+        monday: false,
+        tuesday: false,
+        wednesday: false,
+        thursday: false,
+        friday: false,
+        saturday: false,
+        sunday: false
+      });
       setSharePhone(false);
       setLoading(false);
     }
@@ -113,26 +143,23 @@ export const SparesEditModal: React.FC<SparesEditModalProps> = ({
     setLoading(true);
 
     try {
-      console.log('🔄 Updating registration:', {
-        id: registration.id,
-        skill_level: skillLevel,
-        availability_notes: availabilityNotes.trim() || null,
-        share_phone: sharePhone
-      });
-
       // Update the registration directly - let RLS handle user verification
       const { data, error } = await supabase
         .from('spares')
         .update({
           skill_level: skillLevel,
-          availability_notes: availabilityNotes.trim() || null,
+          available_monday: availability.monday,
+          available_tuesday: availability.tuesday,
+          available_wednesday: availability.wednesday,
+          available_thursday: availability.thursday,
+          available_friday: availability.friday,
+          available_saturday: availability.saturday,
+          available_sunday: availability.sunday,
           share_phone: sharePhone,
           updated_at: new Date().toISOString()
         })
         .eq('id', registration.id)
         .select();
-
-      console.log('📝 Update registration result:', { data, error });
 
       if (error) {
         logger.error('Error updating spare registration', error);
@@ -263,24 +290,47 @@ export const SparesEditModal: React.FC<SparesEditModalProps> = ({
               )}
             </div>
 
-            {/* Availability Notes */}
+            {/* Availability Days */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#6F6F6F] mb-2" htmlFor="availability-notes">
-                Availability Notes (Optional)
+              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                Availability *
               </label>
-              <textarea
-                id="availability-notes"
-                placeholder="e.g., Available Tuesday evenings and weekends, prefer competitive level games..."
-                value={availabilityNotes}
-                onChange={(e) => setAvailabilityNotes(e.target.value)}
-                disabled={loading}
-                rows={3}
-                maxLength={500}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent resize-y"
-              />
-              <p className="text-xs text-[#6F6F6F]">
-                {availabilityNotes.length}/500 characters
+              <p className="text-xs text-[#6F6F6F] mb-3">
+                Select the days you&apos;re typically available to play as a spare
               </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {Object.entries({
+                  monday: 'Monday',
+                  tuesday: 'Tuesday',
+                  wednesday: 'Wednesday',
+                  thursday: 'Thursday',
+                  friday: 'Friday',
+                  saturday: 'Saturday',
+                  sunday: 'Sunday'
+                }).map(([day, label]) => (
+                  <label
+                    key={day}
+                    className="flex items-center gap-2 p-2 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={availability[day as keyof typeof availability]}
+                      onChange={(e) => setAvailability(prev => ({
+                        ...prev,
+                        [day]: e.target.checked
+                      }))}
+                      disabled={loading}
+                      className="h-4 w-4 text-[#B20000] focus:ring-[#B20000] border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-[#6F6F6F]">{label}</span>
+                  </label>
+                ))}
+              </div>
+              {Object.values(availability).every(v => !v) && (
+                <p className="text-xs text-orange-600 mt-2">
+                  Please select at least one day when you&apos;re available
+                </p>
+              )}
             </div>
 
             {/* Phone Number Sharing */}
@@ -307,7 +357,7 @@ export const SparesEditModal: React.FC<SparesEditModalProps> = ({
                     </p>
                     {!userProfile?.phone && (
                       <p className="text-xs text-orange-700 mt-1">
-                        Note: You don't have a phone number in your profile. Add one in your account settings to enable this option.
+                        Note: You don&apos;t have a phone number in your profile. Add one in your account settings to enable this option.
                       </p>
                     )}
                   </div>
@@ -327,7 +377,7 @@ export const SparesEditModal: React.FC<SparesEditModalProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={loading || !skillLevel}
+                disabled={loading || !skillLevel || Object.values(availability).every(v => !v)}
                 className="flex-1 bg-[#B20000] hover:bg-[#8A0000] text-white"
               >
                 {loading ? 'Updating...' : 'Update Registration'}
