@@ -73,8 +73,8 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
 
     try {
       
-      // Let RLS handle the user filtering - it should match auth.uid() to the user_id
-      // Only fetch active registrations since inactive ones are now deleted
+      // Fetch only the current user's registrations
+      // RLS will also enforce this, but we add the filter explicitly for clarity
       const { data, error } = await supabase
         .from('spares')
         .select(`
@@ -100,6 +100,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
             active
           )
         `)
+        .eq('user_id', user.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
