@@ -5,6 +5,7 @@ import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
 import { BookOpen, Star } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { SparesSignupCTA } from "../../components/spares/SparesSignupCTA";
 
 export const VolleyballPage = (): React.ReactElement => {
   const { user } = useAuth();
@@ -404,6 +405,28 @@ export const VolleyballPage = (): React.ReactElement => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Spares List Signup Section */}
+        <div className="max-w-[1280px] mx-auto px-4 mb-16 md:mb-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-center mb-4">
+              Need a Substitute Player?
+            </h2>
+            <p className="max-w-3xl mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
+              Join our volleyball spares list to connect with teams that need substitute players. 
+              Team captains can contact you when they need an extra player for their games.
+            </p>
+          </div>
+          
+          <div className="max-w-2xl mx-auto">
+            <SparesSignupCTA 
+              sportFilter="Volleyball" 
+              className="shadow-lg"
+              title="Join Volleyball Spares List"
+              description="Register as a substitute player for volleyball teams that need extra players. Get notified when captains are looking for spares."
+            />
           </div>
         </div>
 
