@@ -96,6 +96,9 @@ export function App() {
             />
             <Route path="/success" element={<ConditionalRoute><SuccessPage /></ConditionalRoute>} />
             <Route path="/cancel" element={<ConditionalRoute><CancelPage /></ConditionalRoute>} />
+            
+            {/* Spares route - accessible to all logged in users */}
+            <Route path="/spares" element={<ProtectedRoute><SparesTab /></ProtectedRoute>} />
 
             {/* My Account routes with proper routing */}
             <Route
