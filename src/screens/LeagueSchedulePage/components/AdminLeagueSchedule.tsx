@@ -3,6 +3,7 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { MapPin, Clock, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TierEditModal } from './TierEditModal';
 import { AddPlayoffWeeksModal } from './AddPlayoffWeeksModal';
+import { SubmitScoresModal } from '../../LeagueDetailPage/components/SubmitScoresModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import type { Schedule, Tier } from '../../LeagueDetailPage/utils/leagueUtils';
@@ -47,7 +48,7 @@ interface AdminLeagueScheduleProps {
   leagueName: string;
 }
 
-export function AdminLeagueSchedule({ mockSchedule, openScoreSubmissionModal, onScheduleUpdate, leagueId, leagueName }: AdminLeagueScheduleProps) {
+export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, leagueName }: AdminLeagueScheduleProps) {
   const { userProfile } = useAuth();
   const { teams: standingsTeams } = useLeagueStandings(leagueId);
   
@@ -56,6 +57,10 @@ export function AdminLeagueSchedule({ mockSchedule, openScoreSubmissionModal, on
   const [selectedTierIndex, setSelectedTierIndex] = useState<number>(-1);
   const [editingWeeklyTier, setEditingWeeklyTier] = useState<WeeklyScheduleTier | null>(null);
   const [, setDefaults] = useState<{location?: string, time?: string, court?: string}>({});
+  
+  // Submit Scores modal state
+  const [selectedTierForScores, setSelectedTierForScores] = useState<WeeklyScheduleTier | null>(null);
+  const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
   
   // Team reordering state
   const [isEditScheduleMode, setIsEditScheduleMode] = useState(false);
@@ -1471,6 +1476,29 @@ export function AdminLeagueSchedule({ mockSchedule, openScoreSubmissionModal, on
                         )}
                       </h3>
                       
+                      {/* Submit Scores link for weekly tiers */}
+                      {(() => {
+                        const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
+                        const showSubmitLink = canSubmitScores && 
+                          !tier.is_completed && 
+                          !tier.no_games && 
+                          tier.team_a_name && 
+                          tier.team_b_name && 
+                          tier.team_c_name;
+                        
+                        return showSubmitLink && (
+                          <button 
+                            onClick={() => {
+                              setSelectedTierForScores(tier);
+                              setIsScoresModalOpen(true);
+                            }}
+                            className="text-sm text-[#B20000] hover:text-[#8B0000] hover:underline"
+                          >
+                            Submit scores
+                          </button>
+                        );
+                      })()}
+                      
                       {/* Edit button for weekly tiers - only in edit mode */}
                       {userProfile?.is_admin && isEditScheduleMode && (
                         <button
@@ -1689,12 +1717,32 @@ export function AdminLeagueSchedule({ mockSchedule, openScoreSubmissionModal, on
                       Tier {tier.tierNumber}
                       {isPreviewTier && <span className="text-sm font-normal text-blue-500 ml-2">(New Tier Preview)</span>}
                     </h3>
-                    <button 
-                      onClick={() => openScoreSubmissionModal(tier.tierNumber)}
-                      className="text-sm text-[#B20000] hover:underline"
-                    >
-                      Submit scores
-                    </button>
+                    {(() => {
+                      // Find the corresponding weekly tier data
+                      const weeklyTier = weeklyTiers.find(wt => wt.tier_number === tier.tierNumber);
+                      const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
+                      const showSubmitLink = canSubmitScores && 
+                        weeklyTier && 
+                        !weeklyTier.is_completed && 
+                        !weeklyTier.no_games && 
+                        weeklyTier.team_a_name && 
+                        weeklyTier.team_b_name && 
+                        weeklyTier.team_c_name;
+                      
+                      return showSubmitLink && (
+                        <button 
+                          onClick={() => {
+                            if (weeklyTier) {
+                              setSelectedTierForScores(weeklyTier);
+                              setIsScoresModalOpen(true);
+                            }
+                          }}
+                          className="text-sm text-[#B20000] hover:text-[#8B0000] hover:underline"
+                        >
+                          Submit scores
+                        </button>
+                      );
+                    })()}
                   </div>
                   
                   {/* Right side - Location, Time, Court info with edit button */}
@@ -2086,6 +2134,20 @@ export function AdminLeagueSchedule({ mockSchedule, openScoreSubmissionModal, on
           leagueId={leagueId}
           currentPlayoffWeeks={currentPlayoffWeeks}
           onPlayoffWeeksAdded={handlePlayoffWeeksAdded}
+        />
+      )}
+
+      {/* Submit Scores Modal */}
+      {selectedTierForScores && (
+        <SubmitScoresModal
+          isOpen={isScoresModalOpen}
+          onClose={() => {
+            setIsScoresModalOpen(false);
+            setSelectedTierForScores(null);
+          }}
+          tierData={{
+            tier_number: selectedTierForScores.tier_number,
+          }}
         />
       )}
     </div>

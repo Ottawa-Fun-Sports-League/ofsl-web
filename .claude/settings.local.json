@@ -34,7 +34,8 @@
       "Bash(npm run test:*)",
       "Bash(supabase db:*)",
       "Bash(npm run lint:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "additionalDirectories": [

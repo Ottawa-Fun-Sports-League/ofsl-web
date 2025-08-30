@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
-import { MapPin, Clock, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
+import { MapPin, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { fetchLeagueById } from '../../../lib/leagues';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -46,7 +46,7 @@ export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) 
   const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
   
   // Check if user is admin or facilitator
-  const canSubmitScores = userProfile?.role === 'admin' || userProfile?.role === 'facilitator';
+  const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
   
   // Fetch league info for playoff weeks calculation
   useEffect(() => {
@@ -417,10 +417,9 @@ export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) 
                             setSelectedTierForScores(tier);
                             setIsScoresModalOpen(true);
                           }}
-                          className="text-sm text-[#B20000] hover:text-[#8B0000] font-medium flex items-center gap-1 transition-colors"
+                          className="ml-3 text-sm text-[#B20000] hover:text-[#8B0000] hover:underline font-medium transition-colors"
                         >
-                          <Edit className="h-3 w-3" />
-                          Submit Scores
+                          Submit scores
                         </button>
                       )}
                     </div>
@@ -620,17 +619,7 @@ export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) 
             setSelectedTierForScores(null);
           }}
           tierData={{
-            id: selectedTierForScores.id,
             tier_number: selectedTierForScores.tier_number,
-            team_a_name: selectedTierForScores.team_a_name,
-            team_b_name: selectedTierForScores.team_b_name,
-            team_c_name: selectedTierForScores.team_c_name,
-            league_id: parseInt(leagueId),
-            week_number: currentWeek,
-          }}
-          onScoresSubmitted={() => {
-            // Reload the weekly schedule to show updated status
-            loadWeeklySchedule(currentWeek);
           }}
         />
       )}
