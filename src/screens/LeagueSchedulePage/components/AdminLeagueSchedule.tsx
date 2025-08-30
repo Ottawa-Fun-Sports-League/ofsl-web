@@ -129,8 +129,8 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     tierNumber: number;
   } | null>(null);
   
-  // Drag scrolling state
-  const [, setIsDragging] = useState(false);
+  // Drag scrolling state  
+  const [isDragging, setIsDragging] = useState(false);
   const scrollAnimationRef = useRef<number | null>(null);
   const dragOverThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -814,6 +814,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
 
   // Team reordering functions
   const enterEditScheduleMode = () => {
+    console.log('Entering Edit Schedule Mode');
     setIsEditScheduleMode(true);
     setLocalSchedule([...mockSchedule]); // Reset to current state
   };
@@ -901,15 +902,135 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     setAddTeamPosition(null);
   };
 
-  const handleDragStart = (e: React.DragEvent, team: {name: string, ranking: number}, tierIndex: number, position: string) => {
-    setDraggedTeam({
-      name: team.name,
-      ranking: team.ranking,
+  // Simple drag and drop state
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean;
+    draggedTeam: string | null;
+    fromTier: number | null;
+    fromPosition: string | null;
+    hoverTier: number | null;
+    hoverPosition: string | null;
+    mouseX: number;
+    mouseY: number;
+  }>({
+    isDragging: false,
+    draggedTeam: null,
+    fromTier: null,
+    fromPosition: null,
+    hoverTier: null,
+    hoverPosition: null,
+    mouseX: 0,
+    mouseY: 0
+  });
+
+  // Start dragging with mouse events
+  const startDrag = (teamName: string, tierIndex: number, position: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    setDragState({
+      isDragging: true,
+      draggedTeam: teamName,
       fromTier: tierIndex,
-      fromPosition: position
+      fromPosition: position,
+      hoverTier: null,
+      hoverPosition: null,
+      mouseX: event.clientX,
+      mouseY: event.clientY
     });
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // Handle hover over drop zone
+  const handleDragHover = (tierIndex: number, position: string) => {
+    if (!dragState.isDragging) return;
+    
+    setDragState(prev => ({
+      ...prev,
+      hoverTier: tierIndex,
+      hoverPosition: position
+    }));
+  };
+
+  // Handle mouse move during drag
+  const handleMouseMove = (event: MouseEvent) => {
+    if (!dragState.isDragging) return;
+    
+    setDragState(prev => ({
+      ...prev,
+      mouseX: event.clientX,
+      mouseY: event.clientY
+    }));
+  };
+
+  // Handle mouse up (drop)
+  const handleMouseUp = (event: MouseEvent) => {
+    if (!dragState.isDragging) return;
+
+    // Find the element under the cursor
+    const elementUnderCursor = document.elementFromPoint(event.clientX, event.clientY);
+    const dropZone = elementUnderCursor?.closest('[data-drop-zone]');
+    
+    if (dropZone) {
+      const tierIndex = parseInt(dropZone.getAttribute('data-tier-index') || '0');
+      const position = dropZone.getAttribute('data-position') || 'A';
+      
+      // Perform the actual move
+      moveTeam(dragState.fromTier!, dragState.fromPosition!, tierIndex, position);
+    }
+
+    // Clear drag state
+    setDragState({
+      isDragging: false,
+      draggedTeam: null,
+      fromTier: null,
+      fromPosition: null,
+      hoverTier: null,
+      hoverPosition: null,
+      mouseX: 0,
+      mouseY: 0
+    });
+  };
+
+  // Add global mouse event listeners
+  useEffect(() => {
+    if (dragState.isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [dragState.isDragging, dragState.fromTier, dragState.fromPosition]);
+
+  // Simple team move function
+  const moveTeam = (fromTier: number, fromPos: string, toTier: number, toPos: string) => {
+    console.log(`Moving team from T${fromTier + 1}${fromPos} to T${toTier + 1}${toPos}`);
+    
+    // Find the team being moved
+    const sourceTier = weeklyTiers[fromTier];
+    const teamField = `team_${fromPos.toLowerCase()}_name` as keyof WeeklyScheduleTier;
+    const rankingField = `team_${fromPos.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
+    
+    const teamName = (sourceTier as any)[teamField];
+    const teamRanking = (sourceTier as any)[rankingField];
+    
+    if (!teamName) return;
+
+    // Create new tiers array
+    const newTiers = [...weeklyTiers];
+    
+    // Clear source position
+    (newTiers[fromTier] as any)[teamField] = null;
+    (newTiers[fromTier] as any)[rankingField] = null;
+    
+    // Place in target position
+    const targetField = `team_${toPos.toLowerCase()}_name` as keyof WeeklyScheduleTier;
+    const targetRankingField = `team_${toPos.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
+    (newTiers[toTier] as any)[targetField] = teamName;
+    (newTiers[toTier] as any)[targetRankingField] = teamRanking;
+    
+    // Update state
+    setWeeklyTiers(newTiers);
   };
 
   const startEdgeScrolling = (clientY: number) => {
@@ -1182,50 +1303,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     // Edge scrolling now handled by global mouse tracking
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Only clear if we're actually leaving the drop zone (not moving to a child element)
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    // Check if the mouse is still within the drop zone bounds
-    const stillInBounds = (
-      x >= rect.left &&
-      x <= rect.right &&
-      y >= rect.top &&
-      y <= rect.bottom
-    );
-    
-    if (!stillInBounds) {
-      setDragOverTarget(null);
-      setCascadePreview([]);
-    }
-    // Don't stop edge scrolling - let global mouse tracking handle it
-  };
 
-  const handleDragEnd = (_e: React.DragEvent) => {
-    // Clear any pending throttled updates
-    if (dragOverThrottleRef.current) {
-      clearTimeout(dragOverThrottleRef.current);
-      dragOverThrottleRef.current = null;
-    }
-    
-    // Check if the drag ended without a successful drop
-    // If draggedTeam is still set, it means no drop occurred
-    if (draggedTeam) {
-      // The team will automatically reappear in its original position
-      // since we only hide it during preview calculations
-      setDraggedTeam(null);
-      setDragOverTarget(null);
-    }
-    
-    setIsDragging(false);
-    stopEdgeScrolling();
-    setCascadePreview([]);
-  };
 
   const handleDrop = (e: React.DragEvent, targetTierIndex: number, targetPosition: string) => {
     e.preventDefault();
@@ -1306,6 +1384,254 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     setCascadePreview([]);
     setIsDragging(false);
     stopEdgeScrolling();
+  };
+
+  // Weekly Schedule specific drag/drop handlers
+  const handleWeeklyDrop = async (e: React.DragEvent, targetTierIndex: number, targetPosition: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedTeam) return;
+
+
+    try {
+      // Directly simulate the cascade without relying on preview state
+      const newWeeklyTiers = [...weeklyTiers];
+      
+      // FIRST: Always clear the source position immediately
+      const sourceTier = newWeeklyTiers[draggedTeam.fromTier];
+      if (sourceTier) {
+        const sourceField = `team_${draggedTeam.fromPosition.toLowerCase()}_name` as keyof WeeklyScheduleTier;
+        const sourceRankingField = `team_${draggedTeam.fromPosition.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
+        (sourceTier as any)[sourceField] = null;
+        (sourceTier as any)[sourceRankingField] = null;
+      }
+      
+      // SECOND: Simulate fresh cascade from target position
+      let currentTeamToBump = {
+        name: draggedTeam.name,
+        ranking: draggedTeam.ranking
+      };
+      let currentTierIndex = targetTierIndex;
+      let currentPosition = targetPosition;
+
+      // Execute cascade through weekly tiers
+      while (currentTierIndex < newWeeklyTiers.length) {
+        const currentTier = newWeeklyTiers[currentTierIndex];
+        
+        const teamField = `team_${currentPosition.toLowerCase()}_name` as keyof WeeklyScheduleTier;
+        const existingTeam = (currentTier as any)[teamField];
+        const existingRanking = (currentTier as any)[`team_${currentPosition.toLowerCase()}_ranking`] || 0;
+        
+        // Place the current team
+        (currentTier as any)[teamField] = currentTeamToBump.name;
+        (currentTier as any)[`team_${currentPosition.toLowerCase()}_ranking`] = currentTeamToBump.ranking;
+        
+        // If no existing team, we're done
+        if (!existingTeam) {
+          break;
+        }
+        
+        // Prepare to bump the existing team
+        currentTeamToBump = { name: existingTeam, ranking: existingRanking };
+        
+        // Find next position
+        if (currentPosition === 'A') {
+          currentPosition = 'B';
+        } else if (currentPosition === 'B') {
+          currentPosition = 'C';
+        } else {
+          // Move to next tier, position A
+          currentTierIndex++;
+          currentPosition = 'A';
+        }
+      }
+
+      // Handle overflow - if we still have a team to place, create new tier
+      if (currentTierIndex >= newWeeklyTiers.length && currentTeamToBump) {
+        
+        // Create new tier for overflow
+        const templateTier = newWeeklyTiers[0] || {};
+        const newTier: WeeklyScheduleTier = {
+          id: Date.now(), // Temporary ID
+          tier_number: newWeeklyTiers.length + 1,
+          location: templateTier.location || 'TBD',
+          time_slot: templateTier.time_slot || 'TBD',
+          court: `Court ${newWeeklyTiers.length + 1}`,
+          team_a_name: currentPosition === 'A' ? currentTeamToBump.name : null,
+          team_a_ranking: currentPosition === 'A' ? currentTeamToBump.ranking : null,
+          team_b_name: currentPosition === 'B' ? currentTeamToBump.name : null,
+          team_b_ranking: currentPosition === 'B' ? currentTeamToBump.ranking : null,
+          team_c_name: currentPosition === 'C' ? currentTeamToBump.name : null,
+          team_c_ranking: currentPosition === 'C' ? currentTeamToBump.ranking : null,
+          is_completed: false,
+          no_games: false,
+          format: '3-teams-6-sets'
+        };
+        
+        newWeeklyTiers.push(newTier);
+      }
+
+      // Update weekly tiers in state
+      setWeeklyTiers(newWeeklyTiers);
+      
+    } catch (error) {
+      console.error('Error updating weekly schedule:', error);
+    }
+
+    // Clear drag state
+    setDraggedTeam(null);
+    setDragOverTarget(null);
+    setCascadePreview([]);
+    setIsDragging(false);
+    stopEdgeScrolling();
+  };
+
+  const handleWeeklyInsertTier = async (position: number) => {
+    console.log('Insert tier at position:', position);
+    
+    try {
+      const newWeeklyTiers = [...weeklyTiers];
+      
+      // Create new tier structure based on existing tier template
+      const templateTier = weeklyTiers[0] || {
+        location: 'TBD',
+        time_slot: 'TBD', 
+        court: `Court ${position + 1}`
+      };
+      
+      const newTier: WeeklyScheduleTier = {
+        id: Date.now(), // Temporary ID
+        tier_number: position + 1,
+        location: templateTier.location || 'TBD',
+        time_slot: templateTier.time_slot || 'TBD',
+        court: `Court ${position + 1}`,
+        team_a_name: null,
+        team_a_ranking: null,
+        team_b_name: null,
+        team_b_ranking: null,
+        team_c_name: null,
+        team_c_ranking: null,
+        is_completed: false,
+        no_games: false,
+        format: '3-teams-6-sets'
+      };
+      
+      // Insert at position and renumber subsequent tiers
+      newWeeklyTiers.splice(position, 0, newTier);
+      newWeeklyTiers.forEach((tier, index) => {
+        tier.tier_number = index + 1;
+      });
+      
+      setWeeklyTiers(newWeeklyTiers);
+      console.log('Inserted tier at position:', position);
+      
+    } catch (error) {
+      console.error('Error inserting tier:', error);
+    }
+  };
+
+  const handleWeeklyDeleteTeam = async (tierIndex: number, position: string, teamName: string) => {
+    console.log('Delete team:', teamName, 'from', `T${tierIndex + 1}${position}`);
+    
+    try {
+      const newWeeklyTiers = [...weeklyTiers];
+      const tier = newWeeklyTiers[tierIndex];
+      
+      if (tier) {
+        const teamField = `team_${position.toLowerCase()}_name` as keyof WeeklyScheduleTier;
+        const rankingField = `team_${position.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
+        (tier as any)[teamField] = null;
+        (tier as any)[rankingField] = null;
+        
+        setWeeklyTiers(newWeeklyTiers);
+        console.log('Team deleted');
+      }
+    } catch (error) {
+      console.error('Error deleting team from weekly schedule:', error);
+    }
+  };
+
+  const handleWeeklyAddTeamToPosition = (tierIndex: number, position: string) => {
+    console.log('Add team to:', `T${tierIndex + 1}${position}`);
+    
+    setAddTeamPosition({ tierIndex, position });
+    setAddTeamModalOpen(true);
+  };
+
+  const handleWeeklyDragOver = (e: React.DragEvent, targetTierIndex: number, targetPosition: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedTeam || !isEditScheduleMode) {
+      return;
+    }
+
+    // Set drag over target
+    setDragOverTarget({ tierIndex: targetTierIndex, position: targetPosition });
+
+    // Generate cascade preview for weekly schedule
+    const preview: typeof cascadePreview = [];
+    let currentTeamToBump = {
+      name: draggedTeam.name,
+      ranking: draggedTeam.ranking
+    };
+    let currentTierIndex = targetTierIndex;
+    let currentPosition = targetPosition;
+
+    // Simulate cascade through weekly tiers
+    while (currentTierIndex < weeklyTiers.length) {
+      const currentTier = weeklyTiers[currentTierIndex];
+      
+      const teamField = `team_${currentPosition.toLowerCase()}_name` as keyof WeeklyScheduleTier;
+      let existingTeam = (currentTier as any)[teamField];
+      let existingRanking = (currentTier as any)[`team_${currentPosition.toLowerCase()}_ranking`] || 0;
+      
+      // Treat the dragged team's source position as empty to avoid circular cascade
+      if (currentTierIndex === draggedTeam.fromTier && currentPosition === draggedTeam.fromPosition) {
+        existingTeam = null;
+        existingRanking = 0;
+      }
+      
+      // Add current team to preview
+      preview.push({
+        tierIndex: currentTierIndex,
+        position: currentPosition,
+        team: currentTeamToBump,
+        isPreview: true
+      });
+      
+      // If no existing team, we're done
+      if (!existingTeam) {
+        break;
+      }
+      
+      // Prepare to bump the existing team
+      currentTeamToBump = { name: existingTeam, ranking: existingRanking };
+      
+      // Find next position
+      if (currentPosition === 'A') {
+        currentPosition = 'B';
+      } else if (currentPosition === 'B') {
+        currentPosition = 'C';
+      } else {
+        // Move to next tier, position A
+        currentTierIndex++;
+        currentPosition = 'A';
+      }
+    }
+
+    // If we need to create a new tier for overflow
+    if (currentTierIndex >= weeklyTiers.length && currentTeamToBump) {
+      preview.push({
+        tierIndex: currentTierIndex,
+        position: 'A',
+        team: currentTeamToBump,
+        isPreview: true
+      });
+    }
+
+    setCascadePreview(preview);
   };
 
 
@@ -1459,14 +1785,48 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#B20000]"></div>
           </div>
         ) : weeklyTiers.length > 0 ? (
-          // NEW: Display weekly schedule data
-          weeklyTiers.map((tier, tierIndex) => (
-            <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
+          // NEW: Display weekly schedule data with edit features
+          (() => {
+            const elements: React.ReactElement[] = [];
+            
+            weeklyTiers.forEach((tier, tierIndex) => {
+              // Add insert tier button before each tier (in edit mode)
+              if (isEditScheduleMode && userProfile?.is_admin) {
+                elements.push(
+                  <div key={`insert-before-weekly-${tierIndex}`} className="flex justify-center py-1">
+                    <button
+                      onClick={() => handleWeeklyInsertTier(tierIndex)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-dashed border-blue-300 hover:border-blue-500 rounded-md transition-all duration-200"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Insert Tier
+                    </button>
+                  </div>
+                );
+              }
+              
+              elements.push(
+                <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
               <CardContent className="p-0 overflow-hidden">
                 {/* Tier Header */}
                 <div className="bg-[#F8F8F8] border-b px-8 py-3">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
+                      {/* Remove tier button - only for empty tiers in edit mode */}
+                      {isEditScheduleMode && userProfile?.is_admin && (!tier.team_a_name && !tier.team_b_name && !tier.team_c_name) && (
+                        <button
+                          onClick={() => console.log('Remove tier clicked for weekly tier:', tier.tier_number)}
+                          className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Remove
+                        </button>
+                      )}
+                      
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
                         Tier {tier.tier_number}
                         {tier.is_completed && (
@@ -1503,7 +1863,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                       {userProfile?.is_admin && isEditScheduleMode && (
                         <button
                           onClick={() => handleEditWeeklyTier(tier, tierIndex)}
-                          className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline"
+                          className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 transition-colors"
                         >
                           <Edit className="h-4 w-4" />
                           Edit
@@ -1535,38 +1895,363 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                 {/* Teams Display */}
                 <div className="p-4">
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
+                    {/* Team A Position */}
+                    <div 
+                      className={`text-center p-3 rounded border-2 transition-all ${
+                        isEditScheduleMode 
+                          ? dragState.isDragging 
+                            ? 'border-blue-300 bg-blue-50 border-dashed' 
+                            : 'border-transparent'
+                          : 'border-transparent'
+                      }`}
+                      data-drop-zone="true"
+                      data-tier-index={tierIndex}
+                      data-position="A"
+                      onMouseEnter={() => isEditScheduleMode && handleDragHover(tierIndex, 'A')}
+                    >
                       <div className="font-medium text-[#6F6F6F] mb-1">A</div>
-                      <div className="text-sm text-[#6F6F6F]">
-                        {tier.team_a_name ? 
-                          `${tier.team_a_name} (${tier.team_a_ranking || '-'})` : 
-                          <span className="text-gray-400 italic">Empty</span>
+                      {(() => {
+                        // Check for cascade preview team for this position
+                        const previewTeam = cascadePreview.find(p => p.tierIndex === tierIndex && p.position === 'A');
+                        const isOriginalPosition = draggedTeam?.fromTier === tierIndex && draggedTeam?.fromPosition === 'A';
+                        
+                        
+                        if (previewTeam) {
+                          return (
+                            <div className="flex items-center gap-2 h-[60px] min-h-[60px] p-2 w-full bg-blue-50 border-2 border-blue-300 rounded">
+                              <div className="text-blue-500 select-none">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
+                                </svg>
+                              </div>
+                              <div className="text-center flex-1">
+                                <div className="font-medium text-blue-800">{previewTeam.team.name}</div>
+                                <div className="text-xs text-blue-600">(Rank {previewTeam.team.ranking || '-'}) • Preview</div>
+                              </div>
+                            </div>
+                          );
+                        } else if (tier.team_a_name && !isOriginalPosition) {
+                          return (
+                            <div className="flex items-center gap-2 h-[60px] min-h-[60px] p-2 w-full bg-white border-2 border-gray-200 rounded">
+                              {isEditScheduleMode && (
+                                <div className="text-gray-400 cursor-grab active:cursor-grabbing select-none">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="5" r="1"/>
+                                    <circle cx="15" cy="5" r="1"/>
+                                    <circle cx="9" cy="12" r="1"/>
+                                    <circle cx="15" cy="12" r="1"/>
+                                    <circle cx="9" cy="19" r="1"/>
+                                    <circle cx="15" cy="19" r="1"/>
+                                  </svg>
+                                </div>
+                              )}
+                              <div
+                                className={`text-center flex-1 ${isEditScheduleMode ? 'cursor-pointer select-none' : ''} ${
+                                  dragState.isDragging && dragState.fromTier === tierIndex && dragState.fromPosition === 'A' 
+                                    ? 'opacity-50' : ''
+                                }`}
+                                onMouseDown={(e) => {
+                                  if (isEditScheduleMode && tier.team_a_name) {
+                                    startDrag(tier.team_a_name, tierIndex, 'A', e);
+                                  }
+                                }}
+                              >
+                                <div className="font-medium">{tier.team_a_name}</div>
+                                <div className="text-xs text-gray-500">(Rank {tier.team_a_ranking || '-'})</div>
+                              </div>
+                              {isEditScheduleMode && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    tier.team_a_name && handleWeeklyDeleteTeam(tierIndex, 'A', tier.team_a_name);
+                                  }}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                                  title="Remove team"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        } else if (isOriginalPosition && draggedTeam) {
+                          return (
+                            <div className="h-[60px] min-h-[60px] flex items-center justify-center p-2 w-full bg-gray-100 border-2 border-gray-200 text-gray-400 opacity-50 rounded">
+                              <span className="text-xs">Moving...</span>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="h-[60px] min-h-[60px] flex items-center justify-center text-xs p-2 w-full">
+                              {isEditScheduleMode ? (
+                                <div className="flex flex-col items-center justify-center w-full h-full">
+                                  <button
+                                    onClick={() => handleWeeklyAddTeamToPosition(tierIndex, 'A')}
+                                    className="flex items-center justify-center w-8 h-8 text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded-full transition-colors mb-1"
+                                    title="Add team to this position"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                  </button>
+                                  <div className="text-xs font-medium text-gray-600">Add Team</div>
+                                  <div className="text-xs text-gray-500">or drop here</div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 italic text-sm">Empty</span>
+                              )}
+                            </div>
+                          );
                         }
-                      </div>
+                      })()}
                     </div>
-                    <div className="text-center">
+                    
+                    {/* Team B Position */}
+                    <div 
+                      className={`text-center p-3 rounded border-2 transition-all ${
+                        isEditScheduleMode 
+                          ? dragState.isDragging 
+                            ? 'border-blue-300 bg-blue-50 border-dashed' 
+                            : 'border-transparent'
+                          : 'border-transparent'
+                      }`}
+                      data-drop-zone="true"
+                      data-tier-index={tierIndex}
+                      data-position="B"
+                      onMouseEnter={() => isEditScheduleMode && handleDragHover(tierIndex, 'B')}
+                    >
                       <div className="font-medium text-[#6F6F6F] mb-1">B</div>
-                      <div className="text-sm text-[#6F6F6F]">
-                        {tier.team_b_name ? 
-                          `${tier.team_b_name} (${tier.team_b_ranking || '-'})` : 
-                          <span className="text-gray-400 italic">Empty</span>
+                      {(() => {
+                        const previewTeam = cascadePreview.find(p => p.tierIndex === tierIndex && p.position === 'B');
+                        const isOriginalPosition = draggedTeam?.fromTier === tierIndex && draggedTeam?.fromPosition === 'B';
+                        
+                        if (previewTeam) {
+                          return (
+                            <div className="flex items-center gap-2 h-[60px] min-h-[60px] p-2 w-full bg-blue-50 border-2 border-blue-300 rounded">
+                              <div className="text-blue-500 select-none">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
+                                </svg>
+                              </div>
+                              <div className="text-center flex-1">
+                                <div className="font-medium text-blue-800">{previewTeam.team.name}</div>
+                                <div className="text-xs text-blue-600">(Rank {previewTeam.team.ranking || '-'}) • Preview</div>
+                              </div>
+                            </div>
+                          );
+                        } else if (tier.team_b_name && !isOriginalPosition) {
+                          return (
+                            <div className="flex items-center gap-2 h-[60px] min-h-[60px] p-2 w-full bg-white border-2 border-gray-200 rounded">
+                              {isEditScheduleMode && (
+                                <div className="text-gray-400 cursor-grab active:cursor-grabbing select-none">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="5" r="1"/>
+                                    <circle cx="15" cy="5" r="1"/>
+                                    <circle cx="9" cy="12" r="1"/>
+                                    <circle cx="15" cy="12" r="1"/>
+                                    <circle cx="9" cy="19" r="1"/>
+                                    <circle cx="15" cy="19" r="1"/>
+                                  </svg>
+                                </div>
+                              )}
+                              <div
+                                className={`text-center flex-1 ${isEditScheduleMode ? 'cursor-pointer select-none' : ''} ${
+                                  dragState.isDragging && dragState.fromTier === tierIndex && dragState.fromPosition === 'B' 
+                                    ? 'opacity-50' : ''
+                                }`}
+                                onMouseDown={(e) => {
+                                  if (isEditScheduleMode && tier.team_b_name) {
+                                    startDrag(tier.team_b_name, tierIndex, 'B', e);
+                                  }
+                                }}
+                              >
+                                <div className="font-medium">{tier.team_b_name}</div>
+                                <div className="text-xs text-gray-500">(Rank {tier.team_b_ranking || '-'})</div>
+                              </div>
+                              {isEditScheduleMode && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    tier.team_b_name && handleWeeklyDeleteTeam(tierIndex, 'B', tier.team_b_name);
+                                  }}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                                  title="Remove team"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        } else if (isOriginalPosition && draggedTeam) {
+                          return (
+                            <div className="h-[60px] min-h-[60px] flex items-center justify-center p-2 w-full bg-gray-100 border-2 border-gray-200 text-gray-400 opacity-50 rounded">
+                              <span className="text-xs">Moving...</span>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="h-[60px] min-h-[60px] flex items-center justify-center text-xs p-2 w-full">
+                              {isEditScheduleMode ? (
+                                <div className="flex flex-col items-center justify-center w-full h-full">
+                                  <button
+                                    onClick={() => handleWeeklyAddTeamToPosition(tierIndex, 'B')}
+                                    className="flex items-center justify-center w-8 h-8 text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded-full transition-colors mb-1"
+                                    title="Add team to this position"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                  </button>
+                                  <div className="text-xs font-medium text-gray-600">Add Team</div>
+                                  <div className="text-xs text-gray-500">or drop here</div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 italic text-sm">Empty</span>
+                              )}
+                            </div>
+                          );
                         }
-                      </div>
+                      })()}
                     </div>
-                    <div className="text-center">
+                    
+                    {/* Team C Position */}
+                    <div 
+                      className={`text-center p-3 rounded border-2 transition-all ${
+                        isEditScheduleMode 
+                          ? dragState.isDragging 
+                            ? 'border-blue-300 bg-blue-50 border-dashed' 
+                            : 'border-transparent'
+                          : 'border-transparent'
+                      }`}
+                      data-drop-zone="true"
+                      data-tier-index={tierIndex}
+                      data-position="C"
+                      onMouseEnter={() => isEditScheduleMode && handleDragHover(tierIndex, 'C')}
+                    >
                       <div className="font-medium text-[#6F6F6F] mb-1">C</div>
-                      <div className="text-sm text-[#6F6F6F]">
-                        {tier.team_c_name ? 
-                          `${tier.team_c_name} (${tier.team_c_ranking || '-'})` : 
-                          <span className="text-gray-400 italic">Empty</span>
+                      {(() => {
+                        const previewTeam = cascadePreview.find(p => p.tierIndex === tierIndex && p.position === 'C');
+                        const isOriginalPosition = draggedTeam?.fromTier === tierIndex && draggedTeam?.fromPosition === 'C';
+                        
+                        if (previewTeam) {
+                          return (
+                            <div className="flex items-center gap-2 h-[60px] min-h-[60px] p-2 w-full bg-blue-50 border-2 border-blue-300 rounded">
+                              <div className="text-blue-500 select-none">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
+                                </svg>
+                              </div>
+                              <div className="text-center flex-1">
+                                <div className="font-medium text-blue-800">{previewTeam.team.name}</div>
+                                <div className="text-xs text-blue-600">(Rank {previewTeam.team.ranking || '-'}) • Preview</div>
+                              </div>
+                            </div>
+                          );
+                        } else if (tier.team_c_name && !isOriginalPosition) {
+                          return (
+                            <div className="flex items-center gap-2 h-[60px] min-h-[60px] p-2 w-full bg-white border-2 border-gray-200 rounded">
+                              {isEditScheduleMode && (
+                                <div className="text-gray-400 cursor-grab active:cursor-grabbing select-none">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="5" r="1"/>
+                                    <circle cx="15" cy="5" r="1"/>
+                                    <circle cx="9" cy="12" r="1"/>
+                                    <circle cx="15" cy="12" r="1"/>
+                                    <circle cx="9" cy="19" r="1"/>
+                                    <circle cx="15" cy="19" r="1"/>
+                                  </svg>
+                                </div>
+                              )}
+                              <div
+                                className={`text-center flex-1 ${isEditScheduleMode ? 'cursor-pointer select-none' : ''} ${
+                                  dragState.isDragging && dragState.fromTier === tierIndex && dragState.fromPosition === 'C' 
+                                    ? 'opacity-50' : ''
+                                }`}
+                                onMouseDown={(e) => {
+                                  if (isEditScheduleMode && tier.team_c_name) {
+                                    startDrag(tier.team_c_name, tierIndex, 'C', e);
+                                  }
+                                }}
+                              >
+                                <div className="font-medium">{tier.team_c_name}</div>
+                                <div className="text-xs text-gray-500">(Rank {tier.team_c_ranking || '-'})</div>
+                              </div>
+                              {isEditScheduleMode && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    tier.team_c_name && handleWeeklyDeleteTeam(tierIndex, 'C', tier.team_c_name);
+                                  }}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                                  title="Remove team"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        } else if (isOriginalPosition && draggedTeam) {
+                          return (
+                            <div className="h-[60px] min-h-[60px] flex items-center justify-center p-2 w-full bg-gray-100 border-2 border-gray-200 text-gray-400 opacity-50 rounded">
+                              <span className="text-xs">Moving...</span>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="h-[60px] min-h-[60px] flex items-center justify-center text-xs p-2 w-full">
+                              {isEditScheduleMode ? (
+                                <div className="flex flex-col items-center justify-center w-full h-full">
+                                  <button
+                                    onClick={() => handleWeeklyAddTeamToPosition(tierIndex, 'C')}
+                                    className="flex items-center justify-center w-8 h-8 text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded-full transition-colors mb-1"
+                                    title="Add team to this position"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                  </button>
+                                  <div className="text-xs font-medium text-gray-600">Add Team</div>
+                                  <div className="text-xs text-gray-500">or drop here</div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 italic text-sm">Empty</span>
+                              )}
+                            </div>
+                          );
                         }
-                      </div>
+                      })()}
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
+              );
+            });
+            
+            // Add final insert tier button after all tiers (in edit mode)
+            if (isEditScheduleMode && userProfile?.is_admin) {
+              elements.push(
+                <div key="insert-after-all-weekly" className="flex justify-center py-3">
+                  <button
+                    onClick={() => handleWeeklyInsertTier(weeklyTiers.length)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:text-green-800 hover:bg-green-50 border border-dashed border-green-300 hover:border-green-500 rounded-md transition-all duration-200"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Tier
+                  </button>
+                </div>
+              );
+            }
+            
+            return elements;
+          })()
         ) : currentWeek === 1 ? (
           <div className="text-center py-12">
             <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Schedule Generated</h3>
@@ -1769,7 +2454,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                     {isEditScheduleMode && userProfile?.is_admin && (
                       <button
                         onClick={() => handleEditClick(tierIndex, tier)}
-                        className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline ml-2"
+                        className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 transition-colors ml-2"
                       >
                         <Edit className="h-4 w-4" />
                         Edit
@@ -1811,7 +2496,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                                 : 'border-transparent'
                             }`}
                             onDragOver={isEditScheduleMode ? (e) => handleDragOver(e, tierIndex, position) : undefined}
-                            onDragLeave={isEditScheduleMode ? (e) => handleDragLeave(e) : undefined}
+                            onDragLeave={isEditScheduleMode ? undefined : undefined}
                             onDrop={isEditScheduleMode ? (e) => handleDrop(e, tierIndex, position) : undefined}
                           >
 {(() => {
@@ -1838,9 +2523,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                                           }` 
                                         : ''
                                     }`}
-                                    draggable={isEditScheduleMode && !isPreview}
-                                    onDragStart={isEditScheduleMode && !isPreview ? (e) => handleDragStart(e, team, tierIndex, position) : undefined}
-                                    onDragEnd={isEditScheduleMode && !isPreview ? handleDragEnd : undefined}
                                   >
                                     {isEditScheduleMode && !isPreview && (
                                       <div className="text-gray-400 cursor-grab active:cursor-grabbing select-none">
@@ -2149,6 +2831,21 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
             tier_number: selectedTierForScores.tier_number,
           }}
         />
+      )}
+
+      {/* Floating drag element */}
+      {dragState.isDragging && dragState.draggedTeam && (
+        <div
+          className="fixed pointer-events-none z-50 bg-white border-2 border-blue-400 rounded-lg shadow-lg px-3 py-2"
+          style={{
+            left: dragState.mouseX + 10,
+            top: dragState.mouseY - 30,
+            transform: 'none'
+          }}
+        >
+          <div className="text-sm font-medium text-blue-800">{dragState.draggedTeam}</div>
+          <div className="text-xs text-blue-600">Dragging...</div>
+        </div>
       )}
     </div>
   );
