@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent } from "../../../../../components/ui/card";
-import { Edit2, Trash2, Copy, Users } from "lucide-react";
+import { Edit2, Trash2, Copy, Users, Calendar } from "lucide-react";
 import { LeagueWithTeamCount } from "../types";
 import {
   getDayName,
@@ -15,10 +15,13 @@ interface LeagueCardProps {
   league: LeagueWithTeamCount;
   onDelete: (leagueId: number) => Promise<void>;
   onCopy: (league: LeagueWithTeamCount) => void;
+  onManageSchedule?: (leagueId: number) => void;
+  hasEmptySpots?: boolean;
 }
 
-export function LeagueCard({ league, onDelete, onCopy }: LeagueCardProps) {
+export function LeagueCard({ league, onDelete, onCopy, onManageSchedule, hasEmptySpots = false }: LeagueCardProps) {
   const navigate = useNavigate();
+
   const getSportIcon = (sport: string | null) => {
     if (!sport) return "";
     switch (sport) {
@@ -186,6 +189,24 @@ export function LeagueCard({ league, onDelete, onCopy }: LeagueCardProps) {
                 </span>
               )}
             </Button>
+
+            {/* Schedule Management Button (Volleyball only) */}
+            {league.has_schedule && league.sport_name === 'Volleyball' && onManageSchedule && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onManageSchedule?.(league.id)}
+                className="h-8 w-8 p-0 hover:bg-green-100 relative"
+                title={hasEmptySpots ? "Manage schedule - Has empty slots" : "Manage schedule"}
+              >
+                <Calendar className="h-4 w-4 text-green-600" />
+                {hasEmptySpots && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    !
+                  </span>
+                )}
+              </Button>
+            )}
 
             <Link to={`/my-account/leagues/edit/${league.id}`}>
               <Button

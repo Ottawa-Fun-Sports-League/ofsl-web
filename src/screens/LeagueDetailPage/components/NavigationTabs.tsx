@@ -1,14 +1,18 @@
 interface NavigationTabsProps {
-  activeView: "info" | "standings" | "gyms";
-  setActiveView: (view: "info" | "standings" | "gyms") => void;
+  activeView: "info" | "standings" | "gyms" | "schedule";
+  setActiveView: (view: "info" | "standings" | "gyms" | "schedule") => void;
   sport: string;
   isAdmin?: boolean;
+  hasSchedule?: boolean;
+  isLoggedIn?: boolean;
 }
 
 export function NavigationTabs({
   activeView,
   setActiveView,
   sport,
+  hasSchedule = false,
+  isLoggedIn = false,
 }: NavigationTabsProps) {
   return (
     <div className="flex flex-nowrap overflow-x-auto scrollbar-thin border-b border-gray-200 mb-8">
@@ -26,6 +30,23 @@ export function NavigationTabs({
             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
           )}
         </div>
+
+        {/* Show Schedule tab when schedule exists and user is logged in (Volleyball only) */}
+        {hasSchedule && isLoggedIn && sport === 'Volleyball' && (
+          <div
+            onClick={() => setActiveView("schedule")}
+            className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+              activeView === "schedule"
+                ? "text-[#B20000] font-medium"
+                : "text-[#6F6F6F] hover:text-[#B20000]"
+            }`}
+          >
+            <span>Schedule</span>
+            {activeView === "schedule" && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+            )}
+          </div>
+        )}
 
         {/* Show Standings tab for Volleyball */}
         {sport === "Volleyball" && (

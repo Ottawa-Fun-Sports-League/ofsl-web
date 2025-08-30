@@ -22,6 +22,7 @@ export interface LeagueWithTeamCount extends League {
   team_count: number;
   spots_remaining: number;
   skill_names: string[] | null;
+  has_schedule?: boolean;
 }
 
 export interface NewLeague {
@@ -41,4 +42,5 @@ export interface NewLeague {
   hide_day?: boolean;
   payment_due_date: string;
   team_registration?: boolean;
+  playoff_weeks?: number;
 }

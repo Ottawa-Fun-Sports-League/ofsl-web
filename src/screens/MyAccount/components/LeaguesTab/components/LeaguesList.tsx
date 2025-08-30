@@ -1,14 +1,99 @@
+import { useState, useEffect, useCallback } from 'react';
 import { LeagueCard } from './LeagueCard';
 import { LeagueWithTeamCount } from '../types';
 import { groupLeaguesByDay, getOrderedDayNames } from '../../../../../lib/leagues';
+import { supabase } from '../../../../../lib/supabase';
 
 interface LeaguesListProps {
   leagues: LeagueWithTeamCount[];
   onDelete: (leagueId: number) => Promise<void>;
   onCopy: (league: LeagueWithTeamCount) => void;
+  onManageSchedule?: (leagueId: number) => void;
 }
 
-export function LeaguesList({ leagues, onDelete, onCopy }: LeaguesListProps) {
+export function LeaguesList({ leagues, onDelete, onCopy, onManageSchedule }: LeaguesListProps) {
+  const [leaguesWithEmptySpots, setLeaguesWithEmptySpots] = useState<Set<number>>(new Set());
+
+  // Batch check for empty spots in league schedules
+  const checkForEmptySpots = useCallback(async () => {
+    const leaguesWithSchedules = leagues.filter(league => league.has_schedule);
+    if (leaguesWithSchedules.length === 0) return;
+
+    const leagueIds = leaguesWithSchedules.map(league => league.id);
+    
+    try {
+      const { data, error } = await supabase
+        .from('league_schedules')
+        .select('league_id, schedule_data')
+        .in('league_id', leagueIds);
+
+      if (error) {
+        console.error('Error loading schedules:', error);
+        return;
+      }
+
+      const leaguesWithEmpty = new Set<number>();
+      data?.forEach(schedule => {
+        if (schedule.schedule_data?.tiers) {
+          const tiers = schedule.schedule_data.tiers;
+          
+          // Check only the used positions based on tier format (typically A, B, C for 3-team volleyball)
+          const hasEmpty = tiers.some((tier: any) => {
+            const teams = tier.teams || {};
+            const format = tier.format || '3-teams-6-sets';
+            
+            // Define which positions are actually used based on format
+            let usedPositions: string[] = [];
+            if (format.includes('3-teams') || format === '3-teams-6-sets') {
+              usedPositions = ['A', 'B', 'C'];
+            } else if (format.includes('2-teams')) {
+              usedPositions = ['A', 'B'];
+            } else if (format.includes('4-teams')) {
+              usedPositions = ['A', 'B', 'C', 'D'];
+            } else if (format.includes('6-teams')) {
+              usedPositions = ['A', 'B', 'C', 'D', 'E', 'F'];
+            } else {
+              // Default to 3-team format
+              usedPositions = ['A', 'B', 'C'];
+            }
+            
+            // Only check the positions that should be used for this format
+            return usedPositions.some(position => teams[position] === null);
+          });
+          
+          console.log(`League ${schedule.league_id} schedule check (FIXED):`);
+          console.log(`  tierCount: ${tiers.length}, hasEmpty: ${hasEmpty}`);
+          
+          if (hasEmpty) {
+            leaguesWithEmpty.add(schedule.league_id);
+          }
+        }
+      });
+
+      setLeaguesWithEmptySpots(leaguesWithEmpty);
+    } catch (err) {
+      console.error('Error checking for empty spots:', err);
+    }
+  }, [leagues]);
+
+  useEffect(() => {
+    checkForEmptySpots();
+  }, [leagues]);
+
+  // Also re-check when the page becomes visible (user returns from schedule management)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkForEmptySpots();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [checkForEmptySpots]);
+
   if (leagues.length === 0) {
     return (
       <div className="text-center py-12">
@@ -45,6 +130,8 @@ export function LeaguesList({ leagues, onDelete, onCopy }: LeaguesListProps) {
                 league={league}
                 onDelete={onDelete}
                 onCopy={onCopy}
+                onManageSchedule={onManageSchedule}
+                hasEmptySpots={leaguesWithEmptySpots.has(league.id)}
               />
             ))}
           </div>
@@ -67,6 +154,8 @@ export function LeaguesList({ leagues, onDelete, onCopy }: LeaguesListProps) {
                   league={league}
                   onDelete={onDelete}
                   onCopy={onCopy}
+                  onManageSchedule={onManageSchedule}
+                  hasEmptySpots={leaguesWithEmptySpots.has(league.id)}
                 />
               ))}
           </div>
