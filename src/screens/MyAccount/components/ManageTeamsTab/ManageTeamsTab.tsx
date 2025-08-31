@@ -4,11 +4,12 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Card, CardContent } from '../../../../components/ui/card';
-import { Search, Edit, Users, Calendar, User, LayoutGrid, Table } from 'lucide-react';
+import { Search, Edit, Users, Calendar, User, LayoutGrid, Table, ArrowRightLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ManageTeamsTableView } from './ManageTeamsTableView';
 import { Pagination } from '../UsersTab/components/Pagination';
 import { PaginationState } from '../UsersTab/types';
+import { TransferTeamModal } from './TransferTeamModal';
 
 interface Team {
   id: number;
@@ -68,6 +69,8 @@ export function ManageTeamsTab() {
     totalItems: 0,
     totalPages: 0
   });
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedTeamForTransfer, setSelectedTeamForTransfer] = useState<Team | null>(null);
 
   useEffect(() => {
     if (userProfile?.is_admin) {
@@ -320,6 +323,16 @@ export function ManageTeamsTab() {
     navigate(`/leagues/${team.league_id}/teams`);
   };
 
+  const handleTransferTeam = (team: Team) => {
+    setSelectedTeamForTransfer(team);
+    setTransferModalOpen(true);
+  };
+
+  const handleTransferSuccess = () => {
+    // Refresh teams data after successful transfer
+    fetchAllData();
+  };
+
   const handleIndividualsPageChange = (page: number) => {
     const updatedPagination = {
       ...individualsPagination,
@@ -536,15 +549,25 @@ export function ManageTeamsTab() {
                         </div>
                       </div>
                       
-                      <Button
-                        onClick={() => handleEditTeam(team)}
-                        size="sm"
-                        variant="outline"
-                        className="ml-4"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          onClick={() => handleTransferTeam(team)}
+                          size="sm"
+                          variant="outline"
+                          title="Transfer to different league"
+                        >
+                          <ArrowRightLeft className="h-4 w-4 mr-1" />
+                          Transfer
+                        </Button>
+                        <Button
+                          onClick={() => handleEditTeam(team)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -554,6 +577,7 @@ export function ManageTeamsTab() {
             <ManageTeamsTableView
               teams={paginatedTeams}
               onEditTeam={handleEditTeam}
+              onTransferTeam={handleTransferTeam}
             />
           )}
           
@@ -756,6 +780,19 @@ export function ManageTeamsTab() {
     </Card>
       )
     )}
+
+      {/* Transfer Team Modal */}
+      {selectedTeamForTransfer && (
+        <TransferTeamModal
+          isOpen={transferModalOpen}
+          onClose={() => {
+            setTransferModalOpen(false);
+            setSelectedTeamForTransfer(null);
+          }}
+          team={selectedTeamForTransfer}
+          onSuccess={handleTransferSuccess}
+        />
+      )}
     </div>
   );
 }
