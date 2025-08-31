@@ -1,4 +1,4 @@
-import { Edit } from 'lucide-react';
+import { Edit, ArrowRightLeft } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 
 interface Team {
@@ -19,9 +19,10 @@ interface Team {
 interface ManageTeamsTableViewProps {
   teams: Team[];
   onEditTeam: (team: Team) => void;
+  onTransferTeam?: (team: Team) => void;
 }
 
-export function ManageTeamsTableView({ teams, onEditTeam }: ManageTeamsTableViewProps) {
+export function ManageTeamsTableView({ teams, onEditTeam, onTransferTeam }: ManageTeamsTableViewProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
@@ -80,7 +81,19 @@ export function ManageTeamsTableView({ teams, onEditTeam }: ManageTeamsTableView
                 {new Date(team.created_at).toLocaleDateString()}
               </td>
               <td className="p-4">
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-end gap-1">
+                  {onTransferTeam && (
+                    <Button
+                      onClick={() => onTransferTeam(team)}
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1 text-xs hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
+                      title="Transfer to different league"
+                    >
+                      <ArrowRightLeft className="h-3 w-3" />
+                      <span className="hidden lg:inline">Transfer</span>
+                    </Button>
+                  )}
                   <Button
                     onClick={() => onEditTeam(team)}
                     size="sm"
