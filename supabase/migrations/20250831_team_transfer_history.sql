@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS team_transfer_history (
   team_id BIGINT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   from_league_id BIGINT NOT NULL REFERENCES leagues(id),
   to_league_id BIGINT NOT NULL REFERENCES leagues(id),
-  transferred_by TEXT NOT NULL REFERENCES auth.users(id),
+  transferred_by UUID NOT NULL REFERENCES auth.users(id),
   transfer_reason TEXT,
   transferred_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   metadata JSONB DEFAULT '{}'::JSONB
@@ -23,9 +23,9 @@ ALTER TABLE team_transfer_history ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin users can view transfer history" ON team_transfer_history
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.is_admin = true
+      SELECT 1 FROM public.users
+      WHERE public.users.id = auth.uid()::text
+      AND public.users.is_admin = true
     )
   );
 
@@ -33,9 +33,9 @@ CREATE POLICY "Admin users can view transfer history" ON team_transfer_history
 CREATE POLICY "Admin users can insert transfer history" ON team_transfer_history
   FOR INSERT WITH CHECK (
     EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.is_admin = true
+      SELECT 1 FROM public.users
+      WHERE public.users.id = auth.uid()::text
+      AND public.users.is_admin = true
     )
   );
 
