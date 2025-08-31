@@ -78,15 +78,15 @@ serve(async (req: Request) => {
       )
     }
 
-    // Check if user is admin
+    // Get the user's profile to check admin status (using auth_id like other functions)
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('is_admin')
-      .eq('id', user.id)
+      .select('id, is_admin')
+      .eq('auth_id', user.id)
       .single()
 
     if (userError || !userData?.is_admin) {
-      console.error("User is not an admin")
+      console.error("User is not an admin", userError, "Auth ID:", user.id)
       return new Response(
         JSON.stringify({ error: "Admin access required" }),
         {
@@ -150,11 +150,11 @@ serve(async (req: Request) => {
       )
     }
 
-    // Check for any active matches in current league
+    // Check for any active matches in current league (using position columns)
     const { data: activeMatches, error: matchesError } = await supabase
       .from('matches')
       .select('id')
-      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+      .or(`position_a.eq.${teamId},position_b.eq.${teamId},position_c.eq.${teamId}`)
       .eq('status', 'scheduled')
       .limit(1)
 
@@ -179,14 +179,14 @@ serve(async (req: Request) => {
     // Begin transaction-like operations
     console.log(`Starting transfer: Team ${team.name} from League ${currentLeagueId} to ${targetLeagueId}`)
 
-    // 1. Log the transfer in history table
+    // 1. Log the transfer in history table (using auth.users.id for transferred_by)
     const { error: historyError } = await supabase
       .from('team_transfer_history')
       .insert({
         team_id: teamId,
         from_league_id: currentLeagueId,
         to_league_id: targetLeagueId,
-        transferred_by: user.id,
+        transferred_by: user.id,  // This is auth.users.id (UUID) which matches our table
         transfer_reason: reason || null,
         metadata: {
           team_name: team.name,
