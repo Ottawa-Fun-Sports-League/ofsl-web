@@ -567,14 +567,35 @@ export function LeagueTeamsPage() {
     const teamsPerTier = 3;
     const totalTiers = Math.ceil(teams.length / teamsPerTier);
     
-    // Default locations and time slots
-    const defaultLocation = league?.location || "TBD";
-    const timeSlots = [
-      "7:00 PM - 8:30 PM",
-      "8:30 PM - 10:00 PM", 
-      "6:00 PM - 7:30 PM",
-      "7:30 PM - 9:00 PM",
-    ];
+    // Fetch tier-specific defaults from league_schedules table
+    let tierSpecificDefaults: Record<string, { location?: string; time_slot?: string; court?: string }> = {};
+    try {
+      const { data: scheduleData } = await supabase
+        .from('league_schedules')
+        .select('defaults')
+        .eq('league_id', parseInt(leagueId!))
+        .single();
+      
+      tierSpecificDefaults = scheduleData?.defaults || {};
+    } catch (error) {
+      console.warn('No tier-specific defaults found, using placeholders');
+    }
+    
+    // Helper function to get tier-specific default or placeholder
+    const getTierDefault = (tierNumber: number, field: 'location' | 'time_slot' | 'court') => {
+      const tierDefaults = tierSpecificDefaults[tierNumber.toString()];
+      if (tierDefaults && tierDefaults[field]) {
+        return tierDefaults[field];
+      }
+      
+      // Return placeholders when no tier-specific defaults exist
+      switch (field) {
+        case 'location': return 'SET_LOCATION';
+        case 'time_slot': return 'SET_TIME';
+        case 'court': return 'SET_COURT';
+        default: return null;
+      }
+    };
 
     // Clear any existing schedule for this league
     await supabase
@@ -609,9 +630,9 @@ export function LeagueTeamsPage() {
           league_id: parseInt(leagueId!),
           week_number: weekNum,
           tier_number: i + 1,
-          location: defaultLocation,
-          time_slot: timeSlots[i % timeSlots.length],
-          court: `Court ${(i % 3) + 1}`,
+          location: getTierDefault(i + 1, 'location'),
+          time_slot: getTierDefault(i + 1, 'time_slot'),
+          court: getTierDefault(i + 1, 'court'),
           format: '3-teams-6-sets',
           // Only assign teams for Week 1, other weeks will be populated later based on results
           team_a_name: weekNum === 1 ? (tierTeams[0]?.name || null) : null,

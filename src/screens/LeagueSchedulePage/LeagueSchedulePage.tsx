@@ -22,7 +22,6 @@ export function LeagueSchedulePage() {
   const [league, setLeague] = useState<League | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [scheduleData, setScheduleData] = useState<any>(null);
   const { userProfile } = useAuth();
   const { showToast } = useToast();
   const { 
@@ -34,10 +33,7 @@ export function LeagueSchedulePage() {
 
   useEffect(() => {
     if (leagueId && userProfile) {
-      Promise.all([
-        loadLeagueData(),
-        loadScheduleData()
-      ]);
+      loadLeagueData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
@@ -77,57 +73,12 @@ export function LeagueSchedulePage() {
       console.error('Error loading league:', err);
       setError('Failed to load league data');
       return true; // Default to team registration
-    }
-  };
-
-  const loadScheduleData = async () => {
-    if (!leagueId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('league_schedules')
-        .select('schedule_data, format')
-        .eq('league_id', parseInt(leagueId))
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading schedule:', error);
-      } else if (data) {
-        setScheduleData(data.schedule_data);
-      }
-    } catch (err) {
-      console.error('Error loading schedule:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleScheduleUpdate = async (updatedSchedule: any[]) => {
-    if (!leagueId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('league_schedules')
-        .update({ 
-          schedule_data: updatedSchedule[0],
-          updated_at: new Date().toISOString()
-        })
-        .eq('league_id', parseInt(leagueId));
 
-      if (error) {
-        console.error('Error updating schedule:', error);
-        showToast('Failed to update schedule', 'error');
-        throw error;
-      }
-
-      // Update local state
-      setScheduleData(updatedSchedule[0]);
-      showToast('Schedule updated successfully', 'success');
-    } catch (err) {
-      console.error('Error updating schedule:', err);
-      throw err;
-    }
-  };
 
   if (loading) {
     return (
@@ -208,32 +159,17 @@ export function LeagueSchedulePage() {
         </div>
 
         {/* Schedule Content */}
-        {scheduleData ? (
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <AdminLeagueSchedule 
-              mockSchedule={[scheduleData]} 
-              openScoreSubmissionModal={openScoreSubmissionModal}
-              onScheduleUpdate={handleScheduleUpdate}
-              leagueId={leagueId!}
-              leagueName={league?.name || ''}
-            />
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg p-6 shadow-sm text-center">
-            <h2 className="text-2xl font-bold text-[#6F6F6F] mb-4">No Schedule Found</h2>
-            <p className="text-[#6F6F6F] mb-4">This league doesn't have a generated schedule yet.</p>
-            <Link
-              to={`/leagues/${league.id}/teams`}
-              className="inline-flex items-center px-4 py-2 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg"
-            >
-              Generate Schedule from Teams Page
-            </Link>
-          </div>
-        )}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <AdminLeagueSchedule 
+            openScoreSubmissionModal={openScoreSubmissionModal}
+            leagueId={leagueId!}
+            leagueName={league?.name || ''}
+          />
+        </div>
       </div>
 
       {/* Score Submission Modal */}
-      {showScoreSubmissionModal && scheduleData && selectedTier && (
+      {showScoreSubmissionModal && selectedTier && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">

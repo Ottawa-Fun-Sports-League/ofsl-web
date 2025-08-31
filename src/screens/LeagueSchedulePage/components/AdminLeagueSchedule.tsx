@@ -41,14 +41,12 @@ interface WeeklyScheduleTier {
 }
 
 interface AdminLeagueScheduleProps {
-  mockSchedule: Schedule[];
   openScoreSubmissionModal: (tierNumber: number) => void;
-  onScheduleUpdate: (updatedSchedule: Schedule[]) => Promise<void>;
   leagueId: string;
   leagueName: string;
 }
 
-export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, leagueName }: AdminLeagueScheduleProps) {
+export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, leagueName }: AdminLeagueScheduleProps) {
   const { userProfile } = useAuth();
   const { teams: standingsTeams } = useLeagueStandings(leagueId);
   
@@ -65,25 +63,38 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
   // Team reordering state
   const [isEditScheduleMode, setIsEditScheduleMode] = useState(false);
   const [showAddPlayoffModal, setShowAddPlayoffModal] = useState(false);
-  const [localSchedule, setLocalSchedule] = useState<typeof mockSchedule>([]);
+  
+  // Legacy drag state variables (keep for compatibility)
   const [draggedTeam, setDraggedTeam] = useState<{
     name: string;
     ranking: number;
     fromTier: number;
     fromPosition: string;
   } | null>(null);
-  const [dragOverTarget, setDragOverTarget] = useState<{
-    tierIndex: number;
-    position: string;
-  } | null>(null);
+  const [cascadePreview, setCascadePreview] = useState<any[]>([]);
+  const [dragOverTarget, setDragOverTarget] = useState<{ tierIndex: number; position: string } | null>(null);
+
+  // Simple drag and drop state
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean;
+    draggedTeam: string | null;
+    fromTier: number | null;
+    fromPosition: string | null;
+    hoverTier: number | null;
+    hoverPosition: string | null;
+    mouseX: number;
+    mouseY: number;
+  }>({
+    isDragging: false,
+    draggedTeam: null,
+    fromTier: null,
+    fromPosition: null,
+    hoverTier: null,
+    hoverPosition: null,
+    mouseX: 0,
+    mouseY: 0
+  });
   
-  // Cascade preview state
-  const [cascadePreview, setCascadePreview] = useState<{
-    tierIndex: number;
-    position: string;
-    team: { name: string; ranking: number };
-    isPreview: boolean;
-  }[]>([]);
   
   // Add team modal state
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
@@ -140,15 +151,146 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     loadWeeklySchedule(currentWeek);
     loadWeek1Structure();
   }, [leagueId]);
-
-  useEffect(() => {
-    setLocalSchedule([...mockSchedule]);
-  }, [mockSchedule]);
   
   // Load weekly schedule data when week changes
   useEffect(() => {
     loadWeeklySchedule(currentWeek);
   }, [currentWeek]);
+
+  // Stub functions for compatibility
+  const calculateCascadePreview = (tierIndex: number, position: string) => {
+    return [];
+  };
+
+  const enterEditScheduleMode = () => {
+    setIsEditScheduleMode(true);
+  };
+
+  const exitEditScheduleMode = () => {
+    setIsEditScheduleMode(false);
+    setDraggedTeam(null);
+    setDragOverTarget(null);
+    setCascadePreview([]);
+  };
+
+  const saveScheduleChanges = () => {
+    setIsEditScheduleMode(false);
+    setDraggedTeam(null);
+    setDragOverTarget(null);
+    setCascadePreview([]);
+  };
+
+  // Helper functions for managing tier-specific defaults
+  const updateTierDefaults = async (defaultsUpdate: Record<string, any>) => {
+    try {
+      const { error } = await supabase
+        .from('league_schedules')
+        .upsert({
+          league_id: parseInt(leagueId),
+          defaults: defaultsUpdate,
+          format: '3-teams-6-sets',
+          schedule_data: {}
+        });
+      
+      if (error) {
+        console.error('Error updating tier defaults:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error updating tier defaults:', error);
+      throw error;
+    }
+  };
+
+  const shiftTierDefaultsUp = async (fromTier: number) => {
+    // When inserting a tier, shift existing defaults up by 1
+    // e.g., if inserting at position 2, tier 2 becomes tier 3, tier 3 becomes tier 4, etc.
+    try {
+      const { data: leagueData } = await supabase
+        .from('league_schedules')
+        .select('defaults')
+        .eq('league_id', parseInt(leagueId))
+        .maybeSingle();
+      
+      const currentDefaults = leagueData?.defaults || {};
+      const newDefaults: Record<string, any> = {};
+      
+      // Copy defaults for tiers before the insertion point (unchanged)
+      for (let i = 1; i < fromTier; i++) {
+        if (currentDefaults[i.toString()]) {
+          newDefaults[i.toString()] = currentDefaults[i.toString()];
+        }
+      }
+      
+      // Shift defaults for tiers at and after the insertion point
+      Object.keys(currentDefaults).forEach(tierKey => {
+        const tierNum = parseInt(tierKey);
+        if (tierNum >= fromTier) {
+          newDefaults[(tierNum + 1).toString()] = currentDefaults[tierKey];
+        }
+      });
+      
+      // The new tier at fromTier gets no defaults (will use pure placeholders)
+      
+      await updateTierDefaults(newDefaults);
+    } catch (error) {
+      console.error('Error shifting tier defaults up:', error);
+      throw error;
+    }
+  };
+
+  const shiftTierDefaultsDown = async (removedTier: number) => {
+    // When removing a tier, shift existing defaults down by 1
+    // e.g., if removing tier 3, tier 4 becomes tier 3, tier 5 becomes tier 4, etc.
+    try {
+      const { data: leagueData } = await supabase
+        .from('league_schedules')
+        .select('defaults')
+        .eq('league_id', parseInt(leagueId))
+        .maybeSingle();
+      
+      const currentDefaults = leagueData?.defaults || {};
+      const newDefaults: Record<string, any> = {};
+      
+      // Copy defaults for tiers before the removed tier (unchanged)
+      for (let i = 1; i < removedTier; i++) {
+        if (currentDefaults[i.toString()]) {
+          newDefaults[i.toString()] = currentDefaults[i.toString()];
+        }
+      }
+      
+      // Remove the defaults for the deleted tier
+      // Shift defaults for tiers after the removed tier
+      Object.keys(currentDefaults).forEach(tierKey => {
+        const tierNum = parseInt(tierKey);
+        if (tierNum > removedTier) {
+          newDefaults[(tierNum - 1).toString()] = currentDefaults[tierKey];
+        }
+      });
+      
+      await updateTierDefaults(newDefaults);
+    } catch (error) {
+      console.error('Error shifting tier defaults down:', error);
+      throw error;
+    }
+  };
+
+  // Additional stub functions
+  const removeTeamFromSchedule = async (teamName: string) => {
+    console.log('removeTeamFromSchedule called with:', teamName);
+  };
+
+  const handleTeamSelection = (teamName: string) => {
+    console.log('handleTeamSelection called with:', teamName);
+  };
+
+  const confirmDeleteTeam = () => {
+    console.log('confirmDeleteTeam called');
+  };
+
+  const confirmRemoveTier = () => {
+    console.log('confirmRemoveTier called');
+  };
 
   // Edge scrolling optimization - only working method during HTML5 drag
   useEffect(() => {
@@ -238,7 +380,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
       scrollZones = [];
     };
 
-    if (draggedTeam && isEditScheduleMode) {
+    if (dragState.draggedTeam && isEditScheduleMode) {
       createScrollZones();
     } else {
       removeScrollZones();
@@ -247,7 +389,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     return () => {
       removeScrollZones();
     };
-  }, [draggedTeam, isEditScheduleMode]);
+  }, [dragState.draggedTeam, isEditScheduleMode]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -479,14 +621,12 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
 
       if (error) throw error;
 
-      // Get teams currently on schedule
+      // Get teams currently on schedule from weekly schedules
       const teamsOnSchedule = new Set<string>();
-      mockSchedule[0]?.tiers?.forEach((tier) => {
-        Object.values(tier.teams).forEach((team) => {
-          if (team?.name) {
-            teamsOnSchedule.add(team.name);
-          }
-        });
+      weeklyTiers.forEach((tier) => {
+        if (tier.team_a_name) teamsOnSchedule.add(tier.team_a_name);
+        if (tier.team_b_name) teamsOnSchedule.add(tier.team_b_name);
+        if (tier.team_c_name) teamsOnSchedule.add(tier.team_c_name);
       });
 
       // Mark teams as on schedule or available
@@ -621,15 +761,53 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
         return;
       }
 
-      // If any defaults were set, update ALL future weeks for this tier
+      // If any defaults were set, update both the tier-specific defaults AND all future weeks for this tier
       if (setAsDefaultInfo && (setAsDefaultInfo.location || setAsDefaultInfo.time || setAsDefaultInfo.court)) {
-        const updateData: any = {};
+        // First, get current defaults from league_schedules
+        const { data: currentDefaults } = await supabase
+          .from('league_schedules')
+          .select('defaults')
+          .eq('league_id', parseInt(leagueId))
+          .maybeSingle();
+          
+        const allDefaults = currentDefaults?.defaults || {};
+        const tierNumber = editingWeeklyTier.tier_number.toString();
         
+        // Get current tier-specific defaults or create empty object
+        const tierDefaults = allDefaults[tierNumber] || {};
+        
+        // Update only the specified tier's defaults
+        const newTierDefaults = { ...tierDefaults };
+        if (setAsDefaultInfo.location) newTierDefaults.location = tierToSave.location;
+        if (setAsDefaultInfo.time) newTierDefaults.time = tierToSave.time;
+        if (setAsDefaultInfo.court) newTierDefaults.court = tierToSave.court;
+        
+        // Update the tier-specific defaults in the main defaults object
+        const newAllDefaults = { ...allDefaults };
+        newAllDefaults[tierNumber] = newTierDefaults;
+        
+        // Save updated defaults to league_schedules
+        const { error: defaultsError } = await supabase
+          .from('league_schedules')
+          .update({
+            defaults: newAllDefaults,
+            updated_at: new Date().toISOString()
+          })
+          .eq('league_id', parseInt(leagueId));
+          
+        if (defaultsError) {
+          console.error('Error updating tier-specific defaults:', defaultsError);
+        } else {
+          console.log(`Updated Tier ${tierNumber} defaults:`, newTierDefaults);
+          console.log('All defaults now:', newAllDefaults);
+        }
+        
+        // Second, update all future weeks (current week and beyond) for this tier
+        const updateData: any = {};
         if (setAsDefaultInfo.location) updateData.location = tierToSave.location;
         if (setAsDefaultInfo.time) updateData.time_slot = tierToSave.time;
         if (setAsDefaultInfo.court) updateData.court = tierToSave.court;
         
-        // Update all future weeks (current week and beyond) for this tier in this league
         const { error: futureError } = await supabase
           .from('weekly_schedules')
           .update({
@@ -655,20 +833,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     }
   };
 
-  const handleTierSave = async (updatedTiers: Tier[], _setAsDefaultInfo?: {location: boolean, time: boolean, court: boolean}, _updatedTier?: Tier) => {
-    try {
-      const updatedSchedule = [...mockSchedule];
-      updatedSchedule[0].tiers = updatedTiers;
-      
-      await onScheduleUpdate(updatedSchedule);
-      
-      // Reload defaults after saving
-      await loadDefaults();
-    } catch (error) {
-      console.error('Error updating tier:', error);
-      throw error;
-    }
-  };
 
   // Future functionality - add team modal
   // const handleOpenAddTeamModal = async () => {
@@ -682,24 +846,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     setAddTeamPosition(null);
   };
 
-  // Insert tier function
-  const insertTierAtPosition = (insertAtIndex: number) => {
-    const newSchedule = [...localSchedule];
-    
-    // Create new blank tier for manual insertion
-    const newTierNumber = insertAtIndex + 1;
-    const newTier = createNewTier(newTierNumber, true); // Pass true for tier with defaults
-    
-    // Insert the new tier at the specified position
-    newSchedule[0].tiers.splice(insertAtIndex, 0, newTier);
-    
-    // Renumber all tiers after insertion to maintain sequential numbering
-    newSchedule[0].tiers.forEach((tier, index) => {
-      tier.tierNumber = index + 1;
-    });
-    
-    setLocalSchedule(newSchedule);
-  };
 
   // Remove tier functions
   const handleRemoveTier = (tierIndex: number, tierNumber: number) => {
@@ -707,23 +853,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     setRemoveTierConfirmOpen(true);
   };
 
-  const confirmRemoveTier = () => {
-    if (!tierToRemove) return;
-
-    const newSchedule = [...localSchedule];
-    
-    // Remove the tier
-    newSchedule[0].tiers.splice(tierToRemove.tierIndex, 1);
-    
-    // Renumber all remaining tiers
-    newSchedule[0].tiers.forEach((tier, index) => {
-      tier.tierNumber = index + 1;
-    });
-    
-    setLocalSchedule(newSchedule);
-    setRemoveTierConfirmOpen(false);
-    setTierToRemove(null);
-  };
 
   const cancelRemoveTier = () => {
     setRemoveTierConfirmOpen(false);
@@ -780,79 +909,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
   //   }
   // };
 
-  const removeTeamFromSchedule = async (teamName: string) => {
-    try {
-      const updatedSchedule = [...mockSchedule];
-      
-      // Find and remove the team from all tiers
-      updatedSchedule[0].tiers.forEach(tier => {
-        Object.keys(tier.teams).forEach(position => {
-          if (tier.teams[position]?.name === teamName) {
-            tier.teams[position] = null;
-          }
-        });
-      });
 
-      // Remove empty tiers (tiers with no teams)
-      const nonEmptyTiers = updatedSchedule[0].tiers.filter(tier => {
-        return Object.values(tier.teams).some(team => team?.name);
-      });
-
-      // Renumber the remaining tiers
-      nonEmptyTiers.forEach((tier, index) => {
-        tier.tierNumber = index + 1;
-      });
-
-      updatedSchedule[0].tiers = nonEmptyTiers;
-      
-      await onScheduleUpdate(updatedSchedule);
-      await loadAvailableTeams(); // Refresh the teams list
-    } catch (error) {
-      console.error('Error removing team from schedule:', error);
-    }
-  };
-
-  // Team reordering functions
-  const enterEditScheduleMode = () => {
-    console.log('Entering Edit Schedule Mode');
-    setIsEditScheduleMode(true);
-    setLocalSchedule([...mockSchedule]); // Reset to current state
-  };
-
-  const exitEditScheduleMode = () => {
-    setIsEditScheduleMode(false);
-    setDraggedTeam(null);
-    setDragOverTarget(null);
-    setIsDragging(false);
-    stopEdgeScrolling();
-    setLocalSchedule([...mockSchedule]); // Reset to original
-  };
-
-  const saveScheduleChanges = async () => {
-    try {
-      // Clean up empty tiers before saving
-      const cleanedSchedule = [...localSchedule];
-      const nonEmptyTiers = cleanedSchedule[0].tiers.filter(tier => {
-        return Object.values(tier.teams).some(team => team?.name);
-      });
-
-      // Renumber the remaining tiers
-      nonEmptyTiers.forEach((tier, index) => {
-        tier.tierNumber = index + 1;
-      });
-
-      cleanedSchedule[0].tiers = nonEmptyTiers;
-
-      await onScheduleUpdate(cleanedSchedule);
-      setIsEditScheduleMode(false);
-      setDraggedTeam(null);
-      setDragOverTarget(null);
-      setIsDragging(false);
-      stopEdgeScrolling();
-    } catch (error) {
-      console.error('Error saving reordered teams:', error);
-    }
-  };
 
   // Delete team functions
   const handleDeleteTeam = (tierIndex: number, position: string, teamName: string) => {
@@ -860,16 +917,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     setDeleteConfirmOpen(true);
   };
 
-  const confirmDeleteTeam = () => {
-    if (!teamToDelete) return;
-
-    const newSchedule = [...localSchedule];
-    newSchedule[0].tiers[teamToDelete.tierIndex].teams[teamToDelete.position] = null;
-    
-    setLocalSchedule(newSchedule);
-    setDeleteConfirmOpen(false);
-    setTeamToDelete(null);
-  };
 
   const cancelDeleteTeam = () => {
     setDeleteConfirmOpen(false);
@@ -882,46 +929,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     await loadAvailableTeams();
     setAddTeamModalOpen(true);
   };
-
-  const handleTeamSelection = (teamName: string) => {
-    if (!addTeamPosition) return;
-
-    const newSchedule = [...localSchedule];
-    
-    // Get ranking from standings (source of truth)
-    const currentRanking = getCurrentRanking(teamName);
-
-    // Add the team to the position
-    newSchedule[0].tiers[addTeamPosition.tierIndex].teams[addTeamPosition.position] = {
-      name: teamName,
-      ranking: currentRanking
-    };
-    
-    setLocalSchedule(newSchedule);
-    setAddTeamModalOpen(false);
-    setAddTeamPosition(null);
-  };
-
-  // Simple drag and drop state
-  const [dragState, setDragState] = useState<{
-    isDragging: boolean;
-    draggedTeam: string | null;
-    fromTier: number | null;
-    fromPosition: string | null;
-    hoverTier: number | null;
-    hoverPosition: string | null;
-    mouseX: number;
-    mouseY: number;
-  }>({
-    isDragging: false,
-    draggedTeam: null,
-    fromTier: null,
-    fromPosition: null,
-    hoverTier: null,
-    hoverPosition: null,
-    mouseX: 0,
-    mouseY: 0
-  });
 
   // Start dragging with mouse events
   const startDrag = (teamName: string, tierIndex: number, position: string, event: React.MouseEvent) => {
@@ -961,7 +968,7 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
   };
 
   // Handle mouse up (drop)
-  const handleMouseUp = (event: MouseEvent) => {
+  const handleMouseUp = async (event: MouseEvent) => {
     if (!dragState.isDragging) return;
 
     // Find the element under the cursor
@@ -972,8 +979,8 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
       const tierIndex = parseInt(dropZone.getAttribute('data-tier-index') || '0');
       const position = dropZone.getAttribute('data-position') || 'A';
       
-      // Perform the actual move
-      moveTeam(dragState.fromTier!, dragState.fromPosition!, tierIndex, position);
+      // Perform the actual move (async)
+      await moveTeam(dragState.fromTier!, dragState.fromPosition!, tierIndex, position);
     }
 
     // Clear drag state
@@ -1002,12 +1009,25 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     }
   }, [dragState.isDragging, dragState.fromTier, dragState.fromPosition]);
 
-  // Simple team move function
-  const moveTeam = (fromTier: number, fromPos: string, toTier: number, toPos: string) => {
+  // Simple team move function with database persistence
+  const moveTeam = async (fromTier: number, fromPos: string, toTier: number, toPos: string) => {
     console.log(`Moving team from T${fromTier + 1}${fromPos} to T${toTier + 1}${toPos}`);
+    
+    // Don't allow moving to the same position
+    if (fromTier === toTier && fromPos === toPos) {
+      console.log('Same position - no move needed');
+      return;
+    }
     
     // Find the team being moved
     const sourceTier = weeklyTiers[fromTier];
+    const targetTier = weeklyTiers[toTier];
+    
+    if (!sourceTier || !targetTier) {
+      console.error('Invalid tier index');
+      return;
+    }
+    
     const teamField = `team_${fromPos.toLowerCase()}_name` as keyof WeeklyScheduleTier;
     const rankingField = `team_${fromPos.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
     
@@ -1015,6 +1035,17 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     const teamRanking = (sourceTier as any)[rankingField];
     
     if (!teamName) return;
+
+    // Check if target position is occupied
+    const targetField = `team_${toPos.toLowerCase()}_name` as keyof WeeklyScheduleTier;
+    const targetRankingField = `team_${toPos.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
+    const targetTeam = (targetTier as any)[targetField];
+    
+    // Don't allow dropping on occupied positions
+    if (targetTeam) {
+      console.log('Target position is occupied - move not allowed');
+      return;
+    }
 
     // Create new tiers array
     const newTiers = [...weeklyTiers];
@@ -1024,13 +1055,54 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     (newTiers[fromTier] as any)[rankingField] = null;
     
     // Place in target position
-    const targetField = `team_${toPos.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-    const targetRankingField = `team_${toPos.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
     (newTiers[toTier] as any)[targetField] = teamName;
     (newTiers[toTier] as any)[targetRankingField] = teamRanking;
     
-    // Update state
+    // Update state optimistically
     setWeeklyTiers(newTiers);
+    
+    // Save to database
+    try {
+      // Check if tiers have IDs (they might be newly created without IDs)
+      if (!sourceTier.id || !targetTier.id) {
+        console.error('Cannot save move - one or more tiers missing database ID. Save the schedule first.');
+        // Revert the optimistic update
+        await loadWeeklySchedule(currentWeek);
+        return;
+      }
+      
+      // Update source tier - clear the position
+      const sourceUpdate: any = {
+        [`team_${fromPos.toLowerCase()}_name`]: null,
+        [`team_${fromPos.toLowerCase()}_ranking`]: null
+      };
+      
+      const { error: sourceError } = await supabase
+        .from('weekly_schedules')
+        .update(sourceUpdate)
+        .eq('id', sourceTier.id);
+        
+      if (sourceError) throw sourceError;
+      
+      // Update target tier - set the team
+      const targetUpdate: any = {
+        [`team_${toPos.toLowerCase()}_name`]: teamName,
+        [`team_${toPos.toLowerCase()}_ranking`]: teamRanking
+      };
+      
+      const { error: targetError } = await supabase
+        .from('weekly_schedules')
+        .update(targetUpdate)
+        .eq('id', targetTier.id);
+        
+      if (targetError) throw targetError;
+      
+      console.log('Team move saved to database successfully');
+    } catch (error) {
+      console.error('Error saving team move to database:', error);
+      // Revert on error by reloading from database
+      loadWeeklySchedule(currentWeek);
+    }
   };
 
   const startEdgeScrolling = (clientY: number) => {
@@ -1089,79 +1161,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     }
   };
 
-  // Calculate cascade preview for live animation
-  const calculateCascadePreview = (targetTierIndex: number, targetPosition: string) => {
-    if (!draggedTeam) return [];
-
-    const positions = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const preview: {
-      tierIndex: number;
-      position: string;
-      team: { name: string; ranking: number };
-      isPreview: boolean;
-    }[] = [];
-
-    // Create a copy of the schedule for simulation
-    const simulatedSchedule = JSON.parse(JSON.stringify(localSchedule));
-    
-    // Remove dragged team from simulation
-    simulatedSchedule[0].tiers[draggedTeam.fromTier].teams[draggedTeam.fromPosition] = null;
-
-    // Start cascade simulation
-    let currentTeamToBump = {
-      name: draggedTeam.name,
-      ranking: draggedTeam.ranking
-    };
-    let currentTierIndex = targetTierIndex;
-    let currentPosition = targetPosition;
-
-    // Simulate the cascade
-    while (currentTierIndex < simulatedSchedule[0].tiers.length) {
-      const currentTier = simulatedSchedule[0].tiers[currentTierIndex];
-      const teamAtPosition = currentTier.teams[currentPosition];
-      
-      // Add to preview (show where this team will go)
-      preview.push({
-        tierIndex: currentTierIndex,
-        position: currentPosition,
-        team: currentTeamToBump,
-        isPreview: true
-      });
-      
-      // If there was no team here, we're done
-      if (!teamAtPosition) {
-        break;
-      }
-      
-      // Update simulation
-      currentTier.teams[currentPosition] = currentTeamToBump;
-      currentTeamToBump = teamAtPosition;
-      
-      // Find next position
-      const currentPosIndex = positions.indexOf(currentPosition);
-      const tierTeamCount = getTeamCountForFormat(currentTier.format || '3-teams-6-sets');
-      const validPositions = positions.slice(0, tierTeamCount);
-      
-      if (currentPosIndex < validPositions.length - 1) {
-        currentPosition = validPositions[currentPosIndex + 1];
-      } else {
-        currentTierIndex++;
-        currentPosition = 'A';
-      }
-    }
-
-    // If we still have a team to place and no more tiers, show it will create a new tier
-    if (currentTierIndex >= simulatedSchedule[0].tiers.length && currentTeamToBump) {
-      preview.push({
-        tierIndex: currentTierIndex,
-        position: 'A',
-        team: currentTeamToBump,
-        isPreview: true
-      });
-    }
-
-    return preview;
-  };
 
   // Check if a tier is empty (no teams assigned)
   const isTierEmpty = (tier: Tier): boolean => {
@@ -1305,86 +1304,6 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
 
 
 
-  const handleDrop = (e: React.DragEvent, targetTierIndex: number, targetPosition: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Clear any pending throttled updates
-    if (dragOverThrottleRef.current) {
-      clearTimeout(dragOverThrottleRef.current);
-      dragOverThrottleRef.current = null;
-    }
-    
-    if (!draggedTeam) return;
-
-    const newSchedule = [...localSchedule];
-    const positions = ['A', 'B', 'C', 'D', 'E', 'F']; // All possible positions
-    
-    // First, remove the dragged team from its current position
-    const sourceTier = newSchedule[0].tiers[draggedTeam.fromTier];
-    sourceTier.teams[draggedTeam.fromPosition] = null;
-
-    // Create a cascading bump starting from the target position
-    let currentTeamToBump = {
-      name: draggedTeam.name,
-      ranking: draggedTeam.ranking
-    };
-    let currentTierIndex = targetTierIndex;
-    let currentPosition = targetPosition;
-
-    // Continue bumping until we find an empty spot or reach the end
-    while (currentTierIndex < newSchedule[0].tiers.length) {
-      const currentTier = newSchedule[0].tiers[currentTierIndex];
-      const teamAtPosition = currentTier.teams[currentPosition];
-      
-      // Place the current team in this position
-      currentTier.teams[currentPosition] = currentTeamToBump;
-      
-      // If there was no team here, we're done
-      if (!teamAtPosition) {
-        break;
-      }
-      
-      // Otherwise, the displaced team becomes the next team to bump
-      currentTeamToBump = teamAtPosition;
-      
-      // Find the next position to bump to
-      const currentPosIndex = positions.indexOf(currentPosition);
-      const tierTeamCount = getTeamCountForFormat(currentTier.format || '3-teams-6-sets');
-      const validPositions = positions.slice(0, tierTeamCount);
-      
-      if (currentPosIndex < validPositions.length - 1) {
-        // Move to next position in same tier
-        currentPosition = validPositions[currentPosIndex + 1];
-      } else {
-        // Move to position A of next tier
-        currentTierIndex++;
-        currentPosition = 'A';
-      }
-    }
-    
-    // If we've run out of tiers and still have a team to place, create a new tier
-    if (currentTierIndex >= newSchedule[0].tiers.length && currentTeamToBump) {
-      console.log('Creating new tier for overflow team:', currentTeamToBump.name);
-      
-      // Create a new tier with the next tier number
-      const newTierNumber = newSchedule[0].tiers.length + 1;
-      const newTier = createNewTier(newTierNumber);
-      
-      // Place the overflow team in position A of the new tier
-      newTier.teams.A = currentTeamToBump;
-      
-      // Add the new tier to the schedule
-      newSchedule[0].tiers.push(newTier);
-    }
-
-    setLocalSchedule(newSchedule);
-    setDraggedTeam(null);
-    setDragOverTarget(null);
-    setCascadePreview([]);
-    setIsDragging(false);
-    stopEdgeScrolling();
-  };
 
   // Weekly Schedule specific drag/drop handlers
   const handleWeeklyDrop = async (e: React.DragEvent, targetTierIndex: number, targetPosition: string) => {
@@ -1489,23 +1408,57 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
 
   const handleWeeklyInsertTier = async (position: number) => {
     console.log('Insert tier at position:', position);
+    console.log('League ID:', leagueId);
+    console.log('Current Week:', currentWeek);
+    console.log('Existing tiers:', weeklyTiers);
     
     try {
-      const newWeeklyTiers = [...weeklyTiers];
+      // FIRST: Update tier numbers for all existing tiers at or after the insertion position
+      // We need to do this BEFORE inserting to avoid duplicate key violations
+      const tiersToUpdate = weeklyTiers.filter((tier, index) => index >= position);
       
-      // Create new tier structure based on existing tier template
-      const templateTier = weeklyTiers[0] || {
-        location: 'TBD',
-        time_slot: 'TBD', 
-        court: `Court ${position + 1}`
-      };
+      console.log('Tiers to renumber:', tiersToUpdate.length);
       
-      const newTier: WeeklyScheduleTier = {
-        id: Date.now(), // Temporary ID
-        tier_number: position + 1,
-        location: templateTier.location || 'TBD',
-        time_slot: templateTier.time_slot || 'TBD',
-        court: `Court ${position + 1}`,
+      if (tiersToUpdate.length > 0) {
+        // Update tier numbers in reverse order to avoid conflicts
+        // Start from the last tier and work backwards
+        for (let i = tiersToUpdate.length - 1; i >= 0; i--) {
+          const tier = tiersToUpdate[i];
+          if (!tier.id) {
+            console.warn('Skipping tier without ID:', tier);
+            continue;
+          }
+          
+          const oldTierNumber = tier.tier_number;
+          const newTierNumber = oldTierNumber + 1;
+          console.log(`Updating tier ${tier.id} from tier_number ${oldTierNumber} to ${newTierNumber}`);
+          
+          const { error: updateError } = await supabase
+            .from('weekly_schedules')
+            .update({ tier_number: newTierNumber })
+            .eq('id', tier.id);
+            
+          if (updateError) {
+            console.error('Error updating tier number:', updateError);
+            alert(`Failed to update tier numbers: ${updateError.message}`);
+            throw updateError;
+          }
+        }
+      }
+      
+      // SECOND: Update tier-specific defaults before inserting
+      const tierNumber = position + 1;
+      console.log('Shifting tier defaults up from position:', tierNumber);
+      await shiftTierDefaultsUp(tierNumber);
+      
+      // Create new tier structure with pure placeholders (no tier-specific defaults)
+      const insertData = {
+        league_id: leagueId,
+        week_number: currentWeek,
+        tier_number: tierNumber,
+        location: 'SET_LOCATION', // New tier gets pure placeholders
+        time_slot: 'SET_TIME', // New tier gets pure placeholders
+        court: 'SET_COURT', // New tier gets pure placeholders
         team_a_name: null,
         team_a_ranking: null,
         team_b_name: null,
@@ -1517,17 +1470,33 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
         format: '3-teams-6-sets'
       };
       
-      // Insert at position and renumber subsequent tiers
-      newWeeklyTiers.splice(position, 0, newTier);
-      newWeeklyTiers.forEach((tier, index) => {
-        tier.tier_number = index + 1;
-      });
+      console.log('Inserting new tier with data:', insertData);
       
-      setWeeklyTiers(newWeeklyTiers);
-      console.log('Inserted tier at position:', position);
+      const { data: newTierData, error: insertError } = await supabase
+        .from('weekly_schedules')
+        .insert(insertData)
+        .select()
+        .single();
+        
+      if (insertError) {
+        console.error('Error inserting tier to database:', insertError);
+        alert(`Failed to insert tier: ${insertError.message}`);
+        // Try to restore original tier numbers on failure
+        await loadWeeklySchedule(currentWeek);
+        throw insertError;
+      }
+      
+      console.log('New tier saved to database with ID:', newTierData?.id);
+      
+      // Reload the weekly schedule to get the updated data
+      console.log('Reloading weekly schedule...');
+      await loadWeeklySchedule(currentWeek);
+      console.log('Weekly schedule reloaded after tier insertion');
       
     } catch (error) {
       console.error('Error inserting tier:', error);
+      // Reload to ensure UI is in sync with database
+      await loadWeeklySchedule(currentWeek);
     }
   };
 
@@ -1535,20 +1504,107 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
     console.log('Delete team:', teamName, 'from', `T${tierIndex + 1}${position}`);
     
     try {
-      const newWeeklyTiers = [...weeklyTiers];
-      const tier = newWeeklyTiers[tierIndex];
+      const tier = weeklyTiers[tierIndex];
       
-      if (tier) {
+      if (tier && tier.id) {
+        // Update in database
+        const updateData: any = {
+          [`team_${position.toLowerCase()}_name`]: null,
+          [`team_${position.toLowerCase()}_ranking`]: null
+        };
+        
+        const { error } = await supabase
+          .from('weekly_schedules')
+          .update(updateData)
+          .eq('id', tier.id);
+          
+        if (error) {
+          console.error('Error deleting team from database:', error);
+          throw error;
+        }
+        
+        // Update local state
+        const newWeeklyTiers = [...weeklyTiers];
+        const localTier = newWeeklyTiers[tierIndex];
         const teamField = `team_${position.toLowerCase()}_name` as keyof WeeklyScheduleTier;
         const rankingField = `team_${position.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
-        (tier as any)[teamField] = null;
-        (tier as any)[rankingField] = null;
+        (localTier as any)[teamField] = null;
+        (localTier as any)[rankingField] = null;
         
         setWeeklyTiers(newWeeklyTiers);
-        console.log('Team deleted');
+        console.log('Team deleted from database and local state');
       }
     } catch (error) {
       console.error('Error deleting team from weekly schedule:', error);
+    }
+  };
+
+  const handleWeeklyRemoveTier = async (tierIndex: number, tierNumber: number) => {
+    console.log('Remove weekly tier:', tierNumber, 'at index:', tierIndex);
+    
+    // Don't allow removing tiers with teams
+    const tier = weeklyTiers[tierIndex];
+    if (!tier) return;
+    
+    const hasTeams = tier.team_a_name || tier.team_b_name || tier.team_c_name;
+    if (hasTeams) {
+      alert('Cannot remove tier with teams. Remove all teams first.');
+      return;
+    }
+    
+    // Confirm deletion
+    const confirmed = confirm(`Are you sure you want to remove Tier ${tierNumber}? This action cannot be undone.`);
+    if (!confirmed) return;
+    
+    try {
+      // FIRST: Update tier-specific defaults before deleting
+      console.log('Shifting tier defaults down for removed tier:', tierNumber);
+      await shiftTierDefaultsDown(tierNumber);
+      
+      // SECOND: Delete the tier from database
+      const { error: deleteError } = await supabase
+        .from('weekly_schedules')
+        .delete()
+        .eq('id', tier.id);
+        
+      if (deleteError) {
+        console.error('Error deleting tier from database:', deleteError);
+        alert(`Failed to delete tier: ${deleteError.message}`);
+        throw deleteError;
+      }
+      
+      console.log('Tier deleted from database');
+      
+      // THIRD: Update tier numbers for all remaining tiers that come after the deleted one
+      const tiersToRenumber = weeklyTiers.filter((t, index) => index > tierIndex);
+      
+      if (tiersToRenumber.length > 0) {
+        for (const tierToUpdate of tiersToRenumber) {
+          if (!tierToUpdate.id) continue;
+          
+          const newTierNumber = tierToUpdate.tier_number - 1;
+          console.log(`Renumbering tier ${tierToUpdate.id} from ${tierToUpdate.tier_number} to ${newTierNumber}`);
+          
+          const { error: updateError } = await supabase
+            .from('weekly_schedules')
+            .update({ tier_number: newTierNumber })
+            .eq('id', tierToUpdate.id);
+            
+          if (updateError) {
+            console.error('Error renumbering tier:', updateError);
+            // Don't fail completely on renumbering errors
+          }
+        }
+      }
+      
+      // Reload the weekly schedule to show updated state
+      await loadWeeklySchedule(currentWeek);
+      console.log('Weekly schedule reloaded after tier deletion');
+      
+    } catch (error) {
+      console.error('Error removing weekly tier:', error);
+      // Reload to ensure UI is in sync with database
+      await loadWeeklySchedule(currentWeek);
     }
   };
 
@@ -1817,11 +1873,11 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                       {/* Remove tier button - only for empty tiers in edit mode */}
                       {isEditScheduleMode && userProfile?.is_admin && (!tier.team_a_name && !tier.team_b_name && !tier.team_c_name) && (
                         <button
-                          onClick={() => console.log('Remove tier clicked for weekly tier:', tier.tier_number)}
+                          onClick={() => handleWeeklyRemoveTier(tierIndex, tier.tier_number)}
                           className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                           Remove
                         </button>
@@ -1874,11 +1930,15 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
+                        <span className={`text-sm ${tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
+                          {tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? tier.location : 'Set location'}
+                        </span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className="text-sm text-[#6F6F6F]">{tier.time_slot}</span>
+                        <span className={`text-sm ${tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
+                          {tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? tier.time_slot : 'Set time'}
+                        </span>
                       </div>
                       <div className="flex items-center">
                         <svg className="h-4 w-4 text-[#B20000] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1886,7 +1946,9 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                           <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
                           <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
                         </svg>
-                        <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
+                        <span className={`text-sm ${tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
+                          {tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? tier.court : 'Set court'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1900,7 +1962,9 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                       className={`text-center p-3 rounded border-2 transition-all ${
                         isEditScheduleMode 
                           ? dragState.isDragging 
-                            ? 'border-blue-300 bg-blue-50 border-dashed' 
+                            ? !tier.team_a_name || (dragState.fromTier === tierIndex && dragState.fromPosition === 'A')
+                              ? 'border-green-400 bg-green-50 border-dashed cursor-pointer' // Valid drop zone (empty or source position)
+                              : 'border-red-300 bg-red-50 border-dashed cursor-not-allowed' // Invalid drop zone (occupied)
                             : 'border-transparent'
                           : 'border-transparent'
                       }`}
@@ -2012,7 +2076,9 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                       className={`text-center p-3 rounded border-2 transition-all ${
                         isEditScheduleMode 
                           ? dragState.isDragging 
-                            ? 'border-blue-300 bg-blue-50 border-dashed' 
+                            ? !tier.team_b_name || (dragState.fromTier === tierIndex && dragState.fromPosition === 'B')
+                              ? 'border-green-400 bg-green-50 border-dashed cursor-pointer' // Valid drop zone (empty or source position)
+                              : 'border-red-300 bg-red-50 border-dashed cursor-not-allowed' // Invalid drop zone (occupied)
                             : 'border-transparent'
                           : 'border-transparent'
                       }`}
@@ -2122,7 +2188,9 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                       className={`text-center p-3 rounded border-2 transition-all ${
                         isEditScheduleMode 
                           ? dragState.isDragging 
-                            ? 'border-blue-300 bg-blue-50 border-dashed' 
+                            ? !tier.team_c_name || (dragState.fromTier === tierIndex && dragState.fromPosition === 'C')
+                              ? 'border-green-400 bg-green-50 border-dashed cursor-pointer' // Valid drop zone (empty or source position)
+                              : 'border-red-300 bg-red-50 border-dashed cursor-not-allowed' // Invalid drop zone (occupied)
                             : 'border-transparent'
                           : 'border-transparent'
                       }`}
@@ -2285,11 +2353,15 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
+                        <span className={`text-sm ${tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
+                          {tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? tier.location : 'Set location'}
+                        </span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className="text-sm text-[#6F6F6F]">{tier.time_slot}</span>
+                        <span className={`text-sm ${tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
+                          {tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? tier.time_slot : 'Set time'}
+                        </span>
                       </div>
                       <div className="flex items-center">
                         <svg className="h-4 w-4 text-[#B20000] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2297,7 +2369,9 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
                           <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
                           <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
                         </svg>
-                        <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
+                        <span className={`text-sm ${tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
+                          {tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? tier.court : 'Set court'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -2339,293 +2413,13 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
           </div>
         )}
 
-        {/* LEGACY: Fallback to old system if no weekly data */}
-        {weeklyTiers.length === 0 && currentWeek === 1 && mockSchedule[0]?.tiers && (
-        (() => {
-          const currentSchedule = isEditScheduleMode ? localSchedule[0] : mockSchedule[0];
-          const actualTiers = currentSchedule.tiers;
-          const tiersToRender = [...actualTiers];
-          
-          // Check if there's a preview for a new tier (overflow)
-          const maxPreviewTierIndex = Math.max(...cascadePreview.map(p => p.tierIndex), -1);
-          if (maxPreviewTierIndex >= actualTiers.length) {
-            // Create a preview tier for rendering
-            const newTierNumber = actualTiers.length + 1;
-            const previewTier = createNewTier(newTierNumber);
-            tiersToRender.push(previewTier);
-          }
-          
-          // Create elements array to include both tiers and insert buttons
-          const elements: React.ReactElement[] = [];
-          
-          tiersToRender.forEach((tier: Tier, tierIndex: number) => {
-            const isPreviewTier = tierIndex >= (isEditScheduleMode ? localSchedule[0] : mockSchedule[0]).tiers.length;
-            
-            // Add insert tier button before each tier (in edit mode)
-            if (isEditScheduleMode && userProfile?.is_admin) {
-              elements.push(
-                <div key={`insert-before-${tierIndex}`} className="flex justify-center py-1">
-                  <button
-                    onClick={() => insertTierAtPosition(tierIndex)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-dashed border-blue-300 hover:border-blue-500 rounded-md transition-all duration-200"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Insert Tier
-                  </button>
-                </div>
-              );
-            }
-            
-            // Add the tier
-            elements.push(
-              <Card key={`tier-${tierIndex}`} className={`shadow-md overflow-hidden rounded-lg ${
-                isPreviewTier ? 'ring-2 ring-blue-300 bg-blue-50' : ''
-          }`}>
-            <CardContent className="p-0 overflow-hidden">
-              {/* Tier Header with edit button */}
-              <div className="bg-[#F8F8F8] border-b px-8 py-3">
-                <div className="flex justify-between items-center">
-                  {/* Left side - Remove button (if empty), Tier Number with Submit Scores link inline */}
-                  <div className="flex items-center gap-4">
-                    {/* Remove tier button - only for empty tiers in edit mode */}
-                    {isEditScheduleMode && userProfile?.is_admin && isTierEmpty(tier) && (
-                      <button
-                        onClick={() => handleRemoveTier(tierIndex, tier.tierNumber)}
-                        className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                    <h3 className={`font-bold text-xl leading-none m-0 ${isPreviewTier ? 'text-blue-600' : 'text-[#6F6F6F]'}`}>
-                      Tier {tier.tierNumber}
-                      {isPreviewTier && <span className="text-sm font-normal text-blue-500 ml-2">(New Tier Preview)</span>}
-                    </h3>
-                    {(() => {
-                      // Find the corresponding weekly tier data
-                      const weeklyTier = weeklyTiers.find(wt => wt.tier_number === tier.tierNumber);
-                      const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
-                      const showSubmitLink = canSubmitScores && 
-                        weeklyTier && 
-                        !weeklyTier.is_completed && 
-                        !weeklyTier.no_games && 
-                        weeklyTier.team_a_name && 
-                        weeklyTier.team_b_name && 
-                        weeklyTier.team_c_name;
-                      
-                      return showSubmitLink && (
-                        <button 
-                          onClick={() => {
-                            if (weeklyTier) {
-                              setSelectedTierForScores(weeklyTier);
-                              setIsScoresModalOpen(true);
-                            }
-                          }}
-                          className="text-sm text-[#B20000] hover:text-[#8B0000] hover:underline"
-                        >
-                          Submit scores
-                        </button>
-                      );
-                    })()}
-                  </div>
-                  
-                  {/* Right side - Location, Time, Court info with edit button */}
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
-                      <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                      <span className="text-sm text-[#6F6F6F]">{tier.time}</span>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <svg className="h-4 w-4 text-[#B20000] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth="2"/>
-                        <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
-                        <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
-                      </svg>
-                      <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
-                    </div>
-
-                    {isEditScheduleMode && userProfile?.is_admin && (
-                      <button
-                        onClick={() => handleEditClick(tierIndex, tier)}
-                        className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 transition-colors ml-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Edit
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Teams in columns layout */}
-              <div className="p-4">
-                {(() => {
-                  const teamCount = getTeamCountForFormat(tier.format || '3-teams-6-sets');
-                  const positions = ['A', 'B', 'C', 'D', 'E', 'F'];
-                  const visiblePositions = positions.slice(0, teamCount);
-                  
-                  const gridCols = teamCount === 1 ? 'grid-cols-1' :
-                                   teamCount === 2 ? 'grid-cols-2' :
-                                   teamCount === 3 ? 'grid-cols-3' :
-                                   teamCount === 4 ? 'grid-cols-4' :
-                                   teamCount === 5 ? 'grid-cols-5' :
-                                   'grid-cols-6';
-                  
-                  return (
-                    <div className={`grid ${gridCols} gap-4`}>
-                      {visiblePositions.map(position => (
-                        <div key={position} className="text-center">
-                          <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                          
-                          {/* Team Display/Drop Zone */}
-                          <div
-                            className={`min-h-[60px] h-[60px] rounded-md border-2 transition-all duration-200 ${
-                              isEditScheduleMode 
-                                ? `border-dashed ${
-                                    dragOverTarget?.tierIndex === tierIndex && dragOverTarget?.position === position
-                                      ? 'border-blue-500 bg-blue-100 shadow-lg scale-105'
-                                      : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50 hover:shadow-md hover:scale-102'
-                                  }` 
-                                : 'border-transparent'
-                            }`}
-                            onDragOver={isEditScheduleMode ? (e) => handleDragOver(e, tierIndex, position) : undefined}
-                            onDragLeave={isEditScheduleMode ? undefined : undefined}
-                            onDrop={isEditScheduleMode ? (e) => handleDrop(e, tierIndex, position) : undefined}
-                          >
-{(() => {
-                              const displayData = getDisplayTeam(tierIndex, position, tier.teams[position]);
-                              const { team, isPreview, isOriginalPosition } = displayData;
-                              
-                              if (team?.name) {
-                                return (
-                                  <div
-                                    className={`flex items-center justify-center gap-2 p-2 rounded border text-sm transition-all duration-200 ${
-                                      isPreview 
-                                        ? 'bg-blue-50 border-blue-300 text-blue-800 animate-pulse'
-                                        : isOriginalPosition && cascadePreview.length > 0
-                                        ? 'bg-gray-100 border-gray-200 text-gray-400 opacity-50'
-                                        : isOriginalPosition
-                                        ? 'bg-yellow-50 border-yellow-300 text-yellow-800 opacity-75'
-                                        : 'bg-white border-gray-200 text-[#6F6F6F]'
-                                    } ${
-                                      isEditScheduleMode && !isPreview 
-                                        ? `cursor-move hover:shadow-lg hover:border-blue-300 hover:bg-blue-25 ${
-                                            draggedTeam?.fromTier === tierIndex && draggedTeam?.fromPosition === position
-                                              ? 'opacity-50'
-                                              : ''
-                                          }` 
-                                        : ''
-                                    }`}
-                                  >
-                                    {isEditScheduleMode && !isPreview && (
-                                      <div className="text-gray-400 cursor-grab active:cursor-grabbing select-none">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                          <circle cx="9" cy="5" r="1"/>
-                                          <circle cx="15" cy="5" r="1"/>
-                                          <circle cx="9" cy="12" r="1"/>
-                                          <circle cx="15" cy="12" r="1"/>
-                                          <circle cx="9" cy="19" r="1"/>
-                                          <circle cx="15" cy="19" r="1"/>
-                                        </svg>
-                                      </div>
-                                    )}
-                                    {isPreview && (
-                                      <div className="text-blue-500 select-none">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                          <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
-                                        </svg>
-                                      </div>
-                                    )}
-                                    <div className="text-center flex-1">
-                                      <div className={`font-medium ${isPreview ? 'text-blue-800' : ''}`}>
-                                        {team.name}
-                                      </div>
-                                      <div className={`text-xs ${isPreview ? 'text-blue-600' : 'text-gray-500'}`}>
-                                        (Rank {getCurrentRanking(team.name) || '-'})
-                                        {isPreview && ' • Preview'}
-                                      </div>
-                                    </div>
-                                    {isEditScheduleMode && !isPreview && (
-                                      <button
-                                        onClick={() => handleDeleteTeam(tierIndex, position, team.name)}
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
-                                        title="Remove team"
-                                      >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              } else {
-                                return (
-                                  <div className={`h-[60px] min-h-[60px] flex items-center justify-center text-xs p-2 w-full ${
-                                    isEditScheduleMode 
-                                      ? 'text-gray-500 bg-gray-50' 
-                                      : 'text-gray-400'
-                                  }`}>
-                                    {isEditScheduleMode ? (
-                                      <div className="flex flex-col items-center justify-center w-full h-full">
-                                        <button
-                                          onClick={() => handleAddTeamToPosition(tierIndex, position)}
-                                          className="flex items-center justify-center w-8 h-8 text-blue-500 hover:text-blue-700 hover:bg-blue-100 rounded-full transition-colors mb-1"
-                                          title="Add team to this position"
-                                        >
-                                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                          </svg>
-                                        </button>
-                                        <div className="text-xs font-medium text-gray-600">Add Team</div>
-                                        <div className="text-xs text-gray-500">or drop here</div>
-                                      </div>
-                                    ) : (
-                                      <div className="text-center">-</div>
-                                    )}
-                                  </div>
-                                );
-                              }
-                            })()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            </CardContent>
-          </Card>
-            );
-            
-            // Add insert tier button after the last tier
-            if (tierIndex === tiersToRender.length - 1) {
-              if (isEditScheduleMode && userProfile?.is_admin) {
-                elements.push(
-                  <div key={`insert-after-${tierIndex}`} className="flex justify-center py-1">
-                    <button
-                      onClick={() => insertTierAtPosition(tierIndex + 1)}
-                      className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-dashed border-blue-300 hover:border-blue-500 rounded-md transition-all duration-200"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Insert Tier
-                    </button>
-                  </div>
-                );
-              }
-            }
-          });
-          
-          return elements;
-        })())}
+        {/* Show message when no weekly schedule exists */}
+        {weeklyTiers.length === 0 && (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-bold text-[#6F6F6F] mb-4">No Schedule Generated</h3>
+            <p className="text-[#6F6F6F] mb-4">This week doesn't have a schedule yet. Generate a schedule from the Teams page.</p>
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
@@ -2635,10 +2429,10 @@ export function AdminLeagueSchedule({ mockSchedule, onScheduleUpdate, leagueId, 
           onClose={handleModalClose}
           tier={selectedTier}
           tierIndex={selectedTierIndex}
-          allTiers={mockSchedule[0]?.tiers || []}
+          allTiers={[]}
           leagueId={leagueId}
           leagueName={leagueName}
-          onSave={editingWeeklyTier ? handleSaveWeeklyTier : handleTierSave}
+          onSave={handleSaveWeeklyTier}
         />
       )}
 
