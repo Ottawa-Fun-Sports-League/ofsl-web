@@ -121,7 +121,7 @@ serve(async (req: Request) => {
     // Verify target league exists
     const { data: targetLeague, error: targetLeagueError } = await supabase
       .from('leagues')
-      .select('id, name, sport, is_active')
+      .select('id, name, active')
       .eq('id', targetLeagueId)
       .single()
 
@@ -137,7 +137,7 @@ serve(async (req: Request) => {
     }
 
     // Check if target league is active
-    if (!targetLeague.is_active) {
+    if (!targetLeague.active) {
       return new Response(
         JSON.stringify({ 
           error: "Cannot transfer to inactive league",

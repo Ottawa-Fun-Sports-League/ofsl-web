@@ -21,8 +21,7 @@ interface TransferTeamModalProps {
 interface League {
   id: number;
   name: string;
-  sport: string;
-  is_active: boolean;
+  active: boolean;
 }
 
 export function TransferTeamModal({ isOpen, onClose, team, onSuccess }: TransferTeamModalProps) {
@@ -44,10 +43,26 @@ export function TransferTeamModal({ isOpen, onClose, team, onSuccess }: Transfer
   const fetchActiveLeagues = async () => {
     try {
       setFetchingLeagues(true);
+      
+      // First get the current league's sport_id
+      const { data: currentLeague, error: currentLeagueError } = await supabase
+        .from('leagues')
+        .select('sport_id')
+        .eq('id', team.league_id)
+        .single();
+      
+      if (currentLeagueError || !currentLeague) {
+        console.error('Error fetching current league:', currentLeagueError);
+        showToast('Failed to fetch league information', 'error');
+        return;
+      }
+      
+      // Then fetch leagues with the same sport
       const { data, error } = await supabase
         .from('leagues')
-        .select('id, name, sport, is_active')
-        .eq('is_active', true)
+        .select('id, name, active')
+        .eq('active', true)
+        .eq('sport_id', currentLeague.sport_id)
         .neq('id', team.league_id)
         .order('name');
 
@@ -118,22 +133,22 @@ export function TransferTeamModal({ isOpen, onClose, team, onSuccess }: Transfer
   const selectedLeague = leagues.find(l => l.id.toString() === selectedLeagueId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <Card className="w-full max-w-lg mx-4">
-        <CardHeader className="relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <Card className="w-full max-w-lg mx-4 bg-white">
+        <CardHeader className="relative bg-white border-b">
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
+            className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 transition-colors"
             disabled={loading}
           >
             <X className="h-5 w-5" />
           </button>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900">
             <Shield className="h-5 w-5 text-blue-600" />
             Transfer Team to Different League
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 bg-white">
           {/* Current League Info */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="text-sm text-gray-600 mb-1">Current Assignment</div>
@@ -146,21 +161,25 @@ export function TransferTeamModal({ isOpen, onClose, team, onSuccess }: Transfer
           {/* Target League Selection */}
           <div className="space-y-2">
             <label htmlFor="target-league" className="block text-sm font-medium text-gray-700">
-              Transfer to League *
+              Transfer to League * <span className="text-xs text-gray-500">(same sport only)</span>
             </label>
             <select
               id="target-league"
               value={selectedLeagueId}
               onChange={(e) => setSelectedLeagueId(e.target.value)}
-              disabled={loading || fetchingLeagues}
+              disabled={loading || fetchingLeagues || leagues.length === 0}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#B20000] focus:border-[#B20000] disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="">
-                {fetchingLeagues ? "Loading leagues..." : "Select target league"}
+                {fetchingLeagues 
+                  ? "Loading leagues..." 
+                  : leagues.length === 0 
+                    ? "No other leagues available for this sport"
+                    : "Select target league"}
               </option>
               {leagues.map((league) => (
                 <option key={league.id} value={league.id.toString()}>
-                  {league.name} ({league.sport})
+                  {league.name}
                 </option>
               ))}
             </select>
