@@ -1,41 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
-import { MapPin, Clock, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../contexts/AuthContext';
 import { TierEditModal } from './TierEditModal';
 import { AddPlayoffWeeksModal } from './AddPlayoffWeeksModal';
 import { AddTeamModal } from './AddTeamModal';
-import { DynamicTierTeams } from './DynamicTierTeams';
-import { getPositionsForFormat } from '../constants/formats';
-import { SubmitScoresModal } from '../../LeagueDetailPage/components/SubmitScoresModal';
-import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../contexts/AuthContext';
+import type { WeeklyScheduleTier, TeamPositionId } from '../types';
 import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
-
-
-interface WeeklyScheduleTier {
-  id: number;
-  tier_number: number;
-  location: string;
-  time_slot: string;
-  court: string;
-  format: string;
-  team_a_name: string | null;
-  team_a_ranking: number | null;
-  team_b_name: string | null;
-  team_b_ranking: number | null;
-  team_c_name: string | null;
-  team_c_ranking: number | null;
-  team_d_name: string | null;
-  team_d_ranking: number | null;
-  team_e_name: string | null;
-  team_e_ranking: number | null;
-  team_f_name: string | null;
-  team_f_ranking: number | null;
-  is_completed: boolean;
-  no_games?: boolean;
-  is_playoff?: boolean;
-  [key: string]: string | number | boolean | null | undefined;
-}
+import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../utils/formatUtils';
+import { getTeamForPosition } from '../utils/scheduleLogic';
+import { addTierToAllWeeks, removeTierFromAllWeeks } from '../database/scheduleDatabase';
+import { calculateCurrentWeekToDisplay } from '../utils/weekCalculation';
 
 interface AdminLeagueScheduleProps {
   leagueId: string;
@@ -45,32 +21,44 @@ interface AdminLeagueScheduleProps {
 export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueScheduleProps) {
   const { userProfile } = useAuth();
   
+  // Core state
+  const [currentWeek, setCurrentWeek] = useState(1);
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [weeklyTiers, setWeeklyTiers] = useState<WeeklyScheduleTier[]>([]);
+  const [loadingWeekData, setLoadingWeekData] = useState(false);
+  const [leagueInfo, setLeagueInfo] = useState<{
+    start_date: string | null;
+    end_date: string | null; 
+    playoff_weeks: number;
+  } | null>(null);
+  const [week1TierStructure, setWeek1TierStructure] = useState<WeeklyScheduleTier[]>([]);
   
+  // Admin-specific state
+  const [isEditScheduleMode, setIsEditScheduleMode] = useState(false);
+  const [noGamesWeek, setNoGamesWeek] = useState(false);
+  const [savingNoGames, setSavingNoGames] = useState(false);
+  
+  // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
-  const [selectedTierIndex, setSelectedTierIndex] = useState<number>(-1);
+  const [editingTierIndex, setEditingTierIndex] = useState<number>(-1);
   const [editingWeeklyTier, setEditingWeeklyTier] = useState<WeeklyScheduleTier | null>(null);
-  const [, setDefaults] = useState<{location?: string, time?: string, court?: string}>({});
-  
-  // Submit Scores modal state
-  const [selectedTierForScores, setSelectedTierForScores] = useState<WeeklyScheduleTier | null>(null);
-  const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
-  
-  // Team reordering state
-  const [isEditScheduleMode, setIsEditScheduleMode] = useState(false);
-  const [showAddPlayoffModal, setShowAddPlayoffModal] = useState(false);
+  const [addPlayoffModalOpen, setAddPlayoffModalOpen] = useState(false);
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
-  const [addTeamModalData, setAddTeamModalData] = useState<{ tierIndex: number; position: string } | null>(null);
-  
-  // Legacy drag state variables (keep for compatibility)
-  const [draggedTeam, setDraggedTeam] = useState<{
-    name: string;
-    ranking: number;
-    fromTier: number;
-    fromPosition: string;
+  const [addTeamModalData, setAddTeamModalData] = useState<{
+    tierIndex: number;
+    position: string;
   } | null>(null);
 
-  // Simple drag and drop state
+  // Team deletion confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<{
+    tierIndex: number;
+    position: string;
+    teamName: string;
+  } | null>(null);
+
+  // Drag and drop state for team management
   const [dragState, setDragState] = useState<{
     isDragging: boolean;
     draggedTeam: string | null;
@@ -90,328 +78,136 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     mouseX: 0,
     mouseY: 0
   });
+
+  // Auto-scroll functionality for drag and drop
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  
-  
-  // Delete team confirmation state
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [teamToDelete, setTeamToDelete] = useState<{
-    tierIndex: number;
-    position: string;
-    teamName: string;
-  } | null>(null);
-  
-  // Position for adding team
-  
-  // Week management state
-  const [currentWeek, setCurrentWeek] = useState(1);
-  const [startDate, setStartDate] = useState<string | null>(null);
-  const [leagueStartDate, setLeagueStartDate] = useState<string | null>(null);
-  const [leagueEndDate, setLeagueEndDate] = useState<string | null>(null);
-  const [maxWeeks, setMaxWeeks] = useState(10); // Default to 10 weeks
-  const [currentPlayoffWeeks, setCurrentPlayoffWeeks] = useState(0);
-  
-  // Weekly schedule data state
-  const [weeklyTiers, setWeeklyTiers] = useState<WeeklyScheduleTier[]>([]);
-  const [loadingWeekData, setLoadingWeekData] = useState(false);
-  const [week1TierStructure, setWeek1TierStructure] = useState<WeeklyScheduleTier[]>([]);
-  const [noGamesWeek, setNoGamesWeek] = useState(false);
-  const [savingNoGames, setSavingNoGames] = useState(false);
-  
-  // Drag scrolling state
-  const scrollAnimationRef = useRef<number | null>(null);
-  const dragOverThrottleRef = useRef<NodeJS.Timeout | null>(null);
+  const startAutoScroll = (direction: 'up' | 'down') => {
+    if (scrollIntervalRef.current) return; // Already scrolling
+    
+    const scrollAmount = direction === 'up' ? -10 : 10;
+    scrollIntervalRef.current = setInterval(() => {
+      window.scrollBy(0, scrollAmount);
+    }, 16); // ~60fps
+  };
+
+  const stopAutoScroll = () => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+  };
+
+  const handleDragMouseMove = (e: MouseEvent) => {
+    if (!dragState.isDragging) return;
+
+    const scrollZoneHeight = 100; // 100px scroll zones at top and bottom
+    const viewportHeight = window.innerHeight;
+    const mouseY = e.clientY;
+
+    // Check if mouse is in scroll zones
+    if (mouseY < scrollZoneHeight) {
+      // Top scroll zone - scroll up
+      startAutoScroll('up');
+    } else if (mouseY > viewportHeight - scrollZoneHeight) {
+      // Bottom scroll zone - scroll down
+      startAutoScroll('down');
+    } else {
+      // Not in scroll zone - stop scrolling
+      stopAutoScroll();
+    }
+
+    // Update drag state with mouse position
+    setDragState(prev => ({
+      ...prev,
+      mouseX: e.clientX,
+      mouseY: e.clientY
+    }));
+  };
+
+  // Setup drag event listeners
+  useEffect(() => {
+    if (dragState.isDragging) {
+      document.addEventListener('dragover', handleDragMouseMove);
+      return () => {
+        document.removeEventListener('dragover', handleDragMouseMove);
+        stopAutoScroll();
+      };
+    }
+  }, [dragState.isDragging]);
+
+  // Cleanup scroll interval on unmount
+  useEffect(() => {
+    return () => {
+      stopAutoScroll();
+    };
+  }, []);
 
   useEffect(() => {
-    loadDefaults();
-    loadLeagueDates();
+    loadWeekStartDate();
     loadWeeklySchedule(currentWeek);
     loadWeek1Structure();
+    loadLeagueInfo();
   }, [leagueId]);
   
-  // Load weekly schedule data when week changes
   useEffect(() => {
     loadWeeklySchedule(currentWeek);
   }, [currentWeek]);
 
-
-  const enterEditScheduleMode = () => {
-    setIsEditScheduleMode(true);
-  };
-
-  const exitEditScheduleMode = () => {
-    setIsEditScheduleMode(false);
-    setDraggedTeam(null);
-  };
-
-  const saveScheduleChanges = () => {
-    setIsEditScheduleMode(false);
-    setDraggedTeam(null);
-  };
-
-
-  // REMOVED: Old tier defaults shifting function
-
-  // REMOVED: Old tier defaults shifting function
-
-  // Additional stub functions
-
-  const confirmDeleteTeam = () => {
-    console.log('confirmDeleteTeam called');
-  };
-
-  // REMOVED: Old broken tier removal function
-
-  // REMOVED: Old tier gap fixing function
-
-  // Edge scrolling optimization - only working method during HTML5 drag
-  useEffect(() => {
-    // HTML5 drag blocks keyboard/wheel events, so we focus on edge scrolling
-    // which works reliably via mouse position tracking
-    return () => {
-      // Cleanup any remaining animations on unmount
-      if (scrollAnimationRef.current) {
-        cancelAnimationFrame(scrollAnimationRef.current);
-        scrollAnimationRef.current = null;
-      }
-    };
-  }, []);
-
-  // Create invisible scroll zones during drag for proper edge scrolling
-  useEffect(() => {
-    let scrollZones: HTMLDivElement[] = [];
-
-    const createScrollZones = () => {
-      // Remove existing zones
-      scrollZones.forEach(zone => {
-        if (zone.parentNode) zone.parentNode.removeChild(zone);
-      });
-      scrollZones = [];
-
-      // Create top scroll zone (15% of viewport height)
-      const zoneHeight = Math.floor(window.innerHeight * 0.15);
-      const topZone = document.createElement('div');
-      topZone.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: ${zoneHeight}px;
-        z-index: 1000;
-        pointer-events: auto;
-        background: rgba(59, 130, 246, 0.1);
-      `;
-      
-      topZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const viewportY = e.clientY;
-        console.log('Top zone dragover during drag:', viewportY);
-        startEdgeScrolling(viewportY);
-      });
-
-      topZone.addEventListener('dragleave', () => {
-        console.log('Left top zone - stopping scroll');
-        stopEdgeScrolling();
-      });
-
-      // Create bottom scroll zone (same height as top)
-      const bottomZone = document.createElement('div');
-      bottomZone.style.cssText = `
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: ${zoneHeight}px;
-        z-index: 1000;
-        pointer-events: auto;
-        background: rgba(59, 130, 246, 0.1);
-      `;
-      
-      bottomZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const viewportY = e.clientY;
-        console.log('Bottom zone dragover during drag:', viewportY);
-        startEdgeScrolling(viewportY);
-      });
-
-      bottomZone.addEventListener('dragleave', () => {
-        console.log('Left bottom zone - stopping scroll');
-        stopEdgeScrolling();
-      });
-
-      // Add zones to document
-      document.body.appendChild(topZone);
-      document.body.appendChild(bottomZone);
-      scrollZones.push(topZone, bottomZone);
-    };
-
-    const removeScrollZones = () => {
-      scrollZones.forEach(zone => {
-        if (zone.parentNode) zone.parentNode.removeChild(zone);
-      });
-      scrollZones = [];
-    };
-
-    if (dragState.draggedTeam && isEditScheduleMode) {
-      createScrollZones();
-    } else {
-      removeScrollZones();
-    }
-
-    return () => {
-      removeScrollZones();
-    };
-  }, [dragState.draggedTeam, isEditScheduleMode]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopEdgeScrolling();
-      if (dragOverThrottleRef.current) {
-        clearTimeout(dragOverThrottleRef.current);
-      }
-    };
-  }, []);
-
-  const loadDefaults = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('league_schedules')
-        .select('defaults')
-        .eq('league_id', parseInt(leagueId))
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading defaults:', error);
-      } else if (data?.defaults) {
-        setDefaults(data.defaults);
-      }
-    } catch (error) {
-      console.error('Error loading defaults:', error);
-    }
-  };
-
-  const loadLeagueDates = async () => {
+  const loadLeagueInfo = async () => {
     try {
       const { data, error } = await supabase
         .from('leagues')
-        .select('start_date, end_date, day_of_week, playoff_weeks')
+        .select('start_date, end_date, playoff_weeks, day_of_week')
+        .eq('id', parseInt(leagueId))
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setLeagueInfo({
+          start_date: data.start_date,
+          end_date: data.end_date,
+          playoff_weeks: data.playoff_weeks || 0
+        });
+        
+        // Calculate and set the current week based on actual date
+        const calculatedWeek = calculateCurrentWeekToDisplay(
+          data.start_date,
+          data.end_date,
+          data.day_of_week
+        );
+        setCurrentWeek(calculatedWeek);
+      }
+    } catch (error) {
+      console.error('Error loading league info:', error);
+    }
+  };
+
+  const loadWeekStartDate = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('leagues')
+        .select('start_date')
         .eq('id', parseInt(leagueId))
         .single();
 
       if (error) {
-        console.error('Error loading league dates:', error);
+        console.error('Error loading league start date:', error);
         return;
       }
 
-      if (data) {
-        setLeagueStartDate(data.start_date);
-        setLeagueEndDate(data.end_date);
-        
-        // Calculate max weeks based on league start/end dates only
-        if (data.start_date && data.end_date) {
-          // Parse dates as local dates to avoid timezone shifts
-          const startDate = new Date(data.start_date + 'T00:00:00');
-          const endDate = new Date(data.end_date + 'T00:00:00');
-          const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-          const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-          const playoffWeeks = data.playoff_weeks || 0; // Database default should now be 0
-          const totalWeeks = regularSeasonWeeks + playoffWeeks;
-          
-          console.log(`Admin: Setting maxWeeks to ${totalWeeks} (${regularSeasonWeeks} regular + ${playoffWeeks} playoff)`);
-          setMaxWeeks(totalWeeks);
-          setCurrentPlayoffWeeks(playoffWeeks);
-        }
-
-        // Use league's start_date directly as the week start date
-        if (data.start_date) {
-          setStartDate(data.start_date);
-        }
+      if (data?.start_date) {
+        setStartDate(data.start_date);
       }
     } catch (error) {
-      console.error('Error loading league dates:', error);
-    }
-  };
-
-  const getWeekDate = (weekNumber: number): string => {
-    if (!startDate) return 'League start date not set';
-    
-    // Always calculate from start date for consistency
-    // This ensures both admin and public views show the same dates
-    const baseDate = new Date(startDate + 'T00:00:00');
-    const weekOffset = weekNumber - 1;
-    
-    baseDate.setDate(baseDate.getDate() + weekOffset * 7);
-    
-    return baseDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const canNavigateToWeek = (weekNumber: number): boolean => {
-    return weekNumber >= 1 && weekNumber <= maxWeeks;
-  };
-
-  const isPlayoffWeek = (weekNumber: number): boolean => {
-    if (!leagueStartDate || !leagueEndDate) return false;
-    
-    const start = new Date(leagueStartDate + 'T00:00:00');
-    const end = new Date(leagueEndDate + 'T00:00:00');
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-    
-    return weekNumber > regularSeasonWeeks;
-  };
-
-  const handlePlayoffWeeksAdded = (weeksAdded: number) => {
-    // Reload league dates to get updated playoff weeks
-    loadLeagueDates();
-    // Optionally show success message
-    console.log(`Added ${weeksAdded} playoff weeks to the schedule`);
-  };
-
-  const handleNoGamesChange = async (noGames: boolean) => {
-    try {
-      setSavingNoGames(true);
-      console.log(`Setting no_games flag for week ${currentWeek} to:`, noGames);
-      
-      const { error } = await supabase.rpc('set_week_no_games', {
-        p_league_id: parseInt(leagueId),
-        p_week_number: currentWeek,
-        p_no_games: noGames
-      });
-
-      if (error) {
-        console.error('Error setting no_games flag:', error);
-        return;
-      }
-
-      setNoGamesWeek(noGames);
-      console.log('Successfully set no_games flag');
-      
-      // Reload the weekly schedule to reflect changes
-      await loadWeeklySchedule(currentWeek);
-      
-    } catch (error) {
-      console.error('Error setting no_games flag:', error);
-    } finally {
-      setSavingNoGames(false);
-    }
-  };
-
-  const navigateToWeek = (weekNumber: number) => {
-    if (canNavigateToWeek(weekNumber)) {
-      setCurrentWeek(weekNumber);
+      console.error('Error loading league start date:', error);
     }
   };
 
   const loadWeeklySchedule = async (weekNumber: number) => {
     try {
       setLoadingWeekData(true);
-      console.log('Loading weekly schedule for week:', weekNumber, 'league:', leagueId);
       
       const { data, error } = await supabase
         .from('weekly_schedules')
@@ -426,10 +222,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         return;
       }
 
-      console.log('Loaded weekly schedule data:', data);
       setWeeklyTiers(data || []);
       
-      // Set no_games flag based on first tier (all tiers should have same flag)
+      // Set no_games flag based on first tier
       const firstTier = data && data.length > 0 ? data[0] : null;
       setNoGamesWeek(firstTier?.no_games || false);
       
@@ -444,7 +239,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
   const loadWeek1Structure = async () => {
     try {
-      console.log('Loading Week 1 structure for future week templates, league:', leagueId);
       const { data, error } = await supabase
         .from('weekly_schedules')
         .select('tier_number, location, time_slot, court, format')
@@ -457,11 +251,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         return;
       }
 
-      console.log('Loaded Week 1 structure:', data);
       if (data) {
-        // Convert to template format without team assignments
         const templateTiers = data.map((tier, index) => ({
-          id: -index - 1, // Negative IDs for templates
+          id: -index - 1,
           tier_number: tier.tier_number,
           location: tier.location,
           time_slot: tier.time_slot,
@@ -479,7 +271,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           team_e_ranking: null,
           team_f_name: null,
           team_f_ranking: null,
-          is_completed: false
+          is_completed: false,
+          no_games: false,
+          is_playoff: false
         }));
         setWeek1TierStructure(templateTiers);
       }
@@ -488,1245 +282,960 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     }
   };
 
-
-
-  const handleEditWeeklyTier = (weeklyTier: WeeklyScheduleTier, tierIndex: number) => {
-    // Convert WeeklyScheduleTier to Tier format for the modal
-    const convertedTier: Tier = {
-      tierNumber: weeklyTier.tier_number,
-      location: weeklyTier.location,
-      time: weeklyTier.time_slot,
-      court: weeklyTier.court,
-      format: weeklyTier.format,
-      teams: {
-        A: weeklyTier.team_a_name ? { name: weeklyTier.team_a_name, ranking: weeklyTier.team_a_ranking || 0 } : null,
-        B: weeklyTier.team_b_name ? { name: weeklyTier.team_b_name, ranking: weeklyTier.team_b_ranking || 0 } : null,
-        C: weeklyTier.team_c_name ? { name: weeklyTier.team_c_name, ranking: weeklyTier.team_c_ranking || 0 } : null,
-        D: weeklyTier.team_d_name ? { name: weeklyTier.team_d_name, ranking: weeklyTier.team_d_ranking || 0 } : null,
-        E: weeklyTier.team_e_name ? { name: weeklyTier.team_e_name, ranking: weeklyTier.team_e_ranking || 0 } : null,
-        F: weeklyTier.team_f_name ? { name: weeklyTier.team_f_name, ranking: weeklyTier.team_f_ranking || 0 } : null,
-      },
-      courts: {
-        A: weeklyTier.court,
-        B: weeklyTier.court,
-        C: weeklyTier.court,
-        D: weeklyTier.court,
-        E: weeklyTier.court,
-        F: weeklyTier.court,
-      }
-    };
+  // Helper functions
+  
+  const getWeekDate = (weekNumber: number): string => {
+    if (!startDate) return 'League start date not set';
     
-    setSelectedTier(convertedTier);
-    setSelectedTierIndex(tierIndex);
-    setEditModalOpen(true);
-    setEditingWeeklyTier(weeklyTier); // Store the original weekly tier for saving
+    const baseDate = new Date(startDate + 'T00:00:00');
+    const weekOffset = weekNumber - 1;
+    
+    baseDate.setDate(baseDate.getDate() + weekOffset * 7);
+    
+    return baseDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+  
+  const canNavigateToWeek = (weekNumber: number): boolean => {
+    if (weekNumber < 1) return false;
+    if (!leagueInfo) return true;
+    
+    if (leagueInfo.start_date && leagueInfo.end_date) {
+      const start = new Date(leagueInfo.start_date + 'T00:00:00');
+      const end = new Date(leagueInfo.end_date + 'T00:00:00');
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+      const maxWeeks = regularSeasonWeeks + leagueInfo.playoff_weeks;
+      return weekNumber <= maxWeeks;
+    }
+    
+    return true;
   };
 
-  const handleCreateAndEditWeeklyTier = async (templateTier: WeeklyScheduleTier, weekNumber: number) => {
+  const isPlayoffWeek = (weekNumber: number): boolean => {
+    if (!leagueInfo || !leagueInfo.start_date || !leagueInfo.end_date) return false;
+    
+    const start = new Date(leagueInfo.start_date + 'T00:00:00');
+    const end = new Date(leagueInfo.end_date + 'T00:00:00');
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+    
+    return weekNumber > regularSeasonWeeks;
+  };
+
+
+  // Admin handlers
+  const handleEnterEditMode = () => setIsEditScheduleMode(true);
+  const handleExitEditMode = () => {
+    setIsEditScheduleMode(false);
+    setDragState(prev => ({ ...prev, isDragging: false, draggedTeam: null }));
+  };
+  const handleSaveChanges = () => setIsEditScheduleMode(false);
+
+  const handleNoGamesChange = async (noGames: boolean) => {
     try {
-      // First, create a weekly schedule entry for this week and tier if it doesn't exist
-      const { data: existingEntry } = await supabase
-        .from('weekly_schedules')
-        .select('*')
-        .eq('league_id', parseInt(leagueId))
-        .eq('week_number', weekNumber)
-        .eq('tier_number', templateTier.tier_number)
-        .single();
+      setSavingNoGames(true);
+      
+      const { error } = await supabase.rpc('set_week_no_games', {
+        p_league_id: parseInt(leagueId),
+        p_week_number: currentWeek,
+        p_no_games: noGames
+      });
 
-      let weeklyTier: WeeklyScheduleTier;
-
-      if (existingEntry) {
-        // Use existing entry
-        weeklyTier = existingEntry;
-      } else {
-        // Create new entry based on template
-        const { data: newEntry, error } = await supabase
-          .from('weekly_schedules')
-          .insert({
-            league_id: parseInt(leagueId),
-            week_number: weekNumber,
-            tier_number: templateTier.tier_number,
-            location: templateTier.location,
-            time_slot: templateTier.time_slot,
-            court: templateTier.court,
-            format: templateTier.format,
-            team_a_name: null,
-            team_a_ranking: null,
-            team_b_name: null,
-            team_b_ranking: null,
-            team_c_name: null,
-            team_c_ranking: null,
-            team_d_name: null,
-            team_d_ranking: null,
-            team_e_name: null,
-            team_e_ranking: null,
-            team_f_name: null,
-            team_f_ranking: null,
-            is_completed: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating weekly schedule entry:', error);
-          return;
-        }
-
-        weeklyTier = newEntry;
+      if (error) {
+        console.error('Error setting no_games flag:', error);
+        return;
       }
 
-      // Now edit the weekly tier (existing or newly created)
-      handleEditWeeklyTier(weeklyTier, templateTier.tier_number - 1);
+      setNoGamesWeek(noGames);
+      await loadWeeklySchedule(currentWeek);
       
     } catch (error) {
-      console.error('Error in handleCreateAndEditWeeklyTier:', error);
+      console.error('Error setting no_games flag:', error);
+    } finally {
+      setSavingNoGames(false);
     }
   };
 
-  const handleModalClose = () => {
-    setEditModalOpen(false);
-    setSelectedTier(null);
-    setSelectedTierIndex(-1);
-    setEditingWeeklyTier(null);
+  const handlePlayoffWeeksAdded = (weeksAdded: number) => {
+    loadLeagueInfo();
+    console.log(`Added ${weeksAdded} playoff weeks to the schedule`);
   };
 
-  const handleSaveWeeklyTier = async (updatedTiers: Tier[], setAsDefaultInfo?: {location: boolean, time: boolean, court: boolean}, updatedTier?: Tier) => {
-    if (!editingWeeklyTier || updatedTiers.length === 0) return;
+  // Tier management
+  const handleEditTier = (tier: WeeklyScheduleTier, tierIndex: number) => {
+    setEditingTierIndex(tierIndex);
     
-    const tierToSave = updatedTier || updatedTiers[0]; // The modal only edits one tier
+    // Convert to legacy format for modal
+    const legacyTier: Tier = {
+      tierNumber: tier.tier_number,
+      location: tier.location,
+      time: tier.time_slot,
+      court: tier.court,
+      format: tier.format,
+      teams: {
+        A: tier.team_a_name ? { name: tier.team_a_name, ranking: tier.team_a_ranking || 0 } : null,
+        B: tier.team_b_name ? { name: tier.team_b_name, ranking: tier.team_b_ranking || 0 } : null,
+        C: tier.team_c_name ? { name: tier.team_c_name, ranking: tier.team_c_ranking || 0 } : null,
+        D: tier.team_d_name ? { name: tier.team_d_name, ranking: tier.team_d_ranking || 0 } : null,
+        E: tier.team_e_name ? { name: tier.team_e_name, ranking: tier.team_e_ranking || 0 } : null,
+        F: tier.team_f_name ? { name: tier.team_f_name, ranking: tier.team_f_ranking || 0 } : null,
+      },
+      courts: { [tier.tier_number.toString()]: tier.court }
+    };
+    
+    setSelectedTier(legacyTier);
+    setEditModalOpen(true);
+    setEditingWeeklyTier(tier);
+  };
+
+  const handleAddTier = async (afterTierNumber: number) => {
+    try {
+      if (weeklyTiers.length === 0) {
+        alert('Please generate a schedule first before adding tiers.');
+        return;
+      }
+
+      // Use template from last tier or defaults
+      const tierTemplate = weeklyTiers.length > 0 ? {
+        location: weeklyTiers[weeklyTiers.length - 1].location || 'TBD',
+        time_slot: weeklyTiers[weeklyTiers.length - 1].time_slot || 'TBD',
+        court: 'TBD',
+        format: weeklyTiers[weeklyTiers.length - 1].format || '3-teams-6-sets'
+      } : {
+        location: 'TBD',
+        time_slot: 'TBD',
+        court: 'TBD',
+        format: '3-teams-6-sets'
+      };
+
+      await addTierToAllWeeks(parseInt(leagueId), currentWeek, afterTierNumber, tierTemplate);
+      await loadWeeklySchedule(currentWeek);
+    } catch (error) {
+      console.error('Error adding tier:', error);
+      alert('Failed to add tier. Please try again.');
+    }
+  };
+
+  const handleRemoveTier = async (tierNumber: number) => {
+    try {
+      // Find the tier to check for assigned teams
+      const tierToRemove = weeklyTiers.find(t => t.tier_number === tierNumber);
+      if (!tierToRemove) return;
+
+      // Check if tier has any teams assigned
+      const hasTeams = [
+        tierToRemove.team_a_name,
+        tierToRemove.team_b_name,
+        tierToRemove.team_c_name,
+        tierToRemove.team_d_name,
+        tierToRemove.team_e_name,
+        tierToRemove.team_f_name
+      ].some(teamName => teamName && teamName.trim() !== '');
+
+      if (hasTeams) {
+        alert(`Cannot remove Tier ${tierNumber} because it has teams assigned. Please remove all teams from this tier first.`);
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to remove Tier ${tierNumber}? This will remove it from all current and future weeks.`)) {
+        return;
+      }
+
+      await removeTierFromAllWeeks(parseInt(leagueId), currentWeek, tierNumber);
+      await loadWeeklySchedule(currentWeek);
+    } catch (error) {
+      console.error('Error removing tier:', error);
+      alert('Failed to remove tier. Please try again.');
+    }
+  };
+
+  // Team management
+  const handleDeleteTeam = (tierIndex: number, position: string, teamName: string) => {
+    setTeamToDelete({ tierIndex, position, teamName });
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteTeam = async () => {
+    if (!teamToDelete) return;
     
     try {
-      // Prepare team position updates
-      const teamUpdates = {
-        location: tierToSave.location,
-        time_slot: tierToSave.time,
-        court: tierToSave.court,
-        format: tierToSave.format,
-        team_a_name: tierToSave.teams?.A?.name || null,
-        team_a_ranking: tierToSave.teams?.A?.ranking || null,
-        team_b_name: tierToSave.teams?.B?.name || null,
-        team_b_ranking: tierToSave.teams?.B?.ranking || null,
-        team_c_name: tierToSave.teams?.C?.name || null,
-        team_c_ranking: tierToSave.teams?.C?.ranking || null,
-        team_d_name: tierToSave.teams?.D?.name || null,
-        team_d_ranking: tierToSave.teams?.D?.ranking || null,
-        team_e_name: tierToSave.teams?.E?.name || null,
-        team_e_ranking: tierToSave.teams?.E?.ranking || null,
-        team_f_name: tierToSave.teams?.F?.name || null,
-        team_f_ranking: tierToSave.teams?.F?.ranking || null,
+      const { tierIndex, position } = teamToDelete;
+      const tier = weeklyTiers[tierIndex];
+      const nameKey = `team_${position.toLowerCase()}_name`;
+      const rankingKey = `team_${position.toLowerCase()}_ranking`;
+
+      const { error } = await supabase
+        .from('weekly_schedules')
+        .update({
+          [nameKey]: null,
+          [rankingKey]: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tier.id);
+
+      if (error) throw error;
+
+      await loadWeeklySchedule(currentWeek);
+      setDeleteConfirmOpen(false);
+      setTeamToDelete(null);
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      alert('Failed to delete team. Please try again.');
+    }
+  };
+
+  const handleAddTeam = (tierIndex: number, position: string) => {
+    setAddTeamModalData({ tierIndex, position });
+    setAddTeamModalOpen(true);
+  };
+
+  // Function to get a team's current ranking from standings (same logic as useLeagueStandings)
+  const getTeamCurrentRanking = async (teamName: string, leagueId: number, _currentWeek: number): Promise<number> => {
+    try {
+      // Use the same logic as useLeagueStandings to determine team rankings
+      // This ensures consistency between the standings display and schedule rankings
+
+      // Get all teams for this league
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name, created_at')
+        .eq('league_id', leagueId)
+        .eq('active', true);
+
+      if (teamsError) throw teamsError;
+
+      // Get current schedule data for rankings (from league_schedules table)
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from('league_schedules')
+        .select('schedule_data')
+        .eq('league_id', leagueId)
+        .maybeSingle();
+
+      if (scheduleError && scheduleError.code !== 'PGRST116') {
+        console.warn('Error loading schedule data:', scheduleError);
+      }
+
+      // Extract team rankings from schedule if available
+      const teamRankings = new Map<string, number>();
+      const scheduleExists = !!(scheduleData?.schedule_data?.tiers);
+      
+      if (scheduleExists) {
+        scheduleData.schedule_data.tiers.forEach((tier: {teams?: Record<string, {name: string; ranking: number} | null>}) => {
+          if (tier.teams) {
+            Object.values(tier.teams).forEach((team: {name: string; ranking: number} | null) => {
+              if (team && team.name && team.ranking) {
+                teamRankings.set(team.name, team.ranking);
+              }
+            });
+          }
+        });
+      }
+
+      // Create standings data (same as useLeagueStandings)
+      const standingsData = (teamsData || []).map(team => ({
+        id: team.id,
+        name: team.name,
+        created_at: team.created_at,
+        schedule_ranking: teamRankings.get(team.name)
+      }));
+
+      // Sort by schedule ranking if available, otherwise by registration order (same as useLeagueStandings)
+      const sortedStandings = standingsData.sort((a, b) => {
+        // If both teams have schedule rankings, sort by ranking
+        if (a.schedule_ranking && b.schedule_ranking) {
+          return a.schedule_ranking - b.schedule_ranking;
+        }
+        // If only one has ranking, prioritize it
+        if (a.schedule_ranking && !b.schedule_ranking) {
+          return -1;
+        }
+        if (!a.schedule_ranking && b.schedule_ranking) {
+          return 1;
+        }
+        // If neither has ranking, sort by registration order
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+
+      // Find the team's position in the sorted standings (1-based ranking)
+      const teamIndex = sortedStandings.findIndex(team => team.name === teamName);
+      if (teamIndex >= 0) {
+        return teamIndex + 1; // Convert to 1-based ranking
+      }
+
+      // Team not found - this shouldn't happen, but return a safe default
+      console.warn(`Team "${teamName}" not found in standings`);
+      return 999;
+    } catch (error) {
+      console.error('Error getting team ranking:', error);
+      return 999;
+    }
+  };
+
+  const handleAddTeamToSchedule = async (teamName: string, tierIndex: number, position: string) => {
+    try {
+      // Find the tier to add the team to
+      const targetTier = weeklyTiers[tierIndex];
+      if (!targetTier) {
+        throw new Error('Target tier not found');
+      }
+
+      // Look up the team's current ranking from the weekly schedules
+      const teamRanking = await getTeamCurrentRanking(teamName, parseInt(leagueId), currentWeek);
+
+      // Update the tier with the new team
+      const updatePayload = {
+        [`team_${position.toLowerCase()}_name`]: teamName,
+        [`team_${position.toLowerCase()}_ranking`]: teamRanking,
         updated_at: new Date().toISOString()
       };
 
-      // Check if format changed - if so, update all future weeks for this tier
-      const formatChanged = tierToSave.format !== editingWeeklyTier.format;
-      
-      if (formatChanged) {
-        // Update current week (including team positions)
-        const { error: currentWeekError } = await supabase
-          .from('weekly_schedules')
-          .update(teamUpdates)
-          .eq('id', editingWeeklyTier.id);
+      const { error } = await supabase
+        .from('weekly_schedules')
+        .update(updatePayload)
+        .eq('id', targetTier.id);
 
-        if (currentWeekError) {
-          console.error('Error updating current week tier:', currentWeekError);
-          return;
-        }
+      if (error) throw error;
 
-        // Update all future weeks for this tier (format only, preserve existing teams)
+      await loadWeeklySchedule(currentWeek);
+      setAddTeamModalOpen(false);
+      setAddTeamModalData(null);
+    } catch (error) {
+      console.error('Error adding team:', error);
+      alert('Failed to add team to schedule. Please try again.');
+    }
+  };
+
+  // Modal handlers
+  const handleModalClose = () => {
+    setEditModalOpen(false);
+    setSelectedTier(null);
+    setEditingTierIndex(-1);
+    setEditingWeeklyTier(null);
+  };
+
+  const handleSaveTier = async (_updatedTiers: Tier[], setAsDefaultInfo?: {location: boolean, time: boolean, court: boolean}, updatedTier?: Tier) => {
+    try {
+      if (!editingWeeklyTier || !updatedTier) return;
+
+      // Convert the legacy Tier format back to WeeklyScheduleTier format for database update
+      const updatePayload = {
+        location: updatedTier.location,
+        time_slot: updatedTier.time,
+        court: updatedTier.court,
+        format: updatedTier.format,
+        team_a_name: updatedTier.teams.A?.name || null,
+        team_a_ranking: updatedTier.teams.A?.ranking || null,
+        team_b_name: updatedTier.teams.B?.name || null,
+        team_b_ranking: updatedTier.teams.B?.ranking || null,
+        team_c_name: updatedTier.teams.C?.name || null,
+        team_c_ranking: updatedTier.teams.C?.ranking || null,
+        team_d_name: updatedTier.teams.D?.name || null,
+        team_d_ranking: updatedTier.teams.D?.ranking || null,
+        team_e_name: updatedTier.teams.E?.name || null,
+        team_e_ranking: updatedTier.teams.E?.ranking || null,
+        team_f_name: updatedTier.teams.F?.name || null,
+        team_f_ranking: updatedTier.teams.F?.ranking || null,
+        updated_at: new Date().toISOString()
+      };
+
+      // Update the current week's tier
+      const { error: currentWeekError } = await supabase
+        .from('weekly_schedules')
+        .update(updatePayload)
+        .eq('id', editingWeeklyTier.id);
+
+      if (currentWeekError) throw currentWeekError;
+
+      // Only apply changes to future weeks if "set as default" was checked for specific fields
+      if (setAsDefaultInfo && (setAsDefaultInfo.location || setAsDefaultInfo.time || setAsDefaultInfo.court)) {
+        const futureWeeksPayload: Record<string, string> = {
+          updated_at: new Date().toISOString()
+        };
+
+        // Only update fields that were marked as "set as default"
+        if (setAsDefaultInfo.location) futureWeeksPayload.location = updatedTier.location;
+        if (setAsDefaultInfo.time) futureWeeksPayload.time_slot = updatedTier.time;
+        if (setAsDefaultInfo.court) futureWeeksPayload.court = updatedTier.court;
+
         const { error: futureWeeksError } = await supabase
           .from('weekly_schedules')
-          .update({
-            format: tierToSave.format,
-            location: tierToSave.location,
-            time_slot: tierToSave.time,
-            court: tierToSave.court,
+          .update(futureWeeksPayload)
+          .eq('league_id', parseInt(leagueId))
+          .eq('tier_number', editingWeeklyTier.tier_number)
+          .gt('week_number', currentWeek);
+
+        if (futureWeeksError) throw futureWeeksError;
+      }
+
+      // Apply format changes to future weeks only if format actually changed
+      if (updatedTier.format !== editingWeeklyTier.format) {
+        const { error: formatUpdateError } = await supabase
+          .from('weekly_schedules')
+          .update({ 
+            format: updatedTier.format,
             updated_at: new Date().toISOString()
           })
           .eq('league_id', parseInt(leagueId))
           .eq('tier_number', editingWeeklyTier.tier_number)
           .gt('week_number', currentWeek);
 
-        if (futureWeeksError) {
-          console.error('Error updating future weeks:', futureWeeksError);
-          return;
-        }
-      } else {
-        // No format change - just update the current week
-        const { error } = await supabase
-          .from('weekly_schedules')
-          .update(teamUpdates)
-          .eq('id', editingWeeklyTier.id);
-
-        if (error) {
-          console.error('Error updating weekly tier:', error);
-          return;
-        }
+        if (formatUpdateError) throw formatUpdateError;
       }
 
-      // If any defaults were set, update both the tier-specific defaults AND all future weeks for this tier
-      if (setAsDefaultInfo && (setAsDefaultInfo.location || setAsDefaultInfo.time || setAsDefaultInfo.court)) {
-        // First, get current defaults from league_schedules
-        const { data: currentDefaults } = await supabase
-          .from('league_schedules')
-          .select('defaults')
-          .eq('league_id', parseInt(leagueId))
-          .maybeSingle();
-          
-        const allDefaults = currentDefaults?.defaults || {};
-        const tierNumber = editingWeeklyTier.tier_number.toString();
-        
-        // Get current tier-specific defaults or create empty object
-        const tierDefaults = allDefaults[tierNumber] || {};
-        
-        // Update only the specified tier's defaults
-        const newTierDefaults = { ...tierDefaults };
-        if (setAsDefaultInfo.location) newTierDefaults.location = tierToSave.location;
-        if (setAsDefaultInfo.time) newTierDefaults.time = tierToSave.time;
-        if (setAsDefaultInfo.court) newTierDefaults.court = tierToSave.court;
-        
-        // Update the tier-specific defaults in the main defaults object
-        const newAllDefaults = { ...allDefaults };
-        newAllDefaults[tierNumber] = newTierDefaults;
-        
-        // Save updated defaults to league_schedules
-        const { error: defaultsError } = await supabase
-          .from('league_schedules')
-          .update({
-            defaults: newAllDefaults,
-            updated_at: new Date().toISOString()
-          })
-          .eq('league_id', parseInt(leagueId));
-          
-        if (defaultsError) {
-          console.error('Error updating tier-specific defaults:', defaultsError);
-        } else {
-          console.log(`Updated Tier ${tierNumber} defaults:`, newTierDefaults);
-          console.log('All defaults now:', newAllDefaults);
-        }
-        
-        // Second, update ALL weeks for this tier when setting as default
-        // This ensures the default applies to all instances of this tier across the entire season
-        const updateData: Record<string, string | number | null> = {};
-        if (setAsDefaultInfo.location) updateData.location = tierToSave.location;
-        if (setAsDefaultInfo.time) updateData.time_slot = tierToSave.time;
-        if (setAsDefaultInfo.court) updateData.court = tierToSave.court;
-        
-        console.log(`Applying defaults to ALL weeks for Tier ${editingWeeklyTier.tier_number}:`, updateData);
-        
-        // Apply to ALL weeks (not just future weeks) when setting as default
-        const { error: futureError } = await supabase
-          .from('weekly_schedules')
-          .update({
-            ...updateData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('league_id', parseInt(leagueId))
-          .eq('tier_number', editingWeeklyTier.tier_number);
-          // No week filter - applies to ALL weeks for this tier
-
-        if (futureError) {
-          console.error('Error updating all weeks:', futureError);
-        } else {
-          const fieldsUpdated = [
-            setAsDefaultInfo.location ? 'location' : '',
-            setAsDefaultInfo.time ? 'time' : '',
-            setAsDefaultInfo.court ? 'court' : ''
-          ].filter(f => f).join(', ');
-          console.log(`Successfully applied ${fieldsUpdated} to ALL weeks for Tier ${editingWeeklyTier.tier_number}`);
-        }
-      }
-
-      // Reload the weekly schedule to reflect changes
       await loadWeeklySchedule(currentWeek);
-      
+      handleModalClose();
     } catch (error) {
-      console.error('Error saving weekly tier:', error);
+      console.error('Error saving tier:', error);
+      alert('Failed to save tier changes. Please try again.');
     }
   };
 
-
-
-  // Delete team functions
-
-
-  const cancelDeleteTeam = () => {
-    setDeleteConfirmOpen(false);
-    setTeamToDelete(null);
-  };
-
-  // Add team functions
-
-  // Start dragging with mouse events
-  const startDrag = (teamName: string, tierIndex: number, position: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    setDragState({
-      isDragging: true,
-      draggedTeam: teamName,
-      fromTier: tierIndex,
-      fromPosition: position,
-      hoverTier: null,
-      hoverPosition: null,
-      mouseX: event.clientX,
-      mouseY: event.clientY
-    });
-  };
-
-  // Handle hover over drop zone
-  const handleDragHover = (tierIndex: number, position: string) => {
-    if (!dragState.isDragging) return;
+  // Team rendering function with admin controls
+  const renderTeamSlot = (tier: WeeklyScheduleTier, position: string, tierIndex: number) => {
+    const team = getTeamForPosition(tier, position as TeamPositionId);
+    const maxTeamsForFormat = getTeamCountForFormat(tier.format);
+    const positionIndex = ['A', 'B', 'C', 'D', 'E', 'F'].indexOf(position);
     
-    setDragState(prev => ({
-      ...prev,
-      hoverTier: tierIndex,
-      hoverPosition: position
-    }));
-  };
-
-  // Handle mouse move during drag
-  const handleMouseMove = (event: MouseEvent) => {
-    if (!dragState.isDragging) return;
-    
-    setDragState(prev => ({
-      ...prev,
-      mouseX: event.clientX,
-      mouseY: event.clientY
-    }));
-  };
-
-  // Handle mouse up (drop)
-  const handleMouseUp = async (event: MouseEvent) => {
-    if (!dragState.isDragging) return;
-
-    // Find the element under the cursor
-    const elementUnderCursor = document.elementFromPoint(event.clientX, event.clientY);
-    const dropZone = elementUnderCursor?.closest('[data-drop-zone]');
-    
-    if (dropZone) {
-      const tierIndex = parseInt(dropZone.getAttribute('data-tier-index') || '0');
-      const position = dropZone.getAttribute('data-position') || 'A';
-      
-      // Perform the actual move (async)
-      await moveTeam(dragState.fromTier!, dragState.fromPosition!, tierIndex, position);
-    }
-
-    // Clear drag state
-    setDragState({
-      isDragging: false,
-      draggedTeam: null,
-      fromTier: null,
-      fromPosition: null,
-      hoverTier: null,
-      hoverPosition: null,
-      mouseX: 0,
-      mouseY: 0
-    });
-  };
-
-  // Add global mouse event listeners
-  useEffect(() => {
-    if (dragState.isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [dragState.isDragging, dragState.fromTier, dragState.fromPosition]);
-
-  // Simple team move function with database persistence
-  const moveTeam = async (fromTier: number, fromPos: string, toTier: number, toPos: string) => {
-    console.log(`Moving team from T${fromTier + 1}${fromPos} to T${toTier + 1}${toPos}`);
-    
-    // Don't allow moving to the same position
-    if (fromTier === toTier && fromPos === toPos) {
-      console.log('Same position - no move needed');
-      return;
+    // Don't render slots beyond what the format supports
+    if (positionIndex >= maxTeamsForFormat) {
+      return null;
     }
     
-    // Find the team being moved
-    const sourceTier = weeklyTiers[fromTier];
-    const targetTier = weeklyTiers[toTier];
+    const isDragTarget = dragState.hoverTier === tierIndex && dragState.hoverPosition === position;
+    const isBeingDragged = dragState.fromTier === tierIndex && dragState.fromPosition === position && dragState.isDragging;
+    const isDragInProgress = dragState.isDragging && dragState.draggedTeam;
+    const isValidDropTarget = isDragInProgress && !team?.name && !isBeingDragged;
+    const isInvalidDropTarget = isDragInProgress && team?.name && !isBeingDragged;
     
-    if (!sourceTier || !targetTier) {
-      console.error('Invalid tier index');
-      return;
-    }
-    
-    const teamField = `team_${fromPos.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-    const rankingField = `team_${fromPos.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
-    
-    const teamName = (sourceTier as Record<string, string | number | null>)[teamField] as string;
-    const teamRanking = (sourceTier as Record<string, string | number | null>)[rankingField] as number;
-    
-    if (!teamName) return;
-
-    // Check if target position is occupied
-    const targetField = `team_${toPos.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-    const targetRankingField = `team_${toPos.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
-    const targetTeam = (targetTier as Record<string, string | number | null>)[targetField] as string;
-    
-    // Don't allow dropping on occupied positions
-    if (targetTeam) {
-      console.log('Target position is occupied - move not allowed');
-      return;
-    }
-
-    // Create new tiers array
-    const newTiers = [...weeklyTiers];
-    
-    // Clear source position
-    (newTiers[fromTier] as Record<string, string | number | null>)[teamField] = null;
-    (newTiers[fromTier] as Record<string, string | number | null>)[rankingField] = null;
-    
-    // Place in target position
-    (newTiers[toTier] as Record<string, string | number | null>)[targetField] = teamName;
-    (newTiers[toTier] as Record<string, string | number | null>)[targetRankingField] = teamRanking;
-    
-    // Update state optimistically
-    setWeeklyTiers(newTiers);
-    
-    // Save to database
-    try {
-      // Check if tiers have IDs (they might be newly created without IDs)
-      if (!sourceTier.id || !targetTier.id) {
-        console.error('Cannot save move - one or more tiers missing database ID. Save the schedule first.');
-        // Revert the optimistic update
-        await loadWeeklySchedule(currentWeek);
-        return;
-      }
-      
-      // Update source tier - clear the position
-      const sourceUpdate: Record<string, string | number | null> = {
-        [`team_${fromPos.toLowerCase()}_name`]: null,
-        [`team_${fromPos.toLowerCase()}_ranking`]: null
-      };
-      
-      const { error: sourceError } = await supabase
-        .from('weekly_schedules')
-        .update(sourceUpdate)
-        .eq('id', sourceTier.id);
-        
-      if (sourceError) throw sourceError;
-      
-      // Update target tier - set the team
-      const targetUpdate: Record<string, string | number | null> = {
-        [`team_${toPos.toLowerCase()}_name`]: teamName,
-        [`team_${toPos.toLowerCase()}_ranking`]: teamRanking
-      };
-      
-      const { error: targetError } = await supabase
-        .from('weekly_schedules')
-        .update(targetUpdate)
-        .eq('id', targetTier.id);
-        
-      if (targetError) throw targetError;
-      
-      console.log('Team move saved to database successfully');
-    } catch (error) {
-      console.error('Error saving team move to database:', error);
-      // Revert on error by reloading from database
-      loadWeeklySchedule(currentWeek);
-    }
-  };
-
-  const startEdgeScrolling = (clientY: number) => {
-    const zoneHeightPercent = 0.15; // 15% of viewport height
-    const topThreshold = Math.floor(window.innerHeight * zoneHeightPercent);
-    const bottomThreshold = Math.floor(window.innerHeight * zoneHeightPercent);
-    const baseScrollSpeed = 10; // Base scroll speed per frame
-    
-    if (scrollAnimationRef.current) {
-      cancelAnimationFrame(scrollAnimationRef.current);
-    }
-
-    const viewportHeight = window.innerHeight;
-    const topZone = clientY < topThreshold;
-    const bottomZone = clientY > (viewportHeight - bottomThreshold);
-    const distanceFromBottom = viewportHeight - clientY;
-    
-    console.log('Edge scroll check:', {
-      clientY,
-      viewportHeight,
-      topThreshold,
-      topZone: `${topZone} (< ${topThreshold})`,
-      bottomZone: `${bottomZone} (> ${viewportHeight - bottomThreshold})`,
-      distanceFromBottom: `${distanceFromBottom} (< ${bottomThreshold}?)`,
-      shouldScrollDown: distanceFromBottom < bottomThreshold
-    });
-
-    if (topZone) {
-      // Scroll up - faster the closer to edge
-      const intensity = Math.max(0.5, (topThreshold - clientY) / topThreshold);
-      const speed = baseScrollSpeed * intensity;
-      
-      const animate = () => {
-        window.scrollBy(0, -speed);
-        scrollAnimationRef.current = requestAnimationFrame(animate);
-      };
-      scrollAnimationRef.current = requestAnimationFrame(animate);
-    } else if (distanceFromBottom < bottomThreshold) {
-      // Scroll down - faster the closer to bottom edge
-      const intensity = Math.max(0.5, (bottomThreshold - distanceFromBottom) / bottomThreshold);
-      const speed = baseScrollSpeed * intensity;
-      
-      const animate = () => {
-        window.scrollBy(0, speed);
-        scrollAnimationRef.current = requestAnimationFrame(animate);
-      };
-      scrollAnimationRef.current = requestAnimationFrame(animate);
-    }
-  };
-
-  const stopEdgeScrolling = () => {
-    if (scrollAnimationRef.current) {
-      cancelAnimationFrame(scrollAnimationRef.current);
-      scrollAnimationRef.current = null;
-      console.log('Stopped edge scrolling');
-    }
-  };
-
-
-  // Check if a tier is empty (no teams assigned)
-
-
-
-
-
-
-
-
-
-  // === CLEAN TIER MANAGEMENT FUNCTIONS ===
-  
-  const addTier = async (afterTierNumber: number) => {
-    console.log(`Adding new tier after tier ${afterTierNumber}`);
-    
-    try {
-      // OPTIMIZED: Use single transaction with pure SQL for maximum performance
-      const { error } = await supabase.rpc('add_tier_optimized', {
-        p_league_id: parseInt(leagueId),
-        p_current_week: currentWeek,
-        p_after_tier: afterTierNumber
-      });
-      
-      if (error) throw error;
-      
-      // Refresh UI
-      await loadWeeklySchedule(currentWeek);
-      console.log(`Successfully added tier after ${afterTierNumber}`);
-      
-    } catch (error) {
-      console.error('Error adding tier:', error);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : 'No message',
-        code: (error as Error & {code?: string})?.code,
-        details: (error as Error & {details?: string})?.details,
-        hint: (error as Error & {hint?: string})?.hint,
-        stack: error instanceof Error ? error.stack : 'No stack'
-      });
-      
-      // Fallback to old method if RPC doesn't exist
-      if ((error as Error & {code?: string})?.code === 'PGRST202' || (error as Error & {code?: string})?.code === '42883' || (error as Error)?.message?.includes('does not exist') || (error as Error)?.message?.includes('no matches were found')) {
-        console.log('RPC function does not exist, using fallback method for add tier');
-        try {
-          await addTierFallback(afterTierNumber);
-          await loadWeeklySchedule(currentWeek);
-          console.log('Fallback method completed successfully');
-        } catch (fallbackError) {
-          console.error('Fallback method failed:', fallbackError);
-          alert(`Failed to add tier: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown fallback error'}`);
-        }
-      } else {
-        alert(`Failed to add tier: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        await loadWeeklySchedule(currentWeek); // Reload to fix any inconsistencies
-      }
-    }
-  };
-
-  // Fallback method for add tier (original implementation)
-  const addTierFallback = async (afterTierNumber: number) => {
-    // 1. Get max week for this league
-    const { data: maxWeekData, error: maxWeekError } = await supabase
-      .from('weekly_schedules')
-      .select('week_number')
-      .eq('league_id', parseInt(leagueId))
-      .order('week_number', { ascending: false })
-      .limit(1);
-    
-    if (maxWeekError) throw maxWeekError;
-    const maxWeek = maxWeekData?.[0]?.week_number || currentWeek;
-    
-    // 2. Get all tiers that need to be shifted
-    const { data: tiersToShift, error: fetchError } = await supabase
-      .from('weekly_schedules')
-      .select('id, tier_number')
-      .eq('league_id', parseInt(leagueId))
-      .gte('week_number', currentWeek)
-      .gt('tier_number', afterTierNumber);
-    
-    if (fetchError) throw fetchError;
-    
-    // 3. Insert new tier for current week and all future weeks
-    const newTierNumber = afterTierNumber + 1;
-    const insertRows = [];
-    
-    for (let week = currentWeek; week <= maxWeek; week++) {
-      insertRows.push({
-        league_id: parseInt(leagueId),
-        week_number: week,
-        tier_number: newTierNumber,
-        location: 'SET_LOCATION',
-        time_slot: 'SET_TIME',
-        court: 'SET_COURT',
-        team_a_name: null,
-        team_b_name: null,
-        team_c_name: null,
-        team_d_name: null,
-        team_e_name: null,
-        team_f_name: null,
-        team_a_ranking: null,
-        team_b_ranking: null,
-        team_c_ranking: null,
-        team_d_ranking: null,
-        team_e_ranking: null,
-        team_f_ranking: null,
-        is_completed: false,
-        no_games: false,
-        format: '3-teams-6-sets'
-      });
-    }
-    
-    const { error: insertError } = await supabase
-      .from('weekly_schedules')
-      .insert(insertRows);
-    
-    if (insertError) throw insertError;
-    
-    // 4. Shift existing tiers up by 1 in descending order
-    const sortedTiers = (tiersToShift || []).sort((a, b) => b.tier_number - a.tier_number);
-    const updatePromises = sortedTiers.map(tier => 
-      supabase
-        .from('weekly_schedules')
-        .update({ tier_number: tier.tier_number + 1 })
-        .eq('id', tier.id)
-    );
-    
-    const updateResults = await Promise.all(updatePromises);
-    const updateErrors = updateResults.filter(result => result.error);
-    
-    if (updateErrors.length > 0) {
-      throw new Error(`Failed to update ${updateErrors.length} tiers`);
-    }
-  };
-  
-  const removeTier = async (tierNumber: number) => {
-    console.log(`Removing tier ${tierNumber}`);
-    
-    // 1. Check if tier has teams
-    const tier = weeklyTiers.find(t => t.tier_number === tierNumber);
-    if (tier && (tier.team_a_name || tier.team_b_name || tier.team_c_name || tier.team_d_name || tier.team_e_name || tier.team_f_name)) {
-      alert('Cannot remove tier with teams. Remove all teams first.');
-      return;
-    }
-    
-    // 2. Confirm deletion
-    const confirmed = confirm(`Remove Tier ${tierNumber} from week ${currentWeek} and all future weeks?`);
-    if (!confirmed) return;
-    
-    try {
-      // OPTIMIZED: Use single transaction with pure SQL for maximum performance
-      const { error } = await supabase.rpc('remove_tier_optimized', {
-        p_league_id: parseInt(leagueId),
-        p_current_week: currentWeek,
-        p_tier_number: tierNumber
-      });
-      
-      if (error) throw error;
-      
-      // Refresh UI
-      await loadWeeklySchedule(currentWeek);
-      console.log(`Successfully removed tier ${tierNumber}`);
-      
-    } catch (error) {
-      console.error('Error removing tier:', error);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : 'No message',
-        code: (error as Error & {code?: string})?.code,
-        details: (error as Error & {details?: string})?.details,
-        hint: (error as Error & {hint?: string})?.hint
-      });
-      
-      // Fallback to old method if RPC doesn't exist
-      if ((error as Error & {code?: string})?.code === 'PGRST202' || (error as Error & {code?: string})?.code === '42883' || (error as Error)?.message?.includes('does not exist') || (error as Error)?.message?.includes('no matches were found')) {
-        console.log('RPC function does not exist, using fallback method for remove tier');
-        try {
-          await removeTierFallback(tierNumber);
-          await loadWeeklySchedule(currentWeek);
-          console.log('Fallback method completed successfully');
-        } catch (fallbackError) {
-          console.error('Fallback method failed:', fallbackError);
-          alert(`Failed to remove tier: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown fallback error'}`);
-        }
-      } else {
-        alert(`Failed to remove tier: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        await loadWeeklySchedule(currentWeek); // Reload to fix any inconsistencies
-      }
-    }
-  };
-
-  // Fallback method for remove tier (original implementation)
-  const removeTierFallback = async (tierNumber: number) => {
-    // 1. Delete tier from current week and all future weeks
-    const { error: deleteError } = await supabase
-      .from('weekly_schedules')
-      .delete()
-      .eq('league_id', parseInt(leagueId))
-      .gte('week_number', currentWeek)
-      .eq('tier_number', tierNumber);
-    
-    if (deleteError) throw deleteError;
-    
-    // 2. Shift remaining tier numbers down using batched operations
-    const { data: tiersToShift, error: fetchError } = await supabase
-      .from('weekly_schedules')
-      .select('id, tier_number')
-      .eq('league_id', parseInt(leagueId))
-      .gte('week_number', currentWeek)
-      .gt('tier_number', tierNumber)
-      .order('tier_number', { ascending: true });
-    
-    if (fetchError) throw fetchError;
-    
-    // Use Promise.all to batch the updates
-    const updatePromises = (tiersToShift || []).map(tier => 
-      supabase
-        .from('weekly_schedules')
-        .update({ tier_number: tier.tier_number - 1 })
-        .eq('id', tier.id)
-    );
-    
-    const updateResults = await Promise.all(updatePromises);
-    const updateErrors = updateResults.filter(result => result.error);
-    
-    if (updateErrors.length > 0) {
-      throw new Error(`Failed to update ${updateErrors.length} tiers`);
-    }
-  };
-
-  const handleWeeklyDeleteTeam = async (tierIndex: number, position: string, teamName: string) => {
-    console.log('Delete team:', teamName, 'from', `T${tierIndex + 1}${position}`);
-    
-    try {
-      const tier = weeklyTiers[tierIndex];
-      
-      if (tier && tier.id) {
-        // Update in database
-        const updateData: Record<string, string | number | null> = {
-          [`team_${position.toLowerCase()}_name`]: null,
-          [`team_${position.toLowerCase()}_ranking`]: null
-        };
-        
-        const { error } = await supabase
-          .from('weekly_schedules')
-          .update(updateData)
-          .eq('id', tier.id);
-          
-        if (error) {
-          console.error('Error deleting team from database:', error);
-          throw error;
-        }
-        
-        // Update local state
-        const newWeeklyTiers = [...weeklyTiers];
-        const localTier = newWeeklyTiers[tierIndex];
-        const teamField = `team_${position.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-        const rankingField = `team_${position.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
-        (localTier as Record<string, string | number | null>)[teamField] = null;
-        (localTier as Record<string, string | number | null>)[rankingField] = null;
-        
-        setWeeklyTiers(newWeeklyTiers);
-        console.log('Team deleted from database and local state');
-      }
-    } catch (error) {
-      console.error('Error deleting team from weekly schedule:', error);
-    }
-  };
-
-
-  const handleWeeklyAddTeamToPosition = (tierIndex: number, position: string) => {
-    setAddTeamModalData({ tierIndex, position });
-    setAddTeamModalOpen(true);
-  };
-
-  const handleAddTeamToSchedule = async (teamName: string, tierIndex: number, position: string) => {
-    try {
-      // First, get the team's ranking from the schedule data
-      let teamRanking: number | null = null;
-      
-      try {
-        const { data: scheduleData, error: scheduleError } = await supabase
-          .from('league_schedules')
-          .select('schedule_data')
-          .eq('league_id', parseInt(leagueId))
-          .maybeSingle();
-
-        if (scheduleError && scheduleError.code !== 'PGRST116') {
-          console.warn('Error loading schedule data for ranking:', scheduleError);
-        } else if (scheduleData?.schedule_data?.tiers) {
-          // Find the team's ranking in the schedule data
-          for (const tier of scheduleData.schedule_data.tiers) {
-            if (tier.teams) {
-              for (const teamData of Object.values(tier.teams)) {
-                if (teamData && (teamData as {name: string; ranking: number}).name === teamName && (teamData as {name: string; ranking: number}).ranking) {
-                  teamRanking = (teamData as {name: string; ranking: number}).ranking;
-                  break;
-                }
-              }
-            }
-            if (teamRanking) break;
+    return (
+      <div
+        key={position}
+        className={`text-center relative transition-all duration-200 ${
+          isEditScheduleMode && !team?.name ? 'group hover:bg-gray-50 rounded p-1 cursor-pointer' : ''
+        } ${
+          isDragTarget && isValidDropTarget ? 'bg-green-100 border-2 border-green-400 border-dashed rounded' : ''
+        } ${
+          isDragTarget && isInvalidDropTarget ? 'bg-red-100 border-2 border-red-400 border-dashed rounded' : ''
+        } ${
+          isBeingDragged ? 'opacity-30 scale-95' : ''
+        } ${
+          isDragInProgress && isValidDropTarget && !isDragTarget ? 'bg-green-50 border border-green-200 border-dashed rounded' : ''
+        } ${
+          isDragInProgress && isInvalidDropTarget && !isDragTarget ? 'bg-red-50 border border-red-200 rounded opacity-60' : ''
+        }`}
+        onClick={() => {
+          if (isEditScheduleMode && !team?.name) {
+            handleAddTeam(tierIndex, position);
           }
-        }
-      } catch (err) {
-        console.warn('Error fetching team ranking:', err);
-      }
-
-      // If no ranking found in schedule data, try to determine from standings position
-      if (teamRanking === null) {
-        try {
-          const { data: teamsData, error: teamsError } = await supabase
-            .from('teams')
-            .select('id, name, created_at')
-            .eq('league_id', parseInt(leagueId))
-            .eq('active', true)
-            .order('created_at', { ascending: true });
-
-          if (!teamsError && teamsData) {
-            const teamIndex = teamsData.findIndex(team => team.name === teamName);
-            if (teamIndex !== -1) {
-              teamRanking = teamIndex + 1; // 1-based ranking
-            }
+        }}
+        onDragOver={isEditScheduleMode ? (e) => {
+          e.preventDefault();
+          setDragState(prev => ({
+            ...prev,
+            hoverTier: tierIndex,
+            hoverPosition: position
+          }));
+        } : undefined}
+        onDrop={isEditScheduleMode ? async (e) => {
+          e.preventDefault();
+          
+          if (!dragState.isDragging || !dragState.draggedTeam || 
+              dragState.fromTier === null || !dragState.fromPosition) {
+            return;
           }
-        } catch (err) {
-          console.warn('Error calculating team ranking from standings:', err);
-        }
-      }
 
-      // Update the weekly schedule with the new team
-      const updatedTiers = [...weeklyTiers];
-      const positionKey = `team_${position.toLowerCase()}_name` as 'team_a_name' | 'team_b_name' | 'team_c_name' | 'team_d_name' | 'team_e_name' | 'team_f_name';
-      const rankingKey = `team_${position.toLowerCase()}_ranking` as 'team_a_ranking' | 'team_b_ranking' | 'team_c_ranking' | 'team_d_ranking' | 'team_e_ranking' | 'team_f_ranking';
-      
-      updatedTiers[tierIndex] = {
-        ...updatedTiers[tierIndex],
-        [positionKey]: teamName,
-        [rankingKey]: teamRanking
-      };
+          // Don't drop on same position
+          if (dragState.fromTier === tierIndex && dragState.fromPosition === position) {
+            setDragState(prev => ({ ...prev, isDragging: false, draggedTeam: null }));
+            return;
+          }
 
-      // Save to database
-      const { error } = await supabase
-        .from('weekly_schedules')
-        .update({
-          [positionKey]: teamName,
-          [rankingKey]: teamRanking,
-          updated_at: new Date().toISOString()
-        })
-        .eq('league_id', parseInt(leagueId))
-        .eq('week_number', currentWeek)
-        .eq('tier_number', tierIndex + 1);
+          // Don't drop on occupied position
+          if (team?.name) {
+            alert('Cannot move team to an occupied position');
+            setDragState(prev => ({ ...prev, isDragging: false, draggedTeam: null }));
+            return;
+          }
 
-      if (error) throw error;
+          try {
+            // Get source and target tiers
+            const sourceTier = weeklyTiers[dragState.fromTier];
+            const targetTier = weeklyTiers[tierIndex];
+            
+            if (!sourceTier || !targetTier) return;
 
-      // Update local state
-      setWeeklyTiers(updatedTiers);
-      
-      // Close modal
-      setAddTeamModalOpen(false);
-      setAddTeamModalData(null);
-      
-      console.log(`Added team ${teamName} to Tier ${tierIndex + 1}, Position ${position} with ranking ${teamRanking}`);
-    } catch (error) {
-      console.error('Error adding team to schedule:', error);
-      alert('Failed to add team to schedule. Please try again.');
-    }
+            // Update source tier (remove team)
+            const sourceUpdatePayload = {
+              [`team_${dragState.fromPosition.toLowerCase()}_name`]: null,
+              [`team_${dragState.fromPosition.toLowerCase()}_ranking`]: null,
+            };
+
+            const { error: sourceError } = await supabase
+              .from('weekly_schedules')
+              .update(sourceUpdatePayload)
+              .eq('id', sourceTier.id);
+
+            if (sourceError) throw sourceError;
+
+            // Update target tier (add team)
+            const targetUpdatePayload = {
+              [`team_${position.toLowerCase()}_name`]: dragState.draggedTeam,
+              [`team_${position.toLowerCase()}_ranking`]: getTeamForPosition(sourceTier, dragState.fromPosition as TeamPositionId)?.ranking || 0,
+            };
+
+            const { error: targetError } = await supabase
+              .from('weekly_schedules')
+              .update(targetUpdatePayload)
+              .eq('id', targetTier.id);
+
+            if (targetError) throw targetError;
+
+            // Reload the schedule
+            await loadWeeklySchedule(currentWeek);
+            
+          } catch (error) {
+            console.error('Error moving team:', error);
+            alert('Failed to move team. Please try again.');
+          }
+
+          // Clear drag state
+          setDragState({
+            isDragging: false,
+            draggedTeam: null,
+            fromTier: null,
+            fromPosition: null,
+            hoverTier: null,
+            hoverPosition: null,
+            mouseX: 0,
+            mouseY: 0
+          });
+        } : undefined}
+      >
+        <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+        <div className="text-sm text-[#6F6F6F] relative">
+          {team?.name ? (
+            <div className="relative group">
+              <span
+                draggable={isEditScheduleMode}
+                onDragStart={() => {
+                  if (!isEditScheduleMode) return;
+                  setDragState({
+                    isDragging: true,
+                    draggedTeam: team.name,
+                    fromTier: tierIndex,
+                    fromPosition: position,
+                    hoverTier: null,
+                    hoverPosition: null,
+                    mouseX: 0,
+                    mouseY: 0
+                  });
+                }}
+                onDragEnd={() => {
+                  stopAutoScroll(); // Stop any active scrolling
+                  setDragState(prev => ({
+                    ...prev,
+                    isDragging: false,
+                    draggedTeam: null,
+                    fromTier: null,
+                    fromPosition: null,
+                    hoverTier: null,
+                    hoverPosition: null
+                  }));
+                }}
+                className={isEditScheduleMode ? 'cursor-move' : 'cursor-default'}
+              >
+                {`${team.name} (${team.ranking || '-'})`}
+              </span>
+              {isEditScheduleMode && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTeam(tierIndex, position, team.name);
+                  }}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  title="Remove team"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ) : (
+            <span className={`italic ${
+              isDragInProgress && isValidDropTarget
+                ? 'text-green-600 font-medium' 
+                : isDragInProgress && isInvalidDropTarget
+                ? 'text-red-600' 
+                : 'text-gray-400'
+            }`}>
+              {isDragInProgress && isValidDropTarget
+                ? 'Drop here' 
+                : isDragInProgress && isInvalidDropTarget
+                ? 'Unavailable'
+                : isEditScheduleMode 
+                ? 'Click to add team' 
+                : 'TBD'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
   };
-
-
 
   return (
     <div>
-      {/* Header with Action Buttons */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-[#6F6F6F]">League Schedule</h2>
-        
-        {!isEditScheduleMode ? (
-          <div className="flex gap-3">
-            {userProfile?.is_admin && (
-              <>
-                <button
-                  onClick={enterEditScheduleMode}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded border border-gray-300 transition-colors"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Edit Schedule
-                </button>
-                <button
-                  onClick={() => setShowAddPlayoffModal(true)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-[#B20000] text-sm rounded border border-red-200 transition-colors"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  {currentPlayoffWeeks > 0 ? 'Edit Playoff Weeks' : 'Add Playoff Weeks'}
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={exitEditScheduleMode}
-              className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={saveScheduleChanges}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
-            >
-              Save Changes
-            </button>
-          </div>
-        )}
-      </div>
-
-
       {/* Scroll zone indicators during drag */}
-      {draggedTeam && isEditScheduleMode && (
+      {dragState.isDragging && (
         <>
-          {/* Top scroll zone indicator */}
-          <div 
-            className="fixed top-0 left-0 right-0 pointer-events-none z-40 bg-gradient-to-b from-blue-200 to-transparent opacity-30"
-            style={{ height: `${Math.floor(window.innerHeight * 0.15)}px` }}
-          >
-            <div className="flex items-center justify-center text-blue-800 font-medium" style={{ height: `${Math.floor(window.innerHeight * 0.075)}px` }}>
-              ↑ Scroll Up Zone (15%)
+          {/* Top scroll zone */}
+          <div className="fixed top-0 left-0 right-0 h-[100px] bg-blue-200 bg-opacity-30 border-b-2 border-blue-400 border-dashed z-50 pointer-events-none flex items-center justify-center">
+            <div className="text-blue-700 font-semibold text-sm bg-white bg-opacity-75 px-3 py-1 rounded">
+              ↑ Scroll Up Zone
             </div>
           </div>
           
-          {/* Bottom scroll zone indicator */}
-          <div 
-            className="fixed bottom-0 left-0 right-0 pointer-events-none z-40 bg-gradient-to-t from-blue-200 to-transparent opacity-30"
-            style={{ height: `${Math.floor(window.innerHeight * 0.15)}px` }}
-          >
-            <div className="flex items-center justify-center text-blue-800 font-medium" style={{ height: `${Math.floor(window.innerHeight * 0.075)}px`, marginTop: `${Math.floor(window.innerHeight * 0.075)}px` }}>
-              ↓ Scroll Down Zone (15%)
+          {/* Bottom scroll zone */}
+          <div className="fixed bottom-0 left-0 right-0 h-[100px] bg-blue-200 bg-opacity-30 border-t-2 border-blue-400 border-dashed z-50 pointer-events-none flex items-center justify-center">
+            <div className="text-blue-700 font-semibold text-sm bg-white bg-opacity-75 px-3 py-1 rounded">
+              ↓ Scroll Down Zone
             </div>
           </div>
         </>
       )}
-      
-      {/* Week header with navigation */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          {/* Navigation buttons grouped together */}
-          <div className="flex items-center gap-1">
+
+      {/* Admin Controls */}
+      {userProfile?.is_admin && (
+        <div className="mb-6 flex flex-wrap justify-between items-center gap-4">
+          <div className="flex flex-wrap gap-3">
+            {!isEditScheduleMode ? (
+              <button
+                onClick={handleEnterEditMode}
+                className="flex items-center gap-2 px-4 py-2 bg-[#B20000] text-white rounded-md hover:bg-[#8A0000] transition-colors"
+              >
+                <Edit className="h-4 w-4" />
+                Edit Schedule
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSaveChanges}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={handleExitEditMode}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+            
             <button
-              onClick={() => navigateToWeek(currentWeek - 1)}
-              disabled={!canNavigateToWeek(currentWeek - 1)}
-              className="px-2 py-1 text-[#6F6F6F] hover:text-[#B20000] disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
-              aria-label="Previous week"
+              onClick={() => setAddPlayoffModalOpen(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
-              <ChevronLeft className="h-5 w-5" />
+              {leagueInfo?.playoff_weeks && leagueInfo.playoff_weeks > 0 ? 
+                `Edit Playoff Weeks (${leagueInfo.playoff_weeks})` : 
+                'Add Playoff Weeks'
+              }
             </button>
-            <button
-              onClick={() => navigateToWeek(currentWeek + 1)}
-              disabled={!canNavigateToWeek(currentWeek + 1)}
-              className="px-2 py-1 text-[#6F6F6F] hover:text-[#B20000] disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
-              aria-label="Next week"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-          
-          {/* Week and date */}
-          <div className="text-left">
-            <div className="flex items-center gap-2">
-              <p className="font-medium text-[#6F6F6F]">
-                Week {currentWeek} - {getWeekDate(currentWeek)}
-              </p>
-              {isPlayoffWeek(currentWeek) && (
-                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-50 text-[#B20000] rounded-full border border-red-200">
-                  Playoffs
-                </span>
-              )}
-            </div>
-          </div>
-          
-          {/* No Games checkbox outside navigation */}
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 cursor-pointer">
+
+            <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={noGamesWeek}
                 onChange={(e) => handleNoGamesChange(e.target.checked)}
                 disabled={savingNoGames}
-                className="rounded border-gray-300 text-[#B20000] focus:ring-[#B20000] focus:ring-offset-0"
+                className="rounded"
               />
-              <span className="text-sm text-[#6F6F6F]">
-                No Games This Week
-                {savingNoGames && (
-                  <span className="ml-1 text-xs text-gray-400">(Saving...)</span>
-                )}
-              </span>
+              <span className="text-sm text-gray-700">No Games This Week</span>
+              {savingNoGames && <span className="text-xs text-gray-500">(Saving...)</span>}
             </label>
           </div>
         </div>
-        
-        {/* Right side message - always visible */}
-        <div className="flex items-center">
-          {/* Previous week results message */}
-          {currentWeek > 1 && week1TierStructure.length > 0 && (
-            <div className="text-xs text-gray-500 italic">
-              Schedule updated each week based on previous week&apos;s results
+      )}
+
+      {/* Week Navigation - Matching public schedule exactly */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-4">
+            {/* Navigation buttons grouped together */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentWeek(prev => Math.max(1, prev - 1))}
+                disabled={currentWeek <= 1}
+                className="px-2 py-1 text-[#6F6F6F] hover:text-[#B20000] disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous week"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setCurrentWeek(prev => prev + 1)}
+                disabled={!canNavigateToWeek(currentWeek + 1)}
+                className="px-2 py-1 text-[#6F6F6F] hover:text-[#B20000] disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next week"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
-          )}
+            
+            {/* Week and date */}
+            <div className="text-left">
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-[#6F6F6F]">
+                  Week {currentWeek} - {getWeekDate(currentWeek)}
+                </p>
+                {isPlayoffWeek(currentWeek) && (
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-50 text-[#B20000] rounded-full border border-red-200">
+                    Playoffs
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Previous week results message */}
+            {currentWeek > 1 && week1TierStructure.length > 0 && !noGamesWeek && (
+              <div className="text-xs text-gray-500 italic">
+                Schedule updated each week based on previous week&apos;s results
+              </div>
+            )}
+            
+            {/* No games message */}
+            {weeklyTiers.length > 0 && noGamesWeek && (
+              <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
+                No games this week
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      
-      {/* Display tiers for the current week */}
+
+      {/* Schedule Display - EXACT same styling as public schedule */}
       <div className="space-y-6">
         {loadingWeekData ? (
           <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#B20000]"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#B20000]" role="status" aria-label="Loading"></div>
           </div>
         ) : weeklyTiers.length > 0 ? (
-          // NEW: Display weekly schedule data with edit features
-          (() => {
-            const elements: React.ReactElement[] = [];
-            
-            weeklyTiers.forEach((tier, tierIndex) => {
-              // Add insert tier button before each tier (in edit mode)
-              if (isEditScheduleMode && userProfile?.is_admin) {
-                elements.push(
-                  <div key={`insert-before-weekly-${tierIndex}`} className="flex justify-center py-1">
-                    <button
-                      onClick={() => addTier(tier.tier_number - 1)}
-                      className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-dashed border-blue-300 hover:border-blue-500 rounded-md transition-all duration-200"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Insert Tier
-                    </button>
-                  </div>
-                );
-              }
-              
-              elements.push(
-                <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
-              <CardContent className="p-0 overflow-hidden">
-                {/* Tier Header */}
-                <div className="bg-[#F8F8F8] border-b px-8 py-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      {/* Remove tier button - only for empty tiers in edit mode */}
-                      {isEditScheduleMode && userProfile?.is_admin && (!tier.team_a_name && !tier.team_b_name && !tier.team_c_name && !tier.team_d_name && !tier.team_e_name && !tier.team_f_name) && (
-                        <button
-                          onClick={() => removeTier(tier.tier_number)}
-                          className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline"
-                        >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          noGamesWeek ? (
+            // No Games Week Display
+            weeklyTiers.map((tier) => (
+              <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg opacity-60 bg-gray-50">
+                <CardContent className="p-0 overflow-hidden">
+                  <div className="bg-gray-100 border-b px-8 py-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
+                          Tier {tier.tier_number}
+                        </h3>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
+                          <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
+                          <span className="text-sm text-[#6F6F6F]">{tier.time_slot}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <svg className="h-4 w-4 text-gray-400 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth="2"/>
+                            <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
+                            <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
                           </svg>
-                          Remove
-                        </button>
-                      )}
-                      
-                      <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
-                        Tier {tier.tier_number}
-                        {tier.is_completed && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
-                            Completed
-                          </span>
-                        )}
-                      </h3>
-                      
-                      {/* Submit Scores link for weekly tiers */}
-                      {(() => {
-                        const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
-                        // Check if all required positions are filled based on format
-                        const requiredPositions = getPositionsForFormat(tier.format);
-                        const allPositionsFilled = requiredPositions.every((position: string) => {
-                          const positionKey = `team_${position.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-                          return tier[positionKey] !== null;
-                        });
-                        
-                        const showSubmitLink = canSubmitScores && 
-                          !tier.is_completed && 
-                          !tier.no_games && 
-                          allPositionsFilled;
-                        
-                        return showSubmitLink && (
-                          <button 
-                            onClick={() => {
-                              setSelectedTierForScores(tier);
-                              setIsScoresModalOpen(true);
-                            }}
-                            className="text-sm text-[#B20000] hover:text-[#8B0000] hover:underline"
-                          >
-                            Submit scores
-                          </button>
-                        );
-                      })()}
-                      
-                      {/* Edit button for weekly tiers - only in edit mode */}
-                      {userProfile?.is_admin && isEditScheduleMode && (
-                        <button
-                          onClick={() => handleEditWeeklyTier(tier, tierIndex)}
-                          className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 transition-colors"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Edit
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className={`text-sm ${tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
-                          {tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? tier.location : 'Set location'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className={`text-sm ${tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
-                          {tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? tier.time_slot : 'Set time'}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <svg className="h-4 w-4 text-[#B20000] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth="2"/>
-                          <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
-                          <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
-                        </svg>
-                        <span className={`text-sm ${tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
-                          {tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? tier.court : 'Set court'}
-                        </span>
+                          <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                
-{/* Teams Display - Dynamic based on format */}                <DynamicTierTeams                  tier={tier}                  tierIndex={tierIndex}                  isEditScheduleMode={isEditScheduleMode}                  dragState={dragState}                  onDragStart={startDrag}                  onDragHover={handleDragHover}                  onDeleteTeam={handleWeeklyDeleteTeam}                  onAddTeam={handleWeeklyAddTeamToPosition}                />
-              </CardContent>
-            </Card>
-              );
-            });
-            
-            // Add final insert tier button after all tiers (in edit mode)
-            if (isEditScheduleMode && userProfile?.is_admin) {
-              elements.push(
-                <div key="insert-after-all-weekly" className="flex justify-center py-3">
+                  
+                  <div className="p-4">
+                    <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                      {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => (
+                        <div key={position} className="text-center">
+                          <div className="font-medium text-gray-400 mb-1">{position}</div>
+                          <div className="text-sm text-gray-400 italic">
+                            No Games
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            // Normal Schedule Display
+            <>
+              {/* Add tier at beginning (before Tier 1) */}
+              {userProfile?.is_admin && isEditScheduleMode && weeklyTiers.length > 0 && (
+                <div className="text-center pb-2">
                   <button
-                    onClick={() => addTier(weeklyTiers.length > 0 ? Math.max(...weeklyTiers.map(t => t.tier_number)) : 0)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:text-green-800 hover:bg-green-50 border border-dashed border-green-300 hover:border-green-500 rounded-md transition-all duration-200"
+                    onClick={() => handleAddTier(0)}
+                    className="text-sm text-green-600 hover:text-green-700 hover:underline"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Add Tier
+                    + Add Tier
                   </button>
                 </div>
-              );
-            }
-            
-            return elements;
-          })()
+              )}
+              
+              {weeklyTiers.map((tier, tierIndex) => (
+                <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
+                  <CardContent className="p-0 overflow-hidden">
+                    {/* Tier Header - EXACT same as public */}
+                    <div className="bg-[#F8F8F8] border-b px-8 py-3">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
+                            Tier {tier.tier_number}
+                            {tier.is_completed && (
+                              <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                                Completed
+                              </span>
+                            )}
+                          </h3>
+                          
+                          {/* Submit Scores link (when not in edit mode) */}
+                          {!isEditScheduleMode && !tier.is_completed && !tier.no_games && 
+                           getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
+                            <button
+                              onClick={() => {
+                                // TODO: Implement score submission modal
+                                alert('Score submission functionality will be implemented in a future update.');
+                              }}
+                              className="ml-3 text-sm text-[#B20000] hover:text-[#8B0000] hover:underline font-medium transition-colors"
+                            >
+                              Submit scores
+                            </button>
+                          )}
+                          
+                          {/* Admin Actions (only in edit mode) */}
+                          {userProfile?.is_admin && isEditScheduleMode && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditTier(tier, tierIndex)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit tier"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </button>
+                              
+                              <button
+                                onClick={() => handleRemoveTier(tier.tier_number)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Remove tier"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Location/Time/Court - EXACT same as public */}
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
+                            <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
+                            <span className="text-sm text-[#6F6F6F]">{tier.time_slot}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <svg className="h-4 w-4 text-[#B20000] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth="2"/>
+                              <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
+                              <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
+                            </svg>
+                            <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Teams Display - EXACT same as public but with admin controls */}
+                    <div className="p-4">
+                      <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                        {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => 
+                          renderTeamSlot(tier, position, tierIndex)
+                        ).filter(Boolean)}
+                      </div>
+                    </div>
+                  </CardContent>
+                  
+                  {/* Add Tier Button (Admin only, Edit mode only) */}
+                  {userProfile?.is_admin && isEditScheduleMode && (
+                    <div className="border-t bg-gray-50 p-2 text-center">
+                      <button
+                        onClick={() => handleAddTier(tier.tier_number)}
+                        className="text-sm text-green-600 hover:text-green-700 hover:underline"
+                      >
+                        + Add Tier After {tier.tier_number}
+                      </button>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </>
+          )
         ) : currentWeek === 1 ? (
           <div className="text-center py-12">
-            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Schedule Generated</h3>
-            <p className="text-[#6F6F6F]">Generate a schedule from the Teams Management page first.</p>
+            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Schedule Available</h3>
+            <p className="text-[#6F6F6F]">The league schedule hasn&apos;t been generated yet.</p>
           </div>
         ) : week1TierStructure.length > 0 ? (
-          // Show empty tier structure for future weeks
+          // Template tiers for future weeks
           week1TierStructure.map((tier) => (
             <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
               <CardContent className="p-0 overflow-hidden">
-                {/* Tier Header */}
                 <div className="bg-[#F8F8F8] border-b px-8 py-3">
                   <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
+                    <div>
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
                         Tier {tier.tier_number}
                       </h3>
-                      
-                      {/* Edit button for future weeks (week1TierStructure) - only in edit mode */}
-                      {userProfile?.is_admin && isEditScheduleMode && (
-                        <button
-                          onClick={() => handleCreateAndEditWeeklyTier(tier, currentWeek)}
-                          className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Edit
-                        </button>
-                      )}
                     </div>
                     
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className={`text-sm ${tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
-                          {tier.location && !['LOCATION_REQUIRED', 'SET_LOCATION'].includes(tier.location) ? tier.location : 'Set location'}
-                        </span>
+                        <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className={`text-sm ${tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
-                          {tier.time_slot && !['TIME_REQUIRED', 'SET_TIME'].includes(tier.time_slot) ? tier.time_slot : 'Set time'}
-                        </span>
+                        <span className="text-sm text-[#6F6F6F]">{tier.time_slot}</span>
                       </div>
                       <div className="flex items-center">
                         <svg className="h-4 w-4 text-[#B20000] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth="2"/>
-                          <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
                           <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
                         </svg>
-                        <span className={`text-sm ${tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? 'text-[#6F6F6F]' : 'text-red-500 italic'}`}>
-                          {tier.court && !['COURT_REQUIRED', 'SET_COURT'].includes(tier.court) ? tier.court : 'Set court'}
-                        </span>
+                        <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                {/* Teams Display - Empty positions */}
                 <div className="p-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">A</div>
-                      <div className="text-sm text-gray-400 italic">
-                        TBD
+                  <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                    {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => (
+                      <div key={position} className="text-center">
+                        <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                        <div className="text-sm text-[#6F6F6F]">
+                          <span className="text-gray-400 italic">TBD</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">B</div>
-                      <div className="text-sm text-gray-400 italic">
-                        TBD
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">C</div>
-                      <div className="text-sm text-gray-400 italic">
-                        TBD
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </CardContent>
@@ -1734,134 +1243,101 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           ))
         ) : (
           <div className="text-center py-12">
-            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">Week {currentWeek}</h3>
-            <p className="text-[#6F6F6F] mb-4">This week&apos;s schedule will be populated once the previous week&apos;s games are completed and scored.</p>
-            <div className="text-sm text-gray-500">
-              Complete Week {currentWeek - 1} scoring to unlock this week&apos;s schedule.
-            </div>
-          </div>
-        )}
-
-        {/* Show message when no weekly schedule exists */}
-        {weeklyTiers.length === 0 && (
-          <div className="text-center py-12">
-            <h3 className="text-xl font-bold text-[#6F6F6F] mb-4">No Schedule Generated</h3>
-            <p className="text-[#6F6F6F] mb-4">This week doesn&apos;t have a schedule yet. Generate a schedule from the Teams page.</p>
+            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Schedule Available</h3>
+            <p className="text-[#6F6F6F]">Week {currentWeek} hasn&apos;t been scheduled yet.</p>
           </div>
         )}
       </div>
 
-      {/* Edit Modal */}
+      {/* Drag Preview */}
+      {dragState.isDragging && dragState.draggedTeam && (
+        <div
+          className="fixed pointer-events-none z-50 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium"
+          style={{
+            left: dragState.mouseX + 15,
+            top: dragState.mouseY - 10,
+          }}
+        >
+          Moving: {dragState.draggedTeam}
+        </div>
+      )}
+
+      {/* Modals */}
       {selectedTier && (
         <TierEditModal
           isOpen={editModalOpen}
           onClose={handleModalClose}
           tier={selectedTier}
-          tierIndex={selectedTierIndex}
-          allTiers={[]}
+          tierIndex={editingTierIndex}
+          allTiers={weeklyTiers.map(wt => ({
+            tierNumber: wt.tier_number,
+            location: wt.location,
+            time: wt.time_slot,
+            court: wt.court,
+            format: wt.format,
+            teams: {
+              A: wt.team_a_name ? { name: wt.team_a_name, ranking: wt.team_a_ranking || 0 } : null,
+              B: wt.team_b_name ? { name: wt.team_b_name, ranking: wt.team_b_ranking || 0 } : null,
+              C: wt.team_c_name ? { name: wt.team_c_name, ranking: wt.team_c_ranking || 0 } : null,
+              D: wt.team_d_name ? { name: wt.team_d_name, ranking: wt.team_d_ranking || 0 } : null,
+              E: wt.team_e_name ? { name: wt.team_e_name, ranking: wt.team_e_ranking || 0 } : null,
+              F: wt.team_f_name ? { name: wt.team_f_name, ranking: wt.team_f_ranking || 0 } : null,
+            },
+            courts: { [wt.tier_number.toString()]: wt.court }
+          }))}
           leagueId={leagueId}
           leagueName={leagueName}
-          onSave={handleSaveWeeklyTier}
+          onSave={handleSaveTier}
         />
       )}
 
-      {/* Add Team Modal */}
-      {addTeamModalOpen && addTeamModalData && (
-        <AddTeamModal
-          isOpen={addTeamModalOpen}
-          onClose={() => {
-            setAddTeamModalOpen(false);
-            setAddTeamModalData(null);
-          }}
-          leagueId={leagueId}
-          currentWeek={currentWeek}
-          tierIndex={addTeamModalData.tierIndex}
-          position={addTeamModalData.position}
-          onAddTeam={handleAddTeamToSchedule}
-        />
-      )}
+      <AddPlayoffWeeksModal
+        isOpen={addPlayoffModalOpen}
+        onClose={() => setAddPlayoffModalOpen(false)}
+        leagueId={leagueId}
+        currentPlayoffWeeks={leagueInfo?.playoff_weeks || 0}
+        onPlayoffWeeksAdded={handlePlayoffWeeksAdded}
+      />
+
+      <AddTeamModal
+        isOpen={addTeamModalOpen}
+        onClose={() => {
+          setAddTeamModalOpen(false);
+          setAddTeamModalData(null);
+        }}
+        leagueId={leagueId}
+        currentWeek={currentWeek}
+        onAddTeam={handleAddTeamToSchedule}
+        tierIndex={addTeamModalData?.tierIndex ?? 0}
+        position={addTeamModalData?.position ?? ''}
+      />
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && teamToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={cancelDeleteTeam}></div>
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 relative z-10">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0 w-10 h-10 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-              </div>
-              
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Remove Team from Schedule
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Are you sure you want to remove <strong>{teamToDelete.teamName}</strong> from the schedule? This action cannot be undone.
-                </p>
-              </div>
-
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelDeleteTeam}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDeleteTeam}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
-                >
-                  Remove Team
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">Confirm Delete Team</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to remove {teamToDelete.teamName} from this tier?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setDeleteConfirmOpen(false);
+                  setTeamToDelete(null);
+                }}
+                className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteTeam}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+              >
+                Delete Team
+              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* REMOVED: Old tier removal modal - now using simple confirm() */}
-
-      {/* Add Playoff Weeks Modal */}
-      {showAddPlayoffModal && (
-        <AddPlayoffWeeksModal
-          isOpen={showAddPlayoffModal}
-          onClose={() => setShowAddPlayoffModal(false)}
-          leagueId={leagueId}
-          currentPlayoffWeeks={currentPlayoffWeeks}
-          onPlayoffWeeksAdded={handlePlayoffWeeksAdded}
-        />
-      )}
-
-      {/* Submit Scores Modal */}
-      {selectedTierForScores && (
-        <SubmitScoresModal
-          isOpen={isScoresModalOpen}
-          onClose={() => {
-            setIsScoresModalOpen(false);
-            setSelectedTierForScores(null);
-          }}
-          tierData={{
-            tier_number: selectedTierForScores.tier_number,
-          }}
-        />
-      )}
-
-      {/* Floating drag element */}
-      {dragState.isDragging && dragState.draggedTeam && (
-        <div
-          className="fixed pointer-events-none z-50 bg-white border-2 border-blue-400 rounded-lg shadow-lg px-3 py-2"
-          style={{
-            left: dragState.mouseX + 10,
-            top: dragState.mouseY - 30,
-            transform: 'none'
-          }}
-        >
-          <div className="text-sm font-medium text-blue-800">{dragState.draggedTeam}</div>
-          <div className="text-xs text-blue-600">Dragging...</div>
         </div>
       )}
     </div>
