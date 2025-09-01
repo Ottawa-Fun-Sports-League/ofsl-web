@@ -253,7 +253,17 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
       if (error && error.code !== 'PGRST116') {
         console.error('Error loading defaults:', error);
       } else if (data?.defaults) {
-        setDefaults(data.defaults);
+        // Get tier-specific defaults for this tier only
+        const tierNumber = tier.tierNumber?.toString() || (tierIndex + 1).toString();
+        const tierSpecificDefaults = data.defaults[tierNumber] || {};
+        
+        setDefaults({
+          location: tierSpecificDefaults.location || '',
+          time: tierSpecificDefaults.time || '',
+          court: tierSpecificDefaults.court || ''
+        });
+        
+        console.log(`Loaded defaults for Tier ${tierNumber}:`, tierSpecificDefaults);
       } else {
         // If no defaults exist, ensure we start with blank values
         setDefaults({ location: '', time: '', court: '' });
@@ -284,17 +294,43 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
 
   const saveDefaults = async (newDefaults: DefaultSettings) => {
     try {
+      // First, get the current all-tier defaults from the database
+      const { data: currentData, error: fetchError } = await supabase
+        .from('league_schedules')
+        .select('defaults')
+        .eq('league_id', parseInt(leagueId))
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      // Get current all-tier defaults or start with empty object
+      const allDefaults = currentData?.defaults || {};
+      
+      // Update only this tier's defaults
+      const tierNumber = tier.tierNumber?.toString() || (tierIndex + 1).toString();
+      allDefaults[tierNumber] = {
+        location: newDefaults.location || '',
+        time: newDefaults.time || '',
+        court: newDefaults.court || ''
+      };
+      
+      console.log(`Saving defaults for Tier ${tierNumber}:`, allDefaults[tierNumber]);
+      console.log('All tier defaults:', allDefaults);
+
+      // Save the updated all-tier defaults back to database
       const { error } = await supabase
         .from('league_schedules')
         .update({ 
-          defaults: newDefaults,
+          defaults: allDefaults,
           updated_at: new Date().toISOString()
         })
         .eq('league_id', parseInt(leagueId));
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error saving defaults:', error);
+      console.error('Error saving tier-specific defaults:', error);
       throw error;
     }
   };

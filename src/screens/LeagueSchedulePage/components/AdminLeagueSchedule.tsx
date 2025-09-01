@@ -1,26 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
-import { MapPin, Clock, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TierEditModal } from './TierEditModal';
 import { AddPlayoffWeeksModal } from './AddPlayoffWeeksModal';
 import { SubmitScoresModal } from '../../LeagueDetailPage/components/SubmitScoresModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { Schedule, Tier } from '../../LeagueDetailPage/utils/leagueUtils';
-import { useLeagueStandings } from '../../LeagueDetailPage/hooks/useLeagueStandings';
+import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
 
-const getTeamCountForFormat = (format: string): number => {
-  const formatMap: Record<string, number> = {
-    '3-teams-6-sets': 3,
-    '2-teams-4-sets': 2,
-    '2-teams-best-of-5': 2,
-    '2-teams-best-of-3': 2,
-    '4-teams-head-to-head': 4,
-    '6-teams-head-to-head': 6,
-    '2-teams-elite': 2,
-  };
-  return formatMap[format] || 3; // Default to 3 teams if format not found
-};
 
 interface WeeklyScheduleTier {
   id: number;
@@ -41,14 +28,12 @@ interface WeeklyScheduleTier {
 }
 
 interface AdminLeagueScheduleProps {
-  openScoreSubmissionModal: (tierNumber: number) => void;
   leagueId: string;
   leagueName: string;
 }
 
-export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, leagueName }: AdminLeagueScheduleProps) {
+export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueScheduleProps) {
   const { userProfile } = useAuth();
-  const { teams: standingsTeams } = useLeagueStandings(leagueId);
   
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
@@ -72,7 +57,6 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
     fromPosition: string;
   } | null>(null);
   const [cascadePreview, setCascadePreview] = useState<any[]>([]);
-  const [dragOverTarget, setDragOverTarget] = useState<{ tierIndex: number; position: string } | null>(null);
 
   // Simple drag and drop state
   const [dragState, setDragState] = useState<{
@@ -96,13 +80,6 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
   });
   
   
-  // Add team modal state
-  const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
-  const [availableTeams, setAvailableTeams] = useState<Array<{
-    id: number;
-    name: string;
-    onSchedule: boolean;
-  }>>([]);
   
   // Delete team confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -128,20 +105,8 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
   const [week1TierStructure, setWeek1TierStructure] = useState<WeeklyScheduleTier[]>([]);
   const [noGamesWeek, setNoGamesWeek] = useState(false);
   const [savingNoGames, setSavingNoGames] = useState(false);
-  const [addTeamPosition, setAddTeamPosition] = useState<{
-    tierIndex: number;
-    position: string;
-  } | null>(null);
-
-  // Remove tier confirmation state
-  const [removeTierConfirmOpen, setRemoveTierConfirmOpen] = useState(false);
-  const [tierToRemove, setTierToRemove] = useState<{
-    tierIndex: number;
-    tierNumber: number;
-  } | null>(null);
   
-  // Drag scrolling state  
-  const [isDragging, setIsDragging] = useState(false);
+  // Drag scrolling state
   const scrollAnimationRef = useRef<number | null>(null);
   const dragOverThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -157,10 +122,6 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
     loadWeeklySchedule(currentWeek);
   }, [currentWeek]);
 
-  // Stub functions for compatibility
-  const calculateCascadePreview = (tierIndex: number, position: string) => {
-    return [];
-  };
 
   const enterEditScheduleMode = () => {
     setIsEditScheduleMode(true);
@@ -169,128 +130,29 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
   const exitEditScheduleMode = () => {
     setIsEditScheduleMode(false);
     setDraggedTeam(null);
-    setDragOverTarget(null);
     setCascadePreview([]);
   };
 
   const saveScheduleChanges = () => {
     setIsEditScheduleMode(false);
     setDraggedTeam(null);
-    setDragOverTarget(null);
     setCascadePreview([]);
   };
 
-  // Helper functions for managing tier-specific defaults
-  const updateTierDefaults = async (defaultsUpdate: Record<string, any>) => {
-    try {
-      const { error } = await supabase
-        .from('league_schedules')
-        .upsert({
-          league_id: parseInt(leagueId),
-          defaults: defaultsUpdate,
-          format: '3-teams-6-sets',
-          schedule_data: {}
-        });
-      
-      if (error) {
-        console.error('Error updating tier defaults:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error updating tier defaults:', error);
-      throw error;
-    }
-  };
 
-  const shiftTierDefaultsUp = async (fromTier: number) => {
-    // When inserting a tier, shift existing defaults up by 1
-    // e.g., if inserting at position 2, tier 2 becomes tier 3, tier 3 becomes tier 4, etc.
-    try {
-      const { data: leagueData } = await supabase
-        .from('league_schedules')
-        .select('defaults')
-        .eq('league_id', parseInt(leagueId))
-        .maybeSingle();
-      
-      const currentDefaults = leagueData?.defaults || {};
-      const newDefaults: Record<string, any> = {};
-      
-      // Copy defaults for tiers before the insertion point (unchanged)
-      for (let i = 1; i < fromTier; i++) {
-        if (currentDefaults[i.toString()]) {
-          newDefaults[i.toString()] = currentDefaults[i.toString()];
-        }
-      }
-      
-      // Shift defaults for tiers at and after the insertion point
-      Object.keys(currentDefaults).forEach(tierKey => {
-        const tierNum = parseInt(tierKey);
-        if (tierNum >= fromTier) {
-          newDefaults[(tierNum + 1).toString()] = currentDefaults[tierKey];
-        }
-      });
-      
-      // The new tier at fromTier gets no defaults (will use pure placeholders)
-      
-      await updateTierDefaults(newDefaults);
-    } catch (error) {
-      console.error('Error shifting tier defaults up:', error);
-      throw error;
-    }
-  };
+  // REMOVED: Old tier defaults shifting function
 
-  const shiftTierDefaultsDown = async (removedTier: number) => {
-    // When removing a tier, shift existing defaults down by 1
-    // e.g., if removing tier 3, tier 4 becomes tier 3, tier 5 becomes tier 4, etc.
-    try {
-      const { data: leagueData } = await supabase
-        .from('league_schedules')
-        .select('defaults')
-        .eq('league_id', parseInt(leagueId))
-        .maybeSingle();
-      
-      const currentDefaults = leagueData?.defaults || {};
-      const newDefaults: Record<string, any> = {};
-      
-      // Copy defaults for tiers before the removed tier (unchanged)
-      for (let i = 1; i < removedTier; i++) {
-        if (currentDefaults[i.toString()]) {
-          newDefaults[i.toString()] = currentDefaults[i.toString()];
-        }
-      }
-      
-      // Remove the defaults for the deleted tier
-      // Shift defaults for tiers after the removed tier
-      Object.keys(currentDefaults).forEach(tierKey => {
-        const tierNum = parseInt(tierKey);
-        if (tierNum > removedTier) {
-          newDefaults[(tierNum - 1).toString()] = currentDefaults[tierKey];
-        }
-      });
-      
-      await updateTierDefaults(newDefaults);
-    } catch (error) {
-      console.error('Error shifting tier defaults down:', error);
-      throw error;
-    }
-  };
+  // REMOVED: Old tier defaults shifting function
 
   // Additional stub functions
-  const removeTeamFromSchedule = async (teamName: string) => {
-    console.log('removeTeamFromSchedule called with:', teamName);
-  };
-
-  const handleTeamSelection = (teamName: string) => {
-    console.log('handleTeamSelection called with:', teamName);
-  };
 
   const confirmDeleteTeam = () => {
     console.log('confirmDeleteTeam called');
   };
 
-  const confirmRemoveTier = () => {
-    console.log('confirmRemoveTier called');
-  };
+  // REMOVED: Old broken tier removal function
+
+  // REMOVED: Old tier gap fixing function
 
   // Edge scrolling optimization - only working method during HTML5 drag
   useEffect(() => {
@@ -443,7 +305,7 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
           const endDate = new Date(data.end_date + 'T00:00:00');
           const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
           const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-          const playoffWeeks = data.playoff_weeks || 0; // Start with 0 playoff weeks
+          const playoffWeeks = data.playoff_weeks || 0; // Database default should now be 0
           const totalWeeks = regularSeasonWeeks + playoffWeeks;
           
           console.log(`Admin: Setting maxWeeks to ${totalWeeks} (${regularSeasonWeeks} regular + ${playoffWeeks} playoff)`);
@@ -610,43 +472,7 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
     }
   };
 
-  const loadAvailableTeams = async () => {
-    try {
-      const { data: teamsData, error } = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('league_id', parseInt(leagueId))
-        .eq('active', true)
-        .order('name');
 
-      if (error) throw error;
-
-      // Get teams currently on schedule from weekly schedules
-      const teamsOnSchedule = new Set<string>();
-      weeklyTiers.forEach((tier) => {
-        if (tier.team_a_name) teamsOnSchedule.add(tier.team_a_name);
-        if (tier.team_b_name) teamsOnSchedule.add(tier.team_b_name);
-        if (tier.team_c_name) teamsOnSchedule.add(tier.team_c_name);
-      });
-
-      // Mark teams as on schedule or available
-      const availableTeamsList = (teamsData || []).map(team => ({
-        id: team.id,
-        name: team.name,
-        onSchedule: teamsOnSchedule.has(team.name)
-      }));
-
-      setAvailableTeams(availableTeamsList);
-    } catch (error) {
-      console.error('Error loading available teams:', error);
-    }
-  };
-
-  const handleEditClick = (tierIndex: number, tier: Tier) => {
-    setSelectedTier(tier);
-    setSelectedTierIndex(tierIndex);
-    setEditModalOpen(true);
-  };
 
   const handleEditWeeklyTier = (weeklyTier: WeeklyScheduleTier, tierIndex: number) => {
     // Convert WeeklyScheduleTier to Tier format for the modal
@@ -802,12 +628,16 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
           console.log('All defaults now:', newAllDefaults);
         }
         
-        // Second, update all future weeks (current week and beyond) for this tier
+        // Second, update ALL weeks for this tier when setting as default
+        // This ensures the default applies to all instances of this tier across the entire season
         const updateData: any = {};
         if (setAsDefaultInfo.location) updateData.location = tierToSave.location;
         if (setAsDefaultInfo.time) updateData.time_slot = tierToSave.time;
         if (setAsDefaultInfo.court) updateData.court = tierToSave.court;
         
+        console.log(`Applying defaults to ALL weeks for Tier ${editingWeeklyTier.tier_number}:`, updateData);
+        
+        // Apply to ALL weeks (not just future weeks) when setting as default
         const { error: futureError } = await supabase
           .from('weekly_schedules')
           .update({
@@ -815,13 +645,18 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
             updated_at: new Date().toISOString()
           })
           .eq('league_id', parseInt(leagueId))
-          .eq('tier_number', editingWeeklyTier.tier_number)
-          .gte('week_number', currentWeek); // Current week and all future weeks
+          .eq('tier_number', editingWeeklyTier.tier_number);
+          // No week filter - applies to ALL weeks for this tier
 
         if (futureError) {
-          console.error('Error updating future weeks:', futureError);
+          console.error('Error updating all weeks:', futureError);
         } else {
-          console.log(`Updated ${setAsDefaultInfo.location ? 'location' : ''}${setAsDefaultInfo.time ? ' time' : ''}${setAsDefaultInfo.court ? ' court' : ''} for all future weeks of Tier ${editingWeeklyTier.tier_number}`);
+          const fieldsUpdated = [
+            setAsDefaultInfo.location ? 'location' : '',
+            setAsDefaultInfo.time ? 'time' : '',
+            setAsDefaultInfo.court ? 'court' : ''
+          ].filter(f => f).join(', ');
+          console.log(`Successfully applied ${fieldsUpdated} to ALL weeks for Tier ${editingWeeklyTier.tier_number}`);
         }
       }
 
@@ -841,23 +676,9 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
   //   setAddTeamModalOpen(true);
   // };
 
-  const handleCloseAddTeamModal = () => {
-    setAddTeamModalOpen(false);
-    setAddTeamPosition(null);
-  };
 
 
-  // Remove tier functions
-  const handleRemoveTier = (tierIndex: number, tierNumber: number) => {
-    setTierToRemove({ tierIndex, tierNumber });
-    setRemoveTierConfirmOpen(true);
-  };
-
-
-  const cancelRemoveTier = () => {
-    setRemoveTierConfirmOpen(false);
-    setTierToRemove(null);
-  };
+  // REMOVED: Old tier removal functions
 
   // Future functionality - add team to schedule  
   // const addTeamToSchedule = async (teamName: string) => {
@@ -912,10 +733,6 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
 
 
   // Delete team functions
-  const handleDeleteTeam = (tierIndex: number, position: string, teamName: string) => {
-    setTeamToDelete({ tierIndex, position, teamName });
-    setDeleteConfirmOpen(true);
-  };
 
 
   const cancelDeleteTeam = () => {
@@ -924,11 +741,6 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
   };
 
   // Add team functions
-  const handleAddTeamToPosition = async (tierIndex: number, position: string) => {
-    setAddTeamPosition({ tierIndex, position });
-    await loadAvailableTeams();
-    setAddTeamModalOpen(true);
-  };
 
   // Start dragging with mouse events
   const startDrag = (teamName: string, tierIndex: number, position: string, event: React.MouseEvent) => {
@@ -1163,340 +975,223 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
 
 
   // Check if a tier is empty (no teams assigned)
-  const isTierEmpty = (tier: Tier): boolean => {
-    return Object.values(tier.teams).every(team => team === null);
-  };
-
-  // Get current ranking from standings (source of truth)
-  const getCurrentRanking = (teamName: string): number => {
-    const teamIndex = standingsTeams.findIndex(team => team.name === teamName);
-    return teamIndex === -1 ? 0 : teamIndex + 1; // Return 0 if team not found, otherwise ranking
-  };
 
 
-  // Create a new tier for overflow teams
-  const createNewTier = (tierNumber: number, isBlankTier: boolean = false): Tier => {
-    if (isBlankTier) {
-      // Create a tier with sensible defaults for manual insertion
-      return {
-        tierNumber,
-        location: 'TBD',
-        time: '6:00-8:00',
-        court: 'Court 1',
-        format: '3-teams-6-sets', // Default format
-        teams: {
-          A: null,
-          B: null,
-          C: null,
-        },
-        courts: {
-          A: 'Court 1',
-          B: 'Court 1',
-          C: 'Court 1',
-        },
-      };
-    }
 
-    // Original logic for overflow/cascade tiers
-    const locations = [
-      "Carleton University",
-      "University of Ottawa", 
-      "Glebe Collegiate",
-      "Nepean Sportsplex",
-      "Orleans Recreation Complex",
-    ];
+
+
+
+
+
+
+  // === CLEAN TIER MANAGEMENT FUNCTIONS ===
+  
+  const addTier = async (afterTierNumber: number) => {
+    console.log(`Adding new tier after tier ${afterTierNumber}`);
     
-    const timeSlots = [
-      "7:00 PM - 8:30 PM",
-      "8:30 PM - 10:00 PM", 
-      "6:00 PM - 7:30 PM",
-      "7:30 PM - 9:00 PM",
-    ];
-
-    // Use modulo to cycle through locations and times
-    const locationIndex = (tierNumber - 1) % locations.length;
-    const timeIndex = (tierNumber - 1) % timeSlots.length;
-    const courtIndex = (tierNumber - 1) % 3;
-
-    return {
-      tierNumber,
-      location: locations[locationIndex],
-      time: timeSlots[timeIndex],
-      court: `Court ${courtIndex + 1}`,
-      format: '3-teams-6-sets', // Default format
-      teams: {
-        A: null,
-        B: null,
-        C: null,
-      },
-      courts: {
-        A: `Court ${courtIndex + 1}`,
-        B: `Court ${courtIndex + 1}`,
-        C: `Court ${courtIndex + 1}`,
-      },
-    };
-  };
-
-  // Helper function to get the display team for a position (actual team or preview)
-  const getDisplayTeam = (tierIndex: number, position: string, actualTeam: { name: string; ranking: number } | null) => {
-    // Check if there's a preview for this position
-    const previewTeam = cascadePreview.find(p => p.tierIndex === tierIndex && p.position === position);
-    if (previewTeam) {
-      return {
-        team: previewTeam.team,
-        isPreview: true,
-        isOriginalPosition: draggedTeam?.fromTier === tierIndex && draggedTeam?.fromPosition === position
-      };
-    }
-
-    // Check if this is the original position of the dragged team
-    const isOriginalPosition = draggedTeam?.fromTier === tierIndex && draggedTeam?.fromPosition === position;
-    
-    // Only hide the original team if there's an active cascade preview
-    // This ensures the team shows in its original position when not hovering over drop zones
-    if (isOriginalPosition && cascadePreview.length > 0) {
-      return {
-        team: null,
-        isPreview: false,
-        isOriginalPosition: true
-      };
-    }
-
-    // Return actual team (including showing dragged team in original position when no preview)
-    return {
-      team: actualTeam,
-      isPreview: false,
-      isOriginalPosition: isOriginalPosition
-    };
-  };
-
-  const handleDragOver = (e: React.DragEvent, tierIndex: number, position: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Only proceed if we have a dragged team
-    if (!draggedTeam) {
-      e.dataTransfer.dropEffect = 'none';
-      return;
-    }
-    
-    e.dataTransfer.dropEffect = 'move';
-    
-    // Only update if the target actually changed to prevent unnecessary re-renders
-    const currentTarget = dragOverTarget;
-    if (!currentTarget || currentTarget.tierIndex !== tierIndex || currentTarget.position !== position) {
-      // Clear any existing throttle
-      if (dragOverThrottleRef.current) {
-        clearTimeout(dragOverThrottleRef.current);
-      }
-      
-      // Throttle the preview calculation to reduce flickering
-      dragOverThrottleRef.current = setTimeout(() => {
-        setDragOverTarget({ tierIndex, position });
-        
-        // Calculate and set cascade preview
-        const preview = calculateCascadePreview(tierIndex, position);
-        setCascadePreview(preview);
-      }, 10); // Small delay to reduce rapid updates
-    }
-    // Edge scrolling now handled by global mouse tracking
-  };
-
-
-
-
-  // Weekly Schedule specific drag/drop handlers
-  const handleWeeklyDrop = async (e: React.DragEvent, targetTierIndex: number, targetPosition: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!draggedTeam) return;
-
-
     try {
-      // Directly simulate the cascade without relying on preview state
-      const newWeeklyTiers = [...weeklyTiers];
+      // OPTIMIZED: Use single transaction with pure SQL for maximum performance
+      const { error } = await supabase.rpc('add_tier_optimized', {
+        p_league_id: parseInt(leagueId),
+        p_current_week: currentWeek,
+        p_after_tier: afterTierNumber
+      });
       
-      // FIRST: Always clear the source position immediately
-      const sourceTier = newWeeklyTiers[draggedTeam.fromTier];
-      if (sourceTier) {
-        const sourceField = `team_${draggedTeam.fromPosition.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-        const sourceRankingField = `team_${draggedTeam.fromPosition.toLowerCase()}_ranking` as keyof WeeklyScheduleTier;
-        (sourceTier as any)[sourceField] = null;
-        (sourceTier as any)[sourceRankingField] = null;
-      }
+      if (error) throw error;
       
-      // SECOND: Simulate fresh cascade from target position
-      let currentTeamToBump = {
-        name: draggedTeam.name,
-        ranking: draggedTeam.ranking
-      };
-      let currentTierIndex = targetTierIndex;
-      let currentPosition = targetPosition;
-
-      // Execute cascade through weekly tiers
-      while (currentTierIndex < newWeeklyTiers.length) {
-        const currentTier = newWeeklyTiers[currentTierIndex];
-        
-        const teamField = `team_${currentPosition.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-        const existingTeam = (currentTier as any)[teamField];
-        const existingRanking = (currentTier as any)[`team_${currentPosition.toLowerCase()}_ranking`] || 0;
-        
-        // Place the current team
-        (currentTier as any)[teamField] = currentTeamToBump.name;
-        (currentTier as any)[`team_${currentPosition.toLowerCase()}_ranking`] = currentTeamToBump.ranking;
-        
-        // If no existing team, we're done
-        if (!existingTeam) {
-          break;
-        }
-        
-        // Prepare to bump the existing team
-        currentTeamToBump = { name: existingTeam, ranking: existingRanking };
-        
-        // Find next position
-        if (currentPosition === 'A') {
-          currentPosition = 'B';
-        } else if (currentPosition === 'B') {
-          currentPosition = 'C';
-        } else {
-          // Move to next tier, position A
-          currentTierIndex++;
-          currentPosition = 'A';
-        }
-      }
-
-      // Handle overflow - if we still have a team to place, create new tier
-      if (currentTierIndex >= newWeeklyTiers.length && currentTeamToBump) {
-        
-        // Create new tier for overflow
-        const templateTier = newWeeklyTiers[0] || {};
-        const newTier: WeeklyScheduleTier = {
-          id: Date.now(), // Temporary ID
-          tier_number: newWeeklyTiers.length + 1,
-          location: templateTier.location || 'TBD',
-          time_slot: templateTier.time_slot || 'TBD',
-          court: `Court ${newWeeklyTiers.length + 1}`,
-          team_a_name: currentPosition === 'A' ? currentTeamToBump.name : null,
-          team_a_ranking: currentPosition === 'A' ? currentTeamToBump.ranking : null,
-          team_b_name: currentPosition === 'B' ? currentTeamToBump.name : null,
-          team_b_ranking: currentPosition === 'B' ? currentTeamToBump.ranking : null,
-          team_c_name: currentPosition === 'C' ? currentTeamToBump.name : null,
-          team_c_ranking: currentPosition === 'C' ? currentTeamToBump.ranking : null,
-          is_completed: false,
-          no_games: false,
-          format: '3-teams-6-sets'
-        };
-        
-        newWeeklyTiers.push(newTier);
-      }
-
-      // Update weekly tiers in state
-      setWeeklyTiers(newWeeklyTiers);
+      // Refresh UI
+      await loadWeeklySchedule(currentWeek);
+      console.log(`Successfully added tier after ${afterTierNumber}`);
       
     } catch (error) {
-      console.error('Error updating weekly schedule:', error);
+      console.error('Error adding tier:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'No message',
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint,
+        stack: error instanceof Error ? error.stack : 'No stack'
+      });
+      
+      // Fallback to old method if RPC doesn't exist
+      if ((error as any)?.code === 'PGRST202' || (error as any)?.code === '42883' || (error as any)?.message?.includes('does not exist') || (error as any)?.message?.includes('no matches were found')) {
+        console.log('RPC function does not exist, using fallback method for add tier');
+        try {
+          await addTierFallback(afterTierNumber);
+          await loadWeeklySchedule(currentWeek);
+          console.log('Fallback method completed successfully');
+        } catch (fallbackError) {
+          console.error('Fallback method failed:', fallbackError);
+          alert(`Failed to add tier: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown fallback error'}`);
+        }
+      } else {
+        alert(`Failed to add tier: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        await loadWeeklySchedule(currentWeek); // Reload to fix any inconsistencies
+      }
     }
-
-    // Clear drag state
-    setDraggedTeam(null);
-    setDragOverTarget(null);
-    setCascadePreview([]);
-    setIsDragging(false);
-    stopEdgeScrolling();
   };
 
-  const handleWeeklyInsertTier = async (position: number) => {
-    console.log('Insert tier at position:', position);
-    console.log('League ID:', leagueId);
-    console.log('Current Week:', currentWeek);
-    console.log('Existing tiers:', weeklyTiers);
+  // Fallback method for add tier (original implementation)
+  const addTierFallback = async (afterTierNumber: number) => {
+    // 1. Get max week for this league
+    const { data: maxWeekData, error: maxWeekError } = await supabase
+      .from('weekly_schedules')
+      .select('week_number')
+      .eq('league_id', parseInt(leagueId))
+      .order('week_number', { ascending: false })
+      .limit(1);
     
-    try {
-      // FIRST: Update tier numbers for all existing tiers at or after the insertion position
-      // We need to do this BEFORE inserting to avoid duplicate key violations
-      const tiersToUpdate = weeklyTiers.filter((tier, index) => index >= position);
-      
-      console.log('Tiers to renumber:', tiersToUpdate.length);
-      
-      if (tiersToUpdate.length > 0) {
-        // Update tier numbers in reverse order to avoid conflicts
-        // Start from the last tier and work backwards
-        for (let i = tiersToUpdate.length - 1; i >= 0; i--) {
-          const tier = tiersToUpdate[i];
-          if (!tier.id) {
-            console.warn('Skipping tier without ID:', tier);
-            continue;
-          }
-          
-          const oldTierNumber = tier.tier_number;
-          const newTierNumber = oldTierNumber + 1;
-          console.log(`Updating tier ${tier.id} from tier_number ${oldTierNumber} to ${newTierNumber}`);
-          
-          const { error: updateError } = await supabase
-            .from('weekly_schedules')
-            .update({ tier_number: newTierNumber })
-            .eq('id', tier.id);
-            
-          if (updateError) {
-            console.error('Error updating tier number:', updateError);
-            alert(`Failed to update tier numbers: ${updateError.message}`);
-            throw updateError;
-          }
-        }
-      }
-      
-      // SECOND: Update tier-specific defaults before inserting
-      const tierNumber = position + 1;
-      console.log('Shifting tier defaults up from position:', tierNumber);
-      await shiftTierDefaultsUp(tierNumber);
-      
-      // Create new tier structure with pure placeholders (no tier-specific defaults)
-      const insertData = {
-        league_id: leagueId,
-        week_number: currentWeek,
-        tier_number: tierNumber,
-        location: 'SET_LOCATION', // New tier gets pure placeholders
-        time_slot: 'SET_TIME', // New tier gets pure placeholders
-        court: 'SET_COURT', // New tier gets pure placeholders
+    if (maxWeekError) throw maxWeekError;
+    const maxWeek = maxWeekData?.[0]?.week_number || currentWeek;
+    
+    // 2. Get all tiers that need to be shifted
+    const { data: tiersToShift, error: fetchError } = await supabase
+      .from('weekly_schedules')
+      .select('id, tier_number')
+      .eq('league_id', parseInt(leagueId))
+      .gte('week_number', currentWeek)
+      .gt('tier_number', afterTierNumber);
+    
+    if (fetchError) throw fetchError;
+    
+    // 3. Insert new tier for current week and all future weeks
+    const newTierNumber = afterTierNumber + 1;
+    const insertRows = [];
+    
+    for (let week = currentWeek; week <= maxWeek; week++) {
+      insertRows.push({
+        league_id: parseInt(leagueId),
+        week_number: week,
+        tier_number: newTierNumber,
+        location: 'SET_LOCATION',
+        time_slot: 'SET_TIME',
+        court: 'SET_COURT',
         team_a_name: null,
-        team_a_ranking: null,
         team_b_name: null,
-        team_b_ranking: null,
         team_c_name: null,
+        team_a_ranking: null,
+        team_b_ranking: null,
         team_c_ranking: null,
         is_completed: false,
         no_games: false,
         format: '3-teams-6-sets'
-      };
-      
-      console.log('Inserting new tier with data:', insertData);
-      
-      const { data: newTierData, error: insertError } = await supabase
+      });
+    }
+    
+    const { error: insertError } = await supabase
+      .from('weekly_schedules')
+      .insert(insertRows);
+    
+    if (insertError) throw insertError;
+    
+    // 4. Shift existing tiers up by 1 in descending order
+    const sortedTiers = (tiersToShift || []).sort((a, b) => b.tier_number - a.tier_number);
+    const updatePromises = sortedTiers.map(tier => 
+      supabase
         .from('weekly_schedules')
-        .insert(insertData)
-        .select()
-        .single();
-        
-      if (insertError) {
-        console.error('Error inserting tier to database:', insertError);
-        alert(`Failed to insert tier: ${insertError.message}`);
-        // Try to restore original tier numbers on failure
-        await loadWeeklySchedule(currentWeek);
-        throw insertError;
-      }
+        .update({ tier_number: tier.tier_number + 1 })
+        .eq('id', tier.id)
+    );
+    
+    const updateResults = await Promise.all(updatePromises);
+    const updateErrors = updateResults.filter(result => result.error);
+    
+    if (updateErrors.length > 0) {
+      throw new Error(`Failed to update ${updateErrors.length} tiers`);
+    }
+  };
+  
+  const removeTier = async (tierNumber: number) => {
+    console.log(`Removing tier ${tierNumber}`);
+    
+    // 1. Check if tier has teams
+    const tier = weeklyTiers.find(t => t.tier_number === tierNumber);
+    if (tier && (tier.team_a_name || tier.team_b_name || tier.team_c_name)) {
+      alert('Cannot remove tier with teams. Remove all teams first.');
+      return;
+    }
+    
+    // 2. Confirm deletion
+    const confirmed = confirm(`Remove Tier ${tierNumber} from week ${currentWeek} and all future weeks?`);
+    if (!confirmed) return;
+    
+    try {
+      // OPTIMIZED: Use single transaction with pure SQL for maximum performance
+      const { error } = await supabase.rpc('remove_tier_optimized', {
+        p_league_id: parseInt(leagueId),
+        p_current_week: currentWeek,
+        p_tier_number: tierNumber
+      });
       
-      console.log('New tier saved to database with ID:', newTierData?.id);
+      if (error) throw error;
       
-      // Reload the weekly schedule to get the updated data
-      console.log('Reloading weekly schedule...');
+      // Refresh UI
       await loadWeeklySchedule(currentWeek);
-      console.log('Weekly schedule reloaded after tier insertion');
+      console.log(`Successfully removed tier ${tierNumber}`);
       
     } catch (error) {
-      console.error('Error inserting tier:', error);
-      // Reload to ensure UI is in sync with database
-      await loadWeeklySchedule(currentWeek);
+      console.error('Error removing tier:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'No message',
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint
+      });
+      
+      // Fallback to old method if RPC doesn't exist
+      if ((error as any)?.code === 'PGRST202' || (error as any)?.code === '42883' || (error as any)?.message?.includes('does not exist') || (error as any)?.message?.includes('no matches were found')) {
+        console.log('RPC function does not exist, using fallback method for remove tier');
+        try {
+          await removeTierFallback(tierNumber);
+          await loadWeeklySchedule(currentWeek);
+          console.log('Fallback method completed successfully');
+        } catch (fallbackError) {
+          console.error('Fallback method failed:', fallbackError);
+          alert(`Failed to remove tier: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown fallback error'}`);
+        }
+      } else {
+        alert(`Failed to remove tier: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        await loadWeeklySchedule(currentWeek); // Reload to fix any inconsistencies
+      }
+    }
+  };
+
+  // Fallback method for remove tier (original implementation)
+  const removeTierFallback = async (tierNumber: number) => {
+    // 1. Delete tier from current week and all future weeks
+    const { error: deleteError } = await supabase
+      .from('weekly_schedules')
+      .delete()
+      .eq('league_id', parseInt(leagueId))
+      .gte('week_number', currentWeek)
+      .eq('tier_number', tierNumber);
+    
+    if (deleteError) throw deleteError;
+    
+    // 2. Shift remaining tier numbers down using batched operations
+    const { data: tiersToShift, error: fetchError } = await supabase
+      .from('weekly_schedules')
+      .select('id, tier_number')
+      .eq('league_id', parseInt(leagueId))
+      .gte('week_number', currentWeek)
+      .gt('tier_number', tierNumber)
+      .order('tier_number', { ascending: true });
+    
+    if (fetchError) throw fetchError;
+    
+    // Use Promise.all to batch the updates
+    const updatePromises = (tiersToShift || []).map(tier => 
+      supabase
+        .from('weekly_schedules')
+        .update({ tier_number: tier.tier_number - 1 })
+        .eq('id', tier.id)
+    );
+    
+    const updateResults = await Promise.all(updatePromises);
+    const updateErrors = updateResults.filter(result => result.error);
+    
+    if (updateErrors.length > 0) {
+      throw new Error(`Failed to update ${updateErrors.length} tiers`);
     }
   };
 
@@ -1539,156 +1234,12 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
     }
   };
 
-  const handleWeeklyRemoveTier = async (tierIndex: number, tierNumber: number) => {
-    console.log('Remove weekly tier:', tierNumber, 'at index:', tierIndex);
-    
-    // Don't allow removing tiers with teams
-    const tier = weeklyTiers[tierIndex];
-    if (!tier) return;
-    
-    const hasTeams = tier.team_a_name || tier.team_b_name || tier.team_c_name;
-    if (hasTeams) {
-      alert('Cannot remove tier with teams. Remove all teams first.');
-      return;
-    }
-    
-    // Confirm deletion
-    const confirmed = confirm(`Are you sure you want to remove Tier ${tierNumber}? This action cannot be undone.`);
-    if (!confirmed) return;
-    
-    try {
-      // FIRST: Update tier-specific defaults before deleting
-      console.log('Shifting tier defaults down for removed tier:', tierNumber);
-      await shiftTierDefaultsDown(tierNumber);
-      
-      // SECOND: Delete the tier from database
-      const { error: deleteError } = await supabase
-        .from('weekly_schedules')
-        .delete()
-        .eq('id', tier.id);
-        
-      if (deleteError) {
-        console.error('Error deleting tier from database:', deleteError);
-        alert(`Failed to delete tier: ${deleteError.message}`);
-        throw deleteError;
-      }
-      
-      console.log('Tier deleted from database');
-      
-      // THIRD: Update tier numbers for all remaining tiers that come after the deleted one
-      const tiersToRenumber = weeklyTiers.filter((t, index) => index > tierIndex);
-      
-      if (tiersToRenumber.length > 0) {
-        for (const tierToUpdate of tiersToRenumber) {
-          if (!tierToUpdate.id) continue;
-          
-          const newTierNumber = tierToUpdate.tier_number - 1;
-          console.log(`Renumbering tier ${tierToUpdate.id} from ${tierToUpdate.tier_number} to ${newTierNumber}`);
-          
-          const { error: updateError } = await supabase
-            .from('weekly_schedules')
-            .update({ tier_number: newTierNumber })
-            .eq('id', tierToUpdate.id);
-            
-          if (updateError) {
-            console.error('Error renumbering tier:', updateError);
-            // Don't fail completely on renumbering errors
-          }
-        }
-      }
-      
-      // Reload the weekly schedule to show updated state
-      await loadWeeklySchedule(currentWeek);
-      console.log('Weekly schedule reloaded after tier deletion');
-      
-    } catch (error) {
-      console.error('Error removing weekly tier:', error);
-      // Reload to ensure UI is in sync with database
-      await loadWeeklySchedule(currentWeek);
-    }
-  };
 
   const handleWeeklyAddTeamToPosition = (tierIndex: number, position: string) => {
     console.log('Add team to:', `T${tierIndex + 1}${position}`);
-    
-    setAddTeamPosition({ tierIndex, position });
-    setAddTeamModalOpen(true);
+    // TODO: Add team functionality to be implemented
   };
 
-  const handleWeeklyDragOver = (e: React.DragEvent, targetTierIndex: number, targetPosition: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!draggedTeam || !isEditScheduleMode) {
-      return;
-    }
-
-    // Set drag over target
-    setDragOverTarget({ tierIndex: targetTierIndex, position: targetPosition });
-
-    // Generate cascade preview for weekly schedule
-    const preview: typeof cascadePreview = [];
-    let currentTeamToBump = {
-      name: draggedTeam.name,
-      ranking: draggedTeam.ranking
-    };
-    let currentTierIndex = targetTierIndex;
-    let currentPosition = targetPosition;
-
-    // Simulate cascade through weekly tiers
-    while (currentTierIndex < weeklyTiers.length) {
-      const currentTier = weeklyTiers[currentTierIndex];
-      
-      const teamField = `team_${currentPosition.toLowerCase()}_name` as keyof WeeklyScheduleTier;
-      let existingTeam = (currentTier as any)[teamField];
-      let existingRanking = (currentTier as any)[`team_${currentPosition.toLowerCase()}_ranking`] || 0;
-      
-      // Treat the dragged team's source position as empty to avoid circular cascade
-      if (currentTierIndex === draggedTeam.fromTier && currentPosition === draggedTeam.fromPosition) {
-        existingTeam = null;
-        existingRanking = 0;
-      }
-      
-      // Add current team to preview
-      preview.push({
-        tierIndex: currentTierIndex,
-        position: currentPosition,
-        team: currentTeamToBump,
-        isPreview: true
-      });
-      
-      // If no existing team, we're done
-      if (!existingTeam) {
-        break;
-      }
-      
-      // Prepare to bump the existing team
-      currentTeamToBump = { name: existingTeam, ranking: existingRanking };
-      
-      // Find next position
-      if (currentPosition === 'A') {
-        currentPosition = 'B';
-      } else if (currentPosition === 'B') {
-        currentPosition = 'C';
-      } else {
-        // Move to next tier, position A
-        currentTierIndex++;
-        currentPosition = 'A';
-      }
-    }
-
-    // If we need to create a new tier for overflow
-    if (currentTierIndex >= weeklyTiers.length && currentTeamToBump) {
-      preview.push({
-        tierIndex: currentTierIndex,
-        position: 'A',
-        team: currentTeamToBump,
-        isPreview: true
-      });
-    }
-
-    setCascadePreview(preview);
-  };
 
 
   return (
@@ -1851,7 +1402,7 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
                 elements.push(
                   <div key={`insert-before-weekly-${tierIndex}`} className="flex justify-center py-1">
                     <button
-                      onClick={() => handleWeeklyInsertTier(tierIndex)}
+                      onClick={() => addTier(tier.tier_number - 1)}
                       className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-dashed border-blue-300 hover:border-blue-500 rounded-md transition-all duration-200"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1873,7 +1424,7 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
                       {/* Remove tier button - only for empty tiers in edit mode */}
                       {isEditScheduleMode && userProfile?.is_admin && (!tier.team_a_name && !tier.team_b_name && !tier.team_c_name) && (
                         <button
-                          onClick={() => handleWeeklyRemoveTier(tierIndex, tier.tier_number)}
+                          onClick={() => removeTier(tier.tier_number)}
                           className="flex items-center gap-1 text-sm text-[#B20000] hover:text-[#8A0000] hover:underline"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2306,7 +1857,7 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
               elements.push(
                 <div key="insert-after-all-weekly" className="flex justify-center py-3">
                   <button
-                    onClick={() => handleWeeklyInsertTier(weeklyTiers.length)}
+                    onClick={() => addTier(weeklyTiers.length > 0 ? Math.max(...weeklyTiers.map(t => t.tier_number)) : 0)}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-green-600 hover:text-green-800 hover:bg-green-50 border border-dashed border-green-300 hover:border-green-500 rounded-md transition-all duration-200"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2436,87 +1987,6 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
         />
       )}
 
-      {/* Add Team Modal */}
-      {addTeamModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              {/* Header */}
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-[#6F6F6F]">Manage Teams on Schedule</h2>
-                <button 
-                  onClick={handleCloseAddTeamModal}
-                  className="text-gray-500 hover:text-gray-700 bg-transparent hover:bg-gray-100 rounded-full p-2 transition-colors"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Teams List */}
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600 mb-4">
-                  Add teams to the schedule or remove existing teams. Teams not on the schedule can be added, teams on the schedule can be removed.
-                </p>
-                
-                {availableTeams.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Loading teams...</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {availableTeams.map((team) => (
-                      <div
-                        key={team.id}
-                        className={`flex items-center justify-between p-3 rounded-md border ${
-                          team.onSchedule
-                            ? 'bg-green-50 border-green-200 hover:border-green-400 hover:bg-green-100'
-                            : 'bg-white border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <div className={`font-medium ${team.onSchedule ? 'text-[#6F6F6F]' : 'text-[#6F6F6F]'}`}>
-                            {team.name}
-                          </div>
-                          {team.onSchedule && (
-                            <div className="ml-2 text-xs text-green-600 italic">
-                              (On schedule)
-                            </div>
-                          )}
-                        </div>
-                        
-                        {team.onSchedule ? (
-                          <button
-                            onClick={() => removeTeamFromSchedule(team.name)}
-                            className="px-3 py-1 text-sm rounded transition-colors bg-red-500 text-white hover:bg-red-600"
-                          >
-                            Remove
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleTeamSelection(team.name)}
-                            className="px-3 py-1 text-sm rounded transition-colors bg-[#B20000] text-white hover:bg-[#8A0000]"
-                          >
-                            Add Team
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <p className="text-xs text-gray-500">
-                  Added teams will be placed in a new tier at the end of the schedule. Removing teams will delete empty tiers and renumber remaining tiers.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && teamToDelete && (
@@ -2560,47 +2030,7 @@ export function AdminLeagueSchedule({ openScoreSubmissionModal, leagueId, league
         </div>
       )}
 
-      {/* Remove Tier Confirmation Modal */}
-      {removeTierConfirmOpen && tierToRemove && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={cancelRemoveTier}></div>
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 relative z-10">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0 w-10 h-10 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-              </div>
-              
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Remove Tier from Schedule
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Are you sure you want to remove <strong>Tier {tierToRemove.tierNumber}</strong> from the schedule? All teams in this tier will be removed and remaining tiers will be renumbered. This action cannot be undone.
-                </p>
-              </div>
-
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelRemoveTier}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmRemoveTier}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
-                >
-                  Remove Tier
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* REMOVED: Old tier removal modal - now using simple confirm() */}
 
       {/* Add Playoff Weeks Modal */}
       {showAddPlayoffModal && (

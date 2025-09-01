@@ -19,14 +19,14 @@ export function AddPlayoffWeeksModal({
   currentPlayoffWeeks, 
   onPlayoffWeeksAdded 
 }: AddPlayoffWeeksModalProps) {
-  const [playoffWeeks, setPlayoffWeeks] = useState(currentPlayoffWeeks > 0 ? currentPlayoffWeeks : 2); // Default to current or 2 weeks
+  const [playoffWeeks, setPlayoffWeeks] = useState(currentPlayoffWeeks); // Use the actual current value (0 by default)
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Update input when modal opens with current playoff weeks
   useEffect(() => {
     if (isOpen) {
-      setPlayoffWeeks(currentPlayoffWeeks > 0 ? currentPlayoffWeeks : 2);
+      setPlayoffWeeks(currentPlayoffWeeks);
       setError(null);
     }
   }, [isOpen, currentPlayoffWeeks]);

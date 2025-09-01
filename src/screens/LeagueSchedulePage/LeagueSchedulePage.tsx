@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, DollarSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useToast } from '../../components/ui/toast';
 import { supabase } from '../../lib/supabase';
 import { AdminLeagueSchedule } from './components/AdminLeagueSchedule';
 import { useScoreSubmissionModal } from '../LeagueDetailPage/hooks/useLeagueDetail';
@@ -23,11 +22,9 @@ export function LeagueSchedulePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useAuth();
-  const { showToast } = useToast();
   const { 
     showScoreSubmissionModal, 
     selectedTier, 
-    openScoreSubmissionModal, 
     closeScoreSubmissionModal 
   } = useScoreSubmissionModal();
 
@@ -161,7 +158,6 @@ export function LeagueSchedulePage() {
         {/* Schedule Content */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <AdminLeagueSchedule 
-            openScoreSubmissionModal={openScoreSubmissionModal}
             leagueId={leagueId!}
             leagueName={league?.name || ''}
           />
