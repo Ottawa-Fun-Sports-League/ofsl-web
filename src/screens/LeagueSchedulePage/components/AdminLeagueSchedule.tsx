@@ -3,6 +3,8 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { MapPin, Clock, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TierEditModal } from './TierEditModal';
 import { AddPlayoffWeeksModal } from './AddPlayoffWeeksModal';
+import { AddTeamModal } from './AddTeamModal';
+import { getTeamCountForFormat, getGridColsClass } from '../constants/formats';
 import { SubmitScoresModal } from '../../LeagueDetailPage/components/SubmitScoresModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -48,6 +50,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   // Team reordering state
   const [isEditScheduleMode, setIsEditScheduleMode] = useState(false);
   const [showAddPlayoffModal, setShowAddPlayoffModal] = useState(false);
+  const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
+  const [addTeamModalData, setAddTeamModalData] = useState<{ tierIndex: number; position: string } | null>(null);
   
   // Legacy drag state variables (keep for compatibility)
   const [draggedTeam, setDraggedTeam] = useState<{
@@ -669,68 +673,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   };
 
 
-  // Future functionality - add team modal
-  // const handleOpenAddTeamModal = async () => {
-  //   console.log('handleOpenAddTeamModal called');
-  //   await loadAvailableTeams();
-  //   setAddTeamModalOpen(true);
-  // };
-
-
-
-  // REMOVED: Old tier removal functions
-
-  // Future functionality - add team to schedule  
-  // const addTeamToSchedule = async (teamName: string) => {
-  //   console.log('addTeamToSchedule called with:', teamName);
-  //   try {
-  //     // Get original schedule format for the new tier
-  //     const { data } = await supabase
-  //       .from('league_schedules')
-  //       .select('format')
-  //       .eq('league_id', parseInt(leagueId))
-  //       .maybeSingle();
-
-  //     const originalFormat = data?.format || '3-teams-6-sets';
-  //     
-  //     // Create new tier for this team
-  //     const newTierNumber = mockSchedule[0].tiers.length + 1;
-  //     const newTier: Tier = {
-  //       tierNumber: newTierNumber,
-  //       location: mockSchedule[0].tiers[0]?.location || 'TBD',
-  //       time: mockSchedule[0].tiers[0]?.time || 'TBD',
-  //       court: mockSchedule[0].tiers[0]?.court || 'TBD',
-  //       format: originalFormat,
-  //       teams: {
-  //         A: { name: teamName, ranking: getCurrentRanking(teamName) },
-  //         B: null,
-  //         C: null,
-  //         D: null,
-  //         E: null,
-  //         F: null
-  //       },
-  //       courts: {
-  //         A: `Court ${newTierNumber}`,
-  //         B: `Court ${newTierNumber}`,
-  //         C: `Court ${newTierNumber}`,
-  //         D: `Court ${newTierNumber}`,
-  //         E: `Court ${newTierNumber}`,
-  //         F: `Court ${newTierNumber}`
-  //       }
-  //     };
-
-  //     // Add the new tier to the schedule
-  //     const updatedSchedule = [...mockSchedule];
-  //     updatedSchedule[0].tiers = [...updatedSchedule[0].tiers, newTier];
-  //     
-  //     await onScheduleUpdate(updatedSchedule);
-  //     await loadAvailableTeams(); // Refresh the teams list
-  //   } catch (error) {
-  //     console.error('Error adding team to schedule:', error);
-  //   }
-  // };
-
-
 
   // Delete team functions
 
@@ -1236,8 +1178,100 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
 
   const handleWeeklyAddTeamToPosition = (tierIndex: number, position: string) => {
-    console.log('Add team to:', `T${tierIndex + 1}${position}`);
-    // TODO: Add team functionality to be implemented
+    setAddTeamModalData({ tierIndex, position });
+    setAddTeamModalOpen(true);
+  };
+
+  const handleAddTeamToSchedule = async (teamName: string, tierIndex: number, position: string) => {
+    try {
+      // First, get the team's ranking from the schedule data
+      let teamRanking: number | null = null;
+      
+      try {
+        const { data: scheduleData, error: scheduleError } = await supabase
+          .from('league_schedules')
+          .select('schedule_data')
+          .eq('league_id', parseInt(leagueId))
+          .maybeSingle();
+
+        if (scheduleError && scheduleError.code !== 'PGRST116') {
+          console.warn('Error loading schedule data for ranking:', scheduleError);
+        } else if (scheduleData?.schedule_data?.tiers) {
+          // Find the team's ranking in the schedule data
+          for (const tier of scheduleData.schedule_data.tiers) {
+            if (tier.teams) {
+              for (const teamData of Object.values(tier.teams)) {
+                if (teamData && (teamData as any).name === teamName && (teamData as any).ranking) {
+                  teamRanking = (teamData as any).ranking;
+                  break;
+                }
+              }
+            }
+            if (teamRanking) break;
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching team ranking:', err);
+      }
+
+      // If no ranking found in schedule data, try to determine from standings position
+      if (teamRanking === null) {
+        try {
+          const { data: teamsData, error: teamsError } = await supabase
+            .from('teams')
+            .select('id, name, created_at')
+            .eq('league_id', parseInt(leagueId))
+            .eq('active', true)
+            .order('created_at', { ascending: true });
+
+          if (!teamsError && teamsData) {
+            const teamIndex = teamsData.findIndex(team => team.name === teamName);
+            if (teamIndex !== -1) {
+              teamRanking = teamIndex + 1; // 1-based ranking
+            }
+          }
+        } catch (err) {
+          console.warn('Error calculating team ranking from standings:', err);
+        }
+      }
+
+      // Update the weekly schedule with the new team
+      const updatedTiers = [...weeklyTiers];
+      const positionKey = `team_${position.toLowerCase()}_name` as 'team_a_name' | 'team_b_name' | 'team_c_name';
+      const rankingKey = `team_${position.toLowerCase()}_ranking` as 'team_a_ranking' | 'team_b_ranking' | 'team_c_ranking';
+      
+      updatedTiers[tierIndex] = {
+        ...updatedTiers[tierIndex],
+        [positionKey]: teamName,
+        [rankingKey]: teamRanking
+      };
+
+      // Save to database
+      const { error } = await supabase
+        .from('weekly_schedules')
+        .update({
+          [positionKey]: teamName,
+          [rankingKey]: teamRanking,
+          updated_at: new Date().toISOString()
+        })
+        .eq('league_id', parseInt(leagueId))
+        .eq('week_number', currentWeek)
+        .eq('tier_number', tierIndex + 1);
+
+      if (error) throw error;
+
+      // Update local state
+      setWeeklyTiers(updatedTiers);
+      
+      // Close modal
+      setAddTeamModalOpen(false);
+      setAddTeamModalData(null);
+      
+      console.log(`Added team ${teamName} to Tier ${tierIndex + 1}, Position ${position} with ranking ${teamRanking}`);
+    } catch (error) {
+      console.error('Error adding team to schedule:', error);
+      alert('Failed to add team to schedule. Please try again.');
+    }
   };
 
 
@@ -1507,7 +1541,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 
                 {/* Teams Display */}
                 <div className="p-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
                     {/* Team A Position */}
                     <div 
                       className={`text-center p-3 rounded border-2 transition-all ${
@@ -1734,7 +1768,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       })()}
                     </div>
                     
-                    {/* Team C Position */}
+                    {/* Team C Position - Only show for 3+ team formats */}
+                    {getTeamCountForFormat(tier.format || '3-teams-6-sets') >= 3 && (
                     <div 
                       className={`text-center p-3 rounded border-2 transition-all ${
                         isEditScheduleMode 
@@ -1845,6 +1880,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                         }
                       })()}
                     </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -1987,6 +2023,21 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         />
       )}
 
+      {/* Add Team Modal */}
+      {addTeamModalOpen && addTeamModalData && (
+        <AddTeamModal
+          isOpen={addTeamModalOpen}
+          onClose={() => {
+            setAddTeamModalOpen(false);
+            setAddTeamModalData(null);
+          }}
+          leagueId={leagueId}
+          currentWeek={currentWeek}
+          tierIndex={addTeamModalData.tierIndex}
+          position={addTeamModalData.position}
+          onAddTeam={handleAddTeamToSchedule}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && teamToDelete && (

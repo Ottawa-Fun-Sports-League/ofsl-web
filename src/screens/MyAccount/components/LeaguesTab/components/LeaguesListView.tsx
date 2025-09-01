@@ -1,9 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "../../../../../components/ui/button";
 import { Edit2, Trash2, Copy, Users, ChevronUp, ChevronDown, ChevronsUpDown, Calendar } from "lucide-react";
 import { LeagueWithTeamCount } from "../types";
-import { supabase } from "../../../../../lib/supabase";
 import {
   getDayName,
   formatLeagueDates,
@@ -26,87 +25,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [leaguesWithEmptySpots, setLeaguesWithEmptySpots] = useState<Set<number>>(new Set());
 
-  // Batch check for empty spots in league schedules
-  const checkForEmptySpots = useCallback(async () => {
-    const leaguesWithSchedules = leagues.filter(league => league.has_schedule);
-    if (leaguesWithSchedules.length === 0) return;
-
-    const leagueIds = leaguesWithSchedules.map(league => league.id);
-    
-    try {
-      const { data, error } = await supabase
-        .from('league_schedules')
-        .select('league_id, schedule_data')
-        .in('league_id', leagueIds);
-
-      if (error) {
-        console.error('Error loading schedules:', error);
-        return;
-      }
-
-      const leaguesWithEmpty = new Set<number>();
-      data?.forEach(schedule => {
-        if (schedule.schedule_data?.tiers) {
-          const tiers = schedule.schedule_data.tiers;
-          
-          // Check only the used positions based on tier format (typically A, B, C for 3-team volleyball)
-          const hasEmpty = tiers.some((tier: any) => {
-            const teams = tier.teams || {};
-            const format = tier.format || '3-teams-6-sets';
-            
-            // Define which positions are actually used based on format
-            let usedPositions: string[] = [];
-            if (format.includes('3-teams') || format === '3-teams-6-sets') {
-              usedPositions = ['A', 'B', 'C'];
-            } else if (format.includes('2-teams')) {
-              usedPositions = ['A', 'B'];
-            } else if (format.includes('4-teams')) {
-              usedPositions = ['A', 'B', 'C', 'D'];
-            } else if (format.includes('6-teams')) {
-              usedPositions = ['A', 'B', 'C', 'D', 'E', 'F'];
-            } else {
-              // Default to 3-team format
-              usedPositions = ['A', 'B', 'C'];
-            }
-            
-            // Only check the positions that should be used for this format
-            return usedPositions.some(position => teams[position] === null);
-          });
-          
-          console.log(`League ${schedule.league_id} LIST schedule check (FIXED):`);
-          console.log(`  tierCount: ${tiers.length}, hasEmpty: ${hasEmpty}`);
-          
-          if (hasEmpty) {
-            leaguesWithEmpty.add(schedule.league_id);
-          }
-        }
-      });
-
-      setLeaguesWithEmptySpots(leaguesWithEmpty);
-    } catch (err) {
-      console.error('Error checking for empty spots:', err);
-    }
-  }, [leagues]);
-
-  useEffect(() => {
-    checkForEmptySpots();
-  }, [leagues]);
-
-  // Also re-check when the page becomes visible (user returns from schedule management)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        checkForEmptySpots();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [checkForEmptySpots]);
   
   const getSportIcon = (sport: string | null) => {
     if (!sport) return "";
@@ -320,14 +239,9 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
                       size="sm"
                       onClick={() => onManageSchedule?.(league.id)}
                       className="h-8 w-8 p-0 hover:bg-green-100 relative"
-                      title={leaguesWithEmptySpots.has(league.id) ? "Manage schedule - Has empty slots" : "Manage schedule"}
+                      title="Manage schedule"
                     >
                       <Calendar className="h-4 w-4 text-green-600" />
-                      {leaguesWithEmptySpots.has(league.id) && (
-                        <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                          !
-                        </span>
-                      )}
                     </Button>
                   )}
                 </div>

@@ -3,7 +3,8 @@ import { X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { supabase } from '../../../lib/supabase';
-import type { Tier, Team } from '../../LeagueDetailPage/utils/leagueUtils';
+import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
+import { GAME_FORMATS, getPositionsForFormat } from '../constants/formats';
 
 interface TierEditModalProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ interface TierEditModalProps {
   allTiers: Tier[];
   leagueId: string;
   leagueName: string;
-  onSave: (updatedSchedule: Tier[], setAsDefaultInfo?: {location: boolean, time: boolean, court: boolean}, updatedTier?: Tier) => Promise<void>;
+  onSave: (updatedTiers: Tier[], setAsDefaultInfo?: {location: boolean, time: boolean, court: boolean}, updatedTier?: Tier) => Promise<void>;
 }
 
 interface Gym {
@@ -37,182 +38,59 @@ const TIME_PRESETS = [
   'Custom'
 ];
 
-const GAME_FORMATS = [
-  { value: '3-teams-6-sets', label: '3 teams (6 sets)', teamCount: 3 },
-  { value: '2-teams-4-sets', label: '2 teams (4 sets)', teamCount: 2 },
-  { value: '2-teams-best-of-5', label: '2 teams (Best of 5)', teamCount: 2 },
-  { value: '2-teams-best-of-3', label: '2 teams (Best of 3)', teamCount: 2 },
-  { value: '4-teams-head-to-head', label: '4 teams (Head-to-head)', teamCount: 4 },
-  { value: '6-teams-head-to-head', label: '6 teams (head-to-head)', teamCount: 6 },
-  { value: '2-teams-elite', label: '2 teams (Elite)', teamCount: 2 },
-];
-
-const getTeamCountForFormat = (format: string): number => {
-  const gameFormat = GAME_FORMATS.find(f => f.value === format);
-  return gameFormat?.teamCount || 3; // Default to 3 teams if format not found
-};
-
-
-const redistributeTeams = (tiers: Tier[], changedTierIndex: number, newFormat: string, originalScheduleFormat: string | undefined): Tier[] => {
-  console.log('=== TEAM REDISTRIBUTION DEBUG ===');
-  console.log('Changed tier index:', changedTierIndex, 'New format:', newFormat);
+// Simple validation: prevent format changes that would remove teams
+const validateFormatChange = (tier: Tier, newFormat: string): { isValid: boolean; reason?: string } => {
+  const newPositions = getPositionsForFormat(newFormat);
   
-  // Collect all teams from all tiers with their original rankings
-  const allTeams: Array<{ name: string; ranking: number }> = [];
-  const positions = ['A', 'B', 'C', 'D', 'E', 'F'];
-  
-  // Gather all existing teams
-  tiers.forEach((tier, tierIndex) => {
-    Object.keys(tier.teams).forEach(position => {
-      const team = tier.teams[position];
-      if (team && team.name) {
-        allTeams.push({ 
-          name: team.name, 
-          ranking: team.ranking || (tierIndex * 3 + positions.indexOf(position) + 1)
-        });
-      }
-    });
+  // Find occupied positions that would be removed
+  const occupiedPositions: string[] = [];
+  Object.entries(tier.teams).forEach(([position, team]) => {
+    if (team && team.name) {
+      occupiedPositions.push(position);
+    }
   });
   
-  // Sort teams by ranking to maintain competitive order
-  allTeams.sort((a, b) => a.ranking - b.ranking);
-  console.log('Total teams collected:', allTeams.length);
-  console.log('Teams:', allTeams.map(t => `${t.name} (${t.ranking})`));
+  const positionsToRemove = occupiedPositions.filter(pos => !newPositions.includes(pos));
   
-  // Create updated tiers with the format change
-  const updatedTiers = tiers.map((tier, index) => ({
-    ...tier,
-    format: index === changedTierIndex ? newFormat : (tier.format || '3-teams-6-sets')
-  }));
-  
-  // Calculate how many teams we can fit in existing tiers
-  let totalCapacity = 0;
-  updatedTiers.forEach((tier, index) => {
-    const tierTeamCount = getTeamCountForFormat(tier.format!);
-    totalCapacity += tierTeamCount;
-    console.log(`Tier ${index + 1}: ${tier.format} = ${tierTeamCount} teams`);
-  });
-  
-  console.log('Total capacity in existing tiers:', totalCapacity);
-  console.log('Teams needing placement:', allTeams.length);
-  
-  // Add new tiers if we need more capacity
-  while (totalCapacity < allTeams.length) {
-    const newTierNumber = updatedTiers.length + 1;
-    const newTeamCount = getTeamCountForFormat(originalScheduleFormat || '3-teams-6-sets');
-    
-    console.log(`Adding new Tier ${newTierNumber} with original schedule format ${originalScheduleFormat} (${newTeamCount} teams)`);
-    
-    const newTier = {
-      tierNumber: newTierNumber,
-      location: updatedTiers[0]?.location || 'TBD',
-      time: updatedTiers[0]?.time || 'TBD', 
-      court: updatedTiers[0]?.court || 'TBD',
-      format: originalScheduleFormat || '3-teams-6-sets',
-      teams: {} as Record<string, Team | null>,
-      courts: {} as Record<string, string>
+  if (positionsToRemove.length > 0) {
+    const teamsToRemove = positionsToRemove.map(pos => tier.teams[pos]?.name).filter(Boolean);
+    return {
+      isValid: false,
+      reason: `Cannot change to this format because it would remove teams: ${teamsToRemove.join(', ')}. Please remove these teams first.`
     };
-    
-    // Initialize all possible positions as null
-    positions.forEach(position => {
-      newTier.teams[position] = null;
-      newTier.courts[position] = `Court ${newTierNumber}`;
-    });
-    
-    updatedTiers.push(newTier);
-    totalCapacity += newTeamCount;
   }
   
-  console.log('Final tier count:', updatedTiers.length);
-  console.log('Final total capacity:', totalCapacity);
-  
-  // Now redistribute all teams across all tiers
-  let teamIndex = 0;
-  
-  updatedTiers.forEach((tier, tierIdx) => {
-    const tierTeamCount = getTeamCountForFormat(tier.format!);
-    console.log(`Filling Tier ${tierIdx + 1} (${tier.format}) with ${tierTeamCount} teams`);
-    
-    // Clear existing teams
-    tier.teams = {};
-    
-    // Assign teams to positions A, B, C, etc.
-    for (let i = 0; i < tierTeamCount && teamIndex < allTeams.length; i++) {
-      const position = positions[i];
-      tier.teams[position] = allTeams[teamIndex];
-      console.log(`  ${position}: ${allTeams[teamIndex].name} (${allTeams[teamIndex].ranking})`);
-      teamIndex++;
-    }
-    
-    // Fill remaining positions with null
-    for (let i = tierTeamCount; i < positions.length; i++) {
-      const position = positions[i];
-      tier.teams[position] = null;
-    }
-    
-    // Ensure courts object is properly initialized
-    if (!tier.courts || Object.keys(tier.courts).length === 0) {
-      tier.courts = {};
-      positions.forEach(pos => {
-        tier.courts[pos] = tier.court || `Court ${tierIdx + 1}`;
-      });
-    }
-  });
-  
-  // Only keep tiers that have at least one team
-  const finalTiers = updatedTiers.filter(tier => {
-    const hasTeams = Object.values(tier.teams).some(team => team?.name);
-    if (!hasTeams) {
-      console.log(`Removing empty Tier ${tier.tierNumber}`);
-    }
-    return hasTeams;
-  });
-  
-  // Renumber tiers sequentially
-  finalTiers.forEach((tier, index) => {
-    tier.tierNumber = index + 1;
-  });
-  
-  console.log('Final result: %s tiers with %s teams total', 
-    finalTiers.length, 
-    finalTiers.reduce((count, tier) => count + Object.values(tier.teams).filter(t => t?.name).length, 0)
-  );
-  console.log('=== END REDISTRIBUTION DEBUG ===');
-  
-  return finalTiers;
+  return { isValid: true };
 };
 
 export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leagueId, leagueName, onSave }: TierEditModalProps) {
   const [gyms, setGyms] = useState<Gym[]>([]);
-  const [, _setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [defaults, setDefaults] = useState<DefaultSettings>({ location: '', time: '', court: '' });
-  const [scheduleFormat, setScheduleFormat] = useState<string>('');
   
   const [editValues, setEditValues] = useState({
     location: tier.location,
     time: tier.time,
     court: tier.court,
     customTime: '',
-    format: tier.format || ''
+    format: tier.format || '3-teams-6-sets'
   });
-
+  
   const [setAsDefault, setSetAsDefault] = useState({
     location: false,
     time: false,
     court: false
   });
-
+  
+  const [formatValidation, setFormatValidation] = useState<{ isValid: boolean; reason?: string } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       loadGyms();
       loadDefaults();
-      loadScheduleFormat();
     }
   }, [isOpen]);
 
-  // Separate effect to update form values when tier or scheduleFormat changes
   useEffect(() => {
     if (isOpen) {
       setEditValues({
@@ -220,12 +98,11 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
         time: tier.time,
         court: tier.court,
         customTime: TIME_PRESETS.includes(tier.time) ? '' : tier.time,
-        format: tier.format || scheduleFormat || ''
+        format: tier.format || '3-teams-6-sets'
       });
       setSetAsDefault({ location: false, time: false, court: false });
-      
     }
-  }, [isOpen, tier, scheduleFormat]);
+  }, [isOpen, tier]);
 
   const loadGyms = async () => {
     try {
@@ -253,7 +130,6 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
       if (error && error.code !== 'PGRST116') {
         console.error('Error loading defaults:', error);
       } else if (data?.defaults) {
-        // Get tier-specific defaults for this tier only
         const tierNumber = tier.tierNumber?.toString() || (tierIndex + 1).toString();
         const tierSpecificDefaults = data.defaults[tierNumber] || {};
         
@@ -262,10 +138,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
           time: tierSpecificDefaults.time || '',
           court: tierSpecificDefaults.court || ''
         });
-        
-        console.log(`Loaded defaults for Tier ${tierNumber}:`, tierSpecificDefaults);
       } else {
-        // If no defaults exist, ensure we start with blank values
         setDefaults({ location: '', time: '', court: '' });
       }
     } catch (error) {
@@ -273,28 +146,8 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     }
   };
 
-  const loadScheduleFormat = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('league_schedules')
-        .select('format')
-        .eq('league_id', parseInt(leagueId))
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading schedule format:', error);
-      } else if (data?.format) {
-        setScheduleFormat(data.format);
-      }
-    } catch (error) {
-      console.error('Error loading schedule format:', error);
-    }
-  };
-
-
   const saveDefaults = async (newDefaults: DefaultSettings) => {
     try {
-      // First, get the current all-tier defaults from the database
       const { data: currentData, error: fetchError } = await supabase
         .from('league_schedules')
         .select('defaults')
@@ -305,21 +158,15 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
         throw fetchError;
       }
 
-      // Get current all-tier defaults or start with empty object
       const allDefaults = currentData?.defaults || {};
-      
-      // Update only this tier's defaults
       const tierNumber = tier.tierNumber?.toString() || (tierIndex + 1).toString();
+      
       allDefaults[tierNumber] = {
         location: newDefaults.location || '',
         time: newDefaults.time || '',
         court: newDefaults.court || ''
       };
-      
-      console.log(`Saving defaults for Tier ${tierNumber}:`, allDefaults[tierNumber]);
-      console.log('All tier defaults:', allDefaults);
 
-      // Save the updated all-tier defaults back to database
       const { error } = await supabase
         .from('league_schedules')
         .update({ 
@@ -338,10 +185,17 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Determine the final time value
       const finalTime = editValues.time === 'Custom' ? editValues.customTime : editValues.time;
       
-      // Update this tier with new values
+      // Validate format change
+      if (editValues.format !== (tier.format || '3-teams-6-sets')) {
+        const validation = validateFormatChange(tier, editValues.format);
+        if (!validation.isValid) {
+          throw new Error(validation.reason || 'Format change not allowed');
+        }
+      }
+      
+      // Create updated tier
       const updatedTier: Tier = {
         ...tier,
         location: editValues.location,
@@ -350,19 +204,9 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
         format: editValues.format
       };
 
-      // Apply the updated tier
-      let workingTiers = [...allTiers];
-      workingTiers[tierIndex] = updatedTier;
-
-      // Check if format changed and requires team redistribution
-      let finalTiers: Tier[];
-      if (editValues.format !== (tier.format || scheduleFormat)) {
-        // Format changed - redistribute teams
-        finalTiers = redistributeTeams(workingTiers, tierIndex, editValues.format, scheduleFormat || '3-teams-6-sets');
-      } else {
-        // Format didn't change - use working tiers as-is
-        finalTiers = workingTiers;
-      }
+      // Update the tiers array
+      const finalTiers = [...allTiers];
+      finalTiers[tierIndex] = updatedTier;
 
       // Update defaults if requested
       const newDefaults = { ...defaults };
@@ -379,6 +223,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
       onClose();
     } catch (error) {
       console.error('Error saving tier:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save tier changes');
     } finally {
       setSaving(false);
     }
@@ -387,7 +232,15 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   const handleTimeChange = (value: string) => {
     setEditValues(prev => ({ ...prev, time: value }));
   };
-
+  
+  const handleFormatChange = (newFormat: string) => {
+    const validation = validateFormatChange(tier, newFormat);
+    setFormatValidation(validation);
+    
+    if (validation.isValid) {
+      setEditValues(prev => ({ ...prev, format: newFormat }));
+    }
+  };
 
   const getAllGymNames = () => {
     return gyms.map(gym => gym.gym).sort();
@@ -476,7 +329,6 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                 ))}
               </select>
               
-              {/* Custom time input */}
               {editValues.time === 'Custom' && (
                 <div className="mt-2">
                   <Input
@@ -568,22 +420,66 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
               </label>
               <select
                 value={editValues.format}
-                onChange={(e) => setEditValues(prev => ({ ...prev, format: e.target.value }))}
+                onChange={(e) => handleFormatChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
               >
                 <option value="">Select format...</option>
-                {GAME_FORMATS.map((format) => (
-                  <option key={format.value} value={format.value}>
-                    {format.label}
-                  </option>
-                ))}
+                {GAME_FORMATS.map((format) => {
+                  const validation = validateFormatChange(tier, format.value);
+                  const isDisabled = !validation.isValid;
+                  
+                  return (
+                    <option 
+                      key={format.value} 
+                      value={format.value}
+                      disabled={isDisabled}
+                      style={isDisabled ? { color: '#999', backgroundColor: '#f5f5f5' } : {}}
+                    >
+                      {format.label} {isDisabled ? '(incompatible)' : ''}
+                    </option>
+                  );
+                })}
               </select>
+              
+              {/* Format validation message */}
+              {formatValidation && !formatValidation.isValid && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-start">
+                    <svg className="w-4 h-4 text-red-400 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div className="text-sm text-red-700">
+                      <p className="font-medium">Format change not allowed</p>
+                      <p className="mt-1">{formatValidation.reason}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Current tier team information */}
+              <div className="mt-2 p-2 bg-gray-50 rounded-md">
+                <div className="text-xs text-gray-600 mb-1">Current tier teams:</div>
+                {Object.entries(tier.teams).map(([position, team]) => {
+                  if (team && team.name) {
+                    const newPositions = getPositionsForFormat(editValues.format);
+                    const willBeRemoved = !newPositions.includes(position);
+                    
+                    return (
+                      <div key={position} className={`text-xs ${willBeRemoved ? 'text-red-600 font-medium' : 'text-gray-700'}`}>
+                        Position {position}: {team.name} {willBeRemoved ? '(would be removed)' : ''}
+                      </div>
+                    );
+                  }
+                  return null;
+                }).filter(Boolean).length === 0 && (
+                  <div className="text-xs text-gray-500">No teams assigned</div>
+                )}
+              </div>
+              
               <div className="mt-1 text-xs text-gray-500">
-                This format applies only to this tier
+                Format changes are only allowed if they don't interfere with existing team assignments.
               </div>
             </div>
-
-
           </div>
 
           {/* Actions */}

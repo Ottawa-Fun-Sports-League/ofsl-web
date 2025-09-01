@@ -16,10 +16,9 @@ interface LeagueCardProps {
   onDelete: (leagueId: number) => Promise<void>;
   onCopy: (league: LeagueWithTeamCount) => void;
   onManageSchedule?: (leagueId: number) => void;
-  hasEmptySpots?: boolean;
 }
 
-export function LeagueCard({ league, onDelete, onCopy, onManageSchedule, hasEmptySpots = false }: LeagueCardProps) {
+export function LeagueCard({ league, onDelete, onCopy, onManageSchedule }: LeagueCardProps) {
   const navigate = useNavigate();
 
   const getSportIcon = (sport: string | null) => {
@@ -197,14 +196,9 @@ export function LeagueCard({ league, onDelete, onCopy, onManageSchedule, hasEmpt
                 size="sm"
                 onClick={() => onManageSchedule?.(league.id)}
                 className="h-8 w-8 p-0 hover:bg-green-100 relative"
-                title={hasEmptySpots ? "Manage schedule - Has empty slots" : "Manage schedule"}
+                title="Manage schedule"
               >
                 <Calendar className="h-4 w-4 text-green-600" />
-                {hasEmptySpots && (
-                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                    !
-                  </span>
-                )}
               </Button>
             )}
 
