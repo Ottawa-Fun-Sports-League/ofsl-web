@@ -6,6 +6,8 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { RichTextEditor } from '../../../../components/ui/rich-text-editor';
 import { useToast } from '../../../../components/ui/toast';
 import { Save, Edit, Plus, FileText, Users } from 'lucide-react';
+import { Pagination } from '../UsersTab/components/Pagination';
+import { PaginationState } from '../UsersTab/types';
 
 interface Waiver {
   id: number;
@@ -38,7 +40,14 @@ export function WaiversTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [acceptances, setAcceptances] = useState<WaiverAcceptance[]>([]);
+  const [paginatedAcceptances, setPaginatedAcceptances] = useState<WaiverAcceptance[]>([]);
   const [showAcceptances, setShowAcceptances] = useState(false);
+  const [acceptancesPagination, setAcceptancesPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: 25,
+    totalItems: 0,
+    totalPages: 0
+  });
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -98,6 +107,22 @@ export function WaiversTab() {
       })) || [];
       
       setAcceptances(acceptancesWithUserInfo);
+      
+      // Update pagination
+      const totalItems = acceptancesWithUserInfo.length;
+      const totalPages = Math.ceil(totalItems / acceptancesPagination.pageSize);
+      const updatedPagination = {
+        ...acceptancesPagination,
+        currentPage: 1,
+        totalItems,
+        totalPages
+      };
+      setAcceptancesPagination(updatedPagination);
+      
+      // Set initial paginated data
+      const startIndex = 0;
+      const endIndex = acceptancesPagination.pageSize;
+      setPaginatedAcceptances(acceptancesWithUserInfo.slice(startIndex, endIndex));
     } catch (error) {
       console.error('Error loading acceptances:', error);
       showToast('Failed to load waiver acceptances', 'error');
@@ -233,6 +258,32 @@ export function WaiversTab() {
     await loadAcceptances(waiver.id);
   };
 
+  const handleAcceptancesPageChange = (page: number) => {
+    const updatedPagination = {
+      ...acceptancesPagination,
+      currentPage: page
+    };
+    setAcceptancesPagination(updatedPagination);
+    
+    // Update paginated data
+    const startIndex = (page - 1) * acceptancesPagination.pageSize;
+    const endIndex = startIndex + acceptancesPagination.pageSize;
+    setPaginatedAcceptances(acceptances.slice(startIndex, endIndex));
+  };
+
+  const handleAcceptancesPageSizeChange = (pageSize: number) => {
+    const updatedPagination = {
+      ...acceptancesPagination,
+      currentPage: 1,
+      pageSize,
+      totalPages: Math.ceil(acceptances.length / pageSize)
+    };
+    setAcceptancesPagination(updatedPagination);
+    
+    // Update paginated data
+    setPaginatedAcceptances(acceptances.slice(0, pageSize));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -350,9 +401,9 @@ export function WaiversTab() {
                     Back to Waiver
                   </Button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3 mb-4">
                   {acceptances.length > 0 ? (
-                    acceptances.map((acceptance) => (
+                    paginatedAcceptances.map((acceptance) => (
                       <div key={acceptance.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -376,6 +427,16 @@ export function WaiversTab() {
                     </p>
                   )}
                 </div>
+                
+                {acceptances.length > 0 && (
+                  <Pagination
+                    pagination={acceptancesPagination}
+                    onPageChange={handleAcceptancesPageChange}
+                    onPageSizeChange={handleAcceptancesPageSizeChange}
+                    loading={false}
+                    itemName="acceptances"
+                  />
+                )}
               </CardContent>
             </Card>
           ) : (

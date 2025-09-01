@@ -18,6 +18,8 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '../../../../components/ui/dialog';
+import { PaginationState } from '../UsersTab/types';
+import { Pagination } from '../UsersTab/components/Pagination';
 
 export function LeaguesTab() {
   const { userProfile } = useAuth();
@@ -38,6 +40,13 @@ export function LeaguesTab() {
       teams: Record<string, { name: string; ranking: number } | null>;
     }[];
   } | null>(null);
+  const [leaguesPagination, setLeaguesPagination] = useState<PaginationState>({
+    currentPage: 1,
+    pageSize: 25,
+    totalItems: 0,
+    totalPages: 0
+  });
+  const [paginatedLeagues, setPaginatedLeagues] = useState<LeagueWithTeamCount[]>([]);
 
   const [selectedProductForLeague, setSelectedProductForLeague] = useState<{
     productId: string | null;
@@ -149,6 +158,49 @@ export function LeaguesTab() {
     setScheduleData(null);
   };
 
+  const handleLeaguesPageChange = (page: number) => {
+    const updatedPagination = {
+      ...leaguesPagination,
+      currentPage: page
+    };
+    setLeaguesPagination(updatedPagination);
+    const startIndex = (page - 1) * leaguesPagination.pageSize;
+    const endIndex = startIndex + leaguesPagination.pageSize;
+    setPaginatedLeagues(leagues.slice(startIndex, endIndex));
+  };
+
+  const handleLeaguesPageSizeChange = (pageSize: number) => {
+    const updatedPagination = {
+      ...leaguesPagination,
+      currentPage: 1,
+      pageSize,
+      totalItems: leagues.length,
+      totalPages: Math.ceil(leagues.length / pageSize)
+    };
+    setLeaguesPagination(updatedPagination);
+    setPaginatedLeagues(leagues.slice(0, pageSize));
+  };
+
+  useEffect(() => {
+    setLeaguesPagination((prevPagination: PaginationState) => {
+      const totalItems = leagues.length;
+      const totalPages = Math.ceil(totalItems / prevPagination.pageSize);
+      const currentPage = Math.min(prevPagination.currentPage, totalPages || 1);
+      
+      const updatedPagination = {
+        ...prevPagination,
+        currentPage,
+        totalItems,
+        totalPages
+      };
+      
+      const startIndex = (currentPage - 1) * prevPagination.pageSize;
+      const endIndex = startIndex + prevPagination.pageSize;
+      setPaginatedLeagues(leagues.slice(startIndex, endIndex));
+      
+      return updatedPagination;
+    });
+  }, [leagues]);
 
   useEffect(() => {
     loadData();
@@ -189,12 +241,24 @@ export function LeaguesTab() {
         />
       )}
 
-      <LeaguesList
-        leagues={leagues}
-        onDelete={handleDeleteLeague}
-        onCopy={handleCopyClick}
-        onManageSchedule={handleManageSchedule}
-      />
+      <div className="space-y-6">
+        <LeaguesList
+          leagues={paginatedLeagues}
+          onDelete={handleDeleteLeague}
+          onCopy={handleCopyClick}
+          onManageSchedule={handleManageSchedule}
+        />
+        
+        {leaguesPagination.totalItems > 0 && (
+          <Pagination
+            pagination={leaguesPagination}
+            onPageChange={handleLeaguesPageChange}
+            onPageSizeChange={handleLeaguesPageSizeChange}
+            loading={loading}
+            itemName="leagues"
+          />
+        )}
+      </div>
 
       <CopyLeagueDialog
         isOpen={copyDialogOpen}

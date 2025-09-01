@@ -12,13 +12,32 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
-  const { user, userProfile, loading, refreshUserProfile } = useAuth();
+  const { user, userProfile, loading, refreshUserProfile, validateSession } = useAuth();
   const [fixingProfile, setFixingProfile] = useState(false);
   const [profileFixed, setProfileFixed] = useState(false);
+  const [validatingSession, setValidatingSession] = useState(false);
   const location = useLocation();
   
 
   useEffect(() => {
+    // Validate session for authenticated users
+    const performSessionValidation = async () => {
+      if (user && !loading && !validatingSession) {
+        setValidatingSession(true);
+        try {
+          const isValid = await validateSession();
+          if (!isValid) {
+            // validateSession handles the redirect to login, so we just return
+            return;
+          }
+        } catch (error) {
+          logger.error('Error during session validation', error);
+        } finally {
+          setValidatingSession(false);
+        }
+      }
+    };
+
     // Store the attempted location for redirect after login
     if (!user && !loading) {
       // Only store non-login/signup paths
@@ -26,6 +45,9 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         const redirectPath = location.pathname + location.search;
         localStorage.setItem('redirectAfterLogin', redirectPath);
       }
+    } else if (user && !loading) {
+      // If user is authenticated, validate their session
+      performSessionValidation();
     }
     
     // Attempt to fix missing user profile if user is authenticated but profile is missing
@@ -82,14 +104,26 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userProfile, loading, location, fixingProfile, profileFixed]);
 
-  if (loading || fixingProfile) {
+  if (loading || fixingProfile || validatingSession) {
+    const getLoadingMessage = () => {
+      if (validatingSession) return 'Validating session...';
+      if (fixingProfile) return 'Fixing user profile...';
+      return 'Loading...';
+    };
+
+    const getSubMessage = () => {
+      if (validatingSession) return 'Checking if your session is still valid...';
+      if (fixingProfile) return 'This may take a moment while we set up your account.';
+      return 'Please wait while we load your account information.';
+    };
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#B20000] mb-4"></div>
-          <p className="text-[#6F6F6F] mb-2">{fixingProfile ? 'Fixing user profile...' : 'Loading...'}</p>
+          <p className="text-[#6F6F6F] mb-2">{getLoadingMessage()}</p>
           <p className="text-sm text-[#6F6F6F] max-w-md">
-            {fixingProfile ? 'This may take a moment while we set up your account.' : 'Please wait while we load your account information.'}
+            {getSubMessage()}
           </p>
         </div>
       </div>

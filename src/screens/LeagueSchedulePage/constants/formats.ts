@@ -13,10 +13,11 @@ export const getTeamCountForFormat = (format: string): number => {
   return gameFormat?.teamCount || 3;
 };
 
+export const ALL_POSITIONS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
+
 export const getPositionsForFormat = (format: string): string[] => {
   const teamCount = getTeamCountForFormat(format);
-  const positions = ['A', 'B', 'C', 'D', 'E', 'F'];
-  return positions.slice(0, teamCount);
+  return ALL_POSITIONS.slice(0, teamCount);
 };
 
 export const getGridColsClass = (teamCount: number): string => {

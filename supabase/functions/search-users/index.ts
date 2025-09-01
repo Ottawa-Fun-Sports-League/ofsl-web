@@ -34,6 +34,7 @@ serve(async (req: Request) => {
     // Get authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error("No authorization header provided")
       return new Response(
         JSON.stringify({ error: "Authorization header required" }),
         {
@@ -44,6 +45,7 @@ serve(async (req: Request) => {
     }
 
     const { email }: SearchRequest = await req.json()
+    console.log(`Searching for user with email: ${email}`)
 
     if (!email || !email.trim()) {
       return new Response(
@@ -65,6 +67,7 @@ serve(async (req: Request) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
+      console.error("Authentication failed:", authError?.message || "No user found")
       return new Response(
         JSON.stringify({ error: "Invalid authentication token" }),
         {
@@ -74,20 +77,25 @@ serve(async (req: Request) => {
       )
     }
 
+    console.log(`Authenticated user: ${user.email}, searching for: ${email.toLowerCase()}`)
+
     // Search for user by email - only return basic info needed for team management
     const { data: userData, error: searchError } = await supabase
       .from('users')
       .select('id, name, email, phone')
-      .eq('email', email.toLowerCase())
+      .ilike('email', email.trim()) // Use ilike for case-insensitive search and trim whitespace
       .single()
 
     if (searchError) {
+      console.log(`Search error: ${searchError.code} - ${searchError.message}`)
       if (searchError.code === 'PGRST116') {
         // User not found
+        console.log(`User not found with email: ${email}`)
         return new Response(
           JSON.stringify({ 
             found: false,
-            user: null 
+            user: null,
+            message: `No user found with email: ${email}`
           }),
           {
             status: 200,
@@ -98,6 +106,7 @@ serve(async (req: Request) => {
       throw searchError
     }
 
+    console.log(`User found: ${userData.name} (${userData.email})`)
     return new Response(
       JSON.stringify({ 
         found: true,
@@ -110,10 +119,12 @@ serve(async (req: Request) => {
     )
 
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error("Error in search-users function:", error)
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ 
+        error: "Internal server error",
+        details: error.message || "Unknown error"
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

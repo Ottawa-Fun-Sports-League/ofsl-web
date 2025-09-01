@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import { logger } from '../../../../lib/logger';
 import { Profile, Sport, Skill, SportSkill } from './types';
-import { INITIAL_PROFILE, INITIAL_NOTIFICATIONS } from './constants';
+import { INITIAL_PROFILE } from './constants';
+import { loadNotificationPreferences, saveNotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES } from '../../../../lib/notificationPreferences';
 
 export function useProfileData(userProfile: { id: string; name?: string; phone?: string; email?: string; user_sports_skills?: SportSkill[] } | null) {
   const [profile, setProfile] = useState<Profile>(INITIAL_PROFILE);
   const lastSavedProfile = useRef<Profile | null>(null);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATION_PREFERENCES);
+  const [notificationsSaving, setNotificationsSaving] = useState(false);
   const [sports, setSports] = useState<Sport[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loadingSportsSkills, setLoadingSportsSkills] = useState(false);
@@ -91,11 +93,59 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
     }
   }, [userProfile, sports, skills]);
 
-  const handleNotificationToggle = (key: keyof typeof notifications) => {
+  // Load notification preferences when user profile is available
+  useEffect(() => {
+    if (!userProfile?.id) return;
+
+    const loadPreferences = async () => {
+      try {
+        const preferences = await loadNotificationPreferences(userProfile.id);
+        if (preferences) {
+          setNotifications(preferences);
+        }
+      } catch (error) {
+        logger.error('Error loading notification preferences', error);
+        // Keep default preferences on error
+      }
+    };
+
+    loadPreferences();
+  }, [userProfile?.id]);
+
+  const handleNotificationToggle = async (key: keyof typeof notifications) => {
+    if (!userProfile?.id) return;
+
+    // Optimistic update - update UI immediately
+    const newValue = !notifications[key];
     setNotifications(prev => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: newValue
     }));
+
+    // Save to database
+    setNotificationsSaving(true);
+    try {
+      const updatedPreferences = { ...notifications, [key]: newValue };
+      const success = await saveNotificationPreferences(userProfile.id, updatedPreferences);
+      
+      if (!success) {
+        // Revert the optimistic update on failure
+        setNotifications(prev => ({
+          ...prev,
+          [key]: !newValue
+        }));
+        logger.error('Failed to save notification preference');
+      }
+    } catch (error) {
+      // Revert the optimistic update on error
+      setNotifications(prev => ({
+        ...prev,
+        [key]: !newValue
+      }));
+      logger.error('Error saving notification preference', error);
+    } finally {
+      setNotificationsSaving(false);
+    }
   };
 
   const markProfileAsSaved = (savedProfile: Profile) => {
@@ -105,6 +155,7 @@ export function useProfileData(userProfile: { id: string; name?: string; phone?:
   return {
     profile,
     notifications,
+    notificationsSaving,
     sports,
     skills,
     loadingSportsSkills,

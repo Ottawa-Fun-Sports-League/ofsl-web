@@ -66,9 +66,9 @@ export function useLeagueStandings(leagueId: string | undefined) {
       setHasSchedule(scheduleExists);
       
       if (scheduleExists) {
-        scheduleData.schedule_data.tiers.forEach((tier: any) => {
+        scheduleData.schedule_data.tiers.forEach((tier: {teams?: Record<string, {name: string; ranking: number} | null>}) => {
           if (tier.teams) {
-            Object.values(tier.teams).forEach((team: any) => {
+            Object.values(tier.teams).forEach((team: {name: string; ranking: number} | null) => {
               if (team && team.name && team.ranking) {
                 teamRankings.set(team.name, team.ranking);
               }

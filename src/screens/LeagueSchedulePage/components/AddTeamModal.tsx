@@ -87,8 +87,8 @@ export function AddTeamModal({
         id: team.id,
         name: team.name,
         captain_id: team.captain_id,
-        captain_name: (team.users as any)?.name || null,
-        skill_name: (team.skills as any)?.name || null,
+        captain_name: Array.isArray(team.users) ? null : (team.users as {name: string} | null)?.name || null,
+        skill_name: Array.isArray(team.skills) ? null : (team.skills as {name: string} | null)?.name || null,
         isScheduled: scheduledTeamNames.has(team.name)
       }));
 

@@ -48,31 +48,58 @@ export function ResetPasswordPage() {
           hasAccessToken: !!accessToken
         });
         
-        // Check if this is a password reset flow
-        if (typeFromSearch === 'recovery' || typeFromHash === 'recovery' || accessToken) {
-          // If we have an access token in the URL, Supabase needs to process it
+        // Check if this is a password reset flow (accept both recovery and invite types)
+        if (typeFromSearch === 'recovery' || typeFromHash === 'recovery' || 
+            typeFromSearch === 'invite' || typeFromHash === 'invite' || accessToken) {
+          // If we have an access token in the URL, we need to let Supabase process it
           if (accessToken) {
-            // Let Supabase handle the token exchange
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (error) {
-              throw error;
+            logger.info('Found access token in URL, attempting session exchange');
+            
+            // First, try to get the session - Supabase should auto-process URL tokens
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError) {
+              logger.error('Error getting session:', sessionError);
+              throw sessionError;
             }
+            
             if (session) {
+              logger.info('Session established successfully', { userId: session.user?.id });
               setTokenValid(true);
             } else {
-              // Wait a moment for Supabase to process the token
-              setTimeout(async () => {
-                const { data: { session: retrySession } } = await supabase.auth.getSession();
+              logger.info('No session found, waiting for token processing...');
+              // Supabase might need a moment to process the URL tokens
+              // Let's try a few times with increasing delays
+              let retryCount = 0;
+              const maxRetries = 3;
+              
+              const checkSession = async () => {
+                const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession();
+                
+                if (retryError) {
+                  logger.error(`Session retry ${retryCount + 1} failed:`, retryError);
+                }
+                
                 if (retrySession) {
+                  logger.info(`Session established on retry ${retryCount + 1}`, { userId: retrySession.user?.id });
                   setTokenValid(true);
+                } else if (retryCount < maxRetries - 1) {
+                  retryCount++;
+                  logger.info(`Session retry ${retryCount}, waiting ${retryCount * 500}ms...`);
+                  setTimeout(checkSession, retryCount * 500);
                 } else {
-                  logger.error("Failed to establish session from recovery token");
+                  logger.error("Failed to establish session after all retries");
                   setError("Invalid or expired password reset link. Please request a new password reset link.");
                   setTokenValid(false);
                 }
-              }, 1000);
+              };
+              
+              // Start with a small delay
+              setTimeout(checkSession, 500);
             }
           } else {
+            // No access token but type=recovery/invite - this might be an edge case
+            logger.info('Auth type detected but no access token', { typeFromSearch, typeFromHash });
             setTokenValid(true);
           }
         } else {

@@ -18,20 +18,133 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
     setLoading(true);
     try {
       // Get the current session to send with the Edge Function
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error(`Session error: ${sessionError.message}`);
       }
+      
+      if (!session) {
+        console.error('No active session found');
+        throw new Error('No active session. Please log out and log back in.');
+      }
+      
+      if (!session.access_token) {
+        console.error('Session exists but no access token');
+        throw new Error('Invalid session - no access token. Please refresh the page and try again.');
+      }
+      
 
       // Call our admin Edge Function to generate magic link (without sending email)
-      const { data, error } = await supabase.functions.invoke('admin-magic-link', {
-        body: { email: userEmail, sendEmail: false },
+      // Using fetch directly instead of supabase.functions.invoke to ensure headers work properly
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/admin-magic-link`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
         },
+        body: JSON.stringify({ email: userEmail, sendEmail: false }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Failed to generate magic link';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      const error = !data.success ? new Error(data.error || 'Failed to generate magic link') : null;
+
+      if (error) {
+        console.error('Edge function error:', error);
+        
+        // Check for specific bearer token/auth errors and try to refresh session
+        if (error.message?.includes('Bearer token') || 
+            error.message?.includes('authorization') || 
+            error.message?.includes('Invalid JWT') ||
+            error.message?.includes('401')) {
+          
+          
+          try {
+            // Try to refresh the session
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !refreshData.session) {
+              throw new Error('Session expired. Please log out and log back in.');
+            }
+            
+            
+            // Retry the request with refreshed token
+            const retryResponse = await fetch(`${supabaseUrl}/functions/v1/admin-magic-link`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${refreshData.session.access_token}`,
+                'apikey': supabaseAnonKey,
+              },
+              body: JSON.stringify({ email: userEmail, sendEmail: false }),
+            });
+
+            if (!retryResponse.ok) {
+              const retryErrorText = await retryResponse.text();
+              throw new Error(`Authentication failed after refresh: ${retryErrorText}`);
+            }
+
+            const retryData = await retryResponse.json();
+            
+            if (!retryData.success) {
+              throw new Error(retryData.error || 'Failed to generate magic link after retry');
+            }
+            
+            // Success after retry - use retryData instead of data for the rest of the function
+            const data = retryData;
+            
+            // Handle the magic link (same code as below but duplicated here for retry case)
+            if (data.link) {
+              const displayName = userName || userEmail;
+              
+              if (event.metaKey || event.ctrlKey) {
+                window.open(data.link, '_blank');
+                showToast(
+                  `Opening password reset link for ${displayName} in new tab. User will need to set a new password.`,
+                  'success'
+                );
+              } else {
+                await navigator.clipboard.writeText(data.link);
+                setCopied(true);
+                showToast(
+                  `Password reset link copied! Open in new browser/incognito. User will need to set a new password to login as ${displayName}.`,
+                  'success'
+                );
+              }
+              
+              setTimeout(() => {
+                setCopied(false);
+              }, 3000);
+              
+              return; // Exit early since we handled the success case
+            }
+            
+          } catch (refreshAttemptError) {
+            console.error('Session refresh attempt failed:', refreshAttemptError);
+            throw new Error('Authentication failed. Please log out and log back in.');
+          }
+        } else {
+          throw error;
+        }
+      }
+      
       if (!data.success) throw new Error(data.error || 'Failed to generate magic link');
 
       // Handle the magic link

@@ -252,7 +252,6 @@ export function LeagueDetailPage() {
             {/* Schedule View (Volleyball only) */}
             {activeView === "schedule" && scheduleData && league?.sport_name === 'Volleyball' && id && (
               <LeagueSchedule 
-                mockSchedule={[scheduleData]}
                 leagueId={id}
               />
             )}

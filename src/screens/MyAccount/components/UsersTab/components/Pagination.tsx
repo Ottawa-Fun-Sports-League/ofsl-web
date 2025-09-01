@@ -7,9 +7,10 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   loading?: boolean;
+  itemName?: string;
 }
 
-export function Pagination({ pagination, onPageChange, onPageSizeChange, loading = false }: PaginationProps) {
+export function Pagination({ pagination, onPageChange, onPageSizeChange, loading = false, itemName = 'users' }: PaginationProps) {
   const { currentPage, pageSize, totalItems, totalPages } = pagination;
   
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -47,7 +48,7 @@ export function Pagination({ pagination, onPageChange, onPageSizeChange, loading
     return (
       <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t">
         <div className="text-sm text-[#6F6F6F]">
-          Showing {startItem} to {endItem} of {totalItems} users
+          Showing {startItem} to {endItem} of {totalItems} {itemName}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-[#6F6F6F]">Show</span>
@@ -70,7 +71,7 @@ export function Pagination({ pagination, onPageChange, onPageSizeChange, loading
   return (
     <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t">
       <div className="text-sm text-[#6F6F6F]">
-        Showing {startItem} to {endItem} of {totalItems} users
+        Showing {startItem} to {endItem} of {totalItems} {itemName}
       </div>
       
       <div className="flex items-center gap-4">

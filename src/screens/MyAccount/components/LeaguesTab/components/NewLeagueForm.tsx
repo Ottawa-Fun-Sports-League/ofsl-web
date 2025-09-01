@@ -311,7 +311,7 @@ export function NewLeagueForm({
                 Day of Week
               </label>
               <select
-                value={newLeague.day_of_week || ""}
+                value={newLeague.day_of_week !== null ? newLeague.day_of_week.toString() : ""}
                 onChange={(e) =>
                   setNewLeague({
                     ...newLeague,

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { supabase } from '../../../lib/supabase';
 import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
 import { GAME_FORMATS, getPositionsForFormat } from '../constants/formats';
+import { validateFormatChange, repackTeamsForFormat, type FormatValidationResult } from '../utils/tierFormatUtils';
 
 interface TierEditModalProps {
   isOpen: boolean;
@@ -38,30 +39,6 @@ const TIME_PRESETS = [
   'Custom'
 ];
 
-// Simple validation: prevent format changes that would remove teams
-const validateFormatChange = (tier: Tier, newFormat: string): { isValid: boolean; reason?: string } => {
-  const newPositions = getPositionsForFormat(newFormat);
-  
-  // Find occupied positions that would be removed
-  const occupiedPositions: string[] = [];
-  Object.entries(tier.teams).forEach(([position, team]) => {
-    if (team && team.name) {
-      occupiedPositions.push(position);
-    }
-  });
-  
-  const positionsToRemove = occupiedPositions.filter(pos => !newPositions.includes(pos));
-  
-  if (positionsToRemove.length > 0) {
-    const teamsToRemove = positionsToRemove.map(pos => tier.teams[pos]?.name).filter(Boolean);
-    return {
-      isValid: false,
-      reason: `Cannot change to this format because it would remove teams: ${teamsToRemove.join(', ')}. Please remove these teams first.`
-    };
-  }
-  
-  return { isValid: true };
-};
 
 export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leagueId, leagueName, onSave }: TierEditModalProps) {
   const [gyms, setGyms] = useState<Gym[]>([]);
@@ -82,27 +59,8 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     court: false
   });
   
-  const [formatValidation, setFormatValidation] = useState<{ isValid: boolean; reason?: string } | null>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadGyms();
-      loadDefaults();
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setEditValues({
-        location: tier.location,
-        time: tier.time,
-        court: tier.court,
-        customTime: TIME_PRESETS.includes(tier.time) ? '' : tier.time,
-        format: tier.format || '3-teams-6-sets'
-      });
-      setSetAsDefault({ location: false, time: false, court: false });
-    }
-  }, [isOpen, tier]);
+  const [formatValidation, setFormatValidation] = useState<FormatValidationResult | null>(null);
+  const [previewTeams, setPreviewTeams] = useState<typeof tier.teams | null>(null);
 
   const loadGyms = async () => {
     try {
@@ -119,7 +77,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     }
   };
 
-  const loadDefaults = async () => {
+  const loadDefaults = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('league_schedules')
@@ -144,7 +102,29 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     } catch (error) {
       console.error('Error loading defaults:', error);
     }
-  };
+  }, [leagueId, tier.tierNumber, tierIndex]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadGyms();
+      loadDefaults();
+    }
+  }, [isOpen, loadDefaults]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setEditValues({
+        location: tier.location,
+        time: tier.time,
+        court: tier.court,
+        customTime: TIME_PRESETS.includes(tier.time) ? '' : tier.time,
+        format: tier.format || '3-teams-6-sets'
+      });
+      setSetAsDefault({ location: false, time: false, court: false });
+      setFormatValidation(null);
+      setPreviewTeams(null);
+    }
+  }, [isOpen, tier]);
 
   const saveDefaults = async (newDefaults: DefaultSettings) => {
     try {
@@ -195,13 +175,20 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
         }
       }
       
+      // Apply team repacking if format changed
+      let updatedTeams = tier.teams;
+      if (editValues.format !== (tier.format || '3-teams-6-sets')) {
+        updatedTeams = repackTeamsForFormat(tier, editValues.format);
+      }
+      
       // Create updated tier
       const updatedTier: Tier = {
         ...tier,
         location: editValues.location,
         time: finalTime,
         court: editValues.court,
-        format: editValues.format
+        format: editValues.format,
+        teams: updatedTeams
       };
 
       // Update the tiers array
@@ -238,7 +225,11 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     setFormatValidation(validation);
     
     if (validation.isValid) {
+      const repackedTeams = repackTeamsForFormat(tier, newFormat);
       setEditValues(prev => ({ ...prev, format: newFormat }));
+      setPreviewTeams(repackedTeams);
+    } else {
+      setPreviewTeams(null);
     }
   };
 
@@ -456,29 +447,42 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                 </div>
               )}
               
-              {/* Current tier team information */}
+              {/* Team preview */}
               <div className="mt-2 p-2 bg-gray-50 rounded-md">
-                <div className="text-xs text-gray-600 mb-1">Current tier teams:</div>
-                {Object.entries(tier.teams).map(([position, team]) => {
-                  if (team && team.name) {
-                    const newPositions = getPositionsForFormat(editValues.format);
-                    const willBeRemoved = !newPositions.includes(position);
-                    
+                <div className="text-xs text-gray-600 mb-1">
+                  {previewTeams ? 'Preview after format change:' : 'Current tier teams:'}
+                </div>
+                {(() => {
+                  const teamsToShow = previewTeams || tier.teams;
+                  const positions = getPositionsForFormat(editValues.format);
+                  const hasTeams = positions.some(pos => teamsToShow[pos]?.name);
+                  
+                  if (!hasTeams) {
+                    return <div className="text-xs text-gray-500">No teams assigned</div>;
+                  }
+                  
+                  return positions.map(position => {
+                    const team = teamsToShow[position];
+                    if (team?.name) {
+                      return (
+                        <div key={position} className="text-xs text-gray-700">
+                          Position {position}: {team.name}
+                        </div>
+                      );
+                    }
                     return (
-                      <div key={position} className={`text-xs ${willBeRemoved ? 'text-red-600 font-medium' : 'text-gray-700'}`}>
-                        Position {position}: {team.name} {willBeRemoved ? '(would be removed)' : ''}
+                      <div key={position} className="text-xs text-gray-400">
+                        Position {position}: (empty)
                       </div>
                     );
-                  }
-                  return null;
-                }).filter(Boolean).length === 0 && (
-                  <div className="text-xs text-gray-500">No teams assigned</div>
-                )}
+                  });
+                })()}
               </div>
               
               <div className="mt-1 text-xs text-gray-500">
-                Format changes are only allowed if they don't interfere with existing team assignments.
+                Format changes apply to current week and all future weeks. Past weeks remain unchanged.
               </div>
+              
             </div>
           </div>
 

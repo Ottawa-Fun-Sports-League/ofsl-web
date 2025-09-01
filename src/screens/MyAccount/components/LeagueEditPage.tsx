@@ -436,7 +436,7 @@ export function LeagueEditPage() {
                     Day of Week
                   </label>
                   <select
-                    value={editLeague.day_of_week || ""}
+                    value={editLeague.day_of_week !== null ? editLeague.day_of_week.toString() : ""}
                     onChange={(e) =>
                       setEditLeague({
                         ...editLeague,

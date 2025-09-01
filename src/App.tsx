@@ -30,6 +30,7 @@ import {
   UsersTab,
   WaiversTab,
   ManageTeamsTab,
+  SparesTab,
   LeagueEditPage,
   TeamEditPage,
   IndividualEditPage,
@@ -116,6 +117,7 @@ export function App() {
             >
               <Route path="teams" element={<TeamsTab />} />
               <Route path="profile" element={<ProfileTab />} />
+              <Route path="spares" element={<SparesTab />} />
               <Route
                 path="leagues"
                 element={
@@ -242,6 +244,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Navigate to="/my-account/teams" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/spares"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/my-account/spares" replace />
                 </ProtectedRoute>
               }
             />

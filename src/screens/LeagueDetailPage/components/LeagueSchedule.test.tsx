@@ -81,7 +81,7 @@ describe('LeagueSchedule', () => {
       }))
     };
 
-    (supabase.from as any).mockReturnValue(mockFromChain);
+    (supabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockFromChain);
 
     render(<LeagueSchedule {...mockProps} />);
 
@@ -115,7 +115,7 @@ describe('LeagueSchedule', () => {
       }))
     };
 
-    (supabase.from as any).mockReturnValue(mockFromChain);
+    (supabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockFromChain);
 
     render(<LeagueSchedule {...mockProps} />);
 
@@ -144,7 +144,7 @@ describe('LeagueSchedule', () => {
       }))
     };
 
-    (supabase.from as any).mockReturnValue(mockFromChain);
+    (supabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockFromChain);
 
     render(<LeagueSchedule {...mockProps} />);
 

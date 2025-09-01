@@ -10,6 +10,7 @@ import { ChevronLeft, User, DollarSign, Calendar } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { useToast } from '../../../../components/ui/toast';
+import { ConfirmationDialog } from '../../../../components/ui/confirmation-dialog';
 import { UnifiedPaymentSection } from '../../../../components/payments';
 
 interface IndividualData {
@@ -72,6 +73,20 @@ export function IndividualEditPage() {
     notes: ''
   });
   const [editingNoteId] = useState<number | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmText: '',
+    onConfirm: () => {},
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -320,8 +335,19 @@ export function IndividualEditPage() {
   const handleDeletePayment = async (entry: { id: string | number; amount: number; payment_method: string | null; date: string; notes?: string }) => {
     if (!paymentInfo) return;
 
-    const confirmDelete = confirm(`Are you sure you want to delete this payment of $${entry.amount.toFixed(2)}?`);
-    if (!confirmDelete) return;
+    // Show confirmation dialog before deleting payment
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Payment',
+      description: `Are you sure you want to delete this payment of $${entry.amount.toFixed(2)}?`,
+      confirmText: 'Delete',
+      variant: 'destructive',
+      onConfirm: () => performDeletePayment(entry),
+    });
+  };
+
+  const performDeletePayment = async (entry: { id: string | number; amount: number; payment_method: string | null; date: string; notes?: string }) => {
+    if (!paymentInfo) return;
 
     try {
       // Remove from history
@@ -485,6 +511,16 @@ export function IndividualEditPage() {
             onDeletePayment={handleDeletePayment}
           />
         )}
+
+        <ConfirmationDialog
+          open={confirmDialog.open}
+          onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          confirmText={confirmDialog.confirmText}
+          onConfirm={confirmDialog.onConfirm}
+          variant={confirmDialog.variant}
+        />
       </div>
     </div>
   );

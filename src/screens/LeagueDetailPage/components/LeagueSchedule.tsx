@@ -5,7 +5,8 @@ import { supabase } from '../../../lib/supabase';
 import { fetchLeagueById } from '../../../lib/leagues';
 import { useAuth } from '../../../contexts/AuthContext';
 import { SubmitScoresModal } from './SubmitScoresModal';
-import type { Schedule, Tier } from '../utils/leagueUtils';
+import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../../LeagueSchedulePage/constants/formats';
+import { getTeamForPosition } from '../../LeagueSchedulePage/utils/tierFormatUtils';
 
 interface WeeklyScheduleTier {
   id: number;
@@ -20,17 +21,23 @@ interface WeeklyScheduleTier {
   team_b_ranking: number | null;
   team_c_name: string | null;
   team_c_ranking: number | null;
+  team_d_name: string | null;
+  team_d_ranking: number | null;
+  team_e_name: string | null;
+  team_e_ranking: number | null;
+  team_f_name: string | null;
+  team_f_ranking: number | null;
   is_completed: boolean;
   no_games?: boolean;
   is_playoff?: boolean;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 interface LeagueScheduleProps {
-  mockSchedule: Schedule[];
   leagueId: string;
 }
 
-export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) {
+export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const { userProfile } = useAuth();
   const [currentWeek, setCurrentWeek] = useState(1);
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -228,6 +235,12 @@ export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) 
           team_b_ranking: null,
           team_c_name: null,
           team_c_ranking: null,
+          team_d_name: null,
+          team_d_ranking: null,
+          team_e_name: null,
+          team_e_ranking: null,
+          team_f_name: null,
+          team_f_ranking: null,
           is_completed: false
         }));
         setWeek1TierStructure(templateTiers);
@@ -411,7 +424,8 @@ export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) 
                           </span>
                         )}
                       </h3>
-                      {canSubmitScores && !tier.is_completed && !tier.no_games && tier.team_a_name && tier.team_b_name && tier.team_c_name && (
+                      {canSubmitScores && !tier.is_completed && !tier.no_games && 
+                       getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                         <button
                           onClick={() => {
                             setSelectedTierForScores(tier);
@@ -447,34 +461,22 @@ export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) 
                 
                 {/* Teams Display */}
                 <div className="p-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">A</div>
-                      <div className="text-sm text-[#6F6F6F]">
-                        {tier.team_a_name ? 
-                          `${tier.team_a_name} (${tier.team_a_ranking || '-'})` : 
-                          <span className="text-gray-400 italic">TBD</span>
-                        }
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">B</div>
-                      <div className="text-sm text-[#6F6F6F]">
-                        {tier.team_b_name ? 
-                          `${tier.team_b_name} (${tier.team_b_ranking || '-'})` : 
-                          <span className="text-gray-400 italic">TBD</span>
-                        }
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">C</div>
-                      <div className="text-sm text-[#6F6F6F]">
-                        {tier.team_c_name ? 
-                          `${tier.team_c_name} (${tier.team_c_ranking || '-'})` : 
-                          <span className="text-gray-400 italic">TBD</span>
-                        }
-                      </div>
-                    </div>
+                  <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                    {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => {
+                      const team = getTeamForPosition(tier, position);
+                      
+                      return (
+                        <div key={position} className="text-center">
+                          <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                          <div className="text-sm text-[#6F6F6F]">
+                            {team?.name ? 
+                              `${team.name} (${team.ranking || '-'})` : 
+                              <span className="text-gray-400 italic">TBD</span>
+                            }
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>
@@ -557,57 +559,6 @@ export function LeagueSchedule({ mockSchedule, leagueId }: LeagueScheduleProps) 
           </div>
         )}
 
-        {/* LEGACY: Fallback to old system if no weekly data and mockSchedule exists */}
-        {weeklyTiers.length === 0 && currentWeek === 1 && mockSchedule[0]?.tiers && (
-          mockSchedule[0].tiers.map((tier: Tier, tierIndex: number) => (
-            <Card key={tierIndex} className="shadow-md overflow-hidden rounded-lg">
-              <CardContent className="p-0 overflow-hidden">
-                <div className="bg-[#F8F8F8] border-b px-8 py-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
-                        Tier {tier.tierNumber}
-                      </h3>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                        <span className="text-sm text-[#6F6F6F]">{tier.time}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <svg className="h-4 w-4 text-[#B20000] mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth="2"/>
-                          <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1"/>
-                          <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1"/>
-                        </svg>
-                        <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    {['A', 'B', 'C'].map(position => (
-                      <div key={position} className="text-center">
-                        <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                        <div className="text-sm text-[#6F6F6F]">
-                          {tier.teams[position]?.name ? 
-                            `${tier.teams[position].name} (${tier.teams[position].ranking || '-'})` : 
-                            '-'
-                          }
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
       </div>
       
       {/* Submit Scores Modal */}

@@ -69,7 +69,7 @@ describe('LeagueSchedule - No Games Feature', () => {
       error: null
     });
 
-    render(<LeagueSchedule mockSchedule={[]} leagueId="1" />);
+    render(<LeagueSchedule leagueId="1" />);
 
     // Wait for the component to load and check for the message
     expect(await screen.findByText('No games this week')).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('LeagueSchedule - No Games Feature', () => {
       error: null
     });
 
-    render(<LeagueSchedule mockSchedule={[]} leagueId="1" />);
+    render(<LeagueSchedule leagueId="1" />);
 
     // Wait for the tier to be rendered and check for greyed-out styling
     const tierElement = await screen.findByText('Tier 1');
@@ -148,7 +148,7 @@ describe('LeagueSchedule - No Games Feature', () => {
       error: null
     });
 
-    render(<LeagueSchedule mockSchedule={[]} leagueId="1" />);
+    render(<LeagueSchedule leagueId="1" />);
 
     // Wait for the component to load
     await screen.findByText('Tier 1');
