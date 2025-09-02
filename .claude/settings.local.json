@@ -42,12 +42,8 @@
       "Bash(git merge:*)"
     ],
     "deny": [],
-    "additionalDirectories": [
-      "C:\\c\\Users\\wchan\\ofsl-web"
-    ]
+    "additionalDirectories": ["C:\\c\\Users\\wchan\\ofsl-web"]
   },
-  "enabledMcpjsonServers": [
-    "supabase",
-    "stripe"
-  ]
+  "enabledMcpjsonServers": ["supabase", "stripe"]
 }
+

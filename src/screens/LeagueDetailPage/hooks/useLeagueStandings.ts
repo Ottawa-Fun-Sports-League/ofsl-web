@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../../lib/supabase';
+import { useState, useEffect } from "react";
+import { supabase } from "../../../lib/supabase";
 
 export interface StandingsTeam {
   id: number;
@@ -21,14 +21,15 @@ export function useLeagueStandings(leagueId: string | undefined) {
 
   const loadTeams = async () => {
     if (!leagueId) return;
-    
+
     try {
       setLoading(true);
       setError(null);
 
       const { data: standingsData } = await supabase
-        .from('standings')
-        .select(`
+        .from("standings")
+        .select(
+          `
           id,
           team_id,
           wins,
@@ -47,38 +48,42 @@ export function useLeagueStandings(leagueId: string | undefined) {
             created_at,
             active
           )
-        `)
-        .eq('league_id', parseInt(leagueId))
-        .eq('teams.active', true)  // Only show active teams
-        .order('current_position', { ascending: true, nullsFirst: false });
-
+        `,
+        )
+        .eq("league_id", parseInt(leagueId))
+        .eq("teams.active", true) // Only show active teams
+        .order("current_position", { ascending: true, nullsFirst: false });
 
       if (standingsData && standingsData.length > 0) {
         // Get schedule data for rankings
         const { data: scheduleData, error: scheduleError } = await supabase
-          .from('league_schedules')
-          .select('schedule_data')
-          .eq('league_id', parseInt(leagueId))
+          .from("league_schedules")
+          .select("schedule_data")
+          .eq("league_id", parseInt(leagueId))
           .maybeSingle();
 
-        if (scheduleError && scheduleError.code !== 'PGRST116') {
-          console.warn('Error loading schedule data:', scheduleError);
+        if (scheduleError && scheduleError.code !== "PGRST116") {
+          console.warn("Error loading schedule data:", scheduleError);
         }
 
         const teamRankings = new Map<string, number>();
-        const scheduleExists = !!(scheduleData?.schedule_data?.tiers);
+        const scheduleExists = !!scheduleData?.schedule_data?.tiers;
         setHasSchedule(scheduleExists);
-        
+
         if (scheduleExists) {
-          scheduleData.schedule_data.tiers.forEach((tier: {teams?: Record<string, {name: string; ranking: number} | null>}) => {
-            if (tier.teams) {
-              Object.values(tier.teams).forEach((team: {name: string; ranking: number} | null) => {
-                if (team && team.name && team.ranking) {
-                  teamRankings.set(team.name, team.ranking);
-                }
-              });
-            }
-          });
+          scheduleData.schedule_data.tiers.forEach(
+            (tier: { teams?: Record<string, { name: string; ranking: number } | null> }) => {
+              if (tier.teams) {
+                Object.values(tier.teams).forEach(
+                  (team: { name: string; ranking: number } | null) => {
+                    if (team && team.name && team.ranking) {
+                      teamRankings.set(team.name, team.ranking);
+                    }
+                  },
+                );
+              }
+            },
+          );
         }
 
         const formattedStandings: StandingsTeam[] = standingsData.map((standing: any) => ({
@@ -88,51 +93,55 @@ export function useLeagueStandings(leagueId: string | undefined) {
           wins: (standing.wins || 0) + (standing.manual_wins_adjustment || 0),
           losses: (standing.losses || 0) + (standing.manual_losses_adjustment || 0),
           points: (standing.points || 0) + (standing.manual_points_adjustment || 0),
-          differential: (standing.point_differential || 0) + (standing.manual_differential_adjustment || 0),
+          differential:
+            (standing.point_differential || 0) + (standing.manual_differential_adjustment || 0),
           created_at: standing.teams.created_at,
-          schedule_ranking: teamRankings.get(standing.teams.name)
+          schedule_ranking: teamRankings.get(standing.teams.name),
         }));
 
         setTeams(formattedStandings);
         return;
       }
 
-      
       const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('id, name, roster, created_at')
-        .eq('league_id', parseInt(leagueId))
-        .eq('active', true);
+        .from("teams")
+        .select("id, name, roster, created_at")
+        .eq("league_id", parseInt(leagueId))
+        .eq("active", true);
 
       if (teamsError) throw teamsError;
 
       const { data: scheduleData, error: scheduleError } = await supabase
-        .from('league_schedules')
-        .select('schedule_data')
-        .eq('league_id', parseInt(leagueId))
+        .from("league_schedules")
+        .select("schedule_data")
+        .eq("league_id", parseInt(leagueId))
         .maybeSingle();
 
-      if (scheduleError && scheduleError.code !== 'PGRST116') {
-        console.warn('Error loading schedule data:', scheduleError);
+      if (scheduleError && scheduleError.code !== "PGRST116") {
+        console.warn("Error loading schedule data:", scheduleError);
       }
 
       const teamRankings = new Map<string, number>();
-      const scheduleExists = !!(scheduleData?.schedule_data?.tiers);
+      const scheduleExists = !!scheduleData?.schedule_data?.tiers;
       setHasSchedule(scheduleExists);
-      
+
       if (scheduleExists) {
-        scheduleData.schedule_data.tiers.forEach((tier: {teams?: Record<string, {name: string; ranking: number} | null>}) => {
-          if (tier.teams) {
-            Object.values(tier.teams).forEach((team: {name: string; ranking: number} | null) => {
-              if (team && team.name && team.ranking) {
-                teamRankings.set(team.name, team.ranking);
-              }
-            });
-          }
-        });
+        scheduleData.schedule_data.tiers.forEach(
+          (tier: { teams?: Record<string, { name: string; ranking: number } | null> }) => {
+            if (tier.teams) {
+              Object.values(tier.teams).forEach(
+                (team: { name: string; ranking: number } | null) => {
+                  if (team && team.name && team.ranking) {
+                    teamRankings.set(team.name, team.ranking);
+                  }
+                },
+              );
+            }
+          },
+        );
       }
 
-      const fallbackStandings: StandingsTeam[] = (teamsData || []).map(team => ({
+      const fallbackStandings: StandingsTeam[] = (teamsData || []).map((team) => ({
         id: team.id,
         name: team.name,
         roster_size: team.roster?.length || 0,
@@ -141,7 +150,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
         points: 0,
         differential: 0,
         created_at: team.created_at,
-        schedule_ranking: teamRankings.get(team.name)
+        schedule_ranking: teamRankings.get(team.name),
       }));
 
       const sortedFallback = fallbackStandings.sort((a, b) => {
@@ -159,8 +168,8 @@ export function useLeagueStandings(leagueId: string | undefined) {
 
       setTeams(sortedFallback);
     } catch (err) {
-      console.error('Error loading teams for standings:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load teams';
+      console.error("Error loading teams for standings:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to load teams";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -177,6 +186,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
     loading,
     error,
     hasSchedule,
-    refetch: loadTeams
+    refetch: loadTeams,
   };
 }
+

@@ -2,24 +2,24 @@
 // @ts-nocheck - Complex type issues requiring extensive refactoring
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { PaymentStatusBadge } from "../../components/ui/payment-status-badge";
-import { ConfirmationModal } from "../../components/ui/confirmation-modal";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
-import { useViewPreference } from "../../hooks/useViewPreference";
-import {
-  Users,
-  Trash2,
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { PaymentStatusBadge } from '../../components/ui/payment-status-badge';
+import { ConfirmationModal } from '../../components/ui/confirmation-modal';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle 
+} from '../../components/ui/dialog';
+import { useViewPreference } from '../../hooks/useViewPreference';
+import { 
+  Users, 
+  Trash2, 
   ArrowLeft,
   Crown,
   Calendar,
@@ -31,11 +31,11 @@ import {
   Edit,
   Clock,
   CalendarDays,
-  AlertCircle,
-} from "lucide-react";
-import { supabase } from "../../lib/supabase";
-import { useToast } from "../../components/ui/toast";
-import { useAuth } from "../../contexts/AuthContext";
+  AlertCircle
+} from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useToast } from '../../components/ui/toast';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   DndContext,
   closestCenter,
@@ -161,6 +161,16 @@ export function LeagueTeamsPage() {
   // Game format options - using centralized definitions for consistent ordering
   const gameFormats = getFormatOptions();
 
+  // Schedule generation modal states
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedGameFormat, setSelectedGameFormat] = useState<string>('');
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  const [showScheduleConfirmation, setShowScheduleConfirmation] = useState(false);
+  const [hasSchedule, setHasSchedule] = useState(false);
+
+  // Game format options - using centralized definitions for consistent ordering
+  const gameFormats = getFormatOptions();
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -170,7 +180,10 @@ export function LeagueTeamsPage() {
 
   useEffect(() => {
     if (leagueId) {
-      Promise.all([loadLeagueData(), loadScheduleStatus()]).then(([isTeamLeague]) => {
+      Promise.all([
+        loadLeagueData(),
+        loadScheduleStatus()
+      ]).then(([isTeamLeague]) => {
         if (isTeamLeague !== false) {
           loadTeams();
         } else {
@@ -1767,30 +1780,167 @@ export function LeagueTeamsPage() {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto xl:overflow-visible">
-          {dragEnabled && onDragEnd ? (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-              <table className="w-full xl:table-fixed divide-y divide-gray-200">
-                {renderHeader()}
-                <SortableContext
-                  items={teams.map((team) => team.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {teams.map((team) => (
-                      <SortableTableRow key={team.id} team={team} isWaitlisted={isWaitlisted} />
-                    ))}
-                  </tbody>
-                </SortableContext>
-              </table>
-            </DndContext>
-          ) : (
-            <table className="w-full xl:table-fixed divide-y divide-gray-200">
-              {renderHeader()}
-              <tbody className="bg-white divide-y divide-gray-200">
-                {teams.map(renderStaticRow)}
-              </tbody>
-            </table>
-          )}
+          <table className="w-full xl:table-fixed divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Team Name
+                </th>
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Captain
+                </th>
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Skill
+                </th>
+                <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Players
+                </th>
+                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                  Registered
+                </th>
+                {!isWaitlisted && (
+                  <>
+                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Payment
+                    </th>
+                  </>
+                )}
+                <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {teams.map((team) => {
+                // Calculate payment details
+                const totalAmount = team.amount_due 
+                  ? team.amount_due * 1.13 
+                  : (team.league?.cost ? parseFloat(team.league.cost.toString()) * 1.13 : 0);
+                const amountPaid = team.amount_paid || 0;
+                const amountOwing = totalAmount - amountPaid;
+
+                return (
+                  <tr key={team.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
+                          {team.name}
+                        </div>
+                        {isWaitlisted && (
+                          <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                            Waitlisted
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
+                        <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
+                          {team.captain_name || 'Unknown'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      {team.skill_name ? (
+                        <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {team.skill_name}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
+                        <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
+                        <span className="font-medium">{team.roster.length}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
+                      <div className="text-xs text-gray-600">
+                        {new Date(team.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </td>
+                    {!isWaitlisted && (
+                      <>
+                        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                          <PaymentStatusBadge 
+                            status={team.payment_status || 'pending'} 
+                            size="sm"
+                          />
+                        </td>
+                        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P:</span>
+                              <span className="font-medium text-green-700">${amountPaid.toFixed(0)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">O:</span>
+                              <span className={`font-medium ${amountOwing > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                                ${amountOwing.toFixed(0)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
+                              <span className="text-gray-500">T:</span>
+                              ${totalAmount.toFixed(0)}
+                            </div>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <Link 
+                          to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+                          className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                          title={team.isIndividual ? "Edit payment" : "Edit team"}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Link>
+                        <button
+                          onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
+                          disabled={movingTeam === team.id}
+                          className={`p-1 rounded transition-colors disabled:opacity-50 ${
+                            isWaitlisted 
+                              ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
+                              : 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
+                          }`}
+                          title={isWaitlisted ? 'Move to active' : 'Move to waitlist'}
+                        >
+                          {movingTeam === team.id ? (
+                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                          ) : isWaitlisted ? (
+                            <ArrowLeft className="h-3.5 w-3.5" />
+                          ) : (
+                            <Clock className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTeam(team.id, team.name)}
+                          disabled={deleting === team.id}
+                          className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                          title="Delete team"
+                        >
+                          {deleting === team.id ? (
+                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -1889,52 +2039,45 @@ export function LeagueTeamsPage() {
                 </div>
               )}
             </div>
-
-            {/* Search Bar and Team Count */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
-                  <Input
-                    placeholder="Search teams by name, captain, or email..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full"
-                  />
-                </div>
-
-                <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
-                  {filteredActiveTeams.length + filteredWaitlistedTeams.length} of{" "}
-                  {activeTeams.length + waitlistedTeams.length}{" "}
-                  {league?.team_registration === false ? "players" : "teams"}
-                </div>
+            
+            {/* Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
+                <Input
+                  placeholder="Search teams by name, captain, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full"
+                />
+              </div>
+              
+              <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
+                {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} {league?.team_registration === false ? 'players' : 'teams'}
               </div>
             </div>
           </div>
         </div>
 
         {/* Schedule Generation Section - Volleyball only */}
-        {userProfile?.is_admin && activeTeams.length > 0 && league?.sport_name === "Volleyball" && (
+        {userProfile?.is_admin && activeTeams.length > 0 && league?.sport_name === 'Volleyball' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <p className="text-[#6F6F6F] text-base">
-                  {hasSchedule
+                  {hasSchedule 
                     ? "Season schedule has been generated and is now available!"
-                    : "Ready to start the season? Set the order of the teams below and then generate the schedule."}
+                    : "Ready to start the season? Set the order of the teams below and then generate the schedule."
+                  }
                 </p>
               </div>
               <div className="flex-shrink-0">
                 <Button
-                  onClick={
-                    hasSchedule
-                      ? () => navigate(`/leagues/${leagueId}/schedule`)
-                      : handleOpenScheduleModal
-                  }
+                  onClick={hasSchedule ? () => navigate(`/leagues/${leagueId}/schedule`) : handleOpenScheduleModal}
                   className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-6 py-2.5 text-sm font-medium whitespace-nowrap flex items-center gap-2"
                 >
                   <CalendarDays className="h-4 w-4" />
-                  {hasSchedule ? "View Schedule" : "Generate Schedule"}
+                  {hasSchedule ? 'View Schedule' : 'Generate Schedule'}
                 </Button>
               </div>
             </div>
