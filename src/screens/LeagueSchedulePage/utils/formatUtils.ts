@@ -473,9 +473,11 @@ export const COMMON_FORMATS: readonly GameFormatId[] = [
 /**
  * Format categories for organized display
  */
-export const FORMAT_CATEGORIES = {
-  twoTeam: GAME_FORMATS.filter(f => f.teamCount === 2),
-  threeTeam: GAME_FORMATS.filter(f => f.teamCount === 3),
-  fourTeam: GAME_FORMATS.filter(f => f.teamCount === 4),
-  sixTeam: GAME_FORMATS.filter(f => f.teamCount === 6)
-} as const;
+export function getFormatCategories() {
+  return {
+    twoTeam: GAME_FORMATS.filter(f => f.teamCount === 2),
+    threeTeam: GAME_FORMATS.filter(f => f.teamCount === 3),
+    fourTeam: GAME_FORMATS.filter(f => f.teamCount === 4),
+    sixTeam: GAME_FORMATS.filter(f => f.teamCount === 6)
+  } as const;
+}
