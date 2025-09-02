@@ -136,7 +136,7 @@ export function LeagueSchedulePage() {
               
               {/* Admin Actions */}
               {userProfile?.is_admin && league?.id && (
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col gap-2">
                   <Link
                     to={`/my-account/leagues/edit/${league.id}`}
                     className="text-[#B20000] hover:underline text-sm whitespace-nowrap"

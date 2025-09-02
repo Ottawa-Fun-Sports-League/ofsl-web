@@ -55,6 +55,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getFormatOptions } from '../LeagueSchedulePage/utils/formatUtils';
 
 interface TeamData {
   id: number | string;  // number for teams, string for individual users
@@ -159,16 +160,8 @@ export function LeagueTeamsPage() {
   const [showScheduleConfirmation, setShowScheduleConfirmation] = useState(false);
   const [hasSchedule, setHasSchedule] = useState(false);
 
-  // Game format options
-  const gameFormats = [
-    { value: '3-teams-6-sets', label: '3 teams (6 sets)' },
-    { value: '2-teams-4-sets', label: '2 teams (4 sets)' },
-    { value: '2-teams-best-of-5', label: '2 teams (Best of 5)' },
-    { value: '2-teams-best-of-3', label: '2 teams (Best of 3)' },
-    { value: '4-teams-head-to-head', label: '4 teams (Head-to-head)' },
-    { value: '6-teams-head-to-head', label: '6 teams (head-to-head)' },
-    { value: '2-teams-elite', label: '2 teams (Elite)' },
-  ];
+  // Game format options - using centralized definitions for consistent ordering
+  const gameFormats = getFormatOptions();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -559,12 +552,28 @@ export function LeagueTeamsPage() {
     return Math.max(1, regularSeasonWeeks);
   };
 
-  const generate3TeamSchedule = async (teams: TeamData[]) => {
-    if (teams.length < 3) {
-      throw new Error('At least 3 teams are required for this format');
+  const generateScheduleForFormat = async (teams: TeamData[], format: string) => {
+    // Determine teams per tier based on format
+    let teamsPerTier = 3; // default
+    let minTeamsRequired = 3;
+    
+    if (format.startsWith('2-teams')) {
+      teamsPerTier = 2;
+      minTeamsRequired = 2;
+    } else if (format === '3-teams-6-sets') {
+      teamsPerTier = 3;
+      minTeamsRequired = 3;
+    } else if (format === '4-teams-head-to-head') {
+      teamsPerTier = 4;
+      minTeamsRequired = 4;
+    } else if (format === '6-teams-head-to-head') {
+      teamsPerTier = 6;
+      minTeamsRequired = 6;
     }
-
-    const teamsPerTier = 3;
+    
+    if (teams.length < minTeamsRequired) {
+      throw new Error(`At least ${minTeamsRequired} teams are required for this format`);
+    }
     const totalTiers = Math.ceil(teams.length / teamsPerTier);
     
     // Fetch tier-specific defaults from league_schedules table
@@ -617,15 +626,21 @@ export function LeagueTeamsPage() {
         const startIndex = i * teamsPerTier;
         const tierTeams = teams.slice(startIndex, startIndex + teamsPerTier);
         
-        // Skip if we don't have at least 3 teams for this tier
-        if (tierTeams.length < 3) {
-          continue;
+        // Skip if we don't have enough teams for this tier's format
+        if (tierTeams.length < minTeamsRequired) {
+          // For the last tier, we might have fewer teams than the format requires
+          // Only skip if we have no teams at all
+          if (tierTeams.length === 0) {
+            continue;
+          }
+          // If we have some teams but not enough for the format, 
+          // still create the tier but with empty slots
         }
 
         // Determine if this is a playoff week
         const isPlayoffWeek = weekNum > regularSeasonWeeks;
         
-        // Create weekly_schedules row
+        // Create weekly_schedules row with support for all formats
         const scheduleRow = {
           league_id: parseInt(leagueId!),
           week_number: weekNum,
@@ -633,14 +648,20 @@ export function LeagueTeamsPage() {
           location: getTierDefault(i + 1, 'location'),
           time_slot: getTierDefault(i + 1, 'time_slot'),
           court: getTierDefault(i + 1, 'court'),
-          format: '3-teams-6-sets',
+          format: format,
           // Only assign teams for Week 1, other weeks will be populated later based on results
           team_a_name: weekNum === 1 ? (tierTeams[0]?.name || null) : null,
-          team_a_ranking: weekNum === 1 ? (startIndex + 1) : null,
+          team_a_ranking: weekNum === 1 && tierTeams[0] ? (startIndex + 1) : null,
           team_b_name: weekNum === 1 ? (tierTeams[1]?.name || null) : null,
-          team_b_ranking: weekNum === 1 ? (startIndex + 2) : null,
-          team_c_name: weekNum === 1 ? (tierTeams[2]?.name || null) : null,
-          team_c_ranking: weekNum === 1 ? (startIndex + 3) : null,
+          team_b_ranking: weekNum === 1 && tierTeams[1] ? (startIndex + 2) : null,
+          team_c_name: weekNum === 1 && teamsPerTier >= 3 ? (tierTeams[2]?.name || null) : null,
+          team_c_ranking: weekNum === 1 && tierTeams[2] && teamsPerTier >= 3 ? (startIndex + 3) : null,
+          team_d_name: weekNum === 1 && teamsPerTier >= 4 ? (tierTeams[3]?.name || null) : null,
+          team_d_ranking: weekNum === 1 && tierTeams[3] && teamsPerTier >= 4 ? (startIndex + 4) : null,
+          team_e_name: weekNum === 1 && teamsPerTier >= 5 ? (tierTeams[4]?.name || null) : null,
+          team_e_ranking: weekNum === 1 && tierTeams[4] && teamsPerTier >= 5 ? (startIndex + 5) : null,
+          team_f_name: weekNum === 1 && teamsPerTier >= 6 ? (tierTeams[5]?.name || null) : null,
+          team_f_ranking: weekNum === 1 && tierTeams[5] && teamsPerTier >= 6 ? (startIndex + 6) : null,
           is_completed: false,
           is_playoff: isPlayoffWeek,
         };
@@ -669,11 +690,17 @@ export function LeagueTeamsPage() {
         A: row.team_a_name ? { name: row.team_a_name, ranking: row.team_a_ranking } : null,
         B: row.team_b_name ? { name: row.team_b_name, ranking: row.team_b_ranking } : null,
         C: row.team_c_name ? { name: row.team_c_name, ranking: row.team_c_ranking } : null,
+        D: row.team_d_name ? { name: row.team_d_name, ranking: row.team_d_ranking } : null,
+        E: row.team_e_name ? { name: row.team_e_name, ranking: row.team_e_ranking } : null,
+        F: row.team_f_name ? { name: row.team_f_name, ranking: row.team_f_ranking } : null,
       },
       courts: {
         A: row.court,
         B: row.court,
         C: row.court,
+        D: row.court,
+        E: row.court,
+        F: row.court,
       },
     }));
 
@@ -685,7 +712,7 @@ export function LeagueTeamsPage() {
         day: 'numeric' 
       }),
       tiers: legacyTiers,
-      format: '3-teams-6-sets',
+      format: format,
       league_id: parseInt(leagueId!),
     };
   };
@@ -702,17 +729,28 @@ export function LeagueTeamsPage() {
       return;
     }
 
-    // Only handle 3 teams format for now
-    if (selectedGameFormat !== '3-teams-6-sets') {
-      showToast('Only "3 teams (6 sets)" format is currently supported', 'info');
-      return;
-    }
-
     try {
       setGeneratingSchedule(true);
       
-      // Generate schedule based on active teams order
-      const scheduleData = await generate3TeamSchedule(activeTeams);
+      // Validate team count for selected format
+      let minTeamsForFormat = 3; // default
+      if (selectedGameFormat.startsWith('2-teams')) {
+        minTeamsForFormat = 2;
+      } else if (selectedGameFormat === '3-teams-6-sets') {
+        minTeamsForFormat = 3;
+      } else if (selectedGameFormat === '4-teams-head-to-head') {
+        minTeamsForFormat = 4;
+      } else if (selectedGameFormat === '6-teams-head-to-head') {
+        minTeamsForFormat = 6;
+      }
+      
+      if (activeTeams.length < minTeamsForFormat) {
+        showToast(`You need at least ${minTeamsForFormat} teams for the selected format. You currently have ${activeTeams.length} teams.`, 'error');
+        return;
+      }
+      
+      // Generate schedule for the selected format based on active teams order
+      const scheduleData = await generateScheduleForFormat(activeTeams, selectedGameFormat);
       
       // Save schedule to database
       const { error: scheduleError } = await supabase
@@ -1739,19 +1777,34 @@ export function LeagueTeamsPage() {
                 </div>
               </div>
               
-              {/* Generate/View Schedule Button - Right Justified (Volleyball only) */}
-              {userProfile?.is_admin && activeTeams.length > 0 && league?.sport_name === 'Volleyball' && (
+            </div>
+          </div>
+        </div>
+
+        {/* Schedule Generation Section - Volleyball only */}
+        {userProfile?.is_admin && activeTeams.length > 0 && league?.sport_name === 'Volleyball' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-[#6F6F6F] text-base">
+                  {hasSchedule 
+                    ? "Season schedule has been generated and is now available!"
+                    : "Ready to start the season? Set the order of the teams below and then generate the schedule."
+                  }
+                </p>
+              </div>
+              <div className="flex-shrink-0">
                 <Button
                   onClick={hasSchedule ? () => navigate(`/leagues/${leagueId}/schedule`) : handleOpenScheduleModal}
-                  className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap flex items-center gap-2"
+                  className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-6 py-2.5 text-sm font-medium whitespace-nowrap flex items-center gap-2"
                 >
                   <CalendarDays className="h-4 w-4" />
                   {hasSchedule ? 'View Schedule' : 'Generate Schedule'}
                 </Button>
-              )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Teams Content */}
         {activeTeams.length === 0 && waitlistedTeams.length === 0 ? (
