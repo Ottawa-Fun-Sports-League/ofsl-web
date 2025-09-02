@@ -1,42 +1,8 @@
 import React from 'react';
-import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../constants/formats';
-import { getTeamForPosition } from '../utils/tierFormatUtils';
+import type { WeeklyScheduleTier, DragState } from '../types';
+import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../utils/formatUtils';
+import { getTeamForPosition } from '../utils/scheduleLogic';
 
-interface WeeklyScheduleTier {
-  id: number;
-  tier_number: number;
-  location: string;
-  time_slot: string;
-  court: string;
-  format: string;
-  team_a_name: string | null;
-  team_a_ranking: number | null;
-  team_b_name: string | null;
-  team_b_ranking: number | null;
-  team_c_name: string | null;
-  team_c_ranking: number | null;
-  team_d_name: string | null;
-  team_d_ranking: number | null;
-  team_e_name: string | null;
-  team_e_ranking: number | null;
-  team_f_name: string | null;
-  team_f_ranking: number | null;
-  is_completed: boolean;
-  no_games?: boolean;
-  is_playoff?: boolean;
-  [key: string]: string | number | boolean | null | undefined;
-}
-
-interface DragState {
-  isDragging: boolean;
-  draggedTeam: string | null;
-  fromTier: number | null;
-  fromPosition: string | null;
-  hoverTier: number | null;
-  hoverPosition: string | null;
-  mouseX: number;
-  mouseY: number;
-}
 
 interface DynamicTierTeamsProps {
   tier: WeeklyScheduleTier;

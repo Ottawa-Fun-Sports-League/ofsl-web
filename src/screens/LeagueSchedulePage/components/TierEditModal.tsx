@@ -4,8 +4,9 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { supabase } from '../../../lib/supabase';
 import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
-import { GAME_FORMATS, getPositionsForFormat } from '../constants/formats';
-import { validateFormatChange, repackTeamsForFormat, type FormatValidationResult } from '../utils/tierFormatUtils';
+import type { FormatValidationResult } from '../types';
+import { GAME_FORMATS, getPositionsForFormat } from '../utils/formatUtils';
+import { validateFormatChangeCompat, repackTeamsForFormatCompat } from '../utils/scheduleLogic';
 
 interface TierEditModalProps {
   isOpen: boolean;
@@ -169,7 +170,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
       
       // Validate format change
       if (editValues.format !== (tier.format || '3-teams-6-sets')) {
-        const validation = validateFormatChange(tier, editValues.format);
+        const validation = validateFormatChangeCompat(tier, editValues.format);
         if (!validation.isValid) {
           throw new Error(validation.reason || 'Format change not allowed');
         }
@@ -178,7 +179,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
       // Apply team repacking if format changed
       let updatedTeams = tier.teams;
       if (editValues.format !== (tier.format || '3-teams-6-sets')) {
-        updatedTeams = repackTeamsForFormat(tier, editValues.format);
+        updatedTeams = repackTeamsForFormatCompat(tier, editValues.format);
       }
       
       // Create updated tier
@@ -221,11 +222,11 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   };
   
   const handleFormatChange = (newFormat: string) => {
-    const validation = validateFormatChange(tier, newFormat);
+    const validation = validateFormatChangeCompat(tier, newFormat);
     setFormatValidation(validation);
     
     if (validation.isValid) {
-      const repackedTeams = repackTeamsForFormat(tier, newFormat);
+      const repackedTeams = repackTeamsForFormatCompat(tier, newFormat);
       setEditValues(prev => ({ ...prev, format: newFormat }));
       setPreviewTeams(repackedTeams);
     } else {
@@ -416,7 +417,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
               >
                 <option value="">Select format...</option>
                 {GAME_FORMATS.map((format) => {
-                  const validation = validateFormatChange(tier, format.value);
+                  const validation = validateFormatChangeCompat(tier, format.value);
                   const isDisabled = !validation.isValid;
                   
                   return (

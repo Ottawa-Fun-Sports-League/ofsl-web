@@ -5,33 +5,11 @@ import { supabase } from '../../../lib/supabase';
 import { fetchLeagueById } from '../../../lib/leagues';
 import { useAuth } from '../../../contexts/AuthContext';
 import { SubmitScoresModal } from './SubmitScoresModal';
-import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../../LeagueSchedulePage/constants/formats';
-import { getTeamForPosition } from '../../LeagueSchedulePage/utils/tierFormatUtils';
+import type { WeeklyScheduleTier } from '../../LeagueSchedulePage/types';
+import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../../LeagueSchedulePage/utils/formatUtils';
+import { getTeamForPosition } from '../../LeagueSchedulePage/utils/scheduleLogic';
+import { calculateCurrentWeekToDisplay } from '../../LeagueSchedulePage/utils/weekCalculation';
 
-interface WeeklyScheduleTier {
-  id: number;
-  tier_number: number;
-  location: string;
-  time_slot: string;
-  court: string;
-  format: string;
-  team_a_name: string | null;
-  team_a_ranking: number | null;
-  team_b_name: string | null;
-  team_b_ranking: number | null;
-  team_c_name: string | null;
-  team_c_ranking: number | null;
-  team_d_name: string | null;
-  team_d_ranking: number | null;
-  team_e_name: string | null;
-  team_e_ranking: number | null;
-  team_f_name: string | null;
-  team_f_ranking: number | null;
-  is_completed: boolean;
-  no_games?: boolean;
-  is_playoff?: boolean;
-  [key: string]: string | number | boolean | null | undefined;
-}
 
 interface LeagueScheduleProps {
   leagueId: string;
@@ -55,7 +33,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   // Check if user is admin or facilitator
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
   
-  // Fetch league info for playoff weeks calculation
+  // Fetch league info for playoff weeks calculation and set initial week
   useEffect(() => {
     const fetchLeagueInfo = async () => {
       if (!leagueId) return;
@@ -68,6 +46,14 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
             end_date: leagueData.end_date,
             playoff_weeks: leagueData.playoff_weeks || 0
           });
+          
+          // Calculate and set the current week based on actual date
+          const calculatedWeek = calculateCurrentWeekToDisplay(
+            leagueData.start_date,
+            leagueData.end_date,
+            leagueData.day_of_week
+          );
+          setCurrentWeek(calculatedWeek);
         }
       } catch (error) {
         console.error('Error fetching league info:', error);

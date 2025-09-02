@@ -77,12 +77,10 @@ export function AddPlayoffWeeksModal({
       // Smart playoff week management - preserve existing data when possible
       const newPlayoffStart = regularSeasonWeeks + 1;
       const newPlayoffEnd = regularSeasonWeeks + playoffWeeks;
-      const oldPlayoffEnd = regularSeasonWeeks + currentPlayoffWeeks;
 
       // Handle different scenarios based on whether we're increasing or decreasing weeks
       if (playoffWeeks === 0) {
         // REMOVING all playoff weeks
-        console.log(`Removing all playoff weeks (was ${currentPlayoffWeeks})`);
         
         const { error: deleteError } = await supabase
           .from('weekly_schedules')
@@ -96,7 +94,16 @@ export function AddPlayoffWeeksModal({
         
       } else if (playoffWeeks > currentPlayoffWeeks) {
         // INCREASING playoff weeks - only add the new weeks
-        console.log(`Increasing playoff weeks from ${currentPlayoffWeeks} to ${playoffWeeks}`);
+        
+        // First check which playoff weeks already exist
+        const { data: existingPlayoffWeeks } = await supabase
+          .from('weekly_schedules')
+          .select('week_number')
+          .eq('league_id', parseInt(leagueId))
+          .gt('week_number', regularSeasonWeeks)
+          .order('week_number', { ascending: true });
+
+        const existingWeekNumbers = new Set(existingPlayoffWeeks?.map(w => w.week_number) || []);
         
         // Get tier structure for new weeks
         const { data: tierStructure } = await supabase
@@ -124,9 +131,14 @@ export function AddPlayoffWeeksModal({
           throw new Error('No tier structure found in regular season to copy for playoffs');
         }
 
-        // Only create the NEW playoff weeks (not touching existing ones)
+        // Only create the playoff weeks that don't already exist
         const playoffRows = [];
-        for (let weekNum = oldPlayoffEnd + 1; weekNum <= newPlayoffEnd; weekNum++) {
+        for (let weekNum = newPlayoffStart; weekNum <= newPlayoffEnd; weekNum++) {
+          // Skip if this week already exists
+          if (existingWeekNumbers.has(weekNum)) {
+            continue;
+          }
+          
           for (const tier of tiersToUse) {
             playoffRows.push({
               league_id: parseInt(leagueId),
@@ -151,10 +163,21 @@ export function AddPlayoffWeeksModal({
             throw new Error(`Failed to add new playoff weeks: ${playoffError.message}`);
           }
         }
+        
+        // Also update the is_playoff flag for any existing weeks that should be playoffs
+        const { error: updateError } = await supabase
+          .from('weekly_schedules')
+          .update({ is_playoff: true })
+          .eq('league_id', parseInt(leagueId))
+          .gt('week_number', regularSeasonWeeks)
+          .lte('week_number', newPlayoffEnd);
+          
+        if (updateError) {
+          console.error('Failed to update playoff flags:', updateError);
+        }
 
       } else if (playoffWeeks < currentPlayoffWeeks) {
         // DECREASING playoff weeks - only remove the excess weeks
-        console.log(`Decreasing playoff weeks from ${currentPlayoffWeeks} to ${playoffWeeks}`);
         
         const { error: deleteError } = await supabase
           .from('weekly_schedules')
@@ -165,65 +188,8 @@ export function AddPlayoffWeeksModal({
         if (deleteError && !deleteError.message.includes('No rows found')) {
           throw new Error(`Failed to remove excess playoff weeks: ${deleteError.message}`);
         }
-
-      } else if (currentPlayoffWeeks === 0) {
-        // ADDING playoff weeks for the first time
-        console.log(`Adding ${playoffWeeks} playoff weeks for the first time`);
-        
-        // Get tier structure
-        const { data: tierStructure } = await supabase
-          .from('weekly_schedules')
-          .select('tier_number, location, time_slot, court, format')
-          .eq('league_id', parseInt(leagueId))
-          .eq('week_number', regularSeasonWeeks)
-          .order('tier_number', { ascending: true });
-
-        let tiersToUse = tierStructure;
-        
-        if (!tiersToUse || tiersToUse.length === 0) {
-          const { data: week1Tiers } = await supabase
-            .from('weekly_schedules')
-            .select('tier_number, location, time_slot, court, format')
-            .eq('league_id', parseInt(leagueId))
-            .eq('week_number', 1)
-            .order('tier_number', { ascending: true });
-          
-          tiersToUse = week1Tiers;
-        }
-
-        if (!tiersToUse || tiersToUse.length === 0) {
-          throw new Error('No tier structure found in regular season to copy for playoffs');
-        }
-
-        // Create all playoff weeks
-        const playoffRows = [];
-        for (let weekNum = newPlayoffStart; weekNum <= newPlayoffEnd; weekNum++) {
-          for (const tier of tiersToUse) {
-            playoffRows.push({
-              league_id: parseInt(leagueId),
-              week_number: weekNum,
-              tier_number: tier.tier_number,
-              location: tier.location || 'TBD',
-              time_slot: tier.time_slot || 'TBD', 
-              court: tier.court || 'TBD',
-              format: tier.format || '3-teams-6-sets',
-              is_playoff: true,
-              no_games: false
-            });
-          }
-        }
-
-        if (playoffRows.length > 0) {
-          const { error: playoffError } = await supabase
-            .from('weekly_schedules')
-            .insert(playoffRows);
-
-          if (playoffError) {
-            throw new Error(`Failed to create playoff weeks: ${playoffError.message}`);
-          }
-        }
       }
-      // If playoffWeeks === currentPlayoffWeeks and currentPlayoffWeeks > 0, do nothing (no change)
+      // If playoffWeeks === currentPlayoffWeeks, do nothing (no change)
 
       // Success!
       onPlayoffWeeksAdded(playoffWeeks);
