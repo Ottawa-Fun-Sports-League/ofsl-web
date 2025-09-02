@@ -88,7 +88,7 @@ export function NewLeagueForm({
       hide_day: false,
       payment_due_date: "2025-08-21",
       team_registration: true,
-    });
+      });
   };
 
   return (
@@ -522,6 +522,7 @@ export function NewLeagueForm({
               required
             />
           </div>
+          
         </div>
 
         <div className="mt-6">

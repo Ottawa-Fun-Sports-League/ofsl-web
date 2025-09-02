@@ -105,7 +105,7 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
           return;
         }
 
-        let query = supabase
+        const query = supabase
           .from('spares')
           .select(`
             id,
