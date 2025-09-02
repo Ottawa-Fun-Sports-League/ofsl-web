@@ -38,6 +38,7 @@ import {
   UserRegistrationsPage,
 } from "./screens/MyAccount";
 import { LeagueTeamsPage } from "./screens/LeagueTeamsPage";
+import { LeagueSchedulePage } from "./screens/LeagueSchedulePage";
 import { ProfileCompletionPage } from "./screens/ProfileCompletionPage/ProfileCompletionPage";
 import { Navigate } from "react-router-dom";
 import { GoogleSignupRedirect } from "./screens/SignupPage/GoogleSignupRedirect";
@@ -216,6 +217,16 @@ export function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <LeagueTeamsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* League Schedule Page - separate route */}
+            <Route
+              path="/leagues/:leagueId/schedule"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <LeagueSchedulePage />
                 </ProtectedRoute>
               }
             />

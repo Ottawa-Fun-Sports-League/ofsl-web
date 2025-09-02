@@ -25,6 +25,7 @@ export interface League {
   deposit_amount: number | null;
   deposit_date: string | null;
   team_registration: boolean | null;
+  playoff_weeks?: number | null;
   created_at: string;
 
   // Joined data

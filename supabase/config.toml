@@ -1,5 +1,9 @@
 # Supabase Configuration
 
+# Database Configuration
+[db]
+major_version = 15
+
 # Edge Functions Configuration
 # This disables JWT verification for specific functions
 # allowing both anonymous and authenticated users to access them

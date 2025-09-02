@@ -6,7 +6,7 @@ interface LeagueStandingsProps {
 }
 
 export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
-  const { teams, loading, error } = useLeagueStandings(leagueId);
+  const { teams, loading, error, hasSchedule } = useLeagueStandings(leagueId);
   if (loading) {
     return (
       <div>
@@ -64,8 +64,10 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       {/* Note about standings */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Game records and standings will be available
-          once league play begins. Below shows the current registered teams.
+          <strong>Note:</strong> {hasSchedule 
+            ? "Standings are updated weekly once league play begins."
+            : "Game records and standings will be available once league play begins. Below shows the current registered teams."
+          }
         </p>
       </div>
 

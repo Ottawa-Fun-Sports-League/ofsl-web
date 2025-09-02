@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { Button } from "../../../../../components/ui/button";
-import { Edit2, Trash2, Copy, Users, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Edit2, Trash2, Copy, Users, ChevronUp, ChevronDown, ChevronsUpDown, Calendar } from "lucide-react";
 import { LeagueWithTeamCount } from "../types";
 import {
   getDayName,
@@ -18,12 +18,14 @@ interface LeaguesListViewProps {
   leagues: LeagueWithTeamCount[];
   onDelete: (leagueId: number) => Promise<void>;
   onCopy: (league: LeagueWithTeamCount) => void;
+  onManageSchedule?: (leagueId: number) => void;
 }
 
-export function LeaguesListView({ leagues, onDelete, onCopy }: LeaguesListViewProps) {
+export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }: LeaguesListViewProps) {
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
   
   const getSportIcon = (sport: string | null) => {
     if (!sport) return "";
@@ -157,10 +159,8 @@ export function LeaguesListView({ leagues, onDelete, onCopy }: LeaguesListViewPr
                     alt={`${league.sport_name} icon`}
                     className="w-6 h-6 object-contain mr-3"
                   />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {league.name}
-                    </div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {league.name}
                   </div>
                 </div>
               </td>
@@ -216,20 +216,35 @@ export function LeaguesListView({ leagues, onDelete, onCopy }: LeaguesListViewPr
                 </span>
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(`/leagues/${league.id}/teams`)}
-                  className="h-8 w-8 p-0 hover:bg-blue-100 relative"
-                  title={league.team_registration === false ? "View registered users" : "View registered teams"}
-                >
-                  <Users className="h-4 w-4 text-blue-600" />
-                  {league.team_count > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {league.team_count}
-                    </span>
+                <div className="flex items-center justify-center space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/leagues/${league.id}/teams`)}
+                    className="h-8 w-8 p-0 hover:bg-blue-100 relative"
+                    title={league.team_registration === false ? "View registered users" : "View registered teams"}
+                  >
+                    <Users className="h-4 w-4 text-blue-600" />
+                    {league.team_count > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                        {league.team_count}
+                      </span>
+                    )}
+                  </Button>
+
+                  {/* Schedule Management Button (Volleyball only) */}
+                  {league.has_schedule && league.sport_name === 'Volleyball' && onManageSchedule && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onManageSchedule?.(league.id)}
+                      className="h-8 w-8 p-0 hover:bg-green-100 relative"
+                      title="Manage schedule"
+                    >
+                      <Calendar className="h-4 w-4 text-green-600" />
+                    </Button>
                   )}
-                </Button>
+                </div>
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end space-x-1">

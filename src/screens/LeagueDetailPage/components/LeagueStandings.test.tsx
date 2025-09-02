@@ -53,6 +53,7 @@ describe('LeagueStandings', () => {
       teams: [],
       loading: true,
       error: null,
+      hasSchedule: false,
       refetch: vi.fn()
     });
 
@@ -69,6 +70,7 @@ describe('LeagueStandings', () => {
       teams: [],
       loading: false,
       error: 'Failed to load standings',
+      hasSchedule: false,
       refetch: vi.fn()
     });
 
@@ -83,6 +85,7 @@ describe('LeagueStandings', () => {
       teams: [],
       loading: false,
       error: null,
+      hasSchedule: false,
       refetch: vi.fn()
     });
 
@@ -98,6 +101,7 @@ describe('LeagueStandings', () => {
       teams: mockTeams,
       loading: false,
       error: null,
+      hasSchedule: true,
       refetch: vi.fn()
     });
 
@@ -131,6 +135,7 @@ describe('LeagueStandings', () => {
       teams: mockTeams,
       loading: false,
       error: null,
+      hasSchedule: true,
       refetch: vi.fn()
     });
 
@@ -146,6 +151,7 @@ describe('LeagueStandings', () => {
       teams: mockTeams,
       loading: false,
       error: null,
+      hasSchedule: true,
       refetch: vi.fn()
     });
 
@@ -163,6 +169,7 @@ describe('LeagueStandings', () => {
       teams: [],
       loading: false,
       error: null,
+      hasSchedule: false,
       refetch: vi.fn()
     });
 
