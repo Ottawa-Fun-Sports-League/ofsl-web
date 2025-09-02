@@ -615,8 +615,7 @@ export function LeagueTeamsPage() {
     // Calculate total weeks based on league start and end dates, including playoff weeks
     const regularSeasonWeeks = calculateRegularSeasonWeeks(league?.start_date, league?.end_date);
     
-    console.log(`Generating schedule for ${regularSeasonWeeks} regular season weeks`);
-    console.log(`Regular season: ${league?.start_date} to ${league?.end_date}`);
+    // Generating schedule for regular season weeks
 
     // Generate schedule only for regular season weeks
     const weeklyScheduleRows = [];

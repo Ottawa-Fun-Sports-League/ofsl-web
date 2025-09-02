@@ -134,7 +134,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         stopAutoScroll();
       };
     }
-  }, [dragState.isDragging]);
+  }, [dragState.isDragging, handleDragMouseMove]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {
@@ -361,9 +361,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     }
   };
 
-  const handlePlayoffWeeksAdded = (weeksAdded: number) => {
+  const handlePlayoffWeeksAdded = (_weeksAdded: number) => {
     loadLeagueInfo();
-    console.log(`Added ${weeksAdded} playoff weeks to the schedule`);
+    // Added playoff weeks to the schedule
   };
 
   // Tier management

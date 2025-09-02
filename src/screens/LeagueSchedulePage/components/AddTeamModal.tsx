@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Users, Check, AlertCircle, Search } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -42,9 +42,9 @@ export function AddTeamModal({
     if (isOpen) {
       loadTeams();
     }
-  }, [isOpen, leagueId, currentWeek]);
+  }, [isOpen, leagueId, currentWeek, loadTeams]);
 
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -99,7 +99,7 @@ export function AddTeamModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [leagueId, currentWeek]);
 
   const handleAddTeam = async (team: Team) => {
     if (team.isScheduled) return;
