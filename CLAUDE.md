@@ -87,11 +87,14 @@ Main tables:
 
 - `users` - User profiles with skills
 - `teams` - Team registrations with captain info
-- `leagues` - League details with pricing
+- `leagues` - League details with pricing and playoff configuration
 - `registrations` - Team-league registrations
 - `payments` - Payment records
 - `games` - Match schedules
 - `standings` - League standings
+- `league_schedules` - League scheduling configuration
+- `weekly_schedules` - Weekly schedule with tiers and team matchings
+- `game_results` - Game results tracking
 
 ### Stripe Integration
 
@@ -146,7 +149,43 @@ Claude Code can manage the Supabase database for this project:
 - You should update the plan as you work.
 - After you complete tasks in the plan, you should update and append detailed descriptions of the changes you made, so following tasks can be easily hand over to other engineers.
 
-## Recent Session Summary
+## Recent Features and Updates
+
+### League Scheduling System (In Progress)
+- **Weekly Schedule Management**: Dynamic weekly schedule views with tier-based matchings
+- **Tier System**: Support for multiple tiers with team rankings and assignments
+- **Playoff Support**: Configurable playoff weeks (2-6 weeks) after regular season
+- **Holiday Management**: No-games flag for weeks without games (holidays, etc.)
+- **Game Results Tracking**: Record and display game results with completion status
+- **Schedule Components**:
+  - `LeagueSchedule.tsx` - Main schedule display with week navigation
+  - `LeagueSchedulePage` - Dedicated page for full schedule view
+  - Database tables: `league_schedules`, `weekly_schedules`, `game_results`
+
+### Test Infrastructure (Completed)
+- **E2E Testing Suite**: Comprehensive Playwright tests covering:
+  - Authentication flows
+  - League management
+  - Team registration
+  - Payment processing
+  - Admin functionality
+  - Waitlist management
+- **Code Quality**: Achieved zero TypeScript and linting errors
+- **Test Reliability**: Improved test pass rate to 79%
+- **CI/CD Integration**: GitHub Actions workflow for automated testing
+
+### Users Management Improvements (Completed)
+- **Server-side Pagination**: Efficient pagination for large user lists
+- **Fixed Pagination Issues**: Resolved UUID and auth_id ambiguity in database functions
+- **Enhanced Filtering**: Improved sport and active player filters
+- **Performance**: Optimized queries for faster load times
+
+### Waitlist and Payment Management (Completed)
+- **Improved Waitlist Flow**: Better handling of waitlist registrations
+- **Payment Tracking**: Enhanced payment status tracking for waitlist conversions
+- **Cancellation Notifications**: Automated notifications for team cancellations
+
+### Previous Session Summary
 
 Fixed sign-up flow issues:
 

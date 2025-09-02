@@ -144,7 +144,7 @@ export const SparesEditModal: React.FC<SparesEditModalProps> = ({
 
     try {
       // Update the registration directly - let RLS handle user verification
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('spares')
         .update({
           skill_level: skillLevel,

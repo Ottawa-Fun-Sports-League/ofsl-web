@@ -23,6 +23,9 @@ import { NavigationTabs } from "./components/NavigationTabs";
 import { LeagueInfo } from "./components/LeagueInfo";
 import { LeagueStandings } from "./components/LeagueStandings";
 import { LeagueGyms } from "./components/LeagueGyms";
+import { LeagueSchedule } from "./components/LeagueSchedule";
+import { useScoreSubmissionModal } from "./hooks/useLeagueDetail";
+import type { Schedule } from "./utils/leagueUtils";
 
 export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +43,8 @@ export function LeagueDetailPage() {
     instructions: string | null;
     locations: string[] | null;
   }> | null>(null);
+  const [scheduleData, setScheduleData] = useState<Schedule | null>(null);
+  const [hasSchedule, setHasSchedule] = useState(false);
   
   // Check if we should open the waitlist modal
   const shouldOpenWaitlistModal = location.state?.openWaitlistModal || false;
@@ -48,12 +53,41 @@ export function LeagueDetailPage() {
   const tabParam = searchParams.get('tab');
   const initialView: ActiveView = 
     tabParam === 'standings' ? 'standings' : 
-    tabParam === 'gyms' ? 'gyms' : 'info';
+    tabParam === 'gyms' ? 'gyms' : 
+    tabParam === 'schedule' ? 'schedule' : 'info';
   
   const { activeView, setActiveView } = useActiveView(initialView);
+  const { 
+    showScoreSubmissionModal, 
+    selectedTier, 
+    closeScoreSubmissionModal 
+  } = useScoreSubmissionModal();
+
+  const loadSchedule = async () => {
+    if (!id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('league_schedules')
+        .select('schedule_data, format')
+        .eq('league_id', parseInt(id))
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is "not found", which is expected if no schedule exists
+        console.error('Error loading schedule:', error);
+      } else if (data) {
+        setScheduleData(data.schedule_data);
+        setHasSchedule(true);
+      }
+    } catch (err) {
+      console.error('Error loading schedule:', err);
+    }
+  };
 
   useEffect(() => {
     loadLeague();
+    loadSchedule();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -194,6 +228,8 @@ export function LeagueDetailPage() {
               setActiveView={setActiveView}
               sport={league.sport_name || ""}
               isAdmin={userProfile?.is_admin || false}
+              hasSchedule={hasSchedule}
+              isLoggedIn={!!userProfile}
             />
 
             {/* League Info View */}
@@ -213,11 +249,17 @@ export function LeagueDetailPage() {
               </div>
             )}
 
+            {/* Schedule View (Volleyball only) */}
+            {activeView === "schedule" && scheduleData && league?.sport_name === 'Volleyball' && id && (
+              <LeagueSchedule 
+                leagueId={id}
+              />
+            )}
+
             {/* Standings View */}
             {activeView === "standings" && (
               <LeagueStandings leagueId={id} />
             )}
-
 
             {/* Gyms View */}
             {activeView === "gyms" && (
@@ -227,6 +269,30 @@ export function LeagueDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Score Submission Modal */}
+      {showScoreSubmissionModal && scheduleData && selectedTier && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-[#6F6F6F]">Submit Scores - Tier {selectedTier}</h2>
+                <button 
+                  onClick={closeScoreSubmissionModal}
+                  className="text-gray-500 hover:text-gray-700 bg-transparent hover:bg-gray-100 rounded-full p-2 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="text-center py-8">
+                <p className="text-gray-600">Score submission functionality will be implemented in a future update.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

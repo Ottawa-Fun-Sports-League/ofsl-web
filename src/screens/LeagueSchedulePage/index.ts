@@ -1,0 +1,1 @@
+export { LeagueSchedulePage } from './LeagueSchedulePage';

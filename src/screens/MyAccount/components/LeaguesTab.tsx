@@ -33,6 +33,7 @@ export function LeaguesTab() {
     defaultView: 'card' 
   });
 
+
   const {
     leagues,
     loading,
@@ -104,6 +105,12 @@ export function LeaguesTab() {
     setTeamsModalOpen(false);
     setSelectedLeague(null);
   };
+
+  // Schedule management handlers
+  const handleManageSchedule = (leagueId: number) => {
+    navigate(`/leagues/${leagueId}/schedule`);
+  };
+
   
   // Filter leagues using the shared filter function
   const filteredLeagues = filterLeagues(leagues, filters, skills) as LeagueWithTeamCount[];
@@ -170,12 +177,14 @@ export function LeaguesTab() {
           leagues={filteredLeagues}
           onDelete={handleDeleteLeague}
           onCopy={handleCopyClick}
+          onManageSchedule={handleManageSchedule}
         />
       ) : (
         <LeaguesListView
           leagues={filteredLeagues}
           onDelete={handleDeleteLeague}
           onCopy={handleCopyClick}
+          onManageSchedule={handleManageSchedule}
         />
       )}
 

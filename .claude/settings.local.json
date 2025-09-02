@@ -28,9 +28,20 @@
       "Bash(npm install:*)",
       "Bash(del:*)",
       "mcp__ide__executeCode",
-      "Bash(gh pr merge:*)"
+      "Bash(gh pr merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:*)",
+      "Bash(supabase db:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(sed:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "C:\\c\\Users\\wchan\\ofsl-web"
+    ]
   },
   "enabledMcpjsonServers": [
     "supabase",

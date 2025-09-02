@@ -157,6 +157,7 @@ export interface Tier {
   location: string;
   time: string;
   court: string;
+  format?: string;
   teams: Record<string, Team | null>;
   courts: Record<string, string>;
 }
