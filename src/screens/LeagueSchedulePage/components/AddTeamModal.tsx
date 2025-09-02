@@ -42,7 +42,7 @@ export function AddTeamModal({
     if (isOpen) {
       loadTeams();
     }
-  }, [isOpen, leagueId, currentWeek, loadTeams]);
+  }, [isOpen, leagueId, currentWeek]);
 
   const loadTeams = useCallback(async () => {
     setLoading(true);
