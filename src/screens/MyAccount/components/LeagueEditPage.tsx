@@ -283,7 +283,7 @@ export function LeagueEditPage() {
       }
 
       showToast("League updated successfully!", "success");
-      navigate(`/my-account?tab=leagues`);
+      navigate(`/my-account/leagues`);
     } catch (error) {
       console.error("Error updating league:", error);
       console.error("Update payload:", {
