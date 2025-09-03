@@ -319,8 +319,8 @@ export function ManageTeamsTab() {
   };
 
   const handleEditTeam = (team: Team) => {
-    // Navigate to the league teams page
-    navigate(`/leagues/${team.league_id}/teams`);
+    // Navigate to the team edit page for this specific team
+    navigate(`/my-account/teams/edit/${team.id}`);
   };
 
   const handleTransferTeam = (team: Team) => {
