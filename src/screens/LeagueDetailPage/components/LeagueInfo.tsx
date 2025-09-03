@@ -17,6 +17,7 @@ import {
 } from "../../../lib/leagues";
 import { formatLocalDate } from "../../../lib/dateUtils";
 import type { League } from "../../../lib/leagues";
+import { getEffectiveLeagueCost, isEarlyBirdActive } from "../../../lib/leagues";
 
 // Function to get spots badge color
 const getSpotsBadgeColor = (spots: number) => {
@@ -299,13 +300,16 @@ export function LeagueInfo({
                   {formatPrice(stripeProduct.price)} + HST{" "}
                   {sport === "Volleyball" ? "per team" : "per player"}
                 </p>
-              ) : league.cost ? (
+              ) : getEffectiveLeagueCost(league) ? (
                 <p className="text-sm text-[#6F6F6F]">
-                  ${league.cost.toFixed(2)} + HST{" "}
+                  ${getEffectiveLeagueCost(league)!.toFixed(2)} + HST{" "}
                   {sport === "Volleyball" ? "per team" : "per player"}
                 </p>
               ) : (
                 <p className="text-sm text-[#6F6F6F]">No fee required</p>
+              )}
+              {isEarlyBirdActive(league) && league.early_bird_cost && league.early_bird_due_date && (
+                <p className="text-xs text-green-700 mt-1">Early bird until {new Date(league.early_bird_due_date + 'T00:00:00').toLocaleDateString()}</p>
               )}
             </div>
           </div>
@@ -396,4 +400,3 @@ export function LeagueInfo({
     </>
   );
 }
-

@@ -200,7 +200,14 @@ export function LeaguesListView({ leagues, onDelete, onCopy }: LeaguesListViewPr
               </td>
               <td className="px-4 py-4 whitespace-nowrap">
                 <div className="text-sm text-gray-900">
-                  ${league.cost} + HST
+                  ${(() => {
+                    const ebCost = (league as any).early_bird_cost as number | null | undefined;
+                    const ebDue = (league as any).early_bird_due_date as string | null | undefined;
+                    const today = new Date();
+                    const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
+                    const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
+                    return effective;
+                  })()} + HST
                 </div>
                 <div className="text-sm text-gray-500">
                   {league.sport_name === "Volleyball" ? "per team" : "per player"}

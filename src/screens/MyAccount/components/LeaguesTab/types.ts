@@ -36,6 +36,8 @@ export interface NewLeague {
   start_date: string;
   end_date: string;
   cost: number | null;
+  early_bird_cost?: number | null;
+  early_bird_due_date?: string | null;
   max_teams: number;
   gym_ids: number[];
   hide_day?: boolean;
