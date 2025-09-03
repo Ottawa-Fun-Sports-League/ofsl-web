@@ -29,6 +29,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const [week1TierStructure, setWeek1TierStructure] = useState<WeeklyScheduleTier[]>([]);
   const [selectedTierForScores, setSelectedTierForScores] = useState<WeeklyScheduleTier | null>(null);
   const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
+  const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   
   // Check if user is admin or facilitator
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
@@ -67,19 +68,17 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     loadWeekStartDate();
     loadWeeklySchedule(currentWeek);
     loadWeek1Structure();
-  }, [leagueId]); // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // Load weekly schedule when week changes
+    loadTeamPositions(); // Load current standings positions for display
+  }, [leagueId]);
   useEffect(() => {
     loadWeeklySchedule(currentWeek);
-  }, [currentWeek]); // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // Reload data when page becomes visible (user returns from admin page)
+  }, [currentWeek]);
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         loadWeekStartDate();
         loadWeeklySchedule(currentWeek);
+        loadTeamPositions();
       }
     };
 
@@ -87,9 +86,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [leagueId, currentWeek]); // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // Initialize current week to the actual current week when startDate is loaded
+  }, [leagueId, currentWeek]);
   useEffect(() => {
     if (startDate) {
       setCurrentWeek(getCurrentWeek());
@@ -119,6 +116,35 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
       }
     } catch (error) {
       console.error('Error loading league start date:', error);
+    }
+  };
+
+  const loadTeamPositions = async () => {
+    try {
+      const { data: standingsData, error } = await supabase
+        .from('standings')
+        .select(`
+          teams!inner(name),
+          current_position
+        `)
+        .eq('league_id', parseInt(leagueId))
+        .order('current_position', { ascending: true, nullsFirst: false });
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Error loading team standings for positions:', error);
+        return;
+      }
+
+      if (standingsData && standingsData.length > 0) {
+        const positionsMap = new Map<string, number>();
+        standingsData.forEach((standing: any) => {
+          positionsMap.set(standing.teams.name, standing.current_position || 1);
+        });
+
+        setTeamPositions(positionsMap);
+      }
+    } catch (error) {
+      console.warn('Error loading team positions for schedule:', error);
     }
   };
   
@@ -456,7 +482,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                           <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                           <div className="text-sm text-[#6F6F6F]">
                             {team?.name ? 
-                              `${team.name} (${team.ranking || '-'})` : 
+                              `${team.name} (${teamPositions.get(team.name) || team.ranking || '-'})` : 
                               <span className="text-gray-400 italic">TBD</span>
                             }
                           </div>

@@ -23,6 +23,7 @@ export interface LeagueWithTeamCount extends League {
   spots_remaining: number;
   skill_names: string[] | null;
   has_schedule?: boolean;
+  has_standings?: boolean;
 }
 
 export interface NewLeague {

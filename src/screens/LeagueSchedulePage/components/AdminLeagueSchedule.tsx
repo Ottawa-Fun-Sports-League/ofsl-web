@@ -49,6 +49,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     tierIndex: number;
     position: string;
   } | null>(null);
+  const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
 
   // Team deletion confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -148,6 +149,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     loadWeeklySchedule(currentWeek);
     loadWeek1Structure();
     loadLeagueInfo();
+    loadTeamPositions();
   }, [leagueId]);
   
   useEffect(() => {
@@ -327,6 +329,34 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     return weekNumber > regularSeasonWeeks;
   };
 
+  const loadTeamPositions = async () => {
+    try {
+      const { data: standingsData, error } = await supabase
+        .from('standings')
+        .select(`
+          teams!inner(name),
+          current_position
+        `)
+        .eq('league_id', parseInt(leagueId))
+        .order('current_position', { ascending: true, nullsFirst: false });
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Error loading team standings for admin positions:', error);
+        return;
+      }
+
+      if (standingsData && standingsData.length > 0) {
+        const positionsMap = new Map<string, number>();
+        standingsData.forEach((standing: any) => {
+          positionsMap.set(standing.teams.name, standing.current_position || 1);
+        });
+
+        setTeamPositions(positionsMap);
+      }
+    } catch (error) {
+      console.warn('Error loading team positions for admin schedule:', error);
+    }
+  };
 
   // Admin handlers
   const handleEnterEditMode = () => setIsEditScheduleMode(true);
@@ -849,7 +879,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 }}
                 className={isEditScheduleMode ? 'cursor-move' : 'cursor-default'}
               >
-                {`${team.name} (${team.ranking || '-'})`}
+                {`${team.name} (${teamPositions.get(team.name) || team.ranking || '-'})`}
               </span>
               {isEditScheduleMode && (
                 <button
