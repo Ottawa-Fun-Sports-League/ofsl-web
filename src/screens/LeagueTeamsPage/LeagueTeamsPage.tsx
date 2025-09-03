@@ -114,6 +114,9 @@ interface League {
   location: string;
   cost: number;
   team_registration?: boolean;
+  start_date?: string;
+  end_date?: string;
+  playoff_weeks?: number;
 }
 
 export function LeagueTeamsPage() {
@@ -213,6 +216,9 @@ export function LeagueTeamsPage() {
           location,
           cost,
           team_registration,
+          start_date,
+          end_date,
+          playoff_weeks,
           sports:sport_id(name)
         `)
         .eq('id', parseInt(leagueId!))
@@ -230,7 +236,10 @@ export function LeagueTeamsPage() {
             : ''),
         location: data.location || '',
         cost: data.cost || 0,
-        team_registration: data.team_registration
+        team_registration: data.team_registration,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        playoff_weeks: data.playoff_weeks
       });
       
       return data.team_registration;
@@ -612,12 +621,12 @@ export function LeagueTeamsPage() {
       .delete()
       .eq('league_id', parseInt(leagueId!));
 
-    // Calculate total weeks based on league start and end dates, including playoff weeks
+    // Calculate weeks based ONLY on league start and end dates (no playoff weeks)
+    // All schedules are generated with 0 playoff weeks by default - admins add playoff weeks manually later
+    // NOTE: Intentionally ignoring league?.playoff_weeks value from database during generation
     const regularSeasonWeeks = calculateRegularSeasonWeeks(league?.start_date, league?.end_date);
     
-    // Generating schedule for regular season weeks
-
-    // Generate schedule only for regular season weeks
+    // Generate schedule only for regular season weeks (playoff weeks are added separately by admins)
     const weeklyScheduleRows = [];
     
     for (let weekNum = 1; weekNum <= regularSeasonWeeks; weekNum++) {
