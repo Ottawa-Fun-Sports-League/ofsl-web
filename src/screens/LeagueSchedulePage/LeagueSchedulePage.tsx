@@ -133,31 +133,37 @@ export function LeagueSchedulePage() {
                   </div>
                 )}
               </div>
-              
-              {/* Admin Actions */}
-              {userProfile?.is_admin && league?.id && (
-                <div className="flex flex-col gap-2">
-                  <Link
-                    to={`/my-account/leagues/edit/${league.id}`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Edit league
-                  </Link>
-                  <Link
-                    to={`/leagues/${league.id}/teams`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Manage teams
-                  </Link>
-                  <Link
-                    to={`/leagues/${league.id}/standings`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Manage standings
-                  </Link>
-                </div>
-              )}
             </div>
+            
+            {/* Navigation Links */}
+            {userProfile?.is_admin && league?.id && (
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <Link
+                  to={`/my-account/leagues/edit/${league.id}`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Edit league
+                </Link>
+                <span className="text-gray-400 text-sm">|</span>
+                <Link
+                  to={`/leagues/${league.id}/teams`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Manage teams
+                </Link>
+                <span className="text-gray-400 text-sm">|</span>
+                <span className="text-gray-400 text-sm whitespace-nowrap cursor-default">
+                  Manage schedule
+                </span>
+                <span className="text-gray-400 text-sm">|</span>
+                <Link
+                  to={`/leagues/${league.id}/standings`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Manage standings
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 

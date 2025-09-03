@@ -365,7 +365,7 @@ export function LeagueStandingsPage() {
         const teamRankings = extractTeamRankings(scheduleData);
 
         for (const standing of currentStandings) {
-          const teamName = (standing.teams as {name: string}).name;
+          const teamName = (standing as any).teams.name;
           const initialPosition = teamRankings.get(teamName) || 999;
           
           if (!standing.current_position || standing.current_position <= 0) {
@@ -496,32 +496,41 @@ export function LeagueStandingsPage() {
                   </div>
                 )}
               </div>
-              
-              {isAdmin && league?.id && (
-                <div className="flex flex-col gap-2">
-                  <Link
-                    to={`/my-account/leagues/edit/${league.id}`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Edit league
-                  </Link>
-                  <Link
-                    to={`/leagues/${league.id}/teams`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Manage teams
-                  </Link>
-                  {league?.sport_name === 'Volleyball' && (
+            </div>
+            
+            {/* Navigation Links */}
+            {isAdmin && league?.id && (
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <Link
+                  to={`/my-account/leagues/edit/${league.id}`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Edit league
+                </Link>
+                <span className="text-gray-400 text-sm">|</span>
+                <Link
+                  to={`/leagues/${league.id}/teams`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Manage teams
+                </Link>
+                {league?.sport_name === 'Volleyball' && (
+                  <>
+                    <span className="text-gray-400 text-sm">|</span>
                     <Link
                       to={`/leagues/${league.id}/schedule`}
                       className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
                     >
                       Manage schedule
                     </Link>
-                  )}
-                </div>
-              )}
-            </div>
+                  </>
+                )}
+                <span className="text-gray-400 text-sm">|</span>
+                <span className="text-gray-400 text-sm whitespace-nowrap cursor-default">
+                  Manage standings
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

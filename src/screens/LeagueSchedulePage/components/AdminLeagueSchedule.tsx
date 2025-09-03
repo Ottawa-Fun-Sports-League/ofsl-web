@@ -347,7 +347,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
       if (standingsData && standingsData.length > 0) {
         const positionsMap = new Map<string, number>();
-        standingsData.forEach((standing: {teams: {name: string}; current_position: number}) => {
+        standingsData.forEach((standing: any) => {
           positionsMap.set(standing.teams.name, standing.current_position || 1);
         });
 

@@ -81,17 +81,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
           });
         }
 
-        const formattedStandings: StandingsTeam[] = standingsData.map((standing: {
-          teams: {id: number; name: string; roster: string[] | null; created_at: string};
-          wins: number;
-          losses: number;
-          points: number;
-          point_differential: number;
-          manual_wins_adjustment: number;
-          manual_losses_adjustment: number;
-          manual_points_adjustment: number;
-          manual_differential_adjustment: number;
-        }) => ({
+        const formattedStandings: StandingsTeam[] = standingsData.map((standing: any) => ({
           id: standing.teams.id,
           name: standing.teams.name,
           roster_size: standing.teams.roster?.length || 0,

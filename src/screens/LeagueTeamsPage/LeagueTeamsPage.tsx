@@ -1763,36 +1763,20 @@ export function LeagueTeamsPage() {
                 )}
               </div>
               
-              {/* Admin Actions */}
-              {userProfile?.is_admin && league?.id && (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link
-                    to={`/my-account/leagues/edit/${league.id}`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Edit league
-                  </Link>
-                  <Link
-                    to={`/leagues/${league.id}/standings`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Manage standings
-                  </Link>
-                  {league?.team_registration === false && (
-                    <Link
-                      to={`/leagues/${league.id}`}
-                      state={{ openWaitlistModal: true }}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium whitespace-nowrap"
-                    >
-                      Add to Waitlist
-                    </Link>
-                  )}
-                </div>
+              {/* Waitlist button for individual leagues */}
+              {userProfile?.is_admin && league?.team_registration === false && (
+                <Link
+                  to={`/leagues/${league.id}`}
+                  state={{ openWaitlistModal: true }}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium whitespace-nowrap h-fit"
+                >
+                  Add to Waitlist
+                </Link>
               )}
             </div>
             
             {/* Search Bar and Team Count */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
@@ -1808,8 +1792,45 @@ export function LeagueTeamsPage() {
                   {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} {league?.team_registration === false ? 'players' : 'teams'}
                 </div>
               </div>
-              
             </div>
+            
+            {/* Navigation Links */}
+            {userProfile?.is_admin && league?.id && (
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <Link
+                  to={`/my-account/leagues/edit/${league.id}`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Edit league
+                </Link>
+                <span className="text-gray-400 text-sm">|</span>
+                <span className="text-gray-400 text-sm whitespace-nowrap cursor-default">
+                  Manage teams
+                </span>
+                {hasSchedule && league?.sport_name === 'Volleyball' && (
+                  <>
+                    <span className="text-gray-400 text-sm">|</span>
+                    <Link
+                      to={`/leagues/${league.id}/schedule`}
+                      className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                    >
+                      Manage schedule
+                    </Link>
+                  </>
+                )}
+                {hasSchedule && league?.sport_name === 'Volleyball' && (
+                  <>
+                    <span className="text-gray-400 text-sm">|</span>
+                    <Link
+                      to={`/leagues/${league.id}/standings`}
+                      className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                    >
+                      Manage standings
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
