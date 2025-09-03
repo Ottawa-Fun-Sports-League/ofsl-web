@@ -54,7 +54,7 @@ export function useTeamsData(userId?: string) {
         .from('teams')
         .select(`
           *,
-          league:leagues(id, name, location, cost, start_date, gym_ids),
+          league:leagues(id, name, location, cost, start_date, payment_due_date, gym_ids),
           skill:skills(id, name)
         `)
         .contains('roster', [userId])
@@ -134,6 +134,7 @@ export function useTeamsData(userId?: string) {
             cost,
             sport_id,
             start_date,
+            payment_due_date,
             gym_ids
           )
         `)
@@ -214,7 +215,7 @@ export function useTeamsData(userId?: string) {
         .select(`
           *,
           skills!skill_level_id(id, name),
-          league:leagues(name),
+          league:leagues(name, cost, early_bird_cost, early_bird_due_date, payment_due_date),
           team:teams(name)
         `)
         .eq('user_id', userId);
@@ -222,21 +223,31 @@ export function useTeamsData(userId?: string) {
       if (error) throw error;
       
       // Transform the data to match the expected format
-      const transformedData = (paymentsData || []).map(payment => ({
-        id: payment.id,
-        team_id: payment.team_id,
-        league_id: payment.league_id,
-        league_name: payment.league?.name || '',
-        team_name: payment.team?.name || '',
-        amount_due: payment.amount_due || 0,
-        amount_paid: payment.amount_paid || 0,
-        league_cost: payment.amount_due || 0,
-        status: payment.status || 'pending',
-        due_date: payment.due_date || '',
-        payment_method: payment.payment_method,
-        skill_level_id: payment.skill_level_id,
-        skill_name: payment.skills?.name || null
-      }));
+      const transformedData = (paymentsData || []).map(payment => {
+        // Determine effective amount due: keep recorded if paid; otherwise compute from league early-bird
+        const league = payment.league || {} as any;
+        const today = new Date();
+        const ebDue = league.early_bird_due_date ? new Date(league.early_bird_due_date + 'T23:59:59') : null;
+        const ebActive = !!(league.early_bird_cost && ebDue && today.getTime() <= ebDue.getTime());
+        const dynamicDue = ebActive ? (league.early_bird_cost ?? league.cost ?? 0) : (league.cost ?? 0);
+        const effectiveAmountDue = payment.status === 'paid' ? (payment.amount_due || 0) : dynamicDue;
+
+        return {
+          id: payment.id,
+          team_id: payment.team_id,
+          league_id: payment.league_id,
+          league_name: payment.league?.name || '',
+          team_name: payment.team?.name || '',
+          amount_due: effectiveAmountDue,
+          amount_paid: payment.amount_paid || 0,
+          league_cost: effectiveAmountDue,
+          status: payment.status || 'pending',
+          due_date: payment.due_date || '',
+          payment_method: payment.payment_method,
+          skill_level_id: payment.skill_level_id,
+          skill_name: payment.skills?.name || null
+        };
+      });
       
       setLeaguePayments(transformedData);
     } catch (error) {

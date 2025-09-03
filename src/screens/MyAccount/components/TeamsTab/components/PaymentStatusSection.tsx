@@ -11,10 +11,11 @@ interface PaymentStatusSectionProps {
     due_date?: string;
   };
   leagueCost?: number | null;
+  leagueDueDate?: string | null;
   isCaptain: boolean;
 }
 
-export function PaymentStatusSection({ payment, leagueCost, isCaptain }: PaymentStatusSectionProps) {
+export function PaymentStatusSection({ payment, leagueCost, leagueDueDate, isCaptain }: PaymentStatusSectionProps) {
   // Calculate amounts
   const totalDue = payment ? payment.amount_due * 1.13 : (leagueCost ? leagueCost * 1.13 : 0);
   const amountPaid = payment?.amount_paid || 0;
@@ -53,7 +54,8 @@ export function PaymentStatusSection({ payment, leagueCost, isCaptain }: Payment
     return { text: `Due ${formattedDate}`, isOverdue: false, daysUntilDue };
   };
   
-  const dueDate = formatDueDate(payment?.due_date);
+  // Prefer the league's payment due date over any per-payment due_date
+  const dueDate = formatDueDate(leagueDueDate || payment?.due_date || undefined);
   const isPaid = payment?.status === 'paid';
   const isOverdue = payment?.status === 'overdue' || (dueDate?.isOverdue ?? false);
   

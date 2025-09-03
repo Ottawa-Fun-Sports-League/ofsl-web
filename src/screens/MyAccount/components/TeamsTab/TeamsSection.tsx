@@ -265,6 +265,7 @@ export function TeamsSection({
                           : undefined
                       }
                       leagueCost={leagueFee}
+                      leagueDueDate={team.league?.payment_due_date || null}
                       isCaptain={isCaptain}
                     />
                   )}
@@ -554,6 +555,7 @@ export function TeamsSection({
                           : undefined
                       }
                       leagueCost={leagueFee}
+                      leagueDueDate={league.payment_due_date || null}
                       isCaptain={true}
                     />
                   )}

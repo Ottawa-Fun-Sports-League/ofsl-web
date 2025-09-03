@@ -17,6 +17,8 @@ export interface League {
   year: string | null;
   end_date: string | null;
   cost: number | null;
+  early_bird_cost?: number | null;
+  early_bird_due_date?: string | null;
   max_teams: number | null;
   gym_ids: number[] | null;
   active: boolean | null;
@@ -173,6 +175,22 @@ export const getDayOrder = (dayOfWeek: number | null): number => {
   if (dayOfWeek === null) return 7; // Put null values at the end
   // Convert from Sunday=0 indexing to Monday=0 indexing
   return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+};
+
+// Determine if early-bird pricing is currently active for a league
+export const isEarlyBirdActive = (league: League): boolean => {
+  if (!league.early_bird_cost || !league.early_bird_due_date) return false;
+  const today = new Date();
+  const deadline = new Date(league.early_bird_due_date + "T23:59:59");
+  return today.getTime() <= deadline.getTime();
+};
+
+// Compute the effective cost for a league, factoring in early-bird window
+export const getEffectiveLeagueCost = (league: League): number | null => {
+  if (isEarlyBirdActive(league)) {
+    return league.early_bird_cost ?? league.cost ?? null;
+  }
+  return league.cost ?? null;
 };
 
 // Group leagues by day of the week

@@ -61,21 +61,27 @@ export function useLeagueTeamsPayments(teamId: number | null) {
 
   const createPaymentRecord = async (teamId: number, leagueId: number) => {
     try {
-      // Get league cost for default amount_due
+      // Get league cost for default amount_due (consider early-bird if active)
       const { data: leagueData, error: leagueError } = await supabase
         .from('leagues')
-        .select('cost')
+        .select('cost, early_bird_cost, early_bird_due_date')
         .eq('id', leagueId)
         .single();
 
       if (leagueError) throw leagueError;
+
+      // Compute effective amount due
+      const today = new Date();
+      const earlyDeadline = leagueData?.early_bird_due_date ? new Date(leagueData.early_bird_due_date + 'T23:59:59') : null;
+      const earlyActive = !!(leagueData?.early_bird_cost && earlyDeadline && today.getTime() <= earlyDeadline.getTime());
+      const effectiveAmountDue = earlyActive ? (leagueData?.early_bird_cost || leagueData?.cost || 0) : (leagueData?.cost || 0);
 
       const { data: newPayment, error: createError } = await supabase
         .from('league_payments')
         .insert({
           team_id: teamId,
           league_id: leagueId,
-          amount_due: leagueData?.cost || 0,
+          amount_due: effectiveAmountDue,
           amount_paid: 0,
           status: 'pending',
           payment_method: null,

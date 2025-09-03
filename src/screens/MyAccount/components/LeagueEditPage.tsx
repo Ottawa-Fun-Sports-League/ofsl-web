@@ -75,6 +75,8 @@ export function LeagueEditPage() {
     end_date: string;
     year: string;
     cost: number | null;
+    early_bird_cost?: number | null;
+    early_bird_due_date?: string | null;
     max_teams: number;
     gym_ids: number[];
     hide_day?: boolean;
@@ -96,6 +98,8 @@ export function LeagueEditPage() {
     end_date: "",
     year: "2025",
     cost: null,
+    early_bird_cost: null,
+    early_bird_due_date: "",
     max_teams: 20,
     gym_ids: [],
     payment_due_date: "2025-08-21",
@@ -174,8 +178,10 @@ export function LeagueEditPage() {
           year: leagueData.year || "2025",
           start_date: leagueData.start_date || "",
           end_date: leagueData.end_date || "",
-          cost: leagueData.cost,
-          max_teams: leagueData.max_teams || 20,
+        cost: leagueData.cost,
+          early_bird_cost: (leagueData as any).early_bird_cost ?? null,
+          early_bird_due_date: (leagueData as any).early_bird_due_date || "",
+        max_teams: leagueData.max_teams || 20,
           hide_day: leagueData.hide_day || false,
           gym_ids: leagueData.gym_ids || [],
           payment_due_date: leagueData.payment_due_date || "2025-08-21",
@@ -220,6 +226,8 @@ export function LeagueEditPage() {
           end_date: editLeague.end_date,
           hide_day: editLeague.hide_day,
           cost: editLeague.cost,
+          early_bird_cost: editLeague.early_bird_cost ?? null,
+          early_bird_due_date: editLeague.early_bird_due_date || null,
           max_teams: editLeague.max_teams,
           gym_ids: editLeague.gym_ids,
           payment_due_date: editLeague.payment_due_date,
@@ -743,6 +751,45 @@ export function LeagueEditPage() {
                     }
                     className="w-full"
                     required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                    Early Bird Cost ($)
+                  </label>
+                  <Input
+                    type="number"
+                    value={editLeague.early_bird_cost ?? ""}
+                    onChange={(e) =>
+                      setEditLeague({
+                        ...editLeague,
+                        early_bird_cost: e.target.value !== ''
+                          ? parseFloat(e.target.value)
+                          : null,
+                      })
+                    }
+                    placeholder="Optional"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                    Early Bird Due Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={editLeague.early_bird_due_date || ''}
+                    onChange={(e) =>
+                      setEditLeague({
+                        ...editLeague,
+                        early_bird_due_date: e.target.value || null,
+                      })
+                    }
+                    className="w-full"
                   />
                 </div>
               </div>

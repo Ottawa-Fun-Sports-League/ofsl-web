@@ -38,6 +38,8 @@ export function NewLeagueForm({
     start_date: "",
     end_date: "",
     cost: null,
+    early_bird_cost: null,
+    early_bird_due_date: "",
     max_teams: 20,
     gym_ids: [],
     hide_day: false,
@@ -79,6 +81,8 @@ export function NewLeagueForm({
       start_date: "",
       end_date: "",
       cost: null,
+      early_bird_cost: null,
+      early_bird_due_date: "",
       max_teams: 20,
       gym_ids: [],
       hide_day: false,
@@ -468,6 +472,44 @@ export function NewLeagueForm({
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                Early Bird Cost ($)
+              </label>
+              <Input
+                type="number"
+                value={newLeague.early_bird_cost ?? ""}
+                onChange={(e) =>
+                  setNewLeague({
+                    ...newLeague,
+                    early_bird_cost: e.target.value !== '' ? parseFloat(e.target.value) : null,
+                  })
+                }
+                placeholder="Optional"
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                Early Bird Due Date
+              </label>
+              <Input
+                type="date"
+                value={newLeague.early_bird_due_date || ''}
+                onChange={(e) =>
+                  setNewLeague({
+                    ...newLeague,
+                    early_bird_due_date: e.target.value || null,
+                  })
+                }
+                placeholder="Optional"
+                className="w-full"
+              />
+            </div>
+          </div>
           
           <div>
             <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
@@ -574,4 +616,3 @@ export function NewLeagueForm({
     </Card>
   );
 }
-

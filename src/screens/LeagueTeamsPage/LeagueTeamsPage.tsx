@@ -1205,11 +1205,18 @@ export function LeagueTeamsPage() {
                   Sport: {league?.sport_name} | Location: {league?.location}
                 </p>
                 {/* League Cost Display */}
-                {league?.cost && (
+                {league && (
                   <div className="flex items-center">
                     <DollarSign className="h-4 w-4 text-[#B20000] mr-1.5" />
                     <p className="text-sm font-medium text-[#6F6F6F]">
-                      ${league.cost} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
+                      ${(() => {
+                        const ebCost = (league as any).early_bird_cost as number | null | undefined;
+                        const ebDue = (league as any).early_bird_due_date as string | null | undefined;
+                        const today = new Date();
+                        const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
+                        const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
+                        return effective;
+                      })()} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
                     </p>
                   </div>
                 )}
