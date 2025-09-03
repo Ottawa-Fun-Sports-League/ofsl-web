@@ -112,6 +112,9 @@ interface League {
   location: string;
   cost: number;
   team_registration?: boolean;
+  start_date?: string;
+  end_date?: string;
+  playoff_weeks?: number;
 }
 
 export function LeagueTeamsPage() {
@@ -225,6 +228,9 @@ export function LeagueTeamsPage() {
           early_bird_cost,
           early_bird_due_date,
           team_registration,
+          start_date,
+          end_date,
+          playoff_weeks,
           sports:sport_id(name)
         `,
         )
