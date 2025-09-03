@@ -149,6 +149,12 @@ export function LeagueSchedulePage() {
                   >
                     Manage teams
                   </Link>
+                  <Link
+                    to={`/leagues/${league.id}/standings`}
+                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                  >
+                    Manage standings
+                  </Link>
                 </div>
               )}
             </div>

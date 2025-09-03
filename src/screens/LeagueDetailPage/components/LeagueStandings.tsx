@@ -78,10 +78,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
             <table className="w-full table-fixed">
               <colgroup>
                 <col style={{ width: "10%" }} />
-                <col style={{ width: "50%" }} />
+                <col style={{ width: "40%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "12%" }} />
                 <col style={{ width: "13%" }} />
                 <col style={{ width: "13%" }} />
-                <col style={{ width: "14%" }} />
               </colgroup>
               <thead className="bg-gray-50 border-b">
                 <tr>
@@ -97,8 +98,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
                     Losses
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
+                  <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
                     Points
+                  </th>
+                  <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
+                    +/-
                   </th>
                 </tr>
               </thead>
@@ -119,6 +123,9 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">
                       {team.name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
+                      -
                     </td>
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
                       -

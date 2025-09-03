@@ -768,8 +768,35 @@ export function LeagueTeamsPage() {
         console.error('Database error when saving schedule:', scheduleError);
         throw new Error(`Failed to save schedule: ${scheduleError.message}`);
       }
+
       
-      // Update schedule status and show confirmation modal
+      for (let i = 0; i < activeTeams.length; i++) {
+        const team = activeTeams[i];
+        const { error: standingsError } = await supabase
+          .from('standings')
+          .upsert({
+            league_id: parseInt(leagueId!),
+            team_id: team.id,
+            wins: 0,
+            losses: 0,
+            points: 0,
+            point_differential: 0,
+            manual_wins_adjustment: 0,
+            manual_losses_adjustment: 0,
+            manual_points_adjustment: 0,
+            manual_differential_adjustment: 0,
+            current_position: i + 1
+          }, {
+            onConflict: 'league_id,team_id',
+            ignoreDuplicates: false
+          });
+
+        if (standingsError) {
+          console.error('Error creating standings for team:', team.name, standingsError);
+          showToast(`Warning: Could not create standings record for ${team.name}. You may need to create it manually.`, 'warning');
+        }
+      }
+
       setHasSchedule(true);
       setShowScheduleModal(false);
       setShowScheduleConfirmation(true);
@@ -1744,6 +1771,12 @@ export function LeagueTeamsPage() {
                     className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
                   >
                     Edit league
+                  </Link>
+                  <Link
+                    to={`/leagues/${league.id}/standings`}
+                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                  >
+                    Manage standings
                   </Link>
                   {league?.team_registration === false && (
                     <Link
