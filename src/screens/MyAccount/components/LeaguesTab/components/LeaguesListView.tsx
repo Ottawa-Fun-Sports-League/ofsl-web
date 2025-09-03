@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { Button } from "../../../../../components/ui/button";
-import { Edit2, Trash2, Copy, Users, ChevronUp, ChevronDown, ChevronsUpDown, Calendar } from "lucide-react";
+import { Edit2, Trash2, Copy, Users, ChevronUp, ChevronDown, ChevronsUpDown, Calendar, Trophy } from "lucide-react";
 import { LeagueWithTeamCount } from "../types";
 import {
   getDayName,
@@ -250,6 +250,20 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
                     >
                       <Calendar className="h-4 w-4 text-green-600" />
                     </Button>
+                  )}
+
+                  {/* Standings Management Button (Volleyball only - only show if schedule exists) */}
+                  {league.has_standings && league.has_schedule && league.sport_name === 'Volleyball' && (
+                    <Link to={`/leagues/${league.id}/standings`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-yellow-100 relative"
+                        title="Manage standings"
+                      >
+                        <Trophy className="h-4 w-4 text-yellow-600" />
+                      </Button>
+                    </Link>
                   )}
                 </div>
               </td>

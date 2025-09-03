@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent } from "../../../../../components/ui/card";
-import { Edit2, Trash2, Copy, Users, Calendar } from "lucide-react";
+import { Edit2, Trash2, Copy, Users, Calendar, Trophy } from "lucide-react";
 import { LeagueWithTeamCount } from "../types";
 import {
   getDayName,
@@ -207,6 +207,20 @@ export function LeagueCard({ league, onDelete, onCopy, onManageSchedule }: Leagu
               >
                 <Calendar className="h-4 w-4 text-green-600" />
               </Button>
+            )}
+
+            {/* Standings Management Button (Volleyball only - only show if schedule exists) */}
+            {league.has_standings && league.has_schedule && league.sport_name === 'Volleyball' && (
+              <Link to={`/leagues/${league.id}/standings`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 hover:bg-yellow-100 relative"
+                  title="Manage standings"
+                >
+                  <Trophy className="h-4 w-4 text-yellow-600" />
+                </Button>
+              </Link>
             )}
 
             <Link to={`/my-account/leagues/edit/${league.id}`}>
