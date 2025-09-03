@@ -33,7 +33,7 @@ interface StandingRow {
   schedule_ranking?: number;
 }
 
-function extractTeamRankings(scheduleData: any): Map<string, number> {
+function extractTeamRankings(scheduleData: {schedule_data?: {tiers?: Array<{teams?: Record<string, {name: string; ranking: number} | null>}>}} | null): Map<string, number> {
   const teamRankings = new Map<string, number>();
   if (scheduleData?.schedule_data?.tiers) {
     scheduleData.schedule_data.tiers.forEach((tier: {teams?: Record<string, {name: string; ranking: number} | null>}) => {
@@ -149,7 +149,6 @@ export function LeagueStandingsPage() {
       }
 
       const teamRankings = extractTeamRankings(scheduleData);
-      const scheduleExists = !!(scheduleData?.schedule_data?.tiers);
 
 
       let standingsData = null;
@@ -162,6 +161,7 @@ export function LeagueStandingsPage() {
 
         if (standingsError) {
           if (standingsError.code === '42P01') {
+            // Table doesn't exist - this is OK, we'll just use default values
           } else {
             console.warn('Error loading standings data:', standingsError);
           }
@@ -169,6 +169,7 @@ export function LeagueStandingsPage() {
           standingsData = data;
         }
       } catch (err) {
+        // Could not access standings table, using defaults
       }
 
       const standingsMap = new Map();
@@ -364,7 +365,7 @@ export function LeagueStandingsPage() {
         const teamRankings = extractTeamRankings(scheduleData);
 
         for (const standing of currentStandings) {
-          const teamName = standing.teams.name;
+          const teamName = (standing.teams as {name: string}).name;
           const initialPosition = teamRankings.get(teamName) || 999;
           
           if (!standing.current_position || standing.current_position <= 0) {

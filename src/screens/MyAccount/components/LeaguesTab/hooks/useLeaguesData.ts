@@ -42,19 +42,23 @@ export function useLeaguesData() {
         const { data: leaguesData, error: leaguesError } = leaguesResponse;
         if (leaguesError) throw leaguesError;
         
-        // Get team counts and schedule info for each league
-        const [teamCountsResponse, schedulesResponse] = await Promise.all([
+        // Get team counts, schedule info, and standings info for each league
+        const [teamCountsResponse, schedulesResponse, standingsResponse] = await Promise.all([
           supabase
             .from('teams')
             .select('league_id, id')
             .eq('active', true),
           supabase
             .from('league_schedules')
+            .select('league_id'),
+          supabase
+            .from('standings')
             .select('league_id')
         ]);
 
         const { data: teamCounts, error: teamCountsError } = teamCountsResponse;
         const { data: schedules, error: schedulesError } = schedulesResponse;
+        const { data: standings, error: standingsError } = standingsResponse;
 
         if (teamCountsError) {
           console.error('Error fetching team counts:', teamCountsError);
@@ -62,6 +66,10 @@ export function useLeaguesData() {
         
         if (schedulesError) {
           console.error('Error fetching schedules:', schedulesError);
+        }
+        
+        if (standingsError) {
+          console.error('Error fetching standings:', standingsError);
         }
         
         // Get individual registration counts from payment records (team_id is null for individual registrations)
@@ -91,6 +99,14 @@ export function useLeaguesData() {
         if (schedules) {
           schedules.forEach(schedule => {
             schedulesMap.add(schedule.league_id);
+          });
+        }
+        
+        // Create map of leagues with standings
+        const standingsMap = new Set<number>();
+        if (standings) {
+          standings.forEach(standing => {
+            standingsMap.add(standing.league_id);
           });
         }
         
@@ -137,11 +153,7 @@ export function useLeaguesData() {
             }
 
             const hasSchedule = schedulesMap.has(league.id);
-            
-            // Debug: Log has_schedule for volleyball leagues
-            // if (league.sports?.name === 'Volleyball') {
-            //   console.log(`League ${league.id} (${league.name}): has_schedule = ${hasSchedule}`);
-            // }
+            const hasStandings = standingsMap.has(league.id);
 
             return {
               ...league,
@@ -153,7 +165,8 @@ export function useLeaguesData() {
               team_count: registrationCount,  // This now represents either teams or individuals
               spots_remaining: spotsRemaining,
               is_individual: isIndividualLeague,
-              has_schedule: hasSchedule
+              has_schedule: hasSchedule,
+              has_standings: hasStandings
             };
           });
           
