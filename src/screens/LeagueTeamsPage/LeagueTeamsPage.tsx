@@ -2,24 +2,24 @@
 // @ts-nocheck - Complex type issues requiring extensive refactoring
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { PaymentStatusBadge } from '../../components/ui/payment-status-badge';
-import { ConfirmationModal } from '../../components/ui/confirmation-modal';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from '../../components/ui/dialog';
-import { useViewPreference } from '../../hooks/useViewPreference';
-import { 
-  Users, 
-  Trash2, 
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { PaymentStatusBadge } from "../../components/ui/payment-status-badge";
+import { ConfirmationModal } from "../../components/ui/confirmation-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import { useViewPreference } from "../../hooks/useViewPreference";
+import {
+  Users,
+  Trash2,
   ArrowLeft,
   Crown,
   Calendar,
@@ -31,11 +31,11 @@ import {
   Edit,
   Clock,
   CalendarDays,
-  AlertCircle
-} from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { useToast } from '../../components/ui/toast';
-import { useAuth } from '../../contexts/AuthContext';
+  AlertCircle,
+} from "lucide-react";
+import { supabase } from "../../lib/supabase";
+import { useToast } from "../../components/ui/toast";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   DndContext,
   closestCenter,
@@ -44,21 +44,19 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { getFormatOptions } from '../LeagueSchedulePage/utils/formatUtils';
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { getFormatOptions } from "../LeagueSchedulePage/utils/formatUtils";
 
 interface TeamData {
-  id: number | string;  // number for teams, string for individual users
+  id: number | string; // number for teams, string for individual users
   name: string;
   captain_id: string;
   roster: string[];
@@ -67,7 +65,7 @@ interface TeamData {
   display_order: number;
   captain_name: string | null;
   skill_name: string | null;
-  payment_status: 'pending' | 'partial' | 'paid' | 'overdue' | null;
+  payment_status: "pending" | "partial" | "paid" | "overdue" | null;
   amount_due: number | null;
   amount_paid: number | null;
   league?: {
@@ -83,7 +81,7 @@ interface TeamData {
   email?: string;
   isIndividual?: boolean;
   is_waitlisted?: boolean;
-  payment_id?: number;  // For individual registrations to track payment record
+  payment_id?: number; // For individual registrations to track payment record
 }
 
 interface ExtendedTeam {
@@ -127,16 +125,16 @@ export function LeagueTeamsPage() {
   const [movingTeam, setMovingTeam] = useState<number | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragEnabled, setDragEnabled] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [filteredActiveTeams, setFilteredActiveTeams] = useState<TeamData[]>([]);
   const [filteredWaitlistedTeams, setFilteredWaitlistedTeams] = useState<TeamData[]>([]);
-  const [viewMode, setViewMode] = useViewPreference({ 
-    key: `league-teams-${leagueId}`, 
-    defaultView: 'card' 
-  }) as ['card' | 'table', (view: 'card' | 'table') => void];
+  const [viewMode, setViewMode] = useViewPreference({
+    key: `league-teams-${leagueId}`,
+    defaultView: "card",
+  }) as ["card" | "table", (view: "card" | "table") => void];
   const { showToast } = useToast();
   const { userProfile } = useAuth();
-  
+
   // Confirmation modal states
   const [moveConfirmation, setMoveConfirmation] = useState<{
     isOpen: boolean;
@@ -144,18 +142,18 @@ export function LeagueTeamsPage() {
     teamName: string;
     currentlyActive: boolean;
     isIndividual: boolean;
-  }>({ isOpen: false, teamId: null, teamName: '', currentlyActive: false, isIndividual: false });
-  
+  }>({ isOpen: false, teamId: null, teamName: "", currentlyActive: false, isIndividual: false });
+
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     teamId: number | string | null;
     teamName: string;
     isIndividual: boolean;
-  }>({ isOpen: false, teamId: null, teamName: '', isIndividual: false });
+  }>({ isOpen: false, teamId: null, teamName: "", isIndividual: false });
 
   // Schedule generation modal states
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [selectedGameFormat, setSelectedGameFormat] = useState<string>('');
+  const [selectedGameFormat, setSelectedGameFormat] = useState<string>("");
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [showScheduleConfirmation, setShowScheduleConfirmation] = useState(false);
   const [hasSchedule, setHasSchedule] = useState(false);
@@ -167,15 +165,12 @@ export function LeagueTeamsPage() {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   useEffect(() => {
     if (leagueId) {
-      Promise.all([
-        loadLeagueData(),
-        loadScheduleStatus()
-      ]).then(([isTeamLeague]) => {
+      Promise.all([loadLeagueData(), loadScheduleStatus()]).then(([isTeamLeague]) => {
         if (isTeamLeague !== false) {
           loadTeams();
         } else {
@@ -190,12 +185,13 @@ export function LeagueTeamsPage() {
   useEffect(() => {
     const filterTeams = (teams: TeamData[]) => {
       if (!searchTerm.trim()) return teams;
-      
+
       const term = searchTerm.toLowerCase();
-      return teams.filter(team => 
-        team.name.toLowerCase().includes(term) ||
-        (team.captain_name && team.captain_name.toLowerCase().includes(term)) ||
-        team.captain_id.toLowerCase().includes(term)
+      return teams.filter(
+        (team) =>
+          team.name.toLowerCase().includes(term) ||
+          (team.captain_name && team.captain_name.toLowerCase().includes(term)) ||
+          team.captain_id.toLowerCase().includes(term),
       );
     };
 
@@ -206,8 +202,9 @@ export function LeagueTeamsPage() {
   const loadLeagueData = async () => {
     try {
       const { data, error } = await supabase
-        .from('leagues')
-        .select(`
+        .from("leagues")
+        .select(
+          `
           id,
           name,
           location,
@@ -216,8 +213,9 @@ export function LeagueTeamsPage() {
           early_bird_due_date,
           team_registration,
           sports:sport_id(name)
-        `)
-        .eq('id', parseInt(leagueId!))
+        `,
+        )
+        .eq("id", parseInt(leagueId!))
         .single();
 
       if (error) throw error;
@@ -225,47 +223,50 @@ export function LeagueTeamsPage() {
       setLeague({
         id: data.id,
         name: data.name,
-        sport_name: data.sports && Array.isArray(data.sports) && data.sports.length > 0 
-          ? data.sports[0].name 
-          : (data.sports && typeof data.sports === 'object' && 'name' in data.sports 
-            ? (data.sports as { name: string }).name 
-            : ''),
-        location: data.location || '',
+        sport_name:
+          data.sports && Array.isArray(data.sports) && data.sports.length > 0
+            ? data.sports[0].name
+            : data.sports && typeof data.sports === "object" && "name" in data.sports
+              ? (data.sports as { name: string }).name
+              : "",
+        location: data.location || "",
         cost: data.cost || 0,
         team_registration: data.team_registration,
         // attach early bird fields for dynamic pricing display
-        ...(data as any).early_bird_cost !== undefined ? { early_bird_cost: (data as any).early_bird_cost } : {},
-        ...(data as any).early_bird_due_date !== undefined ? { early_bird_due_date: (data as any).early_bird_due_date } : {}
+        ...(data.early_bird_cost !== undefined ? { early_bird_cost: data.early_bird_cost } : {}),
+        ...(data.early_bird_due_date !== undefined
+          ? { early_bird_due_date: data.early_bird_due_date }
+          : {}),
       });
-      
+
       return data.team_registration;
     } catch (err) {
-      console.error('Error loading league:', err);
-      setError('Failed to load league data');
+      console.error("Error loading league:", err);
+      setError("Failed to load league data");
       return true; // Default to team registration
     }
   };
 
   const loadScheduleStatus = async () => {
     if (!leagueId) return;
-    
+
     try {
       const { data, error } = await supabase
-        .from('league_schedules')
-        .select('id')
-        .eq('league_id', parseInt(leagueId))
+        .from("league_schedules")
+        .select("id")
+        .eq("league_id", parseInt(leagueId))
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error && error.code !== "PGRST116") {
         // PGRST116 is "not found", which is expected if no schedule exists
-        console.error('Error loading schedule status:', error);
+        console.error("Error loading schedule status:", error);
       } else if (data) {
         setHasSchedule(true);
       } else {
         setHasSchedule(false);
       }
     } catch (err) {
-      console.error('Error loading schedule status:', err);
+      console.error("Error loading schedule status:", err);
       setHasSchedule(false);
     }
   };
@@ -282,8 +283,9 @@ export function LeagueTeamsPage() {
 
       // First attempt with display_order
       let activeResult = await supabase
-        .from('teams')
-        .select(`
+        .from("teams")
+        .select(
+          `
           id,
           name,
           captain_id,
@@ -294,14 +296,16 @@ export function LeagueTeamsPage() {
           users:captain_id(name),
           skills:skill_level_id(name),
           leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
-        `)
-        .eq('league_id', parseInt(leagueId!))
-        .eq('active', true)
-        .order('display_order', { ascending: true });
+        `,
+        )
+        .eq("league_id", parseInt(leagueId!))
+        .eq("active", true)
+        .order("display_order", { ascending: true });
 
       let waitlistResult = await supabase
-        .from('teams')
-        .select(`
+        .from("teams")
+        .select(
+          `
           id,
           name,
           captain_id,
@@ -312,19 +316,21 @@ export function LeagueTeamsPage() {
           users:captain_id(name),
           skills:skill_level_id(name),
           leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
-        `)
-        .eq('league_id', parseInt(leagueId!))
-        .eq('active', false)
-        .order('display_order', { ascending: true });
+        `,
+        )
+        .eq("league_id", parseInt(leagueId!))
+        .eq("active", false)
+        .order("display_order", { ascending: true });
 
       // Check if display_order column doesn't exist
-      if (activeResult.error && activeResult.error.message?.includes('display_order')) {
+      if (activeResult.error && activeResult.error.message?.includes("display_order")) {
         dragSupported = false;
-        
+
         // Fallback to created_at ordering
         activeResult = (await supabase
-          .from('teams')
-          .select(`
+          .from("teams")
+          .select(
+            `
             id,
             name,
             captain_id,
@@ -334,14 +340,19 @@ export function LeagueTeamsPage() {
             users:captain_id(name),
             skills:skill_level_id(name),
             leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
-          `)
-          .eq('league_id', parseInt(leagueId!))
-          .eq('active', true)
-          .order('created_at', { ascending: false })) as { data: ExtendedTeam[] | null; error: Error | null };
+          `,
+          )
+          .eq("league_id", parseInt(leagueId!))
+          .eq("active", true)
+          .order("created_at", { ascending: false })) as {
+          data: ExtendedTeam[] | null;
+          error: Error | null;
+        };
 
         waitlistResult = (await supabase
-          .from('teams')
-          .select(`
+          .from("teams")
+          .select(
+            `
             id,
             name,
             captain_id,
@@ -351,10 +362,14 @@ export function LeagueTeamsPage() {
             users:captain_id(name),
             skills:skill_level_id(name),
             leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
-          `)
-          .eq('league_id', parseInt(leagueId!))
-          .eq('active', false)
-          .order('created_at', { ascending: false })) as { data: ExtendedTeam[] | null; error: Error | null };
+          `,
+          )
+          .eq("league_id", parseInt(leagueId!))
+          .eq("active", false)
+          .order("created_at", { ascending: false })) as {
+          data: ExtendedTeam[] | null;
+          error: Error | null;
+        };
       }
 
       if (activeResult.error) throw activeResult.error;
@@ -363,30 +378,30 @@ export function LeagueTeamsPage() {
       const activeData = activeResult.data || [];
       activeTeamsData = activeData.map((team: ExtendedTeam) => ({
         ...team,
-        display_order: team.display_order || 0
+        display_order: team.display_order || 0,
       }));
       const waitlistData = waitlistResult.data || [];
       waitlistedTeamsData = waitlistData.map((team: ExtendedTeam) => ({
         ...team,
-        display_order: team.display_order || 0
+        display_order: team.display_order || 0,
       }));
       setDragEnabled(dragSupported);
 
       // Helper function to process teams with payment data
       const processTeamsWithPayments = async (teams: ExtendedTeam[]): Promise<TeamData[]> => {
         if (!teams) return [];
-        
+
         return Promise.all(
           teams.map(async (team) => {
             const { data: paymentData, error: paymentError } = await supabase
-              .from('league_payments')
-              .select('status, amount_due, amount_paid')
-              .eq('team_id', team.id)
-              .eq('league_id', parseInt(leagueId!))
+              .from("league_payments")
+              .select("status, amount_due, amount_paid")
+              .eq("team_id", team.id)
+              .eq("league_id", parseInt(leagueId!))
               .maybeSingle();
 
             if (paymentError) {
-              console.error('Error fetching payment for team:', team.id, paymentError);
+              console.error("Error fetching payment for team:", team.id, paymentError);
             }
 
             return {
@@ -404,20 +419,20 @@ export function LeagueTeamsPage() {
               amount_paid: paymentData?.amount_paid || null,
               league: team.leagues,
             };
-          })
+          }),
         );
       };
 
       const [processedActiveTeams, processedWaitlistedTeams] = await Promise.all([
         processTeamsWithPayments(activeTeamsData),
-        processTeamsWithPayments(waitlistedTeamsData)
+        processTeamsWithPayments(waitlistedTeamsData),
       ]);
 
       setActiveTeams(processedActiveTeams);
       setWaitlistedTeams(processedWaitlistedTeams);
     } catch (err) {
-      console.error('Error loading teams:', err);
-      setError('Failed to load teams data');
+      console.error("Error loading teams:", err);
+      setError("Failed to load teams data");
     } finally {
       setLoading(false);
     }
@@ -427,11 +442,12 @@ export function LeagueTeamsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get ALL payment records for this league (both active and waitlisted)
       const { data: payments, error: paymentsError } = await supabase
-        .from('league_payments')
-        .select(`
+        .from("league_payments")
+        .select(
+          `
           id,
           user_id, 
           status, 
@@ -441,89 +457,91 @@ export function LeagueTeamsPage() {
           is_waitlisted,
           created_at,
           skills!skill_level_id(id, name)
-        `)
-        .eq('league_id', parseInt(leagueId!))
-        .is('team_id', null);
-      
+        `,
+        )
+        .eq("league_id", parseInt(leagueId!))
+        .is("team_id", null);
+
       if (paymentsError) throw paymentsError;
-      
+
       if (!payments || payments.length === 0) {
         setActiveTeams([]);
         setWaitlistedTeams([]);
         setLoading(false);
         return;
       }
-      
+
       // Get user details for all users with payments
-      const userIds = [...new Set(payments.map(p => p.user_id))];
+      const userIds = [...new Set(payments.map((p) => p.user_id))];
       const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, name, email, league_ids')
-        .in('id', userIds);
-      
+        .from("users")
+        .select("id, name, email, league_ids")
+        .in("id", userIds);
+
       if (usersError) throw usersError;
-      
+
       // Create user map for easy lookup
       const userMap = new Map();
-      users?.forEach(user => {
+      users?.forEach((user) => {
         userMap.set(user.id, user);
       });
-      
+
       // Transform payments to TeamData format for compatibility
       const allIndividualTeams: TeamData[] = payments.map((payment, index) => {
         const user = userMap.get(payment.user_id);
-        
+
         // Handle skills which might be an array or object
         const skillData = payment?.skills;
-        const skillName = Array.isArray(skillData) && skillData.length > 0 
-          ? skillData[0].name 
-          : (skillData?.name || null);
-        
+        const skillName =
+          Array.isArray(skillData) && skillData.length > 0
+            ? skillData[0].name
+            : skillData?.name || null;
+
         return {
-          id: payment.user_id,  // Using user ID as team ID
-          name: user?.name || 'Unknown',
-          captain_id: payment.user_id,  // Individual is their own "captain"
-          roster: [payment.user_id],  // Single member roster
+          id: payment.user_id, // Using user ID as team ID
+          name: user?.name || "Unknown",
+          captain_id: payment.user_id, // Individual is their own "captain"
+          roster: [payment.user_id], // Single member roster
           created_at: payment.created_at || new Date().toISOString(),
           skill_level_id: payment.skill_level_id || null,
           display_order: index,
-          captain_name: user?.name || 'Unknown',
+          captain_name: user?.name || "Unknown",
           skill_name: skillName,
           payment_status: payment.status || null,
           amount_due: payment.amount_due || null,
           amount_paid: payment.amount_paid || null,
-          email: user?.email || '',
+          email: user?.email || "",
           isIndividual: true,
           is_waitlisted: payment.is_waitlisted || false,
-          payment_id: payment.id,  // Store payment ID for edit link
+          payment_id: payment.id, // Store payment ID for edit link
           league: {
             id: parseInt(leagueId!),
-            name: league?.name || '',
+            name: league?.name || "",
             cost: league?.cost || null,
             // pass through early bird fields from loaded league for dynamic pricing
-            early_bird_cost: (league as any)?.early_bird_cost ?? null,
-            early_bird_due_date: (league as any)?.early_bird_due_date ?? null,
+            early_bird_cost: league?.early_bird_cost ?? null,
+            early_bird_due_date: league?.early_bird_due_date ?? null,
             location: league?.location || null,
-            sports: league?.sport_name ? { name: league.sport_name } : null
-          }
+            sports: league?.sport_name ? { name: league.sport_name } : null,
+          },
         };
       });
-      
+
       // Separate active and waitlisted individual registrations
       const activeIndividuals = allIndividualTeams
-        .filter(team => !team.is_waitlisted)
+        .filter((team) => !team.is_waitlisted)
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      
+
       const waitlistedIndividuals = allIndividualTeams
-        .filter(team => team.is_waitlisted)
+        .filter((team) => team.is_waitlisted)
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      
+
       setActiveTeams(activeIndividuals);
       setWaitlistedTeams(waitlistedIndividuals);
-      setDragEnabled(false);  // Disable drag for individual registrations
+      setDragEnabled(false); // Disable drag for individual registrations
     } catch (err) {
-      console.error('Error loading individual registrations:', err);
-      setError('Failed to load registrations');
+      console.error("Error loading individual registrations:", err);
+      setError("Failed to load registrations");
     } finally {
       setLoading(false);
     }
@@ -531,13 +549,13 @@ export function LeagueTeamsPage() {
 
   // Schedule generation handlers
   const handleOpenScheduleModal = () => {
-    setSelectedGameFormat('');
+    setSelectedGameFormat("");
     setShowScheduleModal(true);
   };
 
   const handleCloseScheduleModal = () => {
     setShowScheduleModal(false);
-    setSelectedGameFormat('');
+    setSelectedGameFormat("");
     setGeneratingSchedule(false);
   };
 
@@ -546,17 +564,20 @@ export function LeagueTeamsPage() {
   };
 
   // Calculate total weeks: Regular season (start to end date) + playoff weeks (beyond end date)
-  const calculateRegularSeasonWeeks = (startDate: string | null, endDate: string | null): number => {
+  const calculateRegularSeasonWeeks = (
+    startDate: string | null,
+    endDate: string | null,
+  ): number => {
     if (!startDate || !endDate) {
-      console.warn('League start or end date not set, defaulting to 12 weeks');
+      console.warn("League start or end date not set, defaulting to 12 weeks");
       return 12;
     }
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-    
+
     return Math.max(1, regularSeasonWeeks);
   };
 
@@ -564,75 +585,79 @@ export function LeagueTeamsPage() {
     // Determine teams per tier based on format
     let teamsPerTier = 3; // default
     let minTeamsRequired = 3;
-    
-    if (format.startsWith('2-teams')) {
+
+    if (format.startsWith("2-teams")) {
       teamsPerTier = 2;
       minTeamsRequired = 2;
-    } else if (format === '3-teams-6-sets') {
+    } else if (format === "3-teams-6-sets") {
       teamsPerTier = 3;
       minTeamsRequired = 3;
-    } else if (format === '4-teams-head-to-head') {
+    } else if (format === "4-teams-head-to-head") {
       teamsPerTier = 4;
       minTeamsRequired = 4;
-    } else if (format === '6-teams-head-to-head') {
+    } else if (format === "6-teams-head-to-head") {
       teamsPerTier = 6;
       minTeamsRequired = 6;
     }
-    
+
     if (teams.length < minTeamsRequired) {
       throw new Error(`At least ${minTeamsRequired} teams are required for this format`);
     }
     const totalTiers = Math.ceil(teams.length / teamsPerTier);
-    
+
     // Fetch tier-specific defaults from league_schedules table
-    let tierSpecificDefaults: Record<string, { location?: string; time_slot?: string; court?: string }> = {};
+    let tierSpecificDefaults: Record<
+      string,
+      { location?: string; time_slot?: string; court?: string }
+    > = {};
     try {
       const { data: scheduleData } = await supabase
-        .from('league_schedules')
-        .select('defaults')
-        .eq('league_id', parseInt(leagueId!))
+        .from("league_schedules")
+        .select("defaults")
+        .eq("league_id", parseInt(leagueId!))
         .single();
-      
+
       tierSpecificDefaults = scheduleData?.defaults || {};
     } catch (error) {
-      console.warn('No tier-specific defaults found, using placeholders');
+      console.warn("No tier-specific defaults found, using placeholders");
     }
-    
+
     // Helper function to get tier-specific default or placeholder
-    const getTierDefault = (tierNumber: number, field: 'location' | 'time_slot' | 'court') => {
+    const getTierDefault = (tierNumber: number, field: "location" | "time_slot" | "court") => {
       const tierDefaults = tierSpecificDefaults[tierNumber.toString()];
       if (tierDefaults && tierDefaults[field]) {
         return tierDefaults[field];
       }
-      
+
       // Return placeholders when no tier-specific defaults exist
       switch (field) {
-        case 'location': return 'SET_LOCATION';
-        case 'time_slot': return 'SET_TIME';
-        case 'court': return 'SET_COURT';
-        default: return null;
+        case "location":
+          return "SET_LOCATION";
+        case "time_slot":
+          return "SET_TIME";
+        case "court":
+          return "SET_COURT";
+        default:
+          return null;
       }
     };
 
     // Clear any existing schedule for this league
-    await supabase
-      .from('weekly_schedules')
-      .delete()
-      .eq('league_id', parseInt(leagueId!));
+    await supabase.from("weekly_schedules").delete().eq("league_id", parseInt(leagueId!));
 
     // Calculate total weeks based on league start and end dates, including playoff weeks
     const regularSeasonWeeks = calculateRegularSeasonWeeks(league?.start_date, league?.end_date);
-    
+
     // Generating schedule for regular season weeks
 
     // Generate schedule only for regular season weeks
     const weeklyScheduleRows = [];
-    
+
     for (let weekNum = 1; weekNum <= regularSeasonWeeks; weekNum++) {
       for (let i = 0; i < totalTiers; i++) {
         const startIndex = i * teamsPerTier;
         const tierTeams = teams.slice(startIndex, startIndex + teamsPerTier);
-        
+
         // Skip if we don't have enough teams for this tier's format
         if (tierTeams.length < minTeamsRequired) {
           // For the last tier, we might have fewer teams than the format requires
@@ -640,35 +665,39 @@ export function LeagueTeamsPage() {
           if (tierTeams.length === 0) {
             continue;
           }
-          // If we have some teams but not enough for the format, 
+          // If we have some teams but not enough for the format,
           // still create the tier but with empty slots
         }
 
         // Determine if this is a playoff week
         const isPlayoffWeek = weekNum > regularSeasonWeeks;
-        
+
         // Create weekly_schedules row with support for all formats
         const scheduleRow = {
           league_id: parseInt(leagueId!),
           week_number: weekNum,
           tier_number: i + 1,
-          location: getTierDefault(i + 1, 'location'),
-          time_slot: getTierDefault(i + 1, 'time_slot'),
-          court: getTierDefault(i + 1, 'court'),
+          location: getTierDefault(i + 1, "location"),
+          time_slot: getTierDefault(i + 1, "time_slot"),
+          court: getTierDefault(i + 1, "court"),
           format: format,
           // Only assign teams for Week 1, other weeks will be populated later based on results
-          team_a_name: weekNum === 1 ? (tierTeams[0]?.name || null) : null,
-          team_a_ranking: weekNum === 1 && tierTeams[0] ? (startIndex + 1) : null,
-          team_b_name: weekNum === 1 ? (tierTeams[1]?.name || null) : null,
-          team_b_ranking: weekNum === 1 && tierTeams[1] ? (startIndex + 2) : null,
-          team_c_name: weekNum === 1 && teamsPerTier >= 3 ? (tierTeams[2]?.name || null) : null,
-          team_c_ranking: weekNum === 1 && tierTeams[2] && teamsPerTier >= 3 ? (startIndex + 3) : null,
-          team_d_name: weekNum === 1 && teamsPerTier >= 4 ? (tierTeams[3]?.name || null) : null,
-          team_d_ranking: weekNum === 1 && tierTeams[3] && teamsPerTier >= 4 ? (startIndex + 4) : null,
-          team_e_name: weekNum === 1 && teamsPerTier >= 5 ? (tierTeams[4]?.name || null) : null,
-          team_e_ranking: weekNum === 1 && tierTeams[4] && teamsPerTier >= 5 ? (startIndex + 5) : null,
-          team_f_name: weekNum === 1 && teamsPerTier >= 6 ? (tierTeams[5]?.name || null) : null,
-          team_f_ranking: weekNum === 1 && tierTeams[5] && teamsPerTier >= 6 ? (startIndex + 6) : null,
+          team_a_name: weekNum === 1 ? tierTeams[0]?.name || null : null,
+          team_a_ranking: weekNum === 1 && tierTeams[0] ? startIndex + 1 : null,
+          team_b_name: weekNum === 1 ? tierTeams[1]?.name || null : null,
+          team_b_ranking: weekNum === 1 && tierTeams[1] ? startIndex + 2 : null,
+          team_c_name: weekNum === 1 && teamsPerTier >= 3 ? tierTeams[2]?.name || null : null,
+          team_c_ranking:
+            weekNum === 1 && tierTeams[2] && teamsPerTier >= 3 ? startIndex + 3 : null,
+          team_d_name: weekNum === 1 && teamsPerTier >= 4 ? tierTeams[3]?.name || null : null,
+          team_d_ranking:
+            weekNum === 1 && tierTeams[3] && teamsPerTier >= 4 ? startIndex + 4 : null,
+          team_e_name: weekNum === 1 && teamsPerTier >= 5 ? tierTeams[4]?.name || null : null,
+          team_e_ranking:
+            weekNum === 1 && tierTeams[4] && teamsPerTier >= 5 ? startIndex + 5 : null,
+          team_f_name: weekNum === 1 && teamsPerTier >= 6 ? tierTeams[5]?.name || null : null,
+          team_f_ranking:
+            weekNum === 1 && tierTeams[5] && teamsPerTier >= 6 ? startIndex + 6 : null,
           is_completed: false,
           is_playoff: isPlayoffWeek,
         };
@@ -679,7 +708,7 @@ export function LeagueTeamsPage() {
 
     // Insert all weekly schedule data for the entire season
     const { error: insertError } = await supabase
-      .from('weekly_schedules')
+      .from("weekly_schedules")
       .insert(weeklyScheduleRows);
 
     if (insertError) {
@@ -687,7 +716,7 @@ export function LeagueTeamsPage() {
     }
 
     // Return legacy format for backward compatibility (temporary)
-    const legacyTiers = weeklyScheduleRows.map(row => ({
+    const legacyTiers = weeklyScheduleRows.map((row) => ({
       tierNumber: row.tier_number,
       location: row.location,
       time: row.time_slot,
@@ -713,10 +742,10 @@ export function LeagueTeamsPage() {
 
     return {
       week: 1,
-      date: new Date().toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      date: new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       }),
       tiers: legacyTiers,
       format: format,
@@ -726,97 +755,76 @@ export function LeagueTeamsPage() {
 
   const handleGenerateSchedule = async () => {
     if (!selectedGameFormat) {
-      showToast('Please select a game format', 'error');
+      showToast("Please select a game format", "error");
       return;
     }
 
     // Only handle volleyball leagues
-    if (league?.sport_name !== 'Volleyball') {
-      showToast('Schedule generation is only available for volleyball leagues', 'error');
+    if (league?.sport_name !== "Volleyball") {
+      showToast("Schedule generation is only available for volleyball leagues", "error");
       return;
     }
 
     try {
       setGeneratingSchedule(true);
-      
+
       // Validate team count for selected format
       let minTeamsForFormat = 3; // default
-      if (selectedGameFormat.startsWith('2-teams')) {
+      if (selectedGameFormat.startsWith("2-teams")) {
         minTeamsForFormat = 2;
-      } else if (selectedGameFormat === '3-teams-6-sets') {
+      } else if (selectedGameFormat === "3-teams-6-sets") {
         minTeamsForFormat = 3;
-      } else if (selectedGameFormat === '4-teams-head-to-head') {
+      } else if (selectedGameFormat === "4-teams-head-to-head") {
         minTeamsForFormat = 4;
-      } else if (selectedGameFormat === '6-teams-head-to-head') {
+      } else if (selectedGameFormat === "6-teams-head-to-head") {
         minTeamsForFormat = 6;
       }
-      
+
       if (activeTeams.length < minTeamsForFormat) {
-        showToast(`You need at least ${minTeamsForFormat} teams for the selected format. You currently have ${activeTeams.length} teams.`, 'error');
+        showToast(
+          `You need at least ${minTeamsForFormat} teams for the selected format. You currently have ${activeTeams.length} teams.`,
+          "error",
+        );
         return;
       }
-      
+
       // Generate schedule for the selected format based on active teams order
       const scheduleData = await generateScheduleForFormat(activeTeams, selectedGameFormat);
-      
+
       // Save schedule to database
-      const { error: scheduleError } = await supabase
-        .from('league_schedules')
-        .upsert({
+      const { error: scheduleError } = await supabase.from("league_schedules").upsert(
+        {
           league_id: parseInt(leagueId!),
           schedule_data: scheduleData,
           format: selectedGameFormat,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'league_id'
-        });
+        },
+        {
+          onConflict: "league_id",
+        },
+      );
 
       if (scheduleError) {
-        console.error('Database error when saving schedule:', scheduleError);
+        console.error("Database error when saving schedule:", scheduleError);
         throw new Error(`Failed to save schedule: ${scheduleError.message}`);
       }
 
-      
-      for (let i = 0; i < activeTeams.length; i++) {
-        const team = activeTeams[i];
-        const { error: standingsError } = await supabase
-          .from('standings')
-          .upsert({
-            league_id: parseInt(leagueId!),
-            team_id: team.id,
-            wins: 0,
-            losses: 0,
-            points: 0,
-            point_differential: 0,
-            manual_wins_adjustment: 0,
-            manual_losses_adjustment: 0,
-            manual_points_adjustment: 0,
-            manual_differential_adjustment: 0,
-            current_position: i + 1
-          }, {
-            onConflict: 'league_id,team_id',
-            ignoreDuplicates: false
-          });
-
-        if (standingsError) {
-          console.error('Error creating standings for team:', team.name, standingsError);
-          showToast(`Warning: Could not create standings record for ${team.name}. You may need to create it manually.`, 'warning');
-        }
-      }
-
+      // Update schedule status and show confirmation modal
       setHasSchedule(true);
       setShowScheduleModal(false);
       setShowScheduleConfirmation(true);
-      
     } catch (error) {
-      console.error('Error generating schedule:', error);
-      showToast(error instanceof Error ? error.message : 'Failed to generate schedule. Please try again.', 'error');
+      console.error("Error generating schedule:", error);
+      showToast(
+        error instanceof Error ? error.message : "Failed to generate schedule. Please try again.",
+        "error",
+      );
     } finally {
       setGeneratingSchedule(false);
     }
   };
-  
+
   // Payment loading is handled within loadIndividualRegistrations for individual leagues
 
   const handleDeleteTeam = (teamId: number | string, teamName: string, isIndividual?: boolean) => {
@@ -824,211 +832,213 @@ export function LeagueTeamsPage() {
       isOpen: true,
       teamId,
       teamName,
-      isIndividual: isIndividual || false
+      isIndividual: isIndividual || false,
     });
   };
-  
+
   const confirmDeleteTeam = async () => {
     const { teamId, teamName, isIndividual } = deleteConfirmation;
     if (!teamId) return;
-    
+
     try {
       setDeleting(teamId);
-      
+
       if (isIndividual) {
         // Handle individual registration deletion
         const userId = teamId as string;
-        
+
         // Get current user's league_ids
         const { data: userData, error: fetchError } = await supabase
-          .from('users')
-          .select('league_ids')
-          .eq('id', userId)
+          .from("users")
+          .select("league_ids")
+          .eq("id", userId)
           .single();
-        
+
         if (fetchError) throw fetchError;
-        
+
         // Remove this league from their league_ids
         const updatedLeagueIds = (userData.league_ids || []).filter(
-          (id: number) => id !== parseInt(leagueId!)
+          (id: number) => id !== parseInt(leagueId!),
         );
-        
+
         // Update user's league_ids
         const { error: updateError } = await supabase
-          .from('users')
+          .from("users")
           .update({ league_ids: updatedLeagueIds })
-          .eq('id', userId);
-        
+          .eq("id", userId);
+
         if (updateError) throw updateError;
-        
+
         // Delete payment record if exists
         await supabase
-          .from('league_payments')
+          .from("league_payments")
           .delete()
-          .eq('user_id', userId)
-          .eq('league_id', parseInt(leagueId!))
-          .is('team_id', null);
-        
-        showToast(`Successfully removed ${teamName} from the league`, 'success');
+          .eq("user_id", userId)
+          .eq("league_id", parseInt(leagueId!))
+          .is("team_id", null);
+
+        showToast(`Successfully removed ${teamName} from the league`, "success");
         await loadIndividualRegistrations();
         return;
       }
-      
+
       // 1. Update team_ids for all users in the roster
       const { data: teamData, error: teamFetchError } = await supabase
-        .from('teams')
-        .select('roster')
-        .eq('id', teamId)
+        .from("teams")
+        .select("roster")
+        .eq("id", teamId)
         .single();
-        
+
       if (teamFetchError) {
         console.error(`Error fetching team ${teamId}:`, teamFetchError);
       } else if (teamData.roster && teamData.roster.length > 0) {
         for (const userId of teamData.roster) {
           const { data: userData, error: fetchError } = await supabase
-            .from('users')
-            .select('team_ids')
-            .eq('id', userId)
+            .from("users")
+            .select("team_ids")
+            .eq("id", userId)
             .single();
-            
+
           if (fetchError) {
             console.error(`Error fetching user ${userId}:`, fetchError);
             continue;
           }
-          
+
           if (userData) {
             const updatedTeamIds = (userData.team_ids || []).filter((id: number) => id !== teamId);
-            
+
             const { error: updateError } = await supabase
-              .from('users')
+              .from("users")
               .update({ team_ids: updatedTeamIds })
-              .eq('id', userId);
-              
+              .eq("id", userId);
+
             if (updateError) {
               console.error(`Error updating user ${userId}:`, updateError);
             }
           }
         }
       }
-      
+
       // 2. Delete the team (league_payments will be deleted via ON DELETE CASCADE)
-      const { error: deleteError } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId);
-        
+      const { error: deleteError } = await supabase.from("teams").delete().eq("id", teamId);
+
       if (deleteError) throw deleteError;
-      
+
       showToast(
-        isIndividual 
+        isIndividual
           ? `${teamName} has been removed from the league`
           : `Team "${teamName}" has been deleted successfully`,
-        'success'
+        "success",
       );
-      
+
       // Reload data to update the UI
       if (isIndividual) {
         await loadIndividualRegistrations();
       } else {
         await loadTeams();
       }
-      
-      setDeleteConfirmation({ isOpen: false, teamId: null, teamName: '', isIndividual: false });
-      
+
+      setDeleteConfirmation({ isOpen: false, teamId: null, teamName: "", isIndividual: false });
     } catch (error) {
-      console.error('Error deleting:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete';
-      showToast(errorMessage, 'error');
+      console.error("Error deleting:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete";
+      showToast(errorMessage, "error");
     } finally {
       setDeleting(null);
-      setDeleteConfirmation({ isOpen: false, teamId: null, teamName: '', isIndividual: false });
+      setDeleteConfirmation({ isOpen: false, teamId: null, teamName: "", isIndividual: false });
     }
   };
 
-  const handleMoveTeam = (teamId: number | string, teamName: string, currentlyActive: boolean, isIndividual: boolean = false) => {
+  const handleMoveTeam = (
+    teamId: number | string,
+    teamName: string,
+    currentlyActive: boolean,
+    isIndividual: boolean = false,
+  ) => {
     setMoveConfirmation({
       isOpen: true,
       teamId,
       teamName,
       currentlyActive,
-      isIndividual
+      isIndividual,
     });
   };
-  
+
   const confirmMoveTeam = async () => {
     const { teamId, teamName, currentlyActive, isIndividual } = moveConfirmation;
     if (!teamId) return;
-    
-    const entityType = isIndividual ? 'player' : 'team';
-    
+
+    const entityType = isIndividual ? "player" : "team";
+
     try {
       setMovingTeam(teamId);
-      
+
       if (isIndividual) {
         // For individual registrations, update the is_waitlisted field and amount_due in league_payments
         // currentlyActive means the player is currently active (not waitlisted)
         // So we're moving them to the opposite state
         const movingToWaitlist = currentlyActive;
-        const updateData: { 
-          is_waitlisted: boolean; 
-          amount_due?: number; 
-          status?: string; 
+        const updateData: {
+          is_waitlisted: boolean;
+          amount_due?: number;
+          status?: string;
         } = { is_waitlisted: movingToWaitlist };
-        
+
         // If moving to waitlist, set amount_due to 0 since waitlisted players don't owe yet
         if (movingToWaitlist) {
           updateData.amount_due = 0;
-          updateData.status = 'paid'; // No payment needed for waitlist
+          updateData.status = "paid"; // No payment needed for waitlist
         }
         // If moving to active, set amount_due to the league cost
         else if (league?.cost !== undefined) {
           // When moving to active, set amount_due based on current early-bird status
-          const ebCost = (league as any)?.early_bird_cost as number | null | undefined;
-          const ebDue = (league as any)?.early_bird_due_date as string | null | undefined;
+          const ebCost = league?.early_bird_cost as number | null | undefined;
+          const ebDue = league?.early_bird_due_date as string | null | undefined;
           const today = new Date();
-          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
+          const earlyActive =
+            ebCost && ebDue ? today.getTime() <= new Date(ebDue + "T23:59:59").getTime() : false;
           const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
           updateData.amount_due = effective;
           // Check if they've already paid something
           const { data: currentPayment } = await supabase
-            .from('league_payments')
-            .select('amount_paid')
-            .eq('user_id', teamId)
-            .eq('league_id', leagueId)
-            .is('team_id', null)
+            .from("league_payments")
+            .select("amount_paid")
+            .eq("user_id", teamId)
+            .eq("league_id", leagueId)
+            .is("team_id", null)
             .maybeSingle(); // Use maybeSingle to handle cases where no record exists
-          
+
           const amountPaid = currentPayment?.amount_paid || 0;
           if (amountPaid >= league.cost) {
-            updateData.status = 'paid';
+            updateData.status = "paid";
           } else if (amountPaid > 0) {
-            updateData.status = 'partial';
+            updateData.status = "partial";
           } else {
-            updateData.status = 'pending';
+            updateData.status = "pending";
           }
         }
-        
+
         const { error: updateError } = await supabase
-          .from('league_payments')
+          .from("league_payments")
           .update(updateData)
-          .eq('user_id', teamId)
-          .eq('league_id', leagueId)
-          .is('team_id', null);
-          
+          .eq("user_id", teamId)
+          .eq("league_id", leagueId)
+          .is("team_id", null);
+
         if (updateError) throw updateError;
-        
+
         // Also update user's league_ids
         const leagueIdNum = parseInt(leagueId!);
         const { data: userData } = await supabase
-          .from('users')
-          .select('league_ids')
-          .eq('id', teamId)
+          .from("users")
+          .select("league_ids")
+          .eq("id", teamId)
           .single();
-        
+
         if (userData) {
           const currentLeagueIds = userData.league_ids || [];
           let updatedLeagueIds;
-          
+
           if (movingToWaitlist) {
             // Remove from league_ids when moving to waitlist
             updatedLeagueIds = currentLeagueIds.filter((id: number) => id !== leagueIdNum);
@@ -1040,44 +1050,46 @@ export function LeagueTeamsPage() {
               updatedLeagueIds = currentLeagueIds;
             }
           }
-          
+
           if (updatedLeagueIds !== currentLeagueIds) {
-            await supabase
-              .from('users')
-              .update({ league_ids: updatedLeagueIds })
-              .eq('id', teamId);
+            await supabase.from("users").update({ league_ids: updatedLeagueIds }).eq("id", teamId);
           }
         }
       } else {
         // For team registrations, update the active status in teams table
         const { error: updateError } = await supabase
-          .from('teams')
+          .from("teams")
           .update({ active: !currentlyActive })
-          .eq('id', teamId);
-          
+          .eq("id", teamId);
+
         if (updateError) throw updateError;
       }
-      
-      const successMessage = currentlyActive 
-        ? `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} "${teamName}" moved to waitlist` 
+
+      const successMessage = currentlyActive
+        ? `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} "${teamName}" moved to waitlist`
         : `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} "${teamName}" activated from waitlist`;
-      
-      showToast(successMessage, 'success');
-      
+
+      showToast(successMessage, "success");
+
       // Reload data to update the UI
       if (isIndividual) {
         await loadIndividualRegistrations();
       } else {
         await loadTeams();
       }
-      
     } catch (error) {
       console.error(`Error moving ${entityType}:`, error);
       const errorMessage = error instanceof Error ? error.message : `Failed to move ${entityType}`;
-      showToast(errorMessage, 'error');
+      showToast(errorMessage, "error");
     } finally {
       setMovingTeam(null);
-      setMoveConfirmation({ isOpen: false, teamId: null, teamName: '', currentlyActive: false, isIndividual: false });
+      setMoveConfirmation({
+        isOpen: false,
+        teamId: null,
+        teamName: "",
+        currentlyActive: false,
+        isIndividual: false,
+      });
     }
   };
 
@@ -1095,20 +1107,20 @@ export function LeagueTeamsPage() {
       try {
         const updates = newActiveTeams.map((team, index) => ({
           id: team.id,
-          display_order: index + 1
+          display_order: index + 1,
         }));
 
         for (const update of updates) {
           await supabase
-            .from('teams')
+            .from("teams")
             .update({ display_order: update.display_order })
-            .eq('id', update.id);
+            .eq("id", update.id);
         }
 
-        showToast('Team order updated successfully', 'success');
+        showToast("Team order updated successfully", "success");
       } catch (error) {
-        console.error('Error updating team order:', error);
-        showToast('Failed to update team order', 'error');
+        console.error("Error updating team order:", error);
+        showToast("Failed to update team order", "error");
         // Revert the optimistic update
         loadTeams();
       }
@@ -1129,47 +1141,47 @@ export function LeagueTeamsPage() {
       try {
         const updates = newWaitlistedTeams.map((team, index) => ({
           id: team.id,
-          display_order: index + 1
+          display_order: index + 1,
         }));
 
         for (const update of updates) {
           await supabase
-            .from('teams')
+            .from("teams")
             .update({ display_order: update.display_order })
-            .eq('id', update.id);
+            .eq("id", update.id);
         }
 
-        showToast('Waitlist order updated successfully', 'success');
+        showToast("Waitlist order updated successfully", "success");
       } catch (error) {
-        console.error('Error updating waitlist order:', error);
-        showToast('Failed to update waitlist order', 'error');
+        console.error("Error updating waitlist order:", error);
+        showToast("Failed to update waitlist order", "error");
         // Revert the optimistic update
         loadTeams();
       }
     }
   };
 
-
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   // Sortable team card component
-  const SortableTeamCard = ({ team, isWaitlisted = false }: { team: TeamData; isWaitlisted?: boolean }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: team.id });
+  const SortableTeamCard = ({
+    team,
+    isWaitlisted = false,
+  }: {
+    team: TeamData;
+    isWaitlisted?: boolean;
+  }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: team.id,
+    });
 
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -1178,10 +1190,10 @@ export function LeagueTeamsPage() {
     };
 
     return (
-      <Card 
-        ref={setNodeRef} 
+      <Card
+        ref={setNodeRef}
         style={style}
-        className={`bg-white shadow-md overflow-hidden rounded-lg ${isDragging ? 'z-50' : ''}`}
+        className={`bg-white shadow-md overflow-hidden rounded-lg ${isDragging ? "z-50" : ""}`}
       >
         <CardContent className="p-4">
           {/* Header Section - Team Name and Status */}
@@ -1189,8 +1201,8 @@ export function LeagueTeamsPage() {
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Drag Handle */}
               {dragEnabled && (
-                <div 
-                  {...attributes} 
+                <div
+                  {...attributes}
                   {...listeners}
                   className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded flex-shrink-0 self-start"
                   title="Drag to reorder"
@@ -1198,19 +1210,19 @@ export function LeagueTeamsPage() {
                   <GripVertical className="h-4 w-4 text-gray-400" />
                 </div>
               )}
-              
+
               {/* Team Name and Badges */}
               <div className="flex items-baseline gap-2 flex-wrap min-w-0">
-                <h3 className="text-lg font-bold text-[#6F6F6F] truncate">
-                  {team.name}
-                </h3>
+                <h3 className="text-lg font-bold text-[#6F6F6F] truncate">{team.name}</h3>
                 {isWaitlisted && (
                   <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full whitespace-nowrap">
                     Waitlisted
                   </span>
                 )}
                 {team.skill_name && (
-                  <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${isWaitlisted ? 'bg-gray-300 text-gray-700' : 'bg-blue-100 text-blue-800'}`}>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${isWaitlisted ? "bg-gray-300 text-gray-700" : "bg-blue-100 text-blue-800"}`}
+                  >
                     {team.skill_name}
                   </span>
                 )}
@@ -1219,36 +1231,56 @@ export function LeagueTeamsPage() {
           </div>
 
           {/* League Name */}
-          <p className={`text-sm mb-3 ${dragEnabled ? 'ml-6' : ''} ${isWaitlisted ? 'text-gray-600' : 'text-gray-600'}`}>
+          <p
+            className={`text-sm mb-3 ${dragEnabled ? "ml-6" : ""} ${isWaitlisted ? "text-gray-600" : "text-gray-600"}`}
+          >
             {team.league?.name}
           </p>
-          
+
           {/* Body Section - Team Info Grid */}
-          <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm ${dragEnabled ? 'ml-6' : ''}`}>
+          <div
+            className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm ${dragEnabled ? "ml-6" : ""}`}
+          >
             {/* Captain Info or Email for Individuals */}
-            <div className="flex items-center gap-1.5" title={team.isIndividual ? "Email" : "Captain"}>
-              <Crown className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-gray-600' : 'text-blue-600'}`} />
-              <span className={`truncate text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
-                {team.isIndividual ? (team.email || 'Unknown') : (team.captain_name || 'Unknown')}
+            <div
+              className="flex items-center gap-1.5"
+              title={team.isIndividual ? "Email" : "Captain"}
+            >
+              <Crown
+                className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? "text-gray-600" : "text-blue-600"}`}
+              />
+              <span
+                className={`truncate text-xs ${isWaitlisted ? "text-gray-700" : "text-[#6F6F6F]"}`}
+              >
+                {team.isIndividual ? team.email || "Unknown" : team.captain_name || "Unknown"}
               </span>
             </div>
-            
+
             {/* Player Count or Individual Badge */}
             <div className="flex items-center gap-1.5">
-              <Users className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-blue-600' : 'text-blue-500'}`} />
-              <span className={`whitespace-nowrap ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
-                {team.isIndividual ? 'Individual' : `${team.roster.length} players`}
+              <Users
+                className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? "text-blue-600" : "text-blue-500"}`}
+              />
+              <span
+                className={`whitespace-nowrap ${isWaitlisted ? "text-gray-700" : "text-[#6F6F6F]"}`}
+              >
+                {team.isIndividual ? "Individual" : `${team.roster.length} players`}
               </span>
             </div>
-            
+
             {/* Registration Date */}
-            <div className="flex items-center gap-1.5 col-span-2 md:col-span-1" title="Registration Date">
-              <Calendar className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? 'text-green-600' : 'text-green-500'}`} />
-              <span className={`text-xs ${isWaitlisted ? 'text-gray-700' : 'text-[#6F6F6F]'}`}>
+            <div
+              className="flex items-center gap-1.5 col-span-2 md:col-span-1"
+              title="Registration Date"
+            >
+              <Calendar
+                className={`h-4 w-4 flex-shrink-0 ${isWaitlisted ? "text-green-600" : "text-green-500"}`}
+              />
+              <span className={`text-xs ${isWaitlisted ? "text-gray-700" : "text-[#6F6F6F]"}`}>
                 {formatDate(team.created_at)}
               </span>
             </div>
-            
+
             {/* Payment Info */}
             {!isWaitlisted && (
               <div className="flex items-center gap-1.5 col-span-2 md:col-span-1" title="Payment">
@@ -1257,45 +1289,54 @@ export function LeagueTeamsPage() {
                   {team.amount_paid !== null ? (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
-                        ${team.amount_paid.toFixed(2)} / ${(() => {
-                          const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
-                          const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
+                        ${team.amount_paid.toFixed(2)} / $
+                        {(() => {
+                          const ebCost = team.league?.early_bird_cost as number | null | undefined;
+                          const ebDue = team.league?.early_bird_due_date as
+                            | string
+                            | null
+                            | undefined;
                           const today = new Date();
-                          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                          const baseCost = earlyActive 
-                            ? (ebCost ?? (team.league?.cost ?? 0)) 
+                          const earlyActive =
+                            ebCost && ebDue
+                              ? today.getTime() <= new Date(ebDue + "T23:59:59").getTime()
+                              : false;
+                          const baseCost = earlyActive
+                            ? (ebCost ?? team.league?.cost ?? 0)
                             : (team.league?.cost ?? 0);
-                          const effectiveDue = team.payment_status === 'paid' && team.amount_due
-                            ? (team.amount_due || 0)
-                            : baseCost;
+                          const effectiveDue =
+                            team.payment_status === "paid" && team.amount_due
+                              ? team.amount_due || 0
+                              : baseCost;
                           return (effectiveDue * 1.13).toFixed(2);
                         })()}
                       </span>
                       {team.payment_status && (
-                        <PaymentStatusBadge 
-                          status={team.payment_status} 
-                          size="sm"
-                        />
+                        <PaymentStatusBadge status={team.payment_status} size="sm" />
                       )}
                     </>
                   ) : (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
-                        $0.00 / ${(() => {
-                          const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
-                          const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
+                        $0.00 / $
+                        {(() => {
+                          const ebCost = team.league?.early_bird_cost as number | null | undefined;
+                          const ebDue = team.league?.early_bird_due_date as
+                            | string
+                            | null
+                            | undefined;
                           const today = new Date();
-                          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                          const baseCost = earlyActive 
-                            ? (ebCost ?? (team.league?.cost ?? 0)) 
+                          const earlyActive =
+                            ebCost && ebDue
+                              ? today.getTime() <= new Date(ebDue + "T23:59:59").getTime()
+                              : false;
+                          const baseCost = earlyActive
+                            ? (ebCost ?? team.league?.cost ?? 0)
                             : (team.league?.cost ?? 0);
                           return (baseCost * 1.13).toFixed(2);
                         })()}
                       </span>
-                      <PaymentStatusBadge 
-                        status="pending" 
-                        size="sm"
-                      />
+                      <PaymentStatusBadge status="pending" size="sm" />
                     </>
                   )}
                 </div>
@@ -1304,39 +1345,49 @@ export function LeagueTeamsPage() {
           </div>
 
           {/* Footer Section - Action Buttons */}
-          <div className={`flex justify-between items-center pt-2 border-t border-gray-100 ${dragEnabled ? 'ml-6' : ''}`}>
+          <div
+            className={`flex justify-between items-center pt-2 border-t border-gray-100 ${dragEnabled ? "ml-6" : ""}`}
+          >
             <div className="flex items-center gap-2">
-              <Link 
-                to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+              <Link
+                to={
+                  team.isIndividual
+                    ? `/my-account/individual/edit/${team.id}/${leagueId}`
+                    : `/my-account/teams/edit/${team.id}`
+                }
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors inline-flex items-center ${
-                isWaitlisted 
-                  ? 'border-gray-300 text-gray-600 hover:text-gray-800' 
-                  : 'border-blue-300 text-blue-700 hover:text-blue-800'
-              }`}
+                  isWaitlisted
+                    ? "border-gray-300 text-gray-600 hover:text-gray-800"
+                    : "border-blue-300 text-blue-700 hover:text-blue-800"
+                }`}
               >
-                Edit {team.isIndividual ? 'payment' : 'registration'}
+                Edit {team.isIndividual ? "payment" : "registration"}
               </Link>
-              
+
               <button
                 onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
                 disabled={movingTeam === team.id}
                 className={`h-7 px-3 text-xs border rounded bg-white hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  isWaitlisted 
-                    ? 'border-green-300 text-green-700 hover:text-green-800' 
-                    : 'border-yellow-300 text-yellow-700 hover:text-yellow-800'
+                  isWaitlisted
+                    ? "border-green-300 text-green-700 hover:text-green-800"
+                    : "border-yellow-300 text-yellow-700 hover:text-yellow-800"
                 }`}
-                title={isWaitlisted ? `Move ${team.isIndividual ? 'player' : 'team'} to active registration` : `Move ${team.isIndividual ? 'player' : 'team'} to waitlist`}
+                title={
+                  isWaitlisted
+                    ? `Move ${team.isIndividual ? "player" : "team"} to active registration`
+                    : `Move ${team.isIndividual ? "player" : "team"} to waitlist`
+                }
               >
                 {movingTeam === team.id ? (
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current inline-block"></div>
                 ) : isWaitlisted ? (
-                  'Move to Active'
-                  ) : (
-                    'Move to Waitlist'
-                  )}
+                  "Move to Active"
+                ) : (
+                  "Move to Waitlist"
+                )}
               </button>
             </div>
-            
+
             <Button
               onClick={() => handleDeleteTeam(team.id, team.name, team.isIndividual)}
               disabled={deleting === team.id}
@@ -1358,15 +1409,16 @@ export function LeagueTeamsPage() {
   };
 
   // Sortable table row component
-  const SortableTableRow = ({ team, isWaitlisted = false }: { team: TeamData; isWaitlisted?: boolean }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: team.id });
+  const SortableTableRow = ({
+    team,
+    isWaitlisted = false,
+  }: {
+    team: TeamData;
+    isWaitlisted?: boolean;
+  }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: team.id,
+    });
 
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -1374,25 +1426,31 @@ export function LeagueTeamsPage() {
       opacity: isDragging ? 0.5 : 1,
     };
 
-    // Calculate payment details
-    const totalAmount = team.amount_due 
-      ? team.amount_due * 1.13 
-      : (team.league?.cost ? parseFloat(team.league.cost.toString()) * 1.13 : 0);
+    // Calculate dynamic payment details (handles early bird pricing)
+    const ebCost = team.league?.early_bird_cost as number | null | undefined;
+    const ebDue = team.league?.early_bird_due_date as string | null | undefined;
+    const today = new Date();
+    const earlyActive =
+      ebCost && ebDue ? today.getTime() <= new Date(`${ebDue}T23:59:59`).getTime() : false;
+    const baseCost = earlyActive ? (ebCost ?? team.league?.cost ?? 0) : (team.league?.cost ?? 0);
+    const effectiveDue =
+      team.payment_status === "paid" && team.amount_due ? team.amount_due || 0 : baseCost;
+    const totalAmount = (effectiveDue || 0) * 1.13;
     const amountPaid = team.amount_paid || 0;
     const amountOwing = totalAmount - amountPaid;
 
     return (
-      <tr 
-        ref={setNodeRef} 
+      <tr
+        ref={setNodeRef}
         style={style}
-        className={`hover:bg-gray-50 transition-colors ${isDragging ? 'z-50' : ''}`}
+        className={`hover:bg-gray-50 transition-colors ${isDragging ? "z-50" : ""}`}
       >
         <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
           <div className="flex items-center gap-2">
             {/* Drag Handle */}
             {dragEnabled && (
-              <div 
-                {...attributes} 
+              <div
+                {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded flex-shrink-0"
                 title="Drag to reorder"
@@ -1401,7 +1459,10 @@ export function LeagueTeamsPage() {
               </div>
             )}
             <div className="flex flex-col">
-              <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
+              <div
+                className="text-sm font-semibold text-gray-900 truncate max-w-[200px]"
+                title={team.name}
+              >
                 {team.name}
               </div>
               {isWaitlisted && (
@@ -1415,8 +1476,11 @@ export function LeagueTeamsPage() {
         <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
           <div className="flex items-center gap-1">
             <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
-            <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
-              {team.captain_name || 'Unknown'}
+            <div
+              className="text-sm text-gray-700 truncate max-w-[150px]"
+              title={team.captain_name || "Unknown"}
+            >
+              {team.captain_name || "Unknown"}
             </div>
           </div>
         </td>
@@ -1437,19 +1501,16 @@ export function LeagueTeamsPage() {
         </td>
         <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
           <div className="text-xs text-gray-600">
-            {new Date(team.created_at).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric'
+            {new Date(team.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
             })}
           </div>
         </td>
         {!isWaitlisted && (
           <>
             <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-              <PaymentStatusBadge 
-                status={team.payment_status || 'pending'} 
-                size="sm"
-              />
+              <PaymentStatusBadge status={team.payment_status || "pending"} size="sm" />
             </td>
             <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
               <div className="flex flex-col gap-0.5 text-xs">
@@ -1459,13 +1520,14 @@ export function LeagueTeamsPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="text-gray-500">O:</span>
-                  <span className={`font-medium ${amountOwing > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                  <span
+                    className={`font-medium ${amountOwing > 0 ? "text-red-700" : "text-gray-700"}`}
+                  >
                     ${amountOwing.toFixed(0)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
-                  <span className="text-gray-500">T:</span>
-                  ${totalAmount.toFixed(0)}
+                  <span className="text-gray-500">T:</span>${totalAmount.toFixed(0)}
                 </div>
               </div>
             </td>
@@ -1473,8 +1535,12 @@ export function LeagueTeamsPage() {
         )}
         <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
           <div className="flex items-center justify-center gap-0.5">
-            <Link 
-              to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+            <Link
+              to={
+                team.isIndividual
+                  ? `/my-account/individual/edit/${team.id}/${leagueId}`
+                  : `/my-account/teams/edit/${team.id}`
+              }
               className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
               title={team.isIndividual ? "Edit payment" : "Edit team"}
             >
@@ -1484,11 +1550,11 @@ export function LeagueTeamsPage() {
               onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
               disabled={movingTeam === team.id}
               className={`p-1 rounded transition-colors disabled:opacity-50 ${
-                isWaitlisted 
-                  ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
-                  : 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
+                isWaitlisted
+                  ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                  : "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
               }`}
-              title={isWaitlisted ? 'Move to active' : 'Move to waitlist'}
+              title={isWaitlisted ? "Move to active" : "Move to waitlist"}
             >
               {movingTeam === team.id ? (
                 <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
@@ -1517,123 +1583,196 @@ export function LeagueTeamsPage() {
   };
 
   // Table view component
-  const TeamTable = ({ teams, isWaitlisted = false, onDragEnd }: { 
-    teams: TeamData[]; 
+  const TeamTable = ({
+    teams,
+    isWaitlisted = false,
+    onDragEnd,
+  }: {
+    teams: TeamData[];
     isWaitlisted?: boolean;
     onDragEnd?: (event: DragEndEvent) => void;
   }) => {
+    const renderHeader = () => (
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+            Team Name
+          </th>
+          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+            Captain
+          </th>
+          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+            Skill
+          </th>
+          <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+            Players
+          </th>
+          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+            Registered
+          </th>
+          {!isWaitlisted && (
+            <>
+              <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                Status
+              </th>
+              <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                Payment
+              </th>
+            </>
+          )}
+          <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+            Actions
+          </th>
+        </tr>
+      </thead>
+    );
+
+    const renderStaticRow = (team: TeamData) => {
+      const ebCost = team.league?.early_bird_cost as number | null | undefined;
+      const ebDue = team.league?.early_bird_due_date as string | null | undefined;
+      const today = new Date();
+      const earlyActive =
+        ebCost && ebDue ? today.getTime() <= new Date(`${ebDue}T23:59:59`).getTime() : false;
+      const baseCost = earlyActive ? (ebCost ?? team.league?.cost ?? 0) : (team.league?.cost ?? 0);
+      const effectiveDue =
+        team.payment_status === "paid" && team.amount_due ? team.amount_due || 0 : baseCost;
+      const totalAmount = (effectiveDue || 0) * 1.13;
+      const amountPaid = team.amount_paid || 0;
+      const amountOwing = totalAmount - amountPaid;
+
+      return (
+        <tr key={team.id} className="hover:bg-gray-50 transition-colors">
+          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+            <div className="flex flex-col">
+              <div
+                className="text-sm font-semibold text-gray-900 truncate max-w-[200px]"
+                title={team.name}
+              >
+                {team.name}
+              </div>
+              {isWaitlisted && (
+                <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                  Waitlisted
+                </span>
+              )}
+            </div>
+          </td>
+          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+            <div className="flex items-center gap-1">
+              <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
+              <div
+                className="text-sm text-gray-700 truncate max-w-[150px]"
+                title={team.captain_name || "Unknown"}
+              >
+                {team.captain_name || "Unknown"}
+              </div>
+            </div>
+          </td>
+          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+            {team.skill_name ? (
+              <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                {team.skill_name}
+              </span>
+            ) : (
+              <span className="text-sm text-gray-400">—</span>
+            )}
+          </td>
+          <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
+            <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
+              <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
+              <span className="font-medium">{team.roster.length}</span>
+            </div>
+          </td>
+          <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
+            <div className="text-xs text-gray-600">
+              {new Date(team.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </div>
+          </td>
+          {!isWaitlisted && (
+            <>
+              <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                <PaymentStatusBadge status={team.payment_status || "pending"} size="sm" />
+              </td>
+              <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                <div className="flex flex-col gap-0.5 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500">P:</span>
+                    <span className="font-medium text-green-700">${amountPaid.toFixed(0)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500">O:</span>
+                    <span
+                      className={`font-medium ${amountOwing > 0 ? "text-red-700" : "text-gray-700"}`}
+                    >
+                      ${amountOwing.toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
+                    <span className="text-gray-500">T:</span>${totalAmount.toFixed(0)}
+                  </div>
+                </div>
+              </td>
+            </>
+          )}
+          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+            <div className="flex items-center justify-center gap-0.5">
+              <Link
+                to={
+                  team.isIndividual
+                    ? `/my-account/individual/edit/${team.id}/${leagueId}`
+                    : `/my-account/teams/edit/${team.id}`
+                }
+                className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                title={team.isIndividual ? "Edit payment" : "Edit team"}
+              >
+                <Edit className="h-3.5 w-3.5" />
+              </Link>
+              <button
+                onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
+                disabled={movingTeam === team.id}
+                className={`p-1 rounded transition-colors disabled:opacity-50 ${isWaitlisted ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"}`}
+                title={isWaitlisted ? "Move to active" : "Move to waitlist"}
+              >
+                {movingTeam === team.id ? (
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                ) : isWaitlisted ? (
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                ) : (
+                  <Clock className="h-3.5 w-3.5" />
+                )}
+              </button>
+              <button
+                onClick={() => handleDeleteTeam(team.id, team.name)}
+                disabled={deleting === team.id}
+                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                title="Delete team"
+              >
+                {deleting === team.id ? (
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    };
+
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto xl:overflow-visible">
           {dragEnabled && onDragEnd ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={onDragEnd}
-            >
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
               <table className="w-full xl:table-fixed divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Team Name
-                    </th>
-                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Captain
-                    </th>
-                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Skill
-                    </th>
-                    <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Players
-                    </th>
-                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
-                      Registered
-                    </th>
-                  </>
-                )}
-                <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {teams.map((team) => {
-                // Calculate dynamic payment details (early-bird aware)
-                const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
-                const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
-                const today = new Date();
-                const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                const baseCost = earlyActive 
-                  ? (ebCost ?? (team.league?.cost ?? 0)) 
-                  : (team.league?.cost ?? 0);
-                const effectiveDue = team.payment_status === 'paid' && team.amount_due
-                  ? (team.amount_due || 0)
-                  : baseCost;
-                const totalAmount = (effectiveDue || 0) * 1.13;
-                const amountPaid = team.amount_paid || 0;
-                const amountOwing = totalAmount - amountPaid;
-
-                return (
-                  <tr key={team.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
-                          {team.name}
-                        </div>
-                        {isWaitlisted && (
-                          <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                            Waitlisted
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
-                        <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
-                          {team.captain_name || 'Unknown'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                      {team.skill_name ? (
-                        <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                          {team.skill_name}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
-                        <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
-                        <span className="font-medium">{team.roster.length}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-                      <div className="text-xs text-gray-600">
-                        {new Date(team.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </div>
-                    </td>
-                    {!isWaitlisted && (
-                      <>
-                        <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Status
-                        </th>
-                        <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Payment
-                        </th>
-                      </>
-                    )}
-                    <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <SortableContext items={teams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                {renderHeader()}
+                <SortableContext
+                  items={teams.map((team) => team.id)}
+                  strategy={verticalListSortingStrategy}
+                >
                   <tbody className="bg-white divide-y divide-gray-200">
                     {teams.map((team) => (
                       <SortableTableRow key={team.id} team={team} isWaitlisted={isWaitlisted} />
@@ -1644,164 +1783,9 @@ export function LeagueTeamsPage() {
             </DndContext>
           ) : (
             <table className="w-full xl:table-fixed divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Team Name
-                  </th>
-                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Captain
-                  </th>
-                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Skill
-                  </th>
-                  <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Players
-                  </th>
-                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
-                    Registered
-                  </th>
-                  {!isWaitlisted && (
-                    <>
-                      <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Status
-                      </th>
-                      <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Payment
-                      </th>
-                    </>
-                  )}
-                  <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
+              {renderHeader()}
               <tbody className="bg-white divide-y divide-gray-200">
-                {teams.map((team) => {
-                  // Calculate payment details
-                  const totalAmount = team.amount_due 
-                    ? team.amount_due * 1.13 
-                    : (team.league?.cost ? parseFloat(team.league.cost.toString()) * 1.13 : 0);
-                  const amountPaid = team.amount_paid || 0;
-                  const amountOwing = totalAmount - amountPaid;
-
-                  return (
-                    <tr key={team.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
-                            {team.name}
-                          </div>
-                          {isWaitlisted && (
-                            <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                              Waitlisted
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
-                          <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
-                            {team.captain_name || 'Unknown'}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                        {team.skill_name ? (
-                          <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                            {team.skill_name}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
-                          <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
-                          <span className="font-medium">{team.roster.length}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-                        <div className="text-xs text-gray-600">
-                          {new Date(team.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </div>
-                      </td>
-                      {!isWaitlisted && (
-                        <>
-                          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                            <PaymentStatusBadge 
-                              status={team.payment_status || 'pending'} 
-                              size="sm"
-                            />
-                          </td>
-                          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              <div className="flex items-center gap-1">
-                                <span className="text-gray-500">P:</span>
-                                <span className="font-medium text-green-700">${amountPaid.toFixed(0)}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-gray-500">O:</span>
-                                <span className={`font-medium ${amountOwing > 0 ? 'text-red-700' : 'text-gray-700'}`}>
-                                  ${amountOwing.toFixed(0)}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
-                                <span className="text-gray-500">T:</span>
-                                ${totalAmount.toFixed(0)}
-                              </div>
-                            </div>
-                          </td>
-                        </>
-                      )}
-                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Link 
-                            to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
-                            className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                            title={team.isIndividual ? "Edit payment" : "Edit team"}
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </Link>
-                          <button
-                            onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
-                            disabled={movingTeam === team.id}
-                            className={`p-1 rounded transition-colors disabled:opacity-50 ${
-                              isWaitlisted 
-                                ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
-                                : 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
-                            }`}
-                            title={isWaitlisted ? 'Move to active' : 'Move to waitlist'}
-                          >
-                            {movingTeam === team.id ? (
-                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
-                            ) : isWaitlisted ? (
-                              <ArrowLeft className="h-3.5 w-3.5" />
-                            ) : (
-                              <Clock className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTeam(team.id, team.name)}
-                            disabled={deleting === team.id}
-                            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                            title="Delete team"
-                          >
-                            {deleting === team.id ? (
-                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {teams.map(renderStaticRow)}
               </tbody>
             </table>
           )}
@@ -1839,19 +1823,20 @@ export function LeagueTeamsPage() {
       <div className="max-w-6xl mx-auto">
         {/* Enhanced Header */}
         <div className="mb-8">
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="flex items-center text-[#B20000] hover:underline mb-4"
           >
             <ArrowLeft className="h-5 w-5 mr-1" />
             Back
           </button>
-          
+
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
               <div>
                 <h1 className="text-3xl font-bold text-[#6F6F6F] mb-2">
-                  {league?.name} - {league?.team_registration === false ? 'Registered Players' : 'Teams Management'}
+                  {league?.name} -{" "}
+                  {league?.team_registration === false ? "Registered Players" : "Teams Management"}
                 </h1>
                 <p className="text-[#6F6F6F] mb-2">
                   Sport: {league?.sport_name} | Location: {league?.location}
@@ -1861,33 +1846,50 @@ export function LeagueTeamsPage() {
                   <div className="flex items-center">
                     <DollarSign className="h-4 w-4 text-[#B20000] mr-1.5" />
                     <p className="text-sm font-medium text-[#6F6F6F]">
-                      ${(() => {
-                        const ebCost = (league as any).early_bird_cost as number | null | undefined;
-                        const ebDue = (league as any).early_bird_due_date as string | null | undefined;
+                      $
+                      {(() => {
+                        const ebCost = league.early_bird_cost as number | null | undefined;
+                        const ebDue = league.early_bird_due_date as string | null | undefined;
                         const today = new Date();
-                        const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                        const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
+                        const earlyActive =
+                          ebCost && ebDue
+                            ? today.getTime() <= new Date(ebDue + "T23:59:59").getTime()
+                            : false;
+                        const effective = earlyActive
+                          ? (ebCost ?? league.cost ?? 0)
+                          : (league.cost ?? 0);
                         return effective;
-                      })()} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
+                      })()}{" "}
+                      + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
                     </p>
                   </div>
                 )}
               </div>
-              
-              {/* Waitlist button for individual leagues */}
-              {userProfile?.is_admin && league?.team_registration === false && (
-                <Link
-                  to={`/leagues/${league.id}`}
-                  state={{ openWaitlistModal: true }}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium whitespace-nowrap h-fit"
-                >
-                  Add to Waitlist
-                </Link>
+
+              {/* Admin Actions */}
+              {userProfile?.is_admin && league?.id && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    to={`/my-account/leagues/edit/${league.id}`}
+                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                  >
+                    Edit league
+                  </Link>
+                  {league?.team_registration === false && (
+                    <Link
+                      to={`/leagues/${league.id}`}
+                      state={{ openWaitlistModal: true }}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium whitespace-nowrap"
+                    >
+                      Add to Waitlist
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
-            
+
             {/* Search Bar and Team Count */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
@@ -1898,72 +1900,39 @@ export function LeagueTeamsPage() {
                     className="pl-10 w-full"
                   />
                 </div>
-                
+
                 <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
-                  {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} {league?.team_registration === false ? 'players' : 'teams'}
+                  {filteredActiveTeams.length + filteredWaitlistedTeams.length} of{" "}
+                  {activeTeams.length + waitlistedTeams.length}{" "}
+                  {league?.team_registration === false ? "players" : "teams"}
                 </div>
               </div>
             </div>
-            
-            {/* Navigation Links */}
-            {userProfile?.is_admin && league?.id && (
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                <Link
-                  to={`/my-account/leagues/edit/${league.id}`}
-                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                >
-                  Edit league
-                </Link>
-                <span className="text-gray-400 text-sm">|</span>
-                <span className="text-gray-400 text-sm whitespace-nowrap cursor-default">
-                  Manage teams
-                </span>
-                {hasSchedule && league?.sport_name === 'Volleyball' && (
-                  <>
-                    <span className="text-gray-400 text-sm">|</span>
-                    <Link
-                      to={`/leagues/${league.id}/schedule`}
-                      className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                    >
-                      Manage schedule
-                    </Link>
-                  </>
-                )}
-                {hasSchedule && league?.sport_name === 'Volleyball' && (
-                  <>
-                    <span className="text-gray-400 text-sm">|</span>
-                    <Link
-                      to={`/leagues/${league.id}/standings`}
-                      className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                    >
-                      Manage standings
-                    </Link>
-                  </>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
         {/* Schedule Generation Section - Volleyball only */}
-        {userProfile?.is_admin && activeTeams.length > 0 && league?.sport_name === 'Volleyball' && (
+        {userProfile?.is_admin && activeTeams.length > 0 && league?.sport_name === "Volleyball" && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <p className="text-[#6F6F6F] text-base">
-                  {hasSchedule 
+                  {hasSchedule
                     ? "Season schedule has been generated and is now available!"
-                    : "Ready to start the season? Set the order of the teams below and then generate the schedule."
-                  }
+                    : "Ready to start the season? Set the order of the teams below and then generate the schedule."}
                 </p>
               </div>
               <div className="flex-shrink-0">
                 <Button
-                  onClick={hasSchedule ? () => navigate(`/leagues/${leagueId}/schedule`) : handleOpenScheduleModal}
+                  onClick={
+                    hasSchedule
+                      ? () => navigate(`/leagues/${leagueId}/schedule`)
+                      : handleOpenScheduleModal
+                  }
                   className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-6 py-2.5 text-sm font-medium whitespace-nowrap flex items-center gap-2"
                 >
                   <CalendarDays className="h-4 w-4" />
-                  {hasSchedule ? 'View Schedule' : 'Generate Schedule'}
+                  {hasSchedule ? "View Schedule" : "Generate Schedule"}
                 </Button>
               </div>
             </div>
@@ -1974,14 +1943,23 @@ export function LeagueTeamsPage() {
         {activeTeams.length === 0 && waitlistedTeams.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">
             <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">{league?.team_registration === false ? 'No Users Registered' : 'No Teams Registered'}</h3>
-            <p className="text-[#6F6F6F]">{league?.team_registration === false ? 'No users' : 'No teams'} have registered for this league yet.</p>
+            <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">
+              {league?.team_registration === false ? "No Users Registered" : "No Teams Registered"}
+            </h3>
+            <p className="text-[#6F6F6F]">
+              {league?.team_registration === false ? "No users" : "No teams"} have registered for
+              this league yet.
+            </p>
           </div>
-        ) : filteredActiveTeams.length === 0 && filteredWaitlistedTeams.length === 0 && searchTerm ? (
+        ) : filteredActiveTeams.length === 0 &&
+          filteredWaitlistedTeams.length === 0 &&
+          searchTerm ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">
             <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Teams Found</h3>
-            <p className="text-[#6F6F6F]">No teams match your search criteria. Try adjusting your search term.</p>
+            <p className="text-[#6F6F6F]">
+              No teams match your search criteria. Try adjusting your search term.
+            </p>
           </div>
         ) : (
           <div>
@@ -1989,26 +1967,30 @@ export function LeagueTeamsPage() {
             {filteredActiveTeams.length > 0 && (
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-[#6F6F6F]">{league?.team_registration === false ? 'Registered Players' : 'Registered Teams'}</h2>
+                  <h2 className="text-2xl font-bold text-[#6F6F6F]">
+                    {league?.team_registration === false
+                      ? "Registered Players"
+                      : "Registered Teams"}
+                  </h2>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center bg-gray-100 rounded-lg p-1">
                       <button
-                        onClick={() => setViewMode('card')}
+                        onClick={() => setViewMode("card")}
                         className={`p-2 rounded-md transition-all ${
-                          viewMode === 'card' 
-                            ? 'bg-white text-[#B20000] shadow-sm' 
-                            : 'text-gray-600 hover:text-gray-800'
+                          viewMode === "card"
+                            ? "bg-white text-[#B20000] shadow-sm"
+                            : "text-gray-600 hover:text-gray-800"
                         }`}
                         title="Card view"
                       >
                         <Grid3X3 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => setViewMode('table')}
+                        onClick={() => setViewMode("table")}
                         className={`p-2 rounded-md transition-all ${
-                          viewMode === 'table' 
-                            ? 'bg-white text-[#B20000] shadow-sm' 
-                            : 'text-gray-600 hover:text-gray-800'
+                          viewMode === "table"
+                            ? "bg-white text-[#B20000] shadow-sm"
+                            : "text-gray-600 hover:text-gray-800"
                         }`}
                         title="Table view"
                       >
@@ -2016,18 +1998,24 @@ export function LeagueTeamsPage() {
                       </button>
                     </div>
                     <div className="text-sm text-[#6F6F6F]">
-                      {searchTerm ? `${filteredActiveTeams.length} of ${activeTeams.length}` : `${activeTeams.length}`} Active {league?.team_registration === false ? 'Players' : 'Teams'}
+                      {searchTerm
+                        ? `${filteredActiveTeams.length} of ${activeTeams.length}`
+                        : `${activeTeams.length}`}{" "}
+                      Active {league?.team_registration === false ? "Players" : "Teams"}
                     </div>
                   </div>
                 </div>
 
-                {viewMode === 'card' ? (
+                {viewMode === "card" ? (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragEnd={handleActiveTeamDragEnd}
                   >
-                    <SortableContext items={filteredActiveTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext
+                      items={filteredActiveTeams.map((team) => team.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
                       <div className="space-y-4">
                         {filteredActiveTeams.map((team) => (
                           <SortableTeamCard key={team.id} team={team} isWaitlisted={false} />
@@ -2036,7 +2024,11 @@ export function LeagueTeamsPage() {
                     </SortableContext>
                   </DndContext>
                 ) : (
-                  <TeamTable teams={filteredActiveTeams} isWaitlisted={false} onDragEnd={handleActiveTeamDragEnd} />
+                  <TeamTable
+                    teams={filteredActiveTeams}
+                    isWaitlisted={false}
+                    onDragEnd={handleActiveTeamDragEnd}
+                  />
                 )}
               </div>
             )}
@@ -2050,22 +2042,22 @@ export function LeagueTeamsPage() {
                     {filteredActiveTeams.length === 0 && (
                       <div className="flex items-center bg-gray-100 rounded-lg p-1">
                         <button
-                          onClick={() => setViewMode('card')}
+                          onClick={() => setViewMode("card")}
                           className={`p-2 rounded-md transition-all ${
-                            viewMode === 'card' 
-                              ? 'bg-white text-[#B20000] shadow-sm' 
-                              : 'text-gray-600 hover:text-gray-800'
+                            viewMode === "card"
+                              ? "bg-white text-[#B20000] shadow-sm"
+                              : "text-gray-600 hover:text-gray-800"
                           }`}
                           title="Card view"
                         >
                           <Grid3X3 className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => setViewMode('table')}
+                          onClick={() => setViewMode("table")}
                           className={`p-2 rounded-md transition-all ${
-                            viewMode === 'table' 
-                              ? 'bg-white text-[#B20000] shadow-sm' 
-                              : 'text-gray-600 hover:text-gray-800'
+                            viewMode === "table"
+                              ? "bg-white text-[#B20000] shadow-sm"
+                              : "text-gray-600 hover:text-gray-800"
                           }`}
                           title="Table view"
                         >
@@ -2074,18 +2066,24 @@ export function LeagueTeamsPage() {
                       </div>
                     )}
                     <div className="text-sm text-gray-500">
-                      {searchTerm ? `${filteredWaitlistedTeams.length} of ${waitlistedTeams.length}` : `${waitlistedTeams.length}`} Waitlisted {league?.team_registration === false ? 'Players' : 'Teams'}
+                      {searchTerm
+                        ? `${filteredWaitlistedTeams.length} of ${waitlistedTeams.length}`
+                        : `${waitlistedTeams.length}`}{" "}
+                      Waitlisted {league?.team_registration === false ? "Players" : "Teams"}
                     </div>
                   </div>
                 </div>
 
-                {viewMode === 'card' ? (
+                {viewMode === "card" ? (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragEnd={handleWaitlistTeamDragEnd}
                   >
-                    <SortableContext items={filteredWaitlistedTeams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext
+                      items={filteredWaitlistedTeams.map((team) => team.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
                       <div className="space-y-4">
                         {filteredWaitlistedTeams.map((team) => (
                           <SortableTeamCard key={team.id} team={team} isWaitlisted={true} />
@@ -2094,61 +2092,80 @@ export function LeagueTeamsPage() {
                     </SortableContext>
                   </DndContext>
                 ) : (
-                  <TeamTable teams={filteredWaitlistedTeams} isWaitlisted={true} onDragEnd={handleWaitlistTeamDragEnd} />
+                  <TeamTable
+                    teams={filteredWaitlistedTeams}
+                    isWaitlisted={true}
+                    onDragEnd={handleWaitlistTeamDragEnd}
+                  />
                 )}
               </div>
             )}
 
             {/* Show total if both sections exist */}
-            {(filteredActiveTeams.length > 0 || filteredWaitlistedTeams.length > 0) && (activeTeams.length > 0 || waitlistedTeams.length > 0) && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="text-center text-sm text-[#6F6F6F]">
-                  {searchTerm ? (
-                    <>
-                      Showing: {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} teams 
-                      ({filteredActiveTeams.length} active, {filteredWaitlistedTeams.length} waitlisted)
-                    </>
-                  ) : (
-                    <>
-                      Total Teams: {activeTeams.length + waitlistedTeams.length} ({activeTeams.length} active, {waitlistedTeams.length} waitlisted)
-                    </>
-                  )}
+            {(filteredActiveTeams.length > 0 || filteredWaitlistedTeams.length > 0) &&
+              (activeTeams.length > 0 || waitlistedTeams.length > 0) && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="text-center text-sm text-[#6F6F6F]">
+                    {searchTerm ? (
+                      <>
+                        Showing: {filteredActiveTeams.length + filteredWaitlistedTeams.length} of{" "}
+                        {activeTeams.length + waitlistedTeams.length} teams (
+                        {filteredActiveTeams.length} active, {filteredWaitlistedTeams.length}{" "}
+                        waitlisted)
+                      </>
+                    ) : (
+                      <>
+                        Total Teams: {activeTeams.length + waitlistedTeams.length} (
+                        {activeTeams.length} active, {waitlistedTeams.length} waitlisted)
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         )}
       </div>
-      
+
       {/* Move Confirmation Modal */}
       <ConfirmationModal
         isOpen={moveConfirmation.isOpen}
-        onClose={() => setMoveConfirmation({ isOpen: false, teamId: null, teamName: '', currentlyActive: false, isIndividual: false })}
+        onClose={() =>
+          setMoveConfirmation({
+            isOpen: false,
+            teamId: null,
+            teamName: "",
+            currentlyActive: false,
+            isIndividual: false,
+          })
+        }
         onConfirm={confirmMoveTeam}
-        title={moveConfirmation.currentlyActive ? 'Move to Waitlist' : 'Activate from Waitlist'}
-        message={`Are you sure you want to ${moveConfirmation.currentlyActive ? 'move' : 'activate'} ${moveConfirmation.isIndividual ? 'the player' : 'the team'} "${moveConfirmation.teamName}" ${moveConfirmation.currentlyActive ? 'to the waitlist' : 'from the waitlist'}?`}
-        confirmText={moveConfirmation.currentlyActive ? 'Move to Waitlist' : 'Activate'}
+        title={moveConfirmation.currentlyActive ? "Move to Waitlist" : "Activate from Waitlist"}
+        message={`Are you sure you want to ${moveConfirmation.currentlyActive ? "move" : "activate"} ${moveConfirmation.isIndividual ? "the player" : "the team"} "${moveConfirmation.teamName}" ${moveConfirmation.currentlyActive ? "to the waitlist" : "from the waitlist"}?`}
+        confirmText={moveConfirmation.currentlyActive ? "Move to Waitlist" : "Activate"}
         cancelText="Cancel"
         variant="warning"
         isLoading={movingTeam === moveConfirmation.teamId}
       />
-      
+
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={deleteConfirmation.isOpen}
-        onClose={() => setDeleteConfirmation({ isOpen: false, teamId: null, teamName: '', isIndividual: false })}
-        onConfirm={confirmDeleteTeam}
-        title={deleteConfirmation.isIndividual ? 'Remove Player' : 'Delete Team'}
-        message={deleteConfirmation.isIndividual 
-          ? `Are you sure you want to remove "${deleteConfirmation.teamName}" from this league? This action cannot be undone.`
-          : `Are you sure you want to delete the team "${deleteConfirmation.teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`
+        onClose={() =>
+          setDeleteConfirmation({ isOpen: false, teamId: null, teamName: "", isIndividual: false })
         }
-        confirmText={deleteConfirmation.isIndividual ? 'Remove Player' : 'Delete Team'}
+        onConfirm={confirmDeleteTeam}
+        title={deleteConfirmation.isIndividual ? "Remove Player" : "Delete Team"}
+        message={
+          deleteConfirmation.isIndividual
+            ? `Are you sure you want to remove "${deleteConfirmation.teamName}" from this league? This action cannot be undone.`
+            : `Are you sure you want to delete the team "${deleteConfirmation.teamName}"? This action cannot be undone and will remove all team data including registrations and payment records.`
+        }
+        confirmText={deleteConfirmation.isIndividual ? "Remove Player" : "Delete Team"}
         cancelText="Cancel"
         variant="danger"
         isLoading={deleting === deleteConfirmation.teamId}
       />
-      
+
       {/* Schedule Generation Modal */}
       <Dialog open={showScheduleModal} onOpenChange={handleCloseScheduleModal}>
         <DialogContent className="max-w-md">
@@ -2162,21 +2179,19 @@ export function LeagueTeamsPage() {
                 <div>
                   <p className="font-medium text-blue-800 mb-1">Important: Team Order Matters</p>
                   <p className="text-blue-700">
-                    The schedule will be generated based on the current order of your registered teams. 
-                    Teams are ranked by their position in the list - you can reorder them by dragging 
-                    teams up or down before generating the schedule.
+                    The schedule will be generated based on the current order of your registered
+                    teams. Teams are ranked by their position in the list - you can reorder them by
+                    dragging teams up or down before generating the schedule.
                   </p>
                 </div>
               </div>
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             {/* Game Format Selection */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-[#6F6F6F]">
-                Select Game Format
-              </label>
+              <label className="text-sm font-medium text-[#6F6F6F]">Select Game Format</label>
               <select
                 value={selectedGameFormat}
                 onChange={(e) => setSelectedGameFormat(e.target.value)}
@@ -2193,7 +2208,7 @@ export function LeagueTeamsPage() {
               </select>
             </div>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
@@ -2214,7 +2229,7 @@ export function LeagueTeamsPage() {
                   Generating...
                 </>
               ) : (
-                'Generate'
+                "Generate"
               )}
             </Button>
           </div>
@@ -2227,20 +2242,31 @@ export function LeagueTeamsPage() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#6F6F6F] flex items-center gap-2">
               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-5 h-5 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               Schedule Generated Successfully!
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="text-sm text-[#6F6F6F]">
-              Your volleyball league schedule has been generated successfully using the <span className="font-medium">3 teams (6 sets)</span> format. 
-              The schedule is now available for viewing on the league details page.
+              Your volleyball league schedule has been generated successfully using the{" "}
+              <span className="font-medium">3 teams (6 sets)</span> format. The schedule is now
+              available for viewing on the league details page.
             </div>
-            
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="text-sm text-blue-800">
                 <div className="font-medium mb-1">What&apos;s next?</div>
@@ -2252,13 +2278,10 @@ export function LeagueTeamsPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex justify-between gap-3 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={handleCloseScheduleConfirmation}
-            >
+            <Button variant="outline" onClick={handleCloseScheduleConfirmation}>
               Close
             </Button>
             <Button
