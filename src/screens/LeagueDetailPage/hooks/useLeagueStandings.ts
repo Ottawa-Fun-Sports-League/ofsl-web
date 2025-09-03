@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../../../lib/supabase";
+import { useState, useEffect } from 'react';
+import { supabase } from '../../../lib/supabase';
+import { PostgrestError } from '@supabase/supabase-js';
 
 export interface StandingsTeam {
   id: number;
@@ -26,88 +27,25 @@ export function useLeagueStandings(leagueId: string | undefined) {
       setLoading(true);
       setError(null);
 
-      const { data: standingsData } = await supabase
-        .from("standings")
-        .select(
-          `
-          id,
-          team_id,
-          wins,
-          losses,
-          points,
-          point_differential,
-          manual_wins_adjustment,
-          manual_losses_adjustment,
-          manual_points_adjustment,
-          manual_differential_adjustment,
-          current_position,
-          teams!inner(
-            id,
-            name,
-            roster,
-            created_at,
-            active
-          )
-        `,
-        )
-        .eq("league_id", parseInt(leagueId))
-        .eq("teams.active", true) // Only show active teams
-        .order("current_position", { ascending: true, nullsFirst: false });
-
-      if (standingsData && standingsData.length > 0) {
-        // Get schedule data for rankings
-        const { data: scheduleData, error: scheduleError } = await supabase
-          .from("league_schedules")
-          .select("schedule_data")
-          .eq("league_id", parseInt(leagueId))
-          .maybeSingle();
-
-        if (scheduleError && scheduleError.code !== "PGRST116") {
-          console.warn("Error loading schedule data:", scheduleError);
-        }
-
-        const teamRankings = new Map<string, number>();
-        const scheduleExists = !!scheduleData?.schedule_data?.tiers;
-        setHasSchedule(scheduleExists);
-
-        if (scheduleExists) {
-          scheduleData.schedule_data.tiers.forEach(
-            (tier: { teams?: Record<string, { name: string; ranking: number } | null> }) => {
-              if (tier.teams) {
-                Object.values(tier.teams).forEach(
-                  (team: { name: string; ranking: number } | null) => {
-                    if (team && team.name && team.ranking) {
-                      teamRankings.set(team.name, team.ranking);
-                    }
-                  },
-                );
-              }
-            },
-          );
-        }
-
-        const formattedStandings: StandingsTeam[] = standingsData.map((standing: any) => ({
-          id: standing.teams.id,
-          name: standing.teams.name,
-          roster_size: standing.teams.roster?.length || 0,
-          wins: (standing.wins || 0) + (standing.manual_wins_adjustment || 0),
-          losses: (standing.losses || 0) + (standing.manual_losses_adjustment || 0),
-          points: (standing.points || 0) + (standing.manual_points_adjustment || 0),
-          differential:
-            (standing.point_differential || 0) + (standing.manual_differential_adjustment || 0),
-          created_at: standing.teams.created_at,
-          schedule_ranking: teamRankings.get(standing.teams.name),
-        }));
-
-        setTeams(formattedStandings);
-        return;
-      }
-
+      // First, get teams data
       const { data: teamsData, error: teamsError } = await supabase
-        .from("teams")
-        .select("id, name, roster, created_at")
-        .eq("league_id", parseInt(leagueId))
-        .eq("active", true);
+        .from('teams')
+        .select(`
+          id,
+          name,
+          roster,
+          created_at
+        `)
+        .eq('league_id', parseInt(leagueId))
+        .eq('active', true) as {
+          data: Array<{
+            id: number;
+            name: string;
+            roster: string[] | null;
+            created_at: string;
+          }> | null;
+          error: PostgrestError | null;
+        };
 
       if (teamsError) throw teamsError;
 
@@ -141,7 +79,8 @@ export function useLeagueStandings(leagueId: string | undefined) {
         );
       }
 
-      const fallbackStandings: StandingsTeam[] = (teamsData || []).map((team) => ({
+      // Transform the data into standings format
+      const standingsData: StandingsTeam[] = (teamsData || []).map(team => ({
         id: team.id,
         name: team.name,
         roster_size: team.roster?.length || 0,
