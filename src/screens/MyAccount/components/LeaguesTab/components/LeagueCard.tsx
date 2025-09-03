@@ -202,8 +202,8 @@ export function LeagueCard({ league, onDelete, onCopy, onManageSchedule }: Leagu
               </Button>
             )}
 
-            {/* Standings Management Button (Volleyball only) */}
-            {league.has_standings && league.sport_name === 'Volleyball' && (
+            {/* Standings Management Button (Volleyball only - only show if schedule exists) */}
+            {league.has_standings && league.has_schedule && league.sport_name === 'Volleyball' && (
               <Link to={`/leagues/${league.id}/standings`}>
                 <Button
                   variant="ghost"
