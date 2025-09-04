@@ -621,6 +621,18 @@ export function LeagueTeamsPage() {
       .delete()
       .eq('league_id', parseInt(leagueId!));
 
+    // Reset playoff_weeks to 0 when generating a new schedule
+    // This ensures UI doesn't show extra playoff weeks that don't exist
+    const { error: updateError } = await supabase
+      .from('leagues')
+      .update({ playoff_weeks: 0 })
+      .eq('id', parseInt(leagueId!));
+
+    if (updateError) {
+      console.error('Failed to reset playoff weeks:', updateError);
+      // Continue with schedule generation even if this fails
+    }
+
     // Calculate weeks based ONLY on league start and end dates (no playoff weeks)
     // All schedules are generated with 0 playoff weeks by default - admins add playoff weeks manually later
     // NOTE: Intentionally ignoring league?.playoff_weeks value from database during generation
@@ -806,6 +818,11 @@ export function LeagueTeamsPage() {
         }
       }
 
+      // Update local league state to reflect playoff_weeks reset
+      if (league) {
+        setLeague({ ...league, playoff_weeks: 0 });
+      }
+      
       setHasSchedule(true);
       setShowScheduleModal(false);
       setShowScheduleConfirmation(true);
