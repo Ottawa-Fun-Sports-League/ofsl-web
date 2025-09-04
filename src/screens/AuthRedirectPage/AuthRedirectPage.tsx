@@ -24,10 +24,10 @@ export function AuthRedirectPage() {
         const queryParams = new URLSearchParams(location.search);
 
         const page = queryParams.get('page');
-        const code = queryParams.get('code');
-        const errorDescription = queryParams.get('error_description');
-        const tokenHash = queryParams.get('token_hash');
-        const email = queryParams.get('email') || '';
+        const code = queryParams.get('code') || hashParams['code'];
+        const errorDescription = queryParams.get('error_description') || hashParams['error_description'];
+        const tokenHash = queryParams.get('token_hash') || hashParams['token_hash'];
+        const email = queryParams.get('email') || hashParams['email'] || '';
 
         console.info('🔍 Auth redirect params:', {
           targetPage: page,
@@ -45,8 +45,8 @@ export function AuthRedirectPage() {
         }
 
         // 1b) Magic link token_hash flow (verifyOtp)
-        if (tokenHash && email) {
-          const { error } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash: tokenHash, email });
+        if (tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash: tokenHash });
           if (error) throw error;
           navigate(page === 'admin-masquerade' ? '/my-account/teams' : '/', { replace: true });
           return;
