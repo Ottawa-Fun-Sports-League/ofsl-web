@@ -1,0 +1,2 @@
+export { AuthRedirectPage } from './AuthRedirectPage';
+

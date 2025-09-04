@@ -46,6 +46,7 @@ import { ConditionalRoute } from "./components/ConditionalRoute";
 import { ComingSoonPage } from "./screens/ComingSoonPage";
 import { useGoogleAnalytics } from "./hooks/useGoogleAnalytics";
 import { AuthErrorHandler } from "./components/AuthErrorHandler";
+import { AuthRedirectPage } from "./screens/AuthRedirectPage";
 
 // Create a catch-all route component to handle direct URL access
 // const CatchAllRoute = () => {
@@ -96,6 +97,7 @@ export function App() {
             />
             <Route path="/success" element={<ConditionalRoute><SuccessPage /></ConditionalRoute>} />
             <Route path="/cancel" element={<ConditionalRoute><CancelPage /></ConditionalRoute>} />
+            <Route path="/auth-redirect" element={<AuthRedirectPage />} />
 
             {/* My Account routes with proper routing */}
             <Route

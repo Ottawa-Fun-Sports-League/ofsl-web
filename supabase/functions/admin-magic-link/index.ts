@@ -108,13 +108,13 @@ serve(async (req) => {
 
     console.log('User found in both database and auth:', { email, auth_id: targetUserData.auth_id });
 
-    // Generate a recovery link for existing user password reset
+    // Generate a magic login link to directly sign in as the user (no password reset)
     const siteUrl = Deno.env.get('SITE_URL') || 'https://ofsl.ca';
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
+      type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${siteUrl}/auth-redirect?page=reset-password`,
+        redirectTo: `${siteUrl}/auth-redirect?page=admin-masquerade`,
       }
     });
 
@@ -138,9 +138,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          type: 'recovery', 
+          type: 'magiclink', 
           link: recoveryLink,
-          message: 'Recovery link generated successfully (requires password reset)' 
+          message: 'Magic login link generated successfully' 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -164,15 +164,15 @@ serve(async (req) => {
       body: JSON.stringify({
         from: 'OFSL <noreply@ofsl.ca>',
         to: [email],
-        subject: 'Your OFSL Password Reset Link',
+        subject: 'Your OFSL Magic Login Link',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #B20000;">Your OFSL Password Reset Link</h2>
-            <p>Click the link below to reset your password and sign in to your OFSL account:</p>
+            <h2 style="color: #B20000;">Your OFSL Magic Login Link</h2>
+            <p>Click the link below to sign in to your OFSL account:</p>
             <p style="margin: 20px 0;">
               <a href="${linkData.properties.action_link}" 
                  style="background-color: #B20000; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                Reset Password & Sign In
+                Sign In
               </a>
             </p>
             <p style="color: #666; font-size: 14px;">
@@ -193,7 +193,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, type: 'recovery', message: 'Password reset link sent successfully' }),
+      JSON.stringify({ success: true, type: 'magiclink', message: 'Magic login link sent successfully' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
