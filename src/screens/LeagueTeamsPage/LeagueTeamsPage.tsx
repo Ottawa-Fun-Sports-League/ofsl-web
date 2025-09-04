@@ -664,6 +664,18 @@ export function LeagueTeamsPage() {
     // Clear any existing schedule for this league
     await supabase.from("weekly_schedules").delete().eq("league_id", parseInt(leagueId!));
 
+    // Reset playoff_weeks to 0 when generating a new schedule
+    // This ensures UI doesn't show extra playoff weeks that don't exist
+    const { error: updateError } = await supabase
+      .from('leagues')
+      .update({ playoff_weeks: 0 })
+      .eq('id', parseInt(leagueId!));
+
+    if (updateError) {
+      console.error('Failed to reset playoff weeks:', updateError);
+      // Continue with schedule generation even if this fails
+    }
+
     // Calculate weeks based ONLY on league start and end dates (no playoff weeks)
     // All schedules are generated with 0 playoff weeks by default - admins add playoff weeks manually later
     // NOTE: Intentionally ignoring league?.playoff_weeks value from database during generation
@@ -831,7 +843,34 @@ export function LeagueTeamsPage() {
         throw new Error(`Failed to save schedule: ${scheduleError.message}`);
       }
 
-      // Update schedule status and show confirmation modal
+      
+      for (let i = 0; i < activeTeams.length; i++) {
+        const team = activeTeams[i];
+        const { error: standingsError } = await supabase
+          .from('standings')
+          .upsert({
+            league_id: parseInt(leagueId!),
+            team_id: team.id,
+            wins: 0,
+            losses: 0,
+            points: 0,
+            point_differential: 0,
+            manual_wins_adjustment: 0,
+            manual_losses_adjustment: 0,
+            manual_points_adjustment: 0,
+            manual_differential_adjustment: 0,
+            current_position: i + 1
+          }, {
+            onConflict: 'league_id,team_id',
+            ignoreDuplicates: false
+          });
+
+        if (standingsError) {
+          console.error('Error creating standings for team:', team.name, standingsError);
+          showToast(`Warning: Could not create standings record for ${team.name}. You may need to create it manually.`, 'warning');
+        }
+      }
+
       setHasSchedule(true);
       setShowScheduleModal(false);
       setShowScheduleConfirmation(true);
