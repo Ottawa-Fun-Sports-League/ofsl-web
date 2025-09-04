@@ -126,20 +126,20 @@ serve(async (req) => {
       );
     }
 
-    // If sendEmail is false, just return the link
+    // Build client-handled link carrying token_hash + email for verifyOtp
+    const hashedToken = (linkData.properties as any).hashed_token || (linkData.properties as any).token_hash || '';
+    const clientHandledLink = `${siteUrl}/auth-redirect?page=admin-masquerade&type=magiclink&token_hash=${encodeURIComponent(hashedToken)}&email=${encodeURIComponent(email)}`;
+
+    // If sendEmail is false, just return links
     if (!sendEmail) {
-      // The action_link is the full authentication URL that will log the user in
-      // It's in the format: https://api.ofsl.ca/auth/v1/verify?token=...&type=recovery&redirect_to=...
-      // This link can be opened directly in a browser to authenticate the user
-      const recoveryLink = linkData.properties.action_link;
-      
-      console.log('Generated recovery link for', email, ':', recoveryLink);
-      
+      const actionLink = linkData.properties.action_link;
+      console.log('Generated magic login links for', email, { actionLink, clientHandledLink });
       return new Response(
         JSON.stringify({ 
           success: true, 
           type: 'magiclink', 
-          link: recoveryLink,
+          link: clientHandledLink,
+          action_link: actionLink,
           message: 'Magic login link generated successfully' 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -170,7 +170,7 @@ serve(async (req) => {
             <h2 style="color: #B20000;">Your OFSL Magic Login Link</h2>
             <p>Click the link below to sign in to your OFSL account:</p>
             <p style="margin: 20px 0;">
-              <a href="${linkData.properties.action_link}" 
+              <a href="${clientHandledLink}" 
                  style="background-color: #B20000; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
                 Sign In
               </a>

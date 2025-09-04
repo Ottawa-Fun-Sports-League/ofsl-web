@@ -16,6 +16,7 @@ export function AuthRedirectPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.info('🔀 Auth redirect handler loaded');
     const run = async () => {
       try {
         // Try to parse tokens from hash or query
@@ -25,10 +26,27 @@ export function AuthRedirectPage() {
         const page = queryParams.get('page');
         const code = queryParams.get('code');
         const errorDescription = queryParams.get('error_description');
+        const tokenHash = queryParams.get('token_hash');
+        const email = queryParams.get('email') || '';
+
+        console.info('🔍 Auth redirect params:', {
+          targetPage: page,
+          hasAccessToken: Boolean(hashParams['access_token'] || queryParams.get('access_token')),
+          type: queryParams.get('type') || hashParams['type'] || null,
+          currentUrl: window.location.href,
+        });
 
         // 1) Newer flow: code param → exchange for session
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession({ code });
+          if (error) throw error;
+          navigate(page === 'admin-masquerade' ? '/my-account/teams' : '/', { replace: true });
+          return;
+        }
+
+        // 1b) Magic link token_hash flow (verifyOtp)
+        if (tokenHash && email) {
+          const { error } = await supabase.auth.verifyOtp({ type: 'magiclink', token_hash: tokenHash, email });
           if (error) throw error;
           navigate(page === 'admin-masquerade' ? '/my-account/teams' : '/', { replace: true });
           return;
@@ -51,6 +69,7 @@ export function AuthRedirectPage() {
         }
 
         // No tokens present; show guidance
+        console.warn('⚠️  No access token found, redirecting without tokens');
         setError('No session tokens found in redirect. Please ensure you used the latest magic login link.');
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Unexpected error during auth redirect';
