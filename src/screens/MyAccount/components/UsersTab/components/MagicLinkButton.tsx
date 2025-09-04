@@ -36,7 +36,7 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
       }
       
 
-      // Call our admin Edge Function to generate magic link (without sending email)
+      // Call our admin Edge Function to generate a magic login link (without sending email)
       // Using fetch directly instead of supabase.functions.invoke to ensure headers work properly
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -117,14 +117,14 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
               if (event.metaKey || event.ctrlKey) {
                 window.open(data.link, '_blank');
                 showToast(
-                  `Opening password reset link for ${displayName} in new tab. User will need to set a new password.`,
+                  `Opening magic login link for ${displayName} in a new tab. Use a private window to avoid overwriting your session.`,
                   'success'
                 );
               } else {
                 await navigator.clipboard.writeText(data.link);
                 setCopied(true);
                 showToast(
-                  `Password reset link copied! Open in new browser/incognito. User will need to set a new password to login as ${displayName}.`,
+                  `Magic login link copied! Open in a private window to masquerade as ${displayName}.`,
                   'success'
                 );
               }
@@ -155,7 +155,7 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
         if (event.metaKey || event.ctrlKey) {
           window.open(data.link, '_blank');
           showToast(
-            `Opening password reset link for ${displayName} in new tab. User will need to set a new password.`,
+            `Opening magic login link for ${displayName} in a new tab. Use a private window to avoid overwriting your session.`,
             'success'
           );
         } else {
@@ -163,7 +163,7 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
           await navigator.clipboard.writeText(data.link);
           setCopied(true);
           showToast(
-            `Password reset link copied! Open in new browser/incognito. User will need to set a new password to login as ${displayName}.`,
+            `Magic login link copied! Open in a private window to masquerade as ${displayName}.`,
             'success'
           );
         }
@@ -188,7 +188,7 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
       size="sm"
       variant={copied ? "secondary" : "outline"}
       className="h-8 w-8 p-0"
-      title={copied ? "Password reset link copied to clipboard!" : "Generate password reset link (Cmd/Ctrl+Click to open)"}
+      title={copied ? "Magic login link copied!" : "Generate magic login link (Cmd/Ctrl+Click to open)"}
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
