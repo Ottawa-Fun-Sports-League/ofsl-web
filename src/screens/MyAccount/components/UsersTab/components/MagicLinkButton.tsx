@@ -12,8 +12,6 @@ interface MagicLinkButtonProps {
 export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showActions, setShowActions] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const generateMagicLink = async (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -151,10 +149,16 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
 
       // Handle the magic link
       if (data.link) {
-        // Store link and show helper hint instead of immediately acting
-        setGeneratedLink(data.link);
-        setShowActions(true);
-        showToast('Use a private/incognito window to avoid overwriting your admin session.', 'success');
+        const displayName = userName || userEmail;
+        if (event.metaKey || event.ctrlKey) {
+          window.open(data.link, '_blank');
+          showToast(`Opened magic login link. Use a private window to masquerade as ${displayName}.`, 'success');
+        } else {
+          await navigator.clipboard.writeText(data.link);
+          setCopied(true);
+          showToast(`Magic login link copied! Open in a private/incognito window to masquerade as ${displayName}.`, 'success');
+          setTimeout(() => setCopied(false), 3000);
+        }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate magic link';
@@ -165,56 +169,21 @@ export function MagicLinkButton({ userEmail, userName }: MagicLinkButtonProps) {
   };
 
   return (
-    <div className="relative inline-block">
-      <Button
-        onClick={generateMagicLink}
-        disabled={loading}
-        size="sm"
-        variant={copied ? "secondary" : "outline"}
-        className="h-8 w-8 p-0"
-        title={copied ? "Magic login link copied!" : "Generate magic login link"}
-      >
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : copied ? (
-          <Check className="h-4 w-4 text-green-600" />
-        ) : (
-          <Link2 className="h-4 w-4" />
-        )}
-      </Button>
-
-      {showActions && generatedLink && (
-        <div className="absolute z-10 mt-2 right-0 w-72 bg-white border border-gray-200 rounded-md shadow-lg p-3">
-          <p className="text-sm text-gray-700 mb-2">
-            Use a private/incognito window to avoid overwriting your admin session.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="bg-[#B20000] hover:bg-[#8A0000] text-white"
-              onClick={() => {
-                window.open(generatedLink, '_blank');
-                setShowActions(false);
-              }}
-            >
-              Open in new tab
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                await navigator.clipboard.writeText(generatedLink);
-                setCopied(true);
-                setShowActions(false);
-                setTimeout(() => setCopied(false), 3000);
-                showToast('Magic login link copied!', 'success');
-              }}
-            >
-              Copy link
-            </Button>
-          </div>
-        </div>
+    <Button
+      onClick={generateMagicLink}
+      disabled={loading}
+      size="sm"
+      variant={copied ? "secondary" : "outline"}
+      className="h-8 w-8 p-0"
+      title={copied ? "Magic login link copied!" : "Generate magic login link (Cmd/Ctrl+Click to open)"}
+    >
+      {loading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : copied ? (
+        <Check className="h-4 w-4 text-green-600" />
+      ) : (
+        <Link2 className="h-4 w-4" />
       )}
-    </div>
+    </Button>
   );
 }
