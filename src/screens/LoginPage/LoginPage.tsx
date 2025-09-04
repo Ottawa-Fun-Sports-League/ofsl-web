@@ -74,9 +74,7 @@ export function LoginPage() {
     setLoading(true);
     
     try {
-      // Only pass captcha token if Turnstile is configured
-      const captchaToken = turnstileConfigured ? turnstileToken : undefined;
-      const { error } = await signIn(email.trim(), password, captchaToken);
+      const { error } = await signIn(email.trim(), password, turnstileToken || undefined);
       
       if (error) {
         logger.error('Sign in error', error);
