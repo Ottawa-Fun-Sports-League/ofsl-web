@@ -22,24 +22,36 @@ export function AuthRedirectPage() {
         const hashParams = parseHashParams(location.hash || '');
         const queryParams = new URLSearchParams(location.search);
 
+        const page = queryParams.get('page');
+        const code = queryParams.get('code');
+        const errorDescription = queryParams.get('error_description');
+
+        // 1) Newer flow: code param → exchange for session
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession({ code });
+          if (error) throw error;
+          navigate(page === 'admin-masquerade' ? '/my-account/teams' : '/', { replace: true });
+          return;
+        }
+
+        // 2) Legacy flow: access_token + refresh_token in fragment/query
         const access_token = hashParams['access_token'] || queryParams.get('access_token') || '';
         const refresh_token = hashParams['refresh_token'] || queryParams.get('refresh_token') || '';
-
         if (access_token && refresh_token) {
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
           if (error) throw error;
-          // Decide where to go next
-          const page = queryParams.get('page');
-          if (page === 'admin-masquerade') {
-            navigate('/my-account/teams', { replace: true });
-          } else {
-            navigate('/', { replace: true });
-          }
+          navigate(page === 'admin-masquerade' ? '/my-account/teams' : '/', { replace: true });
+          return;
+        }
+
+        // 3) Error path sent from GoTrue
+        if (errorDescription) {
+          setError(decodeURIComponent(errorDescription));
           return;
         }
 
         // No tokens present; show guidance
-        setError('No session tokens found in redirect. Please ensure you used the magic login link.');
+        setError('No session tokens found in redirect. Please ensure you used the latest magic login link.');
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Unexpected error during auth redirect';
         setError(msg);
@@ -67,4 +79,3 @@ export function AuthRedirectPage() {
     </div>
   );
 }
-
