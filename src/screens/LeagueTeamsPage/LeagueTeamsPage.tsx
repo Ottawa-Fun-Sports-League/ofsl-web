@@ -645,7 +645,9 @@ export function LeagueTeamsPage() {
     // Clear any existing schedule for this league
     await supabase.from("weekly_schedules").delete().eq("league_id", parseInt(leagueId!));
 
-    // Calculate total weeks based on league start and end dates, including playoff weeks
+    // Calculate weeks based ONLY on league start and end dates (no playoff weeks)
+    // All schedules are generated with 0 playoff weeks by default - admins add playoff weeks manually later
+    // NOTE: Intentionally ignoring league?.playoff_weeks value from database during generation
     const regularSeasonWeeks = calculateRegularSeasonWeeks(league?.start_date, league?.end_date);
 
     // Generating schedule for regular season weeks
