@@ -45,14 +45,19 @@ export function ImpersonateButton({ userEmail, userName }: ImpersonateButtonProp
       }
 
       const data = await response.json();
-      if (!data.success || !data.link) throw new Error(data.error || 'Failed to generate impersonation link');
+      if (!data.success || (!data.link && !data.action_link)) throw new Error(data.error || 'Failed to generate impersonation link');
+
+      // Prefer client-handled link; normalize for HashRouter in case backend isn't redeployed yet
+      const raw = (data.link || data.action_link) as string;
+      const needsHash = raw.includes('/auth-redirect') && !raw.includes('/#/auth-redirect');
+      const normalizedLink = needsHash ? raw.replace('/auth-redirect', '/#/auth-redirect') : raw;
 
       const displayName = userName || userEmail;
       if (event.metaKey || event.ctrlKey) {
-        window.open(data.link, '_blank');
+        window.open(normalizedLink, '_blank');
         showToast(`Opened admin masquerade link. Use a private/incognito window to sign in as ${displayName}.`, 'success');
       } else {
-        await navigator.clipboard.writeText(data.link);
+        await navigator.clipboard.writeText(normalizedLink);
         setCopied(true);
         showToast(`Masquerade link copied! Open in private/incognito to sign in as ${displayName}.`, 'success');
         setTimeout(() => setCopied(false), 3000);
@@ -84,4 +89,3 @@ export function ImpersonateButton({ userEmail, userName }: ImpersonateButtonProp
     </Button>
   );
 }
-

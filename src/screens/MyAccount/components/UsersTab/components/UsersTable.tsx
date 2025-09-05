@@ -23,6 +23,7 @@ interface UsersTableProps {
   onPageSizeChange: (pageSize: number) => void;
   loading?: boolean;
   registrationCounts?: Record<string, number>;
+  registrationLoadingIds?: Record<string, boolean>;
 }
 
 export function UsersTable({
@@ -38,7 +39,8 @@ export function UsersTable({
   onPageChange,
   onPageSizeChange,
   loading = false,
-  registrationCounts
+  registrationCounts,
+  registrationLoadingIds
 }: UsersTableProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string | null; email: string } | null>(null);
@@ -111,10 +113,10 @@ export function UsersTable({
                   </div>
                 </th>
                 <th 
-                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[110px]"
+                  className="px-3 xl:px-4 py-3 text-center text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[110px]"
                   onClick={() => onSort('team_count')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-center gap-1">
                     Registrations
                     {getSortIcon('team_count')}
                   </div>
@@ -206,25 +208,63 @@ export function UsersTable({
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap">
                     <UserStatusBadge status={user.status} confirmedAt={user.confirmed_at} />
                   </td>
-                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
+                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm text-[#6F6F6F] text-center">
                     {(() => {
                       // Prefer counts fetched from admin-user-registrations, fallback to RPC field
                       const totalRegistrations =
                         (registrationCounts && registrationCounts[user.id] !== undefined)
                           ? registrationCounts[user.id]
                           : (user.current_registrations?.length || 0);
-                      
-                      if (totalRegistrations === 0) {
-                        return <span>0</span>;
-                      }
-                      
+                       
+                      const label = `View ${totalRegistrations} registration${totalRegistrations === 1 ? '' : 's'}`;
+                      const isLoadingCount = registrationLoadingIds && registrationLoadingIds[user.id];
+
+                      const icon = (
+                        <div className="relative inline-flex items-center">
+                          <Users
+                            className={
+                              totalRegistrations > 0
+                                ? 'h-5 w-5 text-blue-600 group-hover:text-blue-800 transition-colors'
+                                : 'h-5 w-5 text-gray-300'
+                            }
+                            aria-hidden="true"
+                          />
+                          <span
+                            className={
+                              `absolute -top-2 -right-2 rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold min-w-[18px] text-center ` +
+                              (totalRegistrations > 0
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-200 text-gray-500')
+                            }
+                          >
+                            {isLoadingCount ? (
+                              <span className="inline-block align-middle">
+                                <span className="inline-block h-3 w-3 border-2 border-white/40 border-t-white rounded-full animate-spin" aria-label="Loading registrations" />
+                              </span>
+                            ) : (
+                              totalRegistrations
+                            )}
+                          </span>
+                        </div>
+                      );
+
                       return (
-                        <Link
-                          to={`/my-account/users/${user.id}/registrations`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {totalRegistrations}
-                        </Link>
+                        <div className="flex justify-center">
+                          {totalRegistrations > 0 && !isLoadingCount ? (
+                            <Link
+                              to={`/my-account/users/${user.id}/registrations`}
+                              className="inline-flex items-center group"
+                              title={label}
+                              aria-label={label}
+                            >
+                              {icon}
+                            </Link>
+                          ) : (
+                            <div className="inline-flex items-center" title="No registrations" aria-label="No registrations">
+                              {icon}
+                            </div>
+                          )}
+                        </div>
                       );
                     })()}
                   </td>

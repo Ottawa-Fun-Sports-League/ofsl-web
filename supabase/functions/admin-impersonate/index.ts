@@ -98,7 +98,8 @@ serve(async (req) => {
       type: 'magiclink',
       email,
       options: {
-        redirectTo: `${siteUrl}/auth-redirect?page=admin-masquerade`,
+        // Use hash-based route to match SPA's HashRouter
+        redirectTo: `${siteUrl}/#/auth-redirect?page=admin-masquerade`,
       },
     });
 
@@ -113,7 +114,8 @@ serve(async (req) => {
     // Build token-hash based link that our SPA can handle with verifyOtp
     const props = (linkData.properties as Record<string, unknown>) || {};
     const hashedToken = (props['hashed_token'] as string) || (props['token_hash'] as string) || '';
-    const clientHandledLink = `${siteUrl}/auth-redirect?page=admin-masquerade&type=magiclink&token_hash=${encodeURIComponent(hashedToken)}&email=${encodeURIComponent(email)}`;
+    // Build SPA-friendly link using hash router so the app handles tokens within the hash fragment
+    const clientHandledLink = `${siteUrl}/#/auth-redirect?page=admin-masquerade&type=magiclink&token_hash=${encodeURIComponent(hashedToken)}&email=${encodeURIComponent(email)}`;
 
     const actionLink = (props['action_link'] as string) || '';
 

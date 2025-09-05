@@ -1,6 +1,4 @@
--- Update get_users_paginated_admin to compute current_registrations
--- including team memberships (captain, co-captain, roster) and
--- individual registrations, limited to active/ongoing leagues.
+-- Add server-side sorting by registration count (team + individual)
 
 DROP FUNCTION IF EXISTS get_users_paginated_admin(
     INTEGER, INTEGER, TEXT, TEXT, TEXT, 
@@ -71,7 +69,7 @@ BEGIN
     IF p_pending_users THEN v_where_conditions := array_append(v_where_conditions, 'cd.status IN (''unconfirmed'', ''confirmed_no_profile'', ''profile_incomplete'')'); END IF;
     IF p_active_player THEN v_where_conditions := array_append(v_where_conditions, 'cd.status = ''active'''); END IF;
 
-    -- Sport-specific filters based on individual league_payments
+    -- Sport filters
     IF p_volleyball_players_in_league THEN
         v_where_conditions := array_append(v_where_conditions, 
             'EXISTS (SELECT 1 FROM league_payments lp JOIN leagues l ON lp.league_id = l.id JOIN sports s ON l.sport_id = s.id WHERE lp.user_id = cd.profile_id AND s.name = ''Volleyball'' AND lp.is_waitlisted = false)');
@@ -90,13 +88,16 @@ BEGIN
         v_where_conditions := array_append(v_where_conditions, 'NOT EXISTS (SELECT 1 FROM league_payments lp WHERE lp.user_id = cd.profile_id AND lp.is_waitlisted = false)');
     END IF;
 
-    -- Sort clause
+    -- Sort clause (supports team_count via reg_count)
     CASE p_sort_field
         WHEN 'name' THEN v_sort_sql := 'name';
         WHEN 'email' THEN v_sort_sql := 'email';
         WHEN 'date_created' THEN v_sort_sql := 'date_created';
         WHEN 'last_sign_in_at' THEN v_sort_sql := 'last_sign_in_at';
         WHEN 'status' THEN v_sort_sql := 'status';
+        WHEN 'total_owed' THEN v_sort_sql := 'total_owed';
+        WHEN 'total_paid' THEN v_sort_sql := 'total_paid';
+        WHEN 'team_count' THEN v_sort_sql := 'reg_count';
         ELSE v_sort_sql := 'date_created';
     END CASE;
     IF UPPER(p_sort_direction) = 'ASC' THEN
@@ -105,7 +106,7 @@ BEGIN
         v_sort_sql := v_sort_sql || ' DESC NULLS LAST';
     END IF;
 
-    -- Final query with CTEs
+    -- Build query with registrations
     v_final_query := '
     WITH auth_users AS (
         SELECT au.id AS auth_user_id, au.email AS auth_email, au.email_confirmed_at, au.created_at AS auth_created_at, au.last_sign_in_at
@@ -149,7 +150,6 @@ BEGIN
         FROM league_payments lp
         GROUP BY lp.user_id
     ),
-    -- Team memberships across active/ongoing leagues
     team_memberships AS (
         SELECT t.captain_id AS user_id, t.id AS team_id, l.id AS league_id, l.name AS league_name, ''captain''::text AS role
         FROM teams t
@@ -168,7 +168,6 @@ BEGIN
         CROSS JOIN LATERAL UNNEST(COALESCE(t.roster, ARRAY[]::text[])) AS roster_user
         WHERE t.active = true AND (l.active = true OR l.end_date IS NULL OR l.end_date >= CURRENT_DATE)
     ),
-    -- Individual active registrations (non-waitlist)
     individual_regs AS (
         SELECT lp.user_id, NULL::bigint AS team_id, l.id AS league_id, l.name AS league_name, ''individual''::text AS role
         FROM league_payments lp
@@ -188,7 +187,8 @@ BEGIN
                    ''registration_type'', CASE WHEN role = ''individual'' THEN ''individual'' ELSE ''team'' END
                  )
                  ORDER BY league_name
-               ) AS current_registrations
+               ) AS current_registrations,
+               COUNT(*) AS reg_count
         FROM (
           SELECT * FROM team_memberships
           UNION ALL
@@ -216,6 +216,7 @@ BEGIN
                COALESCE(pt.total_owed, 0) AS total_owed,
                COALESCE(pt.total_paid, 0) AS total_paid,
                COALESCE(cr.current_registrations, ''[]''::jsonb) AS current_registrations,
+               COALESCE(cr.reg_count, 0) AS reg_count,
                COUNT(*) OVER() AS total_count
         FROM combined_data cd
         LEFT JOIN payment_totals pt ON cd.profile_id = pt.user_id
@@ -242,4 +243,4 @@ GRANT EXECUTE ON FUNCTION get_users_paginated_admin(
     BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN
 ) TO authenticated;
 
-COMMENT ON FUNCTION get_users_paginated_admin IS 'Admin function to retrieve paginated users with current_registrations including team memberships and individual registrations.';
+COMMENT ON FUNCTION get_users_paginated_admin IS 'Admin function to retrieve paginated users with sortable registration counts.';

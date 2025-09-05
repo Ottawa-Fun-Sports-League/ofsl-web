@@ -62,7 +62,7 @@ export function UsersTab() {
       // For now, export current page data
       // TODO: Implement server-side export for all filtered data
       const filename = generateExportFilename();
-      exportUsersToCSV(filteredUsers, selectedColumns, filename);
+      exportUsersToCSV(filteredUsers, selectedColumns, filename, { registrationCounts: regCounts });
       showToast(`Exported ${filteredUsers.length} users from current page to ${filename}`, 'success');
     } catch (error) {
       showToast('Failed to export CSV. Please try again.', 'error');
@@ -72,6 +72,7 @@ export function UsersTab() {
   // Registration counts loaded via Edge Function for accuracy
   const [regCounts, setRegCounts] = useState<Record<string, number>>({});
   const [loadingCounts, setLoadingCounts] = useState(false);
+  const [registrationLoadingIds, setRegistrationLoadingIds] = useState<Record<string, boolean>>({});
 
   const visibleUserIds = useMemo(
     () => filteredUsers.map((u) => u.id).filter(Boolean),
@@ -94,6 +95,11 @@ export function UsersTab() {
 
         const entries: Array<[string, number]> = [];
         const batchSize = 10;
+        // Mark these IDs as loading
+        setRegistrationLoadingIds((prev) => ({
+          ...prev,
+          ...Object.fromEntries(missing.map((id) => [id, true]))
+        }));
         for (let i = 0; i < missing.length; i += batchSize) {
           const batch = missing.slice(i, i + batchSize);
           const results = await Promise.allSettled(
@@ -120,6 +126,12 @@ export function UsersTab() {
         }
         if (!cancelled && entries.length) {
           setRegCounts((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+          // Clear loading flags for completed IDs
+          setRegistrationLoadingIds((prev) => {
+            const updated = { ...prev };
+            for (const [id] of entries) updated[id] = false;
+            return updated;
+          });
         }
       } catch {
         // ignore errors per user; counts will stay 0/fallback
@@ -200,6 +212,7 @@ export function UsersTab() {
             onPageSizeChange={handlePageSizeChange}
             loading={loading}
             registrationCounts={regCounts}
+            registrationLoadingIds={registrationLoadingIds}
           />
         </div>
 

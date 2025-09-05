@@ -86,7 +86,8 @@ const COLUMN_CONFIGS: ColumnConfig[] = [
 export function exportUsersToCSV(
   users: User[], 
   selectedColumns: string[], 
-  filename: string = 'users_export.csv'
+  filename: string = 'users_export.csv',
+  options?: { registrationCounts?: Record<string, number> }
 ) {
   // Filter columns based on selection
   const columnsToExport = COLUMN_CONFIGS.filter(col => selectedColumns.includes(col.key));
@@ -96,7 +97,13 @@ export function exportUsersToCSV(
 
   // Convert users data to CSV rows with only selected columns
   const rows = users.map(user => {
-    return columnsToExport.map(col => col.getValue(user));
+    return columnsToExport.map(col => {
+      if (col.key === 'registrations' && options?.registrationCounts) {
+        const count = options.registrationCounts[user.id];
+        if (typeof count === 'number') return String(count);
+      }
+      return col.getValue(user);
+    });
   });
 
   // Combine headers and rows

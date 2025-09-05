@@ -4,7 +4,12 @@ import { supabase } from '../../lib/supabase';
 import { LoadingSpinner } from '../../components/ui/loading-spinner';
 
 function parseHashParams(hash: string): Record<string, string> {
-  const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+  // Supports both forms:
+  // 1) '#access_token=...&refresh_token=...'
+  // 2) '#/auth-redirect?token_hash=...&type=magiclink'
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash;
+  const query = raw.includes('?') ? raw.split('?')[1] : raw;
+  const params = new URLSearchParams(query);
   const obj: Record<string, string> = {};
   params.forEach((v, k) => { obj[k] = v; });
   return obj;
@@ -23,7 +28,7 @@ export function AuthRedirectPage() {
         const hashParams = parseHashParams(location.hash || '');
         const queryParams = new URLSearchParams(location.search);
 
-        const page = queryParams.get('page');
+        const page = queryParams.get('page') || hashParams['page'];
         const code = queryParams.get('code') || hashParams['code'];
         const errorDescription = queryParams.get('error_description') || hashParams['error_description'];
         const tokenHash = queryParams.get('token_hash') || hashParams['token_hash'];
