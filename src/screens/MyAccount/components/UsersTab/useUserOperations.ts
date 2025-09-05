@@ -3,18 +3,6 @@ import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
 import { User, EditUserForm, UserRegistration } from './types';
 
-interface TeamWithLeague {
-  id: number;
-  captain_id: string;
-  leagues: {
-    id: number;
-    name: string;
-    sports: {
-      name: string;
-    } | null;
-  } | null;
-}
-
 export function useUserOperations(loadUsers: () => Promise<void>) {
   const { showToast } = useToast();
   
@@ -35,58 +23,108 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
       is_facilitator: user.is_facilitator || undefined
     });
     
-    // Use current_registrations instead of team_ids to show all active team memberships
-    const teamIds = user.current_registrations?.map(r => r.team_id?.toString()).filter((id): id is string => id !== undefined) || [];
-    await loadUserRegistrations(teamIds);
+    // Load registrations via admin function (bypasses RLS)
+    await loadUserRegistrations(user.id);
   };
 
-  const loadUserRegistrations = async (teamIds: string[]) => {
-    if (teamIds.length === 0) {
-      setUserRegistrations([]);
-      return;
-    }
-
+  const loadUserRegistrations = async (userId: string) => {
     try {
-      const { data: teamsData, error } = await supabase
+      // Fetch the user to get league_ids (for individual registrations)
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id, league_ids')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user) {
+        console.error('Failed to load user for registrations', userError);
+        setUserRegistrations([]);
+        return;
+      }
+
+      // Load active teams the user is involved with (captain, co-captain, or roster)
+      const { data: allTeams, error: teamsError } = await supabase
         .from('teams')
         .select(`
           id,
+          name,
           captain_id,
-          leagues:league_id(
-            id, 
+          co_captains,
+          roster,
+          league_id,
+          leagues!inner (
+            id,
             name,
-            sports:sport_id(name)
+            end_date,
+            sports!inner ( name )
           )
-        `)
-        .in('id', teamIds.map(id => parseInt(id)));
+        `);
 
-      if (error) throw error;
+      if (teamsError) {
+        console.error('Error loading teams for registrations', teamsError);
+      }
 
-      const leagueMap = new Map();
-      
-      (teamsData as unknown as TeamWithLeague[] | null)?.forEach(team => {
-        if (team.leagues) {
-          const league = team.leagues;
-          const isCaptain = editingUser ? team.captain_id === editingUser : false;
-          const sportName = league.sports?.name;
-          
-          if (leagueMap.has(league.id)) {
-            const existing = leagueMap.get(league.id);
-            if (isCaptain) {
-              existing.role = 'captain';
-            }
-          } else {
-            leagueMap.set(league.id, {
-              id: league.id,
-              name: league.name,
-              sport_name: sportName,
-              role: isCaptain ? 'captain' : 'player'
+      const today = new Date().toISOString().split('T')[0];
+      const regsMap = new Map<number, UserRegistration>();
+
+      (allTeams || [])
+        .filter((team: any) => {
+          const league = team.leagues as any;
+          if (league?.end_date && league.end_date < today) return false;
+          return (
+            team.captain_id === user.id ||
+            (Array.isArray(team.co_captains) && team.co_captains.includes(user.id)) ||
+            (Array.isArray(team.roster) && team.roster.includes(user.id))
+          );
+        })
+        .forEach((team: any) => {
+          const league = team.leagues as any;
+          const role = team.captain_id === user.id ? 'captain' : 'player';
+          const leagueId = league?.id as number;
+          if (!leagueId) return;
+          const existing = regsMap.get(leagueId);
+          if (!existing || role === 'captain') {
+            regsMap.set(leagueId, {
+              id: leagueId,
+              name: league?.name || 'Unknown League',
+              sport_name: (league?.sports as any)?.name || null,
+              role,
+              registration_type: 'team',
+              team_id: team.id,
+              league_id: leagueId,
             });
           }
-        }
-      });
+        });
 
-      setUserRegistrations(Array.from(leagueMap.values()));
+      // Also include individual league registrations (league_ids) as player
+      const individualIds: number[] = (user.league_ids as number[] | null) || [];
+      if (individualIds.length > 0) {
+        const { data: leagues, error: leaguesError } = await supabase
+          .from('leagues')
+          .select('id, name, sports:sport_id(name), end_date, team_registration')
+          .in('id', individualIds);
+
+        if (leaguesError) {
+          console.error('Error loading individual leagues for registrations', leaguesError);
+        } else {
+          (leagues || [])
+            .filter((l: any) => l.team_registration === false && (!l.end_date || l.end_date >= today))
+            .forEach((l: any) => {
+              if (!regsMap.has(l.id)) {
+                regsMap.set(l.id, {
+                  id: l.id,
+                  name: l.name || 'Unknown League',
+                  sport_name: (l.sports as any)?.name || null,
+                  role: 'player',
+                  registration_type: 'individual',
+                  league_id: l.id,
+                });
+              }
+            });
+        }
+      }
+
+      setUserRegistrations(Array.from(regsMap.values()));
     } catch (error) {
       console.error('Error loading user registrations:', error);
       setUserRegistrations([]);
@@ -157,22 +195,40 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
 
     try {
       setResettingPassword(true);
-      
+
       const userEmail = editForm.email;
       if (!userEmail) {
         showToast('User email is required to reset password', 'error');
         return;
       }
 
-      const { error } = await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email: userEmail,
-        options: {
-          redirectTo: `${window.location.origin}/#/reset-password`
-        }
+      // Call admin Edge Function with service role to generate and send reset link
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.access_token) throw new Error('No active session. Please log out and log back in.');
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/admin-reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ email: userEmail, sendEmail: true }),
       });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const txt = await res.text();
+        try {
+          const j = JSON.parse(txt);
+          throw new Error(j.error || 'Failed to reset password');
+        } catch {
+          throw new Error(txt || 'Failed to reset password');
+        }
+      }
 
       showToast('Password reset email sent successfully!', 'success');
     } catch (error) {

@@ -138,6 +138,7 @@ export function UsersTab() {
           userRegistrations={userRegistrations}
           resettingPassword={resettingPassword}
           isAdmin={!!userProfile?.is_admin}
+          userId={editingUser}
           onFormChange={setEditForm}
           onSave={handleSaveUser}
           onCancel={handleCancelEdit}

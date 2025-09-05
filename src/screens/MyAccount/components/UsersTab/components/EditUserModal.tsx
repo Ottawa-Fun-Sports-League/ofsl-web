@@ -10,6 +10,7 @@ interface EditUserModalProps {
   userRegistrations: UserRegistration[];
   resettingPassword: boolean;
   isAdmin: boolean;
+  userId?: string | null;
   onFormChange: (form: EditUserForm) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -22,6 +23,7 @@ export function EditUserModal({
   userRegistrations,
   resettingPassword,
   isAdmin,
+  userId,
   onFormChange,
   onSave,
   onCancel,
@@ -70,28 +72,35 @@ export function EditUserModal({
               <div className="text-sm">
                 {userRegistrations.length > 0 ? (
                   <div className="space-y-1">
-                    {userRegistrations.map((league) => (
-                      <div key={league.id}>
-                        <div className="flex items-center gap-2">
-                          <Link 
-                            to={`/leagues/${league.id}`}
-                            className="text-[#B20000] hover:text-[#8A0000] hover:underline"
-                          >
-                            {league.name}
-                          </Link>
-                          {league.sport_name === 'Volleyball' && (
-                            <span className={`flex items-center gap-1 px-2 py-1 text-xs rounded-full ${
-                              league.role === 'captain' 
+                    {userRegistrations.map((reg) => {
+                      const href = reg.registration_type === 'team' && reg.team_id
+                        ? `/my-account/teams/edit/${reg.team_id}`
+                        : (reg.registration_type === 'individual' && reg.league_id && userId)
+                          ? `/my-account/individual/edit/${userId}/${reg.league_id}`
+                          : userId
+                            ? `/my-account/users/${userId}/registrations`
+                            : '#';
+                      return (
+                        <div key={`${reg.registration_type || 'reg'}-${reg.id}`}>
+                          <div className="flex items-center gap-2">
+                            <Link 
+                              to={href}
+                              className="text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              {reg.name}
+                            </Link>
+                            <span className={`flex items-center gap-1 px-2 py-0.5 text-[11px] rounded-full ${
+                              reg.role === 'captain' 
                                 ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-purple-100 text-purple-800'
+                                : 'bg-gray-100 text-gray-700'
                             }`}>
-                              {league.role === 'captain' && <Crown className="h-3 w-3" />}
-                              {league.role === 'captain' ? 'Captain' : 'Player'}
+                              {reg.role === 'captain' && <Crown className="h-3 w-3" />}
+                              {reg.role === 'captain' ? 'Captain' : 'Player'}
                             </span>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-[#6F6F6F]">No league registrations</span>
@@ -136,10 +145,10 @@ export function EditUserModal({
                 <Button
                   onClick={onResetPassword}
                   disabled={resettingPassword || !editForm.email}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-4 py-2 flex items-center justify-center gap-2"
+                  className="w-full h-9 bg-white text-[#333] border border-[#D4D4D4] hover:bg-gray-50 rounded-md px-3 flex items-center justify-center gap-2"
                 >
                   <Key className="h-4 w-4" />
-                  {resettingPassword ? 'Sending Reset Email...' : 'Reset Password'}
+                  <span className="text-sm">{resettingPassword ? 'Sending Reset Email...' : 'Reset Password'}</span>
                 </Button>
                 <p className="text-xs text-[#6F6F6F] mt-2">
                   This will send a password reset email to the user&apos;s email address.
@@ -148,18 +157,18 @@ export function EditUserModal({
             )}
           </div>
 
-          <div className="flex gap-4 mt-6 sticky bottom-0 pt-4 bg-white border-t">
-            <Button
-              onClick={onSave}
-              className="flex-1 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-6 py-2"
-            >
-              Save Changes
-            </Button>
+          <div className="flex justify-end gap-3 mt-6 sticky bottom-0 pt-4 bg-white border-t">
             <Button
               onClick={onCancel}
-              className="text-gray-500 hover:text-gray-700 bg-transparent hover:bg-transparent border-none shadow-none p-2"
+              className="h-9 px-3 bg-white text-[#333] border border-[#D4D4D4] hover:bg-gray-50 rounded-md"
             >
-              Cancel
+              <span className="text-sm">Cancel</span>
+            </Button>
+            <Button
+              onClick={onSave}
+              className="h-9 px-4 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-md"
+            >
+              <span className="text-sm">Save Changes</span>
             </Button>
           </div>
         </div>

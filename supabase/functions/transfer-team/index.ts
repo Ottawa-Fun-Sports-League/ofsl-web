@@ -215,7 +215,25 @@ serve(async (req: Request) => {
       throw updateError
     }
 
-    // 3. Archive any league-specific standings
+    // 3. Update any existing payment records to the new league
+    // This ensures payment records stay connected to the team in its new league
+    const { error: paymentUpdateError } = await supabase
+      .from('league_payments')
+      .update({ 
+        league_id: targetLeagueId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('team_id', teamId)
+      .eq('league_id', currentLeagueId)
+
+    if (paymentUpdateError) {
+      console.error("Error updating payment records:", paymentUpdateError)
+      // Non-critical - log but continue
+    } else {
+      console.log(`Updated payment records for team ${teamId} to new league ${targetLeagueId}`)
+    }
+
+    // 4. Archive any league-specific standings
     const { error: standingsError } = await supabase
       .from('league_standings')
       .delete()

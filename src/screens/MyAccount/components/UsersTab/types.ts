@@ -61,6 +61,9 @@ export interface UserRegistration {
   name: string;
   sport_name: string | null;
   role: 'captain' | 'player';
+  registration_type?: 'team' | 'individual';
+  team_id?: number;
+  league_id?: number;
 }
 
 export interface EditUserForm {

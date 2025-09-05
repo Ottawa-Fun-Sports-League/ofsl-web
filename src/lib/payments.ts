@@ -59,7 +59,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
         notes,
         created_at,
         updated_at,
-        leagues!inner(name),
+        leagues!inner(name, cost, early_bird_cost, early_bird_due_date, payment_due_date),
         teams(name)
       `)
       .eq('user_id', currentUserId);
@@ -67,14 +67,30 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
     if (error) throw error;
 
     // Transform the data to match the LeaguePayment interface
-    const actualPayments = (data || []).map(payment => ({
+    const actualPayments = (data || []).map(payment => {
+      // Determine effective amount due: if already paid, keep recorded
+      // else use current league effective cost for dynamic pricing
+      const league = payment.leagues as unknown as { 
+        name: string; 
+        cost: number | null; 
+        early_bird_cost?: number | null; 
+        early_bird_due_date?: string | null; 
+        payment_due_date?: string | null;
+      };
+      const today = new Date();
+      const earlyDeadline = league?.early_bird_due_date ? new Date(league.early_bird_due_date + 'T23:59:59') : null;
+      const earlyActive = !!(league?.early_bird_cost && earlyDeadline && today.getTime() <= earlyDeadline.getTime());
+      const dynamicDue = earlyActive ? (league.early_bird_cost || league.cost || 0) : (league.cost || 0);
+      const effectiveAmountDue = (payment.status === 'paid') ? payment.amount_due : dynamicDue;
+
+      return ({
       id: payment.id,
       user_id: payment.user_id,
       team_id: payment.team_id,
       league_id: payment.league_id,
-      amount_due: payment.amount_due,
+      amount_due: effectiveAmountDue,
       amount_paid: payment.amount_paid,
-      amount_outstanding: Math.max(0, payment.amount_due - payment.amount_paid),
+      amount_outstanding: Math.max(0, effectiveAmountDue - payment.amount_paid),
       status: payment.status as 'pending' | 'partial' | 'paid' | 'overdue',
       due_date: payment.due_date,
       payment_method: payment.payment_method,
@@ -84,7 +100,8 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
       updated_at: payment.updated_at,
       league_name: (payment.leagues as unknown as { name: string })?.name || '',
       team_name: (payment.teams as unknown as { name: string } | null)?.name || null
-    }));
+    });
+    });
 
     // Get user's teams that might not have payment records
     const { data: userTeams, error: teamsError } = await supabase
@@ -115,7 +132,7 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
     
     for (const team of userTeams || []) {
       // Skip if team already has a payment record or if league has no cost
-      const league = team.leagues as unknown as { id: number; name: string; cost: number | null; payment_due_date: string | null };
+      const league = team.leagues as unknown as { id: number; name: string; cost: number | null; payment_due_date: string | null; early_bird_cost?: number | null; early_bird_due_date?: string | null };
       if (
         teamsWithPayments.has(team.id) || 
         !league || 
@@ -131,14 +148,20 @@ export const getUserLeaguePayments = async (userId?: string): Promise<LeaguePaym
         ? new Date(league.payment_due_date + "T00:00:00") 
         : new Date(new Date().getTime() + (30 * 24 * 60 * 60 * 1000));
 
+      // Determine effective amount due for virtual payment (dynamic)
+      const today = new Date();
+      const earlyDeadline = league.early_bird_due_date ? new Date(league.early_bird_due_date + 'T23:59:59') : null;
+      const earlyActive = !!(league.early_bird_cost && earlyDeadline && today.getTime() <= earlyDeadline.getTime());
+      const effectiveAmountDue = earlyActive ? (league.early_bird_cost || league.cost || 0) : (league.cost || 0);
+
       virtualPayments.push({
         id: -team.id, // Use negative team ID to ensure uniqueness
         user_id: currentUserId, // Use the current user's ID
         team_id: team.id,
         league_id: team.league_id,
-        amount_due: league.cost,
+        amount_due: effectiveAmountDue,
         amount_paid: 0,
-        amount_outstanding: league.cost,
+        amount_outstanding: effectiveAmountDue,
         status: 'pending',
         due_date: dueDate.toISOString(),
         payment_method: null,

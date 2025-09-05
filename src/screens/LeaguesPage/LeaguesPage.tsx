@@ -13,7 +13,9 @@ import {
   LeagueWithTeamCount,
   groupLeaguesByDay,
   getOrderedDayNames,
-  GroupedLeagues 
+  GroupedLeagues,
+  getEffectiveLeagueCost,
+  isEarlyBirdActive 
 } from "../../lib/leagues";
 import { getStripeProductByLeagueId } from '../../lib/stripe';
 import { MobileFilterDrawer } from "./components/MobileFilterDrawer";
@@ -307,9 +309,12 @@ export const LeaguesPage = (): React.ReactElement => {
                               <div className="flex items-center">
                                 <DollarSign className="h-4 w-4 text-[#B20000] mr-1.5" />
                                 <p className="text-sm font-medium text-[#6F6F6F]">
-                                  ${league.cost} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
+                                  ${getEffectiveLeagueCost(league)} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
                                 </p>
                               </div>
+                              {isEarlyBirdActive(league) && league.early_bird_cost && league.early_bird_due_date && (
+                                <p className="text-xs text-green-700">Early bird until {new Date(league.early_bird_due_date + 'T00:00:00').toLocaleDateString()}</p>
+                              )}
                             </div>
                           </div>
                           
