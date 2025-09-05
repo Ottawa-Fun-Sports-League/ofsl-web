@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Button } from '../../../../components/ui/button';
 import { ArrowLeft, Edit2, DollarSign, Users, User, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { useToast } from '../../../../components/ui/toast';
-import { LeagueWithSport } from '../../../../types/test-mocks';
 
 interface UserData {
   id: string;
@@ -67,262 +66,70 @@ export function UserRegistrationsPage() {
 
   const loadUserData = async () => {
     if (!userId) return;
-    
-    // Wait for userProfile to be loaded
-    if (!userProfile?.id) {
-      return;
-    }
-    
-    // Check admin status from already loaded profile
+    if (!userProfile?.id) return;
     if (!userProfile.is_admin) {
       showToast('You must be an admin to view user registrations', 'error');
       navigate('/my-account/users');
       setDataLoaded(true);
       return;
     }
-    
     try {
       setLoading(true);
 
-      // Load user data - first try by profile ID, then by auth_id
-      let user = null;
-      let userError = null;
-      
-      // First try to find by profile ID (users.id)
-      const { data: userById, error: errorById } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();  // Use maybeSingle to avoid error if no rows
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('No active session');
 
-      if (userById) {
-        user = userById;
-      } else {
-        // If not found by ID, try by auth_id
-        const { data: userByAuthId, error: errorByAuthId } = await supabase
-          .from('users')
-          .select('*')
-          .eq('auth_id', userId)
-          .maybeSingle();  // Use maybeSingle to avoid error if no rows
-        
-        if (userByAuthId) {
-          user = userByAuthId;
-        } else {
-          userError = errorById || errorByAuthId;
-        }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`${supabaseUrl}/functions/v1/admin-user-registrations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to load registrations');
       }
 
-      if (!user) {
-        console.error('Error loading user:', userError);
-        showToast('User not found', 'error');
-        navigate('/my-account/users');
-        setDataLoaded(true);
-        return;
-      }
+      const json = await res.json();
+      const apiUser = json.user || {};
+      setUserData({
+        id: apiUser.id,
+        name: apiUser.name || null,
+        email: apiUser.email || null,
+        phone: null,
+        team_ids: null,
+        league_ids: null,
+      });
 
-      setUserData(user);
+      const teamRegs: TeamRegistration[] = (json.team_registrations || []).map((t: any) => ({
+        id: t.team_id,
+        team_id: t.team_id,
+        team_name: t.team_name,
+        league_id: t.league_id,
+        league_name: t.league_name,
+        sport_name: t.sport_name || 'Unknown Sport',
+        role: t.role,
+        payment_status: t.payment_status,
+        amount_owing: t.amount_owing,
+        season: t.season,
+      }));
+      setTeamRegistrations(teamRegs);
 
-      // Load ALL team registrations where user is involved
-      // This includes teams where they are captain, co-captain, or roster member
-      const { data: allTeams, error: allTeamsError } = await supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          captain_id,
-          co_captains,
-          roster,
-          league_id,
-          leagues!inner (
-            id,
-            name,
-            sport_id,
-            year,
-            start_date,
-            end_date,
-            sports!inner (
-              name
-            )
-          )
-        `);
-      
-      // Filter teams to only include those where the user is involved
-      // and the league hasn't ended yet
-      const today = new Date().toISOString().split('T')[0];
-      const teams = allTeams?.filter(team => {
-        const league = team.leagues as LeagueWithSport;
-        // Check if league is still active (not ended)
-        if (league?.end_date && league.end_date < today) {
-          return false; // Skip ended leagues
-        }
-        
-        // Check if user is involved in this team
-        return team.captain_id === user.id ||
-               team.co_captains?.includes(user.id) ||
-               team.roster?.includes(user.id);
-      }) || [];
-      
-      if (teams.length > 0) {
-
-        if (allTeamsError) {
-          console.error('Error loading teams:', allTeamsError);
-        } else {
-          // Load payment data for the filtered teams
-          const teamIds = teams.map(t => t.id);
-          const { data: payments } = await supabase
-            .from('league_payments')
-            .select('*')
-            .in('team_id', teamIds);
-
-          const teamRegs: TeamRegistration[] = teams.map(team => {
-            const league = team.leagues as LeagueWithSport;
-            const sport = league?.sports;
-            const payment = payments?.find(p => p.team_id === team.id);
-            
-            // Determine user's role in the team
-            // Use the actual user.id from the database, not the userId param
-            let role: 'captain' | 'co-captain' | 'player' = 'player';
-            if (team.captain_id === user.id) {
-              role = 'captain';
-            } else if (team.co_captains?.includes(user.id)) {
-              role = 'co-captain';
-            }
-
-            // Calculate payment status
-            let paymentStatus: 'not_paid' | 'deposit_paid' | 'fully_paid' = 'not_paid';
-            let amountOwing = 0;
-
-            if (payment) {
-              const totalDue = (payment.amount_due || 0) * 1.13; // Include tax
-              const amountPaid = payment.amount_paid || 0;
-              amountOwing = Math.max(0, totalDue - amountPaid);
-              
-              if (amountPaid >= totalDue) {
-                paymentStatus = 'fully_paid';
-              } else if (amountPaid > 0) {
-                paymentStatus = 'deposit_paid';
-              }
-            }
-
-            // Format season from start_date and year
-            let season: string | undefined;
-            if (league?.start_date) {
-              const date = new Date(league.start_date);
-              const month = date.getMonth();
-              const year = league.year || date.getFullYear();
-              // Determine season based on month
-              if (month >= 2 && month <= 4) season = `Spring ${year}`;
-              else if (month >= 5 && month <= 7) season = `Summer ${year}`;
-              else if (month >= 8 && month <= 10) season = `Fall ${year}`;
-              else season = `Winter ${year}`;
-            }
-
-            return {
-              id: team.id,
-              team_id: team.id,
-              team_name: team.name || 'Unnamed Team',
-              league_id: league?.id || 0,
-              league_name: league?.name || 'Unknown League',
-              sport_name: sport?.name || 'Unknown Sport',
-              role,
-              payment_status: paymentStatus,
-              amount_owing: amountOwing,
-              season
-            };
-          });
-
-          setTeamRegistrations(teamRegs);
-        }
-      }
-
-      // Load individual registrations
-      if (user.league_ids && user.league_ids.length > 0) {
-        const { data: leagues, error: leaguesError } = await supabase
-          .from('leagues')
-          .select(`
-            id,
-            name,
-            sport_id,
-            year,
-            start_date,
-            team_registration,
-            deposit_amount,
-            deposit_date,
-            sports!inner (
-              name
-            )
-          `)
-          .in('id', user.league_ids);
-          // Temporarily removed: .eq('team_registration', false)
-
-        if (leaguesError) {
-          console.error('Error loading individual leagues:', leaguesError);
-        } else if (leagues) {
-          // Filter for individual leagues (team_registration = false)
-          const individualLeagues = leagues.filter(l => l.team_registration === false);
-          
-          if (individualLeagues.length > 0) {
-          // Load payment data for individual registrations
-          // Use the actual user.id from the database, not the userId param which might be auth_id
-          const { data: payments } = await supabase
-            .from('league_payments')
-            .select('*')
-            .eq('user_id', user.id)
-            .is('team_id', null)
-            .in('league_id', individualLeagues.map(l => l.id));
-
-          const individualRegs: IndividualRegistration[] = individualLeagues.map(league => {
-            const sport = league?.sports;
-            const payment = payments?.find(p => p.league_id === league.id);
-            
-            // Calculate payment status
-            let paymentStatus: 'not_paid' | 'deposit_paid' | 'fully_paid' = 'not_paid';
-            let amountOwing = 0;
-
-            if (payment) {
-              const totalDue = (payment.amount_due || 0) * 1.13; // Include tax
-              const amountPaid = payment.amount_paid || 0;
-              amountOwing = Math.max(0, totalDue - amountPaid);
-              
-              if (amountPaid >= totalDue) {
-                paymentStatus = 'fully_paid';
-              } else if (amountPaid > 0) {
-                paymentStatus = 'deposit_paid';
-              }
-            } else {
-              // No payment record, calculate based on league deposit amount
-              // For individual leagues, we typically charge the deposit amount as the full price
-              amountOwing = (league.deposit_amount || 0) * 1.13;
-            }
-
-            // Format season from start_date and year
-            let season: string | undefined;
-            if (league.start_date) {
-              const date = new Date(league.start_date);
-              const month = date.getMonth();
-              const year = league.year || date.getFullYear();
-              // Determine season based on month
-              if (month >= 2 && month <= 4) season = `Spring ${year}`;
-              else if (month >= 5 && month <= 7) season = `Summer ${year}`;
-              else if (month >= 8 && month <= 10) season = `Fall ${year}`;
-              else season = `Winter ${year}`;
-            }
-
-            return {
-              league_id: league.id,
-              league_name: league.name || 'Unknown League',
-              sport_name: sport?.name || 'Unknown Sport',
-              payment_status: paymentStatus,
-              amount_owing: amountOwing,
-              season
-            };
-          });
-
-          setIndividualRegistrations(individualRegs);
-          }
-        }
-      }
-
+      const individualRegs: IndividualRegistration[] = (json.individual_registrations || []).map((i: any) => ({
+        league_id: i.league_id,
+        league_name: i.league_name,
+        sport_name: i.sport_name || 'Unknown Sport',
+        payment_status: i.payment_status,
+        amount_owing: i.amount_owing,
+        season: i.season,
+      }));
+      setIndividualRegistrations(individualRegs);
     } catch (error) {
       console.error('Error loading user data:', error);
       showToast('Failed to load user registrations', 'error');

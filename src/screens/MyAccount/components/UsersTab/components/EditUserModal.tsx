@@ -3,6 +3,7 @@ import { Input } from '../../../../../components/ui/input';
 import { Key, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EditUserForm, UserRegistration } from '../types';
+import { TurnstileWidget } from '../../../../../components/ui/turnstile';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -15,6 +16,9 @@ interface EditUserModalProps {
   onSave: () => void;
   onCancel: () => void;
   onResetPassword: () => void;
+  onCaptchaVerify?: (token: string) => void;
+  onCaptchaError?: () => void;
+  onCaptchaExpire?: () => void;
 }
 
 export function EditUserModal({
@@ -27,7 +31,10 @@ export function EditUserModal({
   onFormChange,
   onSave,
   onCancel,
-  onResetPassword
+  onResetPassword,
+  onCaptchaVerify,
+  onCaptchaError,
+  onCaptchaExpire
 }: EditUserModalProps) {
   if (!isOpen) return null;
 
@@ -142,6 +149,15 @@ export function EditUserModal({
             {isAdmin && (
               <div className="border-t pt-4">
                 <h4 className="text-sm font-medium text-[#6F6F6F] mb-3">Password Management</h4>
+                {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                  <div className="flex justify-center mb-3">
+                    <TurnstileWidget
+                      onVerify={onCaptchaVerify || (() => {})}
+                      onError={onCaptchaError}
+                      onExpire={onCaptchaExpire}
+                    />
+                  </div>
+                )}
                 <Button
                   onClick={onResetPassword}
                   disabled={resettingPassword || !editForm.email}

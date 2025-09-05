@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
 import { User, EditUserForm, UserRegistration } from './types';
@@ -11,6 +11,7 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
   const [userRegistrations, setUserRegistrations] = useState<UserRegistration[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const handleEditUser = async (user: User) => {
     setEditingUser(user.id);
@@ -29,102 +30,58 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
 
   const loadUserRegistrations = async (userId: string) => {
     try {
-      // Fetch the user to get league_ids (for individual registrations)
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id, league_ids')
-        .eq('id', userId)
-        .single();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.access_token) throw new Error('No active session');
 
-      if (userError || !user) {
-        console.error('Failed to load user for registrations', userError);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/admin-user-registrations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error('admin-user-registrations error:', txt);
         setUserRegistrations([]);
         return;
       }
 
-      // Load active teams the user is involved with (captain, co-captain, or roster)
-      const { data: allTeams, error: teamsError } = await supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          captain_id,
-          co_captains,
-          roster,
-          league_id,
-          leagues!inner (
-            id,
-            name,
-            end_date,
-            sports!inner ( name )
-          )
-        `);
+      const json = await res.json();
+      const regs: UserRegistration[] = [];
+      const teams = (json?.team_registrations || []) as Array<any>;
+      const indiv = (json?.individual_registrations || []) as Array<any>;
 
-      if (teamsError) {
-        console.error('Error loading teams for registrations', teamsError);
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-      const regsMap = new Map<number, UserRegistration>();
-
-      (allTeams || [])
-        .filter((team: any) => {
-          const league = team.leagues as any;
-          if (league?.end_date && league.end_date < today) return false;
-          return (
-            team.captain_id === user.id ||
-            (Array.isArray(team.co_captains) && team.co_captains.includes(user.id)) ||
-            (Array.isArray(team.roster) && team.roster.includes(user.id))
-          );
-        })
-        .forEach((team: any) => {
-          const league = team.leagues as any;
-          const role = team.captain_id === user.id ? 'captain' : 'player';
-          const leagueId = league?.id as number;
-          if (!leagueId) return;
-          const existing = regsMap.get(leagueId);
-          if (!existing || role === 'captain') {
-            regsMap.set(leagueId, {
-              id: leagueId,
-              name: league?.name || 'Unknown League',
-              sport_name: (league?.sports as any)?.name || null,
-              role,
-              registration_type: 'team',
-              team_id: team.id,
-              league_id: leagueId,
-            });
-          }
+      teams.forEach((t) => {
+        regs.push({
+          id: t.league_id,
+          name: t.league_name,
+          sport_name: t.sport_name || null,
+          role: t.role === 'captain' ? 'captain' : 'player',
+          registration_type: 'team',
+          team_id: t.team_id,
+          league_id: t.league_id,
         });
+      });
+      indiv.forEach((i) => {
+        regs.push({
+          id: i.league_id,
+          name: i.league_name,
+          sport_name: i.sport_name || null,
+          role: 'player',
+          registration_type: 'individual',
+          league_id: i.league_id,
+        });
+      });
 
-      // Also include individual league registrations (league_ids) as player
-      const individualIds: number[] = (user.league_ids as number[] | null) || [];
-      if (individualIds.length > 0) {
-        const { data: leagues, error: leaguesError } = await supabase
-          .from('leagues')
-          .select('id, name, sports:sport_id(name), end_date, team_registration')
-          .in('id', individualIds);
-
-        if (leaguesError) {
-          console.error('Error loading individual leagues for registrations', leaguesError);
-        } else {
-          (leagues || [])
-            .filter((l: any) => l.team_registration === false && (!l.end_date || l.end_date >= today))
-            .forEach((l: any) => {
-              if (!regsMap.has(l.id)) {
-                regsMap.set(l.id, {
-                  id: l.id,
-                  name: l.name || 'Unknown League',
-                  sport_name: (l.sports as any)?.name || null,
-                  role: 'player',
-                  registration_type: 'individual',
-                  league_id: l.id,
-                });
-              }
-            });
-        }
-      }
-
-      setUserRegistrations(Array.from(regsMap.values()));
+      setUserRegistrations(regs);
     } catch (error) {
       console.error('Error loading user registrations:', error);
       setUserRegistrations([]);
@@ -202,33 +159,23 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
         return;
       }
 
-      // Call admin Edge Function with service role to generate and send reset link
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      if (!session?.access_token) throw new Error('No active session. Please log out and log back in.');
+      const options: { redirectTo: string; captchaToken?: string } = {
+        redirectTo: `${window.location.origin}/#/reset-password?type=recovery`,
+      };
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const res = await fetch(`${supabaseUrl}/functions/v1/admin-reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({ email: userEmail, sendEmail: true }),
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        try {
-          const j = JSON.parse(txt);
-          throw new Error(j.error || 'Failed to reset password');
-        } catch {
-          throw new Error(txt || 'Failed to reset password');
+      // If Turnstile is enabled, require a captcha token
+      if (import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+        if (!captchaToken) {
+          showToast('Please complete the security verification', 'error');
+          return;
         }
+        options.captchaToken = captchaToken;
       }
+
+      // Use Supabase's standard reset email to keep templates identical
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, options);
+
+      if (error) throw error;
 
       showToast('Password reset email sent successfully!', 'success');
     } catch (error) {
@@ -236,8 +183,14 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
       showToast(errorMessage, 'error');
     } finally {
       setResettingPassword(false);
+      setCaptchaToken(null);
     }
   };
+
+  // Turnstile handlers for admin reset flow
+  const handleCaptchaVerify = useCallback((token: string) => setCaptchaToken(token), []);
+  const handleCaptchaError = useCallback(() => setCaptchaToken(null), []);
+  const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   const handleCancelEdit = () => {
     setEditingUser(null);
@@ -257,6 +210,9 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
     handleSaveUser,
     handleDeleteUser,
     handleResetPassword,
+    handleCaptchaVerify,
+    handleCaptchaError,
+    handleCaptchaExpire,
     handleCancelEdit
   };
 }

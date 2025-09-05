@@ -47,6 +47,9 @@ export function UsersTab() {
     handleSaveUser,
     handleDeleteUser,
     handleResetPassword,
+    handleCaptchaVerify,
+    handleCaptchaError,
+    handleCaptchaExpire,
     handleCancelEdit
   } = useUserOperations(loadUsers);
 
@@ -143,6 +146,9 @@ export function UsersTab() {
           onSave={handleSaveUser}
           onCancel={handleCancelEdit}
           onResetPassword={handleResetPassword}
+          onCaptchaVerify={handleCaptchaVerify}
+          onCaptchaError={handleCaptchaError}
+          onCaptchaExpire={handleCaptchaExpire}
         />
         
         <ExportColumnsModal
