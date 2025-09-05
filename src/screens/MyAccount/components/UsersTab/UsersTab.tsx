@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ImprovedMobileFilterDrawer } from './components/ImprovedMobileFilterDrawer';
@@ -11,6 +11,7 @@ import { useUsersData } from './useUsersData';
 import { useUserOperations } from './useUserOperations';
 import { exportUsersToCSV, generateExportFilename } from './utils/exportCsv';
 import { useToast } from '../../../../components/ui/toast';
+import { supabase } from '../../../../lib/supabase';
 
 export function UsersTab() {
   const { userProfile } = useAuth();
@@ -42,6 +43,7 @@ export function UsersTab() {
     userRegistrations,
     deleting,
     resettingPassword,
+    captchaSolved,
     setEditForm,
     handleEditUser,
     handleSaveUser,
@@ -66,6 +68,71 @@ export function UsersTab() {
       showToast('Failed to export CSV. Please try again.', 'error');
     }
   };
+
+  // Registration counts loaded via Edge Function for accuracy
+  const [regCounts, setRegCounts] = useState<Record<string, number>>({});
+  const [loadingCounts, setLoadingCounts] = useState(false);
+
+  const visibleUserIds = useMemo(
+    () => filteredUsers.map((u) => u.id).filter(Boolean),
+    [filteredUsers]
+  );
+
+  useEffect(() => {
+    // Fetch counts for users that we haven't fetched yet
+    const missing = visibleUserIds.filter((id) => regCounts[id] === undefined);
+    if (!missing.length) return;
+
+    let cancelled = false;
+    const loadCounts = async () => {
+      try {
+        setLoadingCounts(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+        const entries: Array<[string, number]> = [];
+        const batchSize = 10;
+        for (let i = 0; i < missing.length; i += batchSize) {
+          const batch = missing.slice(i, i + batchSize);
+          const results = await Promise.allSettled(
+            batch.map(async (userId) => {
+              const res = await fetch(`${supabaseUrl}/functions/v1/admin-user-registrations`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                  'apikey': supabaseAnonKey,
+                },
+                body: JSON.stringify({ userId }),
+              });
+              if (!res.ok) return [userId, 0] as [string, number];
+              const json = await res.json();
+              const teamCount = Array.isArray(json?.team_registrations) ? json.team_registrations.length : 0;
+              const indivCount = Array.isArray(json?.individual_registrations) ? json.individual_registrations.length : 0;
+              return [userId, teamCount + indivCount] as [string, number];
+            })
+          );
+          for (const r of results) {
+            if (r.status === 'fulfilled') entries.push(r.value);
+          }
+        }
+        if (!cancelled && entries.length) {
+          setRegCounts((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+        }
+      } catch {
+        // ignore errors per user; counts will stay 0/fallback
+      } finally {
+        if (!cancelled) setLoadingCounts(false);
+      }
+    };
+
+    loadCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleUserIds, regCounts]);
 
   if (!userProfile?.is_admin) {
     return (
@@ -132,6 +199,7 @@ export function UsersTab() {
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
             loading={loading}
+            registrationCounts={regCounts}
           />
         </div>
 
@@ -149,6 +217,7 @@ export function UsersTab() {
           onCaptchaVerify={handleCaptchaVerify}
           onCaptchaError={handleCaptchaError}
           onCaptchaExpire={handleCaptchaExpire}
+          captchaSolved={captchaSolved}
         />
         
         <ExportColumnsModal

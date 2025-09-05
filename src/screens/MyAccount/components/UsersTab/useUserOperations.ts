@@ -205,6 +205,7 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
     userRegistrations,
     deleting,
     resettingPassword,
+    captchaSolved: !!captchaToken,
     setEditForm,
     handleEditUser,
     handleSaveUser,

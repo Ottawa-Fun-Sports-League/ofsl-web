@@ -22,6 +22,7 @@ interface UsersTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   loading?: boolean;
+  registrationCounts?: Record<string, number>;
 }
 
 export function UsersTable({
@@ -36,7 +37,8 @@ export function UsersTable({
   pagination,
   onPageChange,
   onPageSizeChange,
-  loading = false
+  loading = false,
+  registrationCounts
 }: UsersTableProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string | null; email: string } | null>(null);
@@ -113,7 +115,7 @@ export function UsersTable({
                   onClick={() => onSort('team_count')}
                 >
                   <div className="flex items-center">
-                    Reg.
+                    Registrations
                     {getSortIcon('team_count')}
                   </div>
                 </th>
@@ -206,9 +208,11 @@ export function UsersTable({
                   </td>
                   <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm text-[#6F6F6F]">
                     {(() => {
-                      // Use current_registrations which includes all active team memberships
-                      // (captain, roster member, co-captain) in leagues that haven't ended
-                      const totalRegistrations = user.current_registrations?.length || 0;
+                      // Prefer counts fetched from admin-user-registrations, fallback to RPC field
+                      const totalRegistrations =
+                        (registrationCounts && registrationCounts[user.id] !== undefined)
+                          ? registrationCounts[user.id]
+                          : (user.current_registrations?.length || 0);
                       
                       if (totalRegistrations === 0) {
                         return <span>0</span>;

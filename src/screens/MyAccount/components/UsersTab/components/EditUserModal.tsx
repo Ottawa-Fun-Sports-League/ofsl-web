@@ -19,6 +19,7 @@ interface EditUserModalProps {
   onCaptchaVerify?: (token: string) => void;
   onCaptchaError?: () => void;
   onCaptchaExpire?: () => void;
+  captchaSolved?: boolean;
 }
 
 export function EditUserModal({
@@ -34,7 +35,8 @@ export function EditUserModal({
   onResetPassword,
   onCaptchaVerify,
   onCaptchaError,
-  onCaptchaExpire
+  onCaptchaExpire,
+  captchaSolved
 }: EditUserModalProps) {
   if (!isOpen) return null;
 
@@ -160,7 +162,11 @@ export function EditUserModal({
                 )}
                 <Button
                   onClick={onResetPassword}
-                  disabled={resettingPassword || !editForm.email}
+                  disabled={
+                    resettingPassword ||
+                    !editForm.email ||
+                    (Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY) && !captchaSolved)
+                  }
                   className="w-full h-9 bg-white text-[#333] border border-[#D4D4D4] hover:bg-gray-50 rounded-md px-3 flex items-center justify-center gap-2"
                 >
                   <Key className="h-4 w-4" />
