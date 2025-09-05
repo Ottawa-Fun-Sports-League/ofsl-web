@@ -5,7 +5,7 @@ import { Edit2, Trash2, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } f
 import { User, SortField, SortDirection, PaginationState } from '../types';
 import { Link } from 'react-router-dom';
 import { UserStatusBadge } from './UserStatusBadge';
-import { MagicLinkButton } from './MagicLinkButton';
+import { ImpersonateButton } from './ImpersonateButton';
 import { ConfirmationDialog } from '../../../../../components/ui/confirmation-dialog';
 import { Pagination } from './Pagination';
 
@@ -251,10 +251,7 @@ export function UsersTable({
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       {user.email && (
-                        <MagicLinkButton 
-                          userEmail={user.email} 
-                          userName={user.name}
-                        />
+                        <ImpersonateButton userEmail={user.email} userName={user.name} />
                       )}
                       <Button
                         onClick={() => onEditUser(user)} 
