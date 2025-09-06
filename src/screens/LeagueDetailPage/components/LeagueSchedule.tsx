@@ -37,6 +37,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
   const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   const [isScheduleVisible, setIsScheduleVisible] = useState<boolean>(true);
+  const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
   
   // Check if user is admin or facilitator
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
@@ -356,14 +357,14 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
 
           <div className="flex items-center gap-3">
             {/* Previous week results message */}
-            {currentWeek > 1 && week1TierStructure.length > 0 && !weeklyTiers[0]?.no_games && (
+            {currentWeek > 1 && week1TierStructure.length > 0 && !weekNoGames && (
               <div className="text-xs text-gray-500 italic">
                 Schedule updated each week based on previous week&apos;s results
               </div>
             )}
 
             {/* No games message */}
-            {weeklyTiers.length > 0 && weeklyTiers[0]?.no_games && (
+            {weekNoGames && (
               <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
                 No games this week
               </div>
@@ -383,8 +384,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
             ></div>
           </div>
         ) : weeklyTiers.length > 0 ? (
-          // Check if this week is marked as 'no games'
-          weeklyTiers[0]?.no_games ? (
+          // Check if this week is marked as 'no games' (all tiers no_games)
+          weekNoGames ? (
             // Show 'No Games' display for this week with standard styling
             weeklyTiers.map((tier) => (
               <Card
