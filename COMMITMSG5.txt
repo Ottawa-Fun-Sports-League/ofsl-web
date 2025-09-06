@@ -1,4 +1,0 @@
-﻿style(standings): use subtle emphasis for Points column
-
-- Header: add small light-red "primary" pill next to Points
-- Cells: revert to neutral text color for better balance
