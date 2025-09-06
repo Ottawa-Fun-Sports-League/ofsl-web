@@ -200,7 +200,7 @@ export function TeamsSection({
                         </button>
                       )}
 
-                      {teamPayment && (
+                      {teamPayment && isCaptain && (
                         <PaymentStatusBadge
                           status={teamPayment.status}
                           size="sm"

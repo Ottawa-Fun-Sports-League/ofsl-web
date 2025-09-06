@@ -58,6 +58,22 @@ export function PaymentStatusSection({ payment, leagueCost, leagueDueDate, isCap
   const dueDate = formatDueDate(leagueDueDate || payment?.due_date || undefined);
   const isPaid = payment?.status === 'paid';
   const isOverdue = payment?.status === 'overdue' || (dueDate?.isOverdue ?? false);
+
+  // For non-captains: simplify the experience per requirements
+  if (!isCaptain) {
+    // If the team is fully paid, players should not see anything
+    if (isPaid || remainingBalance <= 0) return null;
+
+    // If not fully paid, show a simple notice without amounts or dates
+    return (
+      <div className="mt-4 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <AlertCircle className="h-5 w-5 text-amber-600" />
+        <span className="text-sm font-medium text-amber-700">
+          Your team fee hasn&apos;t been fully paid yet. Please check with your captain.
+        </span>
+      </div>
+    );
+  }
   
   // Don't show payment section if there's no cost
   if (!totalDue || totalDue === 0) {
