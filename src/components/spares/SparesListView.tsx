@@ -95,52 +95,58 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
       }
 
       try {
-        // Simplified approach: Check if user has any team or registration
-        // and allow access to spares for all sports they're involved in
-        
-        // Check team captain roles
-        const { data: userTeams, error: teamsError } = await supabase
-          .from('teams')
-          .select('id')
-          .or(`captain_id.eq.${user.id},co_captain_id.eq.${user.id}`)
-          .eq('is_active', true);
+        // Base access: all authenticated users can view individual sport spares (e.g., Badminton, Pickleball)
+        const { data: sports, error: sportsError } = await supabase
+          .from('sports')
+          .select('id, name, active')
+          .eq('active', true);
 
-        // Check individual registrations  
-        const { data: userRegistrations, error: regError } = await supabase
-          .from('registrations')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('is_active', true);
-
-        if (teamsError || regError) {
-          logger.error('Error checking user access', teamsError || regError);
+        if (sportsError) {
+          logger.error('Error loading sports', sportsError);
           setHasAccess(false);
-          setAccessReason('Error checking access permissions.');
+          setAccessReason("We couldn't verify your access right now. Please try again.");
           return;
         }
 
-        // If user has any teams or registrations, give them access
-        if ((userTeams && userTeams.length > 0) || (userRegistrations && userRegistrations.length > 0)) {
-          setHasAccess(true);
-          setAccessReason('participant');
-          
-          // Fetch all active sports
-          const { data: sports, error: sportsError } = await supabase
-            .from('sports')
-            .select('id, name, active')
-            .eq('active', true);
+        const allSports = sports || [];
+        const allowedNames = new Set(['Badminton', 'Pickleball']);
 
-          if (!sportsError) {
-            setAvailableSports(sports || []);
+        // Volleyball access is granted to captains/co-captains of active volleyball teams
+        let canViewVolleyball = false;
+        const vb = allSports.find(s => s.name?.toLowerCase() === 'volleyball');
+        if (vb) {
+          try {
+            const { data: captainTeams, error: captainErr } = await supabase
+              .from('teams')
+              .select('id, captain_id, co_captains, active, leagues:league_id(sport_id, end_date, active)')
+              .eq('active', true);
+
+            if (!captainErr && captainTeams) {
+              canViewVolleyball = captainTeams.some(t => {
+                const isCaptain = t.captain_id === userProfile.id;
+                const isCoCap = Array.isArray(t.co_captains) && t.co_captains.includes(userProfile.id);
+                const league = (t as any).leagues;
+                const isVbLeague = league && league.sport_id === vb.id;
+                const leagueActive = league && (league.active === true || !league.end_date || new Date(league.end_date) >= new Date());
+                return (isCaptain || isCoCap) && isVbLeague && leagueActive;
+              });
+            }
+          } catch (e) {
+            logger.warn('Volleyball captain check failed', e);
           }
-        } else {
-          setHasAccess(false);
-          setAccessReason('You must be registered in a league or be a team captain to view spares lists.');
         }
+
+        // Build accessible sports list
+        const accessible = allSports.filter(s => allowedNames.has(s.name));
+        if (canViewVolleyball && vb) accessible.push(vb);
+
+        setAvailableSports(accessible);
+        setHasAccess(true);
+        setAccessReason(canViewVolleyball ? 'volleyball-captain' : 'individual-access');
       } catch (error) {
         logger.error('Error in checkAccess', error);
         setHasAccess(false);
-        setAccessReason('Error checking access permissions.');
+        setAccessReason("We couldn't verify your access right now. Please try again.");
       }
     };
 
