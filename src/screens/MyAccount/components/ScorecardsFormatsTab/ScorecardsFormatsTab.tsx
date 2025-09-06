@@ -41,7 +41,9 @@ export function ScorecardsFormatsTab() {
             <div className="space-y-4">
               <h3 className="text-xl font-semibold text-[#6F6F6F]">{selected.label}</h3>
               {selected.value === '3-teams-6-sets' ? (
-                <Scorecard3Teams6Sets />
+                <Scorecard3Teams6Sets
+                  teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }}
+                />
               ) : (
                 <div className="border rounded-md p-4 text-sm text-gray-700">
                   This view will show the scorecard for "{selected.label}". Build-out will follow after the 3-team reference.

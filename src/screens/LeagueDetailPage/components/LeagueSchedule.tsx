@@ -638,9 +638,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
             setIsScoresModalOpen(false);
             setSelectedTierForScores(null);
           }}
-          tierData={{
-            tier_number: selectedTierForScores.tier_number,
-          }}
+          weeklyTier={selectedTierForScores}
         />
       )}
       </div>{/* end blurred content container */}

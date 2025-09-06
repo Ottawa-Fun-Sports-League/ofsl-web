@@ -1,21 +1,19 @@
-import { useState, useEffect, useRef } from "react";
-import { Card, CardContent } from "../../../components/ui/card";
-import { MapPin, Clock, ChevronLeft, ChevronRight, Edit, Trash2 } from "lucide-react";
-import { supabase } from "../../../lib/supabase";
-import { useAuth } from "../../../contexts/AuthContext";
-import { TierEditModal } from "./TierEditModal";
-import { AddPlayoffWeeksModal } from "./AddPlayoffWeeksModal";
-import { AddTeamModal } from "./AddTeamModal";
-import type { WeeklyScheduleTier, TeamPositionId } from "../types";
-import type { Tier } from "../../LeagueDetailPage/utils/leagueUtils";
-import {
-  getPositionsForFormat,
-  getGridColsClass,
-  getTeamCountForFormat,
-} from "../utils/formatUtils";
-import { getTeamForPosition } from "../utils/scheduleLogic";
-import { addTierToAllWeeks, removeTierFromAllWeeks } from "../database/scheduleDatabase";
-import { calculateCurrentWeekToDisplay } from "../utils/weekCalculation";
+import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent } from '../../../components/ui/card';
+import { MapPin, Clock, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import { SubmitScoresModal } from './SubmitScoresModal';
+import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../contexts/AuthContext';
+import { TierEditModal } from './TierEditModal';
+import { AddPlayoffWeeksModal } from './AddPlayoffWeeksModal';
+import { AddTeamModal } from './AddTeamModal';
+import type { WeeklyScheduleTier, TeamPositionId } from '../types';
+import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
+import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../utils/formatUtils';
+import { getTeamForPosition } from '../utils/scheduleLogic';
+import { addTierToAllWeeks, removeTierFromAllWeeks } from '../database/scheduleDatabase';
+import { calculateCurrentWeekToDisplay } from '../utils/weekCalculation';
 
 interface AdminLeagueScheduleProps {
   leagueId: string;
@@ -85,6 +83,19 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     mouseX: 0,
     mouseY: 0,
   });
+
+  // Submit scores modal state
+  const [submitScoresOpen, setSubmitScoresOpen] = useState(false);
+  const [submitScoresTier, setSubmitScoresTier] = useState<WeeklyScheduleTier | null>(null);
+
+  const openSubmitScores = (tier: WeeklyScheduleTier) => {
+    setSubmitScoresTier(tier);
+    setSubmitScoresOpen(true);
+  };
+  const closeSubmitScores = () => {
+    setSubmitScoresOpen(false);
+    setSubmitScoresTier(null);
+  };
 
   // Auto-scroll functionality for drag and drop
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -1262,10 +1273,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           {!isEditScheduleMode && !tier.is_completed && !tier.no_games && 
                            getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                             <button
-                              onClick={() => {
-                                // TODO: Implement score submission modal
-                                alert('Score submission functionality will be implemented in a future update.');
-                              }}
+                              onClick={() => openSubmitScores(tier)}
                               className="ml-3 text-sm text-[#B20000] hover:text-[#8B0000] hover:underline font-medium transition-colors"
                             >
                               Submit scores
@@ -1446,10 +1454,21 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       <div key={position} className="text-center">
                         <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                         <div className="text-sm text-[#6F6F6F]">
-                          <span className="text-gray-400 italic">TBD</span>
+                          {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                            <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                          ) : (
+                            <span className="text-gray-400 italic">TBD</span>
+                          )}
                         </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    {tier.format === '3-teams-6-sets' && (
+                      <Button size="sm" onClick={() => openSubmitScores(tier)}>
+                        Submit Scores
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -1502,8 +1521,14 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           leagueId={leagueId}
           leagueName={leagueName}
           onSave={handleSaveTier}
-        />
+      />
       )}
+
+      <SubmitScoresModal
+        isOpen={submitScoresOpen}
+        onClose={closeSubmitScores}
+        weeklyTier={submitScoresTier}
+      />
 
       <AddPlayoffWeeksModal
         isOpen={addPlayoffModalOpen}
