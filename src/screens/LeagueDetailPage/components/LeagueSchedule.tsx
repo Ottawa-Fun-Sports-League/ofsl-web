@@ -450,10 +450,10 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
           ) : (
             // NEW: Display normal weekly schedule data
             weeklyTiers.map((tier) => (
-              <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
-                <CardContent className="p-0 overflow-hidden">
-                  {/* Tier Header */}
-                  <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
+            <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'opacity-50 bg-gray-100 grayscale' : ''}`}>
+              <CardContent className="p-0 overflow-hidden">
+                {/* Tier Header */}
+                <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
@@ -464,6 +464,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                           </span>
                         )}
                       </h3>
+                      {tier.no_games && (
+                        <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                          No games
+                        </span>
+                      )}
                       {canSubmitScores && !tier.is_completed && !tier.no_games && 
                        getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                         <button
@@ -479,11 +484,6 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                     </div>
                     
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
-                      {tier.no_games && (
-                        <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
-                          No games
-                        </div>
-                      )}
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
                         <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
