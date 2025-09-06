@@ -1,3 +1,0 @@
-﻿feat: update public standings note
-
-- Standings are updated weekly. Ordered by points, then wins, then point differential.
