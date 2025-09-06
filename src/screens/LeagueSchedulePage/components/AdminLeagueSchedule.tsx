@@ -1238,13 +1238,13 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               )}
 
               {weeklyTiers.map((tier, tierIndex) => (
-                <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'opacity-50 bg-gray-100' : ''}`}>
+                <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'bg-gray-100' : ''}`}>
                   <CardContent className="p-0 overflow-hidden">
                     {/* Tier Header - EXACT same as public */}
                     <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                          <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
+                          <h3 className={`font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
                             Tier {tier.tier_number}
                             {tier.is_completed && (
                               <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
@@ -1337,7 +1337,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                         </div>
 
                         {/* Location/Time/Court - EXACT same as public */}
-                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
+                        <div className={`flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right ${tier.no_games ? 'opacity-50' : ''}`}>
                           <div className="flex items-center">
                             <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
                             <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
