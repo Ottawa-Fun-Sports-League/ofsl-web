@@ -103,8 +103,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
                     Losses
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-[#B20000]">
-                    Points
+                  <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
+                    <span className="inline-flex items-center gap-2 justify-center">
+                      <span>Points</span>
+                      <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-red-50 text-[#B20000] rounded-full border border-red-200">primary</span>
+                    </span>
                   </th>
                   <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
                     +/-
@@ -135,7 +138,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
                       {team.losses}
                     </td>
-                    <td className="px-4 py-3 text-sm text-center font-semibold text-[#B20000]">
+                    <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
                       {team.points}
                     </td>
                     <td
