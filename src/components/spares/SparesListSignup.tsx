@@ -81,13 +81,13 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
   // Fetch existing spare registrations for this user
   useEffect(() => {
     const fetchExistingRegistrations = async () => {
-      if (!user) return;
+      if (!userProfile) return;
 
       try {
         const { data, error } = await supabase
           .from('spares')
           .select('sport_id')
-          .eq('user_id', user.id)
+          .eq('user_id', userProfile.id)
           .eq('is_active', true);
 
         if (error) {
@@ -102,7 +102,7 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
     };
 
     fetchExistingRegistrations();
-  }, [user]);
+  }, [userProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

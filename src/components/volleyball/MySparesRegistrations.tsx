@@ -39,7 +39,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
   className = '',
   onEditRegistration
 }) => {
-  const { user } = useAuth();
+  const { userProfile } = useAuth();
   const { showToast } = useToast();
   
   const [registrations, setRegistrations] = useState<SparesRegistration[]>([]);
@@ -49,7 +49,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
   // Fetch user's spares registrations
   useEffect(() => {
     const fetchRegistrations = async () => {
-      if (!user) {
+      if (!userProfile) {
         setLoading(false);
         return;
       }
@@ -71,7 +71,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
               name
             )
           `)
-          .eq('user_id', user.id)
+          .eq('user_id', userProfile.id)
           .eq('is_active', true)
           .order('created_at', { ascending: false });
 
@@ -96,7 +96,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     };
 
     fetchRegistrations();
-  }, [user, showToast]);
+  }, [userProfile, showToast]);
 
   const handleRemoveRegistration = async (registrationId: string, sportName: string) => {
     if (!confirm(`Are you sure you want to remove yourself from the ${sportName} spares list?`)) {
@@ -153,7 +153,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     });
   };
 
-  if (!user) {
+  if (!userProfile) {
     return (
       <Card className={className}>
         <CardContent className="text-center py-8">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MySparesRegistrations } from '../../../../components/volleyball/MySparesRegistrations';
+import { MySparesRegistrations } from '../../../../components/spares/MySparesRegistrations';
 import { SparesListView } from '../../../../components/volleyball/SparesListView';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { Card, CardHeader, CardTitle } from '../../../../components/ui/card';

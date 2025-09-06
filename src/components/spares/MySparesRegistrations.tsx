@@ -51,7 +51,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
   className = '',
   onSparesChange
 }) => {
-  const { user } = useAuth();
+  const { userProfile } = useAuth();
   const { showToast } = useToast();
   
   const [registrations, setRegistrations] = useState<SparesRegistration[]>([]);
@@ -66,7 +66,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
 
   // Define fetchRegistrations first
   const fetchRegistrations = useCallback(async () => {
-    if (!user) {
+    if (!userProfile) {
       setLoading(false);
       return;
     }
@@ -100,7 +100,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
             active
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userProfile.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -122,12 +122,12 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [user, showToast]);
+  }, [userProfile, showToast]);
 
   // Fetch user's spares registrations on component mount
   useEffect(() => {
     fetchRegistrations();
-  }, [fetchRegistrations, user]);
+  }, [fetchRegistrations, userProfile]);
 
   const handleSignupSuccess = async () => {
     // Refetch registrations to show the new one
@@ -148,6 +148,8 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     onSparesChange?.();
     setEditingRegistration(null);
   };
+
+  // Inline edit removed; revert to modal editing
 
   const handleRemoveClick = (registration: SparesRegistration) => {
     setConfirmDelete({ registration, show: true });
@@ -235,7 +237,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     return days.join(', ');
   };
 
-  if (!user) {
+  if (!userProfile) {
     return (
       <Card className={className}>
         <CardContent className="text-center py-8">
@@ -369,7 +371,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 lg:min-w-[120px]">
+                    <div className="flex gap-2 lg:min-w-[180px]">
                       <Button
                         variant="outline"
                         size="sm"
@@ -379,7 +381,6 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
                         <Edit className="h-4 w-4" />
                         Edit
                       </Button>
-                      
                       <Button
                         variant="outline"
                         size="sm"
