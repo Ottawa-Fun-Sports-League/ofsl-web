@@ -18,18 +18,15 @@ import { logger } from '../../lib/logger';
 interface SparesRegistration {
   id: string;
   user_id: string;
-  league_id: string;
+  sport_id: number;
   skill_level: 'beginner' | 'intermediate' | 'advanced' | 'competitive' | 'elite';
   availability_notes: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  leagues: {
-    id: string;
+  sports: {
+    id?: number;
     name: string;
-    sport: string;
-    level: string | null;
-    is_active: boolean;
   };
 }
 
@@ -59,22 +56,19 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
 
       try {
         const { data, error } = await supabase
-          .from('volleyball_spares')
+          .from('spares')
           .select(`
             id,
             user_id,
-            league_id,
+            sport_id,
             skill_level,
             availability_notes,
             is_active,
             created_at,
             updated_at,
-            leagues!league_id (
+            sports!sport_id (
               id,
-              name,
-              sport,
-              level,
-              is_active
+              name
             )
           `)
           .eq('user_id', user.id)
@@ -90,7 +84,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
         // Transform the data to match our expected type structure
         const transformedData = (data || []).map(item => ({
           ...item,
-          leagues: Array.isArray(item.leagues) ? item.leagues[0] : item.leagues
+          sports: Array.isArray(item.sports) ? item.sports[0] : item.sports
         })) as SparesRegistration[];
         setRegistrations(transformedData);
       } catch (error) {
@@ -104,17 +98,16 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     fetchRegistrations();
   }, [user, showToast]);
 
-  const handleRemoveRegistration = async (registrationId: string, leagueName: string) => {
-    if (!confirm(`Are you sure you want to remove yourself from the spares list for ${leagueName}?`)) {
+  const handleRemoveRegistration = async (registrationId: string, sportName: string) => {
+    if (!confirm(`Are you sure you want to remove yourself from the ${sportName} spares list?`)) {
       return;
     }
 
     setDeletingId(registrationId);
 
     try {
-      // Use the helper function to deactivate the registration
-      const { error } = await supabase.rpc('deactivate_volleyball_spare', {
-        p_user_id: user!.id,
+      // Use the helper function to deactivate the registration (generic spares)
+      const { error } = await supabase.rpc('deactivate_spare', {
         p_registration_id: registrationId
       });
 
@@ -126,7 +119,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
 
       // Remove from local state
       setRegistrations(prev => prev.filter(reg => reg.id !== registrationId));
-      showToast(`Successfully removed from ${leagueName} spares list`, 'success');
+      showToast(`Successfully removed from ${sportName} spares list`, 'success');
     } catch (error) {
       logger.error('Error in handleRemoveRegistration', error);
       showToast('Failed to remove registration. Please try again.', 'error');
@@ -193,12 +186,12 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          My Volleyball Spares Registrations
+          My Spares Registrations
         </CardTitle>
         <p className="text-sm text-[#6F6F6F]">
           {registrations.length === 0 
-            ? 'You are not registered as a spare for any volleyball leagues.' 
-            : `You are registered as a spare for ${registrations.length} volleyball league${registrations.length === 1 ? '' : 's'}.`
+            ? 'You have not joined any spares lists yet.' 
+            : `You are registered as a spare for ${registrations.length} sport${registrations.length === 1 ? '' : 's'}.`
           }
         </p>
       </CardHeader>
@@ -207,17 +200,15 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
         {registrations.length === 0 ? (
           <div className="text-center py-8">
             <Users className="h-12 w-12 text-[#6F6F6F] mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-[#6F6F6F] mb-2">
-              No Spares Registrations
-            </h3>
+            <h3 className="text-lg font-semibold text-[#6F6F6F] mb-2">No Spares Registrations</h3>
             <p className="text-[#6F6F6F] mb-4">
-              You haven&apos;t joined any volleyball spares lists yet.
+              You haven&apos;t joined any spares lists yet.
             </p>
             <Button
-              onClick={() => window.location.hash = '#/volleyball'}
+              onClick={() => window.location.hash = '#/leagues'}
               className="bg-[#B20000] hover:bg-[#8A0000] text-white"
             >
-              Browse Volleyball Leagues
+              Browse Leagues
             </Button>
           </div>
         ) : (
@@ -229,7 +220,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
                     {/* Registration Info */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-lg">{registration.leagues.name}</h3>
+                        <h3 className="font-semibold text-lg">{registration.sports.name}</h3>
                         <Badge className={getSkillLevelColor(registration.skill_level)}>
                           {registration.skill_level.charAt(0).toUpperCase() + registration.skill_level.slice(1)}
                         </Badge>
@@ -282,7 +273,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRemoveRegistration(registration.id, registration.leagues.name)}
+                        onClick={() => handleRemoveRegistration(registration.id, registration.sports.name)}
                         disabled={deletingId === registration.id}
                         className="flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
                       >
