@@ -23,6 +23,8 @@ export interface League {
   gym_ids: number[] | null;
   active: boolean | null;
   hide_day: boolean | null;
+  // When false, public schedule tab shows an overlay
+  schedule_visible?: boolean | null;
   payment_due_date: string | null;
   deposit_amount: number | null;
   deposit_date: string | null;
