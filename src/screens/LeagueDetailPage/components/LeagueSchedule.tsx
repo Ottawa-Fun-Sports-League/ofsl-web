@@ -438,10 +438,10 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
           ) : (
             // NEW: Display normal weekly schedule data
             weeklyTiers.map((tier) => (
-            <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
-              <CardContent className="p-0 overflow-hidden">
-                {/* Tier Header */}
-                <div className="bg-[#F8F8F8] border-b px-8 py-3">
+              <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
+                <CardContent className="p-0 overflow-hidden">
+                  {/* Tier Header */}
+                  <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
