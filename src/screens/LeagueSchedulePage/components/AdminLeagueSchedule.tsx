@@ -1146,7 +1146,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
             {/* No games message */}
             {weeklyTiers.length > 0 && noGamesWeek && (
-              <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
+              <div className="px-2 py-1 rounded-full text-xs font-semibold bg-[#B20000] text-white">
                 No games this week
               </div>
             )}
