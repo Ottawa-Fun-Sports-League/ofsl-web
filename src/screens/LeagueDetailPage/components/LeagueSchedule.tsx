@@ -28,6 +28,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     start_date: string | null;
     end_date: string | null;
     playoff_weeks: number;
+    schedule_visible?: boolean | null;
   } | null>(null);
   const [week1TierStructure, setWeek1TierStructure] = useState<WeeklyScheduleTier[]>([]);
   const [selectedTierForScores, setSelectedTierForScores] = useState<WeeklyScheduleTier | null>(
@@ -35,7 +36,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   );
   const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
   const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
-
+  const [isScheduleVisible, setIsScheduleVisible] = useState<boolean>(true);
+  
   // Check if user is admin or facilitator
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
 
@@ -51,8 +53,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
             start_date: leagueData.start_date,
             end_date: leagueData.end_date,
             playoff_weeks: leagueData.playoff_weeks || 0,
+            // schedule_visible may not exist in older types; cast defensively
+            schedule_visible: (leagueData as any).schedule_visible ?? true
           });
-
+          setIsScheduleVisible(((leagueData as any).schedule_visible ?? true) as boolean);
+          
           // Calculate and set the current week based on actual date
           const calculatedWeek = calculateCurrentWeekToDisplay(
             leagueData.start_date,
@@ -298,9 +303,20 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   return (
     <div>
       <h2 className="text-2xl font-bold text-[#6F6F6F] mb-6">League Schedule</h2>
+      <div className="relative">
+        {/* Overlay when schedule is hidden from public - show banner at top */}
+        {isScheduleVisible ? null : (
+          <div className="absolute left-0 right-0 top-0 z-20 flex justify-center bg-transparent">
+            <div className="mx-4 my-2 px-6 py-2 rounded-full bg-[#B20000] text-white font-semibold shadow-md">
+              Working on it—Serving soon.
+            </div>
+          </div>
+        )}
 
-      {/* Week header with limited navigation */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Content container that we blur and disable when hidden */}
+        <div className={`${isScheduleVisible ? '' : 'pointer-events-none blur-[5px]'} pt-10`}>
+        {/* Week header with limited navigation */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center justify-between gap-4 w-full">
           <div className="flex items-center gap-4">
             {/* Navigation buttons grouped together */}
@@ -637,6 +653,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
           }}
         />
       )}
+      </div>{/* end blurred content container */}
+      </div>{/* end relative wrapper */}
     </div>
   );
 }

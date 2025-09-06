@@ -34,6 +34,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     start_date: string | null;
     end_date: string | null;
     playoff_weeks: number;
+    schedule_visible?: boolean | null;
   } | null>(null);
   const [week1TierStructure, setWeek1TierStructure] = useState<WeeklyScheduleTier[]>([]);
 
@@ -41,7 +42,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [isEditScheduleMode, setIsEditScheduleMode] = useState(false);
   const [noGamesWeek, setNoGamesWeek] = useState(false);
   const [savingNoGames, setSavingNoGames] = useState(false);
-
+  const [savingScheduleVisibility, setSavingScheduleVisibility] = useState(false);
+  
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
@@ -163,9 +165,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const loadLeagueInfo = async () => {
     try {
       const { data, error } = await supabase
-        .from("leagues")
-        .select("start_date, end_date, playoff_weeks, day_of_week")
-        .eq("id", parseInt(leagueId))
+        .from('leagues')
+        .select('start_date, end_date, playoff_weeks, day_of_week, schedule_visible')
+        .eq('id', parseInt(leagueId))
         .single();
 
       if (error) throw error;
@@ -175,6 +177,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           start_date: data.start_date,
           end_date: data.end_date,
           playoff_weeks: data.playoff_weeks || 0,
+          schedule_visible: data.schedule_visible ?? true
         });
 
         // Calculate and set the current week based on actual date
@@ -187,6 +190,27 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       }
     } catch (error) {
       console.error("Error loading league info:", error);
+    }
+  };
+
+  const handleScheduleVisibilityToggle = async (visible: boolean) => {
+    try {
+      setSavingScheduleVisibility(true);
+      const { error } = await supabase
+        .from('leagues')
+        .update({ schedule_visible: visible })
+        .eq('id', parseInt(leagueId));
+      if (error) throw error;
+      setLeagueInfo((prev) => prev ? { ...prev, schedule_visible: visible } : prev);
+    } catch (e: any) {
+      console.error('Failed to update schedule visibility', e);
+      if (e?.code === 'PGRST204') {
+        alert("Schedule visibility setting isn't available yet. Apply the DB migration to add 'schedule_visible' to the 'leagues' table, then try again.");
+      } else {
+        alert('Failed to update schedule visibility. Please try again.');
+      }
+    } finally {
+      setSavingScheduleVisibility(false);
     }
   };
 
@@ -994,7 +1018,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       {/* Admin Controls */}
       {userProfile?.is_admin && (
         <div className="mb-6 flex flex-wrap justify-between items-center gap-4">
-          <div className="flex flex-wrap gap-3">
+          {/* Left controls */}
+          <div className="flex flex-wrap gap-3 items-center">
             {!isEditScheduleMode ? (
               <button
                 onClick={handleEnterEditMode}
@@ -1040,6 +1065,33 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               <span className="text-sm text-gray-700">No Games This Week</span>
               {savingNoGames && <span className="text-xs text-gray-500">(Saving...)</span>}
             </label>
+
+          </div>
+
+          {/* Right-side: Public visibility toggle */}
+          <div className="flex items-center gap-3 ml-auto">
+            <span className="text-sm text-gray-700">Visible to public</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={(leagueInfo?.schedule_visible ?? true) ? 'true' : 'false'}
+              aria-label="Toggle public schedule visibility"
+              onClick={() => handleScheduleVisibilityToggle(!(leagueInfo?.schedule_visible ?? true))}
+              disabled={savingScheduleVisibility}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                (leagueInfo?.schedule_visible ?? true) ? 'bg-[#B20000]' : 'bg-gray-300'
+              } ${savingScheduleVisibility ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <span
+                className={`inline-flex h-5 w-5 transform rounded-full bg-white transition-transform items-center justify-center text-[10px] font-bold ${
+                  (leagueInfo?.schedule_visible ?? true)
+                    ? 'translate-x-5 text-[#B20000]'
+                    : 'translate-x-1 text-gray-700'
+                }`}
+              >
+                {(leagueInfo?.schedule_visible ?? true) ? 'Y' : 'N'}
+              </span>
+            </button>
           </div>
         </div>
       )}
