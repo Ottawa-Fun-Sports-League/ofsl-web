@@ -1,0 +1,3 @@
+﻿feat(standings): highlight Points column as primary indicator
+
+- Public: color Points header and cells red (#B20000) and make values bold
