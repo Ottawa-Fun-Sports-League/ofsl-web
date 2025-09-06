@@ -120,6 +120,38 @@ export function useLeagueStandings(leagueId: string | undefined) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
 
+  // Live updates: refetch when standings change or window gains focus
+  useEffect(() => {
+    if (!leagueId) return;
+
+    // Re-fetch on window focus (e.g., after admin saves in another tab/view)
+    const onFocus = () => loadTeams();
+    window.addEventListener('focus', onFocus);
+
+    // Subscribe to Postgres changes for this league's standings
+    const channel = supabase
+      .channel(`standings-${leagueId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'standings',
+          filter: `league_id=eq.${parseInt(leagueId)}`,
+        },
+        () => {
+          loadTeams();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId]);
+
   return {
     teams,
     loading,

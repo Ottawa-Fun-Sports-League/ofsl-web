@@ -1,0 +1,5 @@
+﻿fix(standings): live-refresh public standings after admin adjustments
+
+- Add Supabase realtime subscription on public standings (by league_id)
+- Refetch on window focus to catch cross-view saves
+- Keeps ordering by current_position from DB recalc
