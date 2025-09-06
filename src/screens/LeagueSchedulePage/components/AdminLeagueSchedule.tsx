@@ -253,10 +253,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       }
 
       setWeeklyTiers(data || []);
-
-      // Set no_games flag based on first tier
-      const firstTier = data && data.length > 0 ? data[0] : null;
-      setNoGamesWeek(firstTier?.no_games || false);
+      
+      // Week is considered no-games only if ALL tiers are marked no_games
+      const allNoGames = Array.isArray(data) && data.length > 0 && data.every((t: any) => !!t.no_games);
+      setNoGamesWeek(allNoGames);
+      
     } catch (error) {
       console.error("Error loading weekly schedule:", error);
       setWeeklyTiers([]);
@@ -1285,7 +1286,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                                       .update({ no_games: e.target.checked })
                                       .eq('id', tier.id);
                                     if (error) throw error;
-                                    setWeeklyTiers(prev => prev.map(t => t.id === tier.id ? { ...t, no_games: e.target.checked } : t));
+                                    setWeeklyTiers(prev => {
+                                      const next = prev.map(t => t.id === tier.id ? { ...t, no_games: e.target.checked } : t);
+                                      const allNoGamesLocal = next.length > 0 && next.every(t => !!t.no_games);
+                                      setNoGamesWeek(allNoGamesLocal);
+                                      return next;
+                                    });
                                   } catch (err) {
                                     console.error('Failed to update tier no_games', err);
                                     alert('Failed to update tier No games setting.');
