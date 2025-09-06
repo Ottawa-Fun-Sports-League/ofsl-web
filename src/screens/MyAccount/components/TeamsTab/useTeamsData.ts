@@ -31,6 +31,7 @@ interface IndividualLeague {
 export function useTeamsData(userId?: string) {
   const [leaguePayments, setLeaguePayments] = useState<LeaguePayment[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [teamPaymentsByTeamId, setTeamPaymentsByTeamId] = useState<Record<number, LeaguePayment>>({});
   const [individualLeagues, setIndividualLeagues] = useState<IndividualLeague[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -101,6 +102,58 @@ export function useTeamsData(userId?: string) {
       });
       
       setTeams(teamsData);
+      // Also load team-level payments for these teams (not limited to current user)
+      const teamIds = teamsData.map((t) => t.id);
+      if (teamIds.length > 0) {
+        try {
+          const { data: teamPays } = await supabase
+            .from('league_payments')
+            .select('id, team_id, amount_due, amount_paid, status, due_date, league_id')
+            .in('team_id', teamIds);
+
+          const byTeam: Record<number, LeaguePayment> = {};
+          (teamPays || []).forEach((p: any) => {
+            const tid = p.team_id as number;
+            const existing = byTeam[tid];
+            const amount_due = Number(p.amount_due) || 0;
+            const amount_paid = Number(p.amount_paid) || 0;
+            if (!existing) {
+              byTeam[tid] = {
+                id: p.id,
+                team_id: tid,
+                league_id: p.league_id,
+                league_name: '',
+                team_name: '',
+                amount_due,
+                amount_paid,
+                league_cost: amount_due,
+                status: p.status || (amount_paid >= amount_due ? 'paid' : amount_paid > 0 ? 'partial' : 'pending'),
+                due_date: p.due_date || '',
+                payment_method: null,
+                skill_level_id: null,
+                skill_name: null,
+              };
+            } else {
+              // Aggregate by taking max due and sum paid
+              const newPaid = existing.amount_paid + amount_paid;
+              const newDue = Math.max(existing.amount_due, amount_due);
+              byTeam[tid] = {
+                ...existing,
+                amount_due: newDue,
+                league_cost: newDue,
+                amount_paid: newPaid,
+                status: newPaid >= newDue ? 'paid' : newPaid > 0 ? 'partial' : 'pending',
+              };
+            }
+          });
+          setTeamPaymentsByTeamId(byTeam);
+        } catch (e) {
+          console.error('Error fetching team-level payments:', e);
+          setTeamPaymentsByTeamId({});
+        }
+      } else {
+        setTeamPaymentsByTeamId({});
+      }
       return teamsData;
     } catch (error) {
       console.error('Error fetching teams:', error);
@@ -282,6 +335,7 @@ export function useTeamsData(userId?: string) {
   return {
     leaguePayments,
     teams,
+    teamPaymentsByTeamId,
     individualLeagues,
     loading,
     setLeaguePayments,

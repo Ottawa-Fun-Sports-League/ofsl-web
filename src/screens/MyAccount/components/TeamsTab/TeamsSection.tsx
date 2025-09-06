@@ -40,6 +40,7 @@ interface TeamsSectionProps {
   individualLeagues?: IndividualLeague[];
   currentUserId?: string;
   leaguePayments: LeaguePayment[];
+  teamPaymentsByTeamId?: Record<number, LeaguePayment>;
   unregisteringPayment: number | null;
   leavingTeam: number | null;
   onUnregister: (paymentId: number, leagueName: string) => void;
@@ -54,6 +55,7 @@ export function TeamsSection({
   individualLeagues = [],
   currentUserId,
   leaguePayments,
+  teamPaymentsByTeamId,
   unregisteringPayment,
   leavingTeam,
   onUnregister,
@@ -88,9 +90,11 @@ export function TeamsSection({
         <div className="space-y-4">
           {teams.map((team) => {
             // Find the corresponding league payment for this team
-            const teamPayment = leaguePayments.find(
-              (payment) => payment.team_id === team.id,
-            );
+            // Prefer team-level payment aggregate if available; fallback to current user's payment
+            // to avoid showing incorrect unpaid messages to non-captains
+            const teamPayment =
+              (teamPaymentsByTeamId && (teamPaymentsByTeamId as any)[team.id]) ||
+              leaguePayments.find((payment) => payment.team_id === team.id);
             const isCaptain = team.captain_id === currentUserId;
 
             // Get the league fee - prioritize team.league.cost, then fall back to teamPayment data

@@ -15,7 +15,7 @@ import { MissingSkillLevelPrompt } from './MissingSkillLevelPrompt';
 
 export function TeamsTab() {
   const { user, userProfile, refreshUserProfile } = useAuth();
-  const { leaguePayments, teams, individualLeagues, loading, setLeaguePayments, refetchTeams, refetchIndividualLeagues, refetchLeaguePayments, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
+  const { leaguePayments, teams, teamPaymentsByTeamId, individualLeagues, loading, setLeaguePayments, refetchTeams, refetchIndividualLeagues, refetchLeaguePayments, updateTeamRoster, updateTeamCaptain } = useTeamsData(userProfile?.id);
   const { unregisteringPayment, handleUnregister, confirmationState, handleConfirmCancellation, handleCloseModal, resultState, handleCloseResultModal } = useTeamOperations();
   const [selectedTeam, setSelectedTeam] = useState<{id: number, name: string, roster: string[], captainId: string, leagueName: string} | null>(null);
   const [leavingTeam, setLeavingTeam] = useState<number | null>(null);
@@ -368,16 +368,17 @@ export function TeamsTab() {
       {/* Show pending invites at the top */}
       <PendingInvites onInviteAccepted={refetchTeams} />
       
-      <TeamsSection
-        teams={teams}
-        individualLeagues={individualLeagues}
-        currentUserId={userProfile?.id}
-        leaguePayments={leaguePayments}
-        unregisteringPayment={unregisteringPayment}
-        leavingTeam={leavingTeam}
-        onUnregister={onUnregister}
-        onLeaveTeam={handleLeaveTeam}
-        onManageTeammates={handleManageTeammates}
+        <TeamsSection
+          teams={teams}
+          individualLeagues={individualLeagues}
+          currentUserId={userProfile?.id}
+          leaguePayments={leaguePayments}
+          teamPaymentsByTeamId={teamPaymentsByTeamId}
+          unregisteringPayment={unregisteringPayment}
+          leavingTeam={leavingTeam}
+          onUnregister={onUnregister}
+          onLeaveTeam={handleLeaveTeam}
+          onManageTeammates={handleManageTeammates}
         onLeaveIndividualLeague={handleLeaveIndividualLeague}
         onSkillLevelUpdate={() => {
           // Refresh both teams and payments to get updated skill levels
