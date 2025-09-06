@@ -38,7 +38,6 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   const [isScheduleVisible, setIsScheduleVisible] = useState<boolean>(true);
   const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
-  const isSeedingWeek = currentWeek <= 2 && !isPlayoffWeek(currentWeek);
   
   // Check if user is admin or facilitator
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
@@ -352,7 +351,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                     Playoffs
                   </span>
                 )}
-                {isSeedingWeek && (
+                {currentWeek <= 2 && !isPlayoffWeek(currentWeek) && (
                   <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-red-50 text-[#B20000] rounded-full border border-red-200">
                     Seeding week
                   </span>

@@ -43,7 +43,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [noGamesWeek, setNoGamesWeek] = useState(false);
   const [savingNoGames, setSavingNoGames] = useState(false);
   const [savingScheduleVisibility, setSavingScheduleVisibility] = useState(false);
-  const isSeedingWeek = currentWeek <= 2 && !isPlayoffWeek(currentWeek);
   
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -1133,7 +1132,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       Playoffs
                     </span>
                   )}
-                  {isSeedingWeek && (
+                  {currentWeek <= 2 && !isPlayoffWeek(currentWeek) && (
                     <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-red-50 text-[#B20000] rounded-full border border-red-200">
                       Seeding week
                     </span>
