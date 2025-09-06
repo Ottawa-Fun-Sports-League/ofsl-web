@@ -31,7 +31,7 @@ import {
   WaiversTab,
   ManageTeamsTab,
   SparesTab,
-  SiteSettingsTab,
+  ScorecardsFormatsTab,
   LeagueEditPage,
   TeamEditPage,
   IndividualEditPage,
@@ -143,6 +143,14 @@ export function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <UsersTab />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="scorecards"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ScorecardsFormatsTab />
                   </ProtectedRoute>
                 }
               />

@@ -7,7 +7,7 @@ export { UsersTab } from './components/UsersTab/';
 export { WaiversTab } from './components/WaiversTab/';
 export { ManageTeamsTab } from './components/ManageTeamsTab/ManageTeamsTab';
 export { SparesTab } from './components/SparesTab/';
-export { SiteSettingsTab } from './components/SiteSettingsTab';
+export { ScorecardsFormatsTab } from './components/ScorecardsFormatsTab';
 export { LeagueEditPage } from './components/LeagueEditPage';
 export { TeamEditPage } from './components/TeamEditPage/';
 export { IndividualEditPage } from './components/IndividualEditPage/';
