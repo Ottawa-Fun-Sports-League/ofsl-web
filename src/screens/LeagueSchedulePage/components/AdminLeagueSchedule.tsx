@@ -43,6 +43,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [noGamesWeek, setNoGamesWeek] = useState(false);
   const [savingNoGames, setSavingNoGames] = useState(false);
   const [savingScheduleVisibility, setSavingScheduleVisibility] = useState(false);
+  const isSeedingWeek = currentWeek <= 2 && !isPlayoffWeek(currentWeek);
   
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -1122,18 +1123,23 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
             </div>
 
             {/* Week and date */}
-            <div className="text-left">
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-[#6F6F6F]">
-                  Week {currentWeek} - {getWeekDate(currentWeek)}
-                </p>
-                {isPlayoffWeek(currentWeek) && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-50 text-[#B20000] rounded-full border border-red-200">
-                    Playoffs
-                  </span>
-                )}
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-[#6F6F6F]">
+                    Week {currentWeek} - {getWeekDate(currentWeek)}
+                  </p>
+                  {isPlayoffWeek(currentWeek) && (
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-50 text-[#B20000] rounded-full border border-red-200">
+                      Playoffs
+                    </span>
+                  )}
+                  {isSeedingWeek && (
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-red-50 text-[#B20000] rounded-full border border-red-200">
+                      Seeding week
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
           </div>
 
           <div className="flex items-center gap-3">
