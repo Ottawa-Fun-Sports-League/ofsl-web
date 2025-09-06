@@ -1237,7 +1237,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               )}
 
               {weeklyTiers.map((tier, tierIndex) => (
-                <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
+                <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'opacity-60 bg-gray-50' : ''}`}>
                   <CardContent className="p-0 overflow-hidden">
                     {/* Tier Header - EXACT same as public */}
                     <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
@@ -1253,25 +1253,44 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           </h3>
 
                           {/* Submit Scores link (when not in edit mode) */}
-                          {!isEditScheduleMode &&
-                            !tier.is_completed &&
-                            !tier.no_games &&
-                            getPositionsForFormat(tier.format || "3-teams-6-sets").every(
-                              (pos) => getTeamForPosition(tier, pos)?.name,
-                            ) && (
-                              <button
-                                onClick={() => {
-                                  // TODO: Implement score submission modal
-                                  alert(
-                                    "Score submission functionality will be implemented in a future update.",
-                                  );
+                          {!isEditScheduleMode && !tier.is_completed && !tier.no_games && 
+                           getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
+                            <button
+                              onClick={() => {
+                                // TODO: Implement score submission modal
+                                alert('Score submission functionality will be implemented in a future update.');
+                              }}
+                              className="ml-3 text-sm text-[#B20000] hover:text-[#8B0000] hover:underline font-medium transition-colors"
+                            >
+                              Submit scores
+                            </button>
+                          )}
+                          
+                          {/* Tier-specific No Games toggle (admin edit mode) */}
+                          {isEditScheduleMode && (
+                            <label className="ml-3 flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={!!tier.no_games}
+                                onChange={async (e) => {
+                                  try {
+                                    const { error } = await supabase
+                                      .from('weekly_schedules')
+                                      .update({ no_games: e.target.checked })
+                                      .eq('id', tier.id);
+                                    if (error) throw error;
+                                    setWeeklyTiers(prev => prev.map(t => t.id === tier.id ? { ...t, no_games: e.target.checked } : t));
+                                  } catch (err) {
+                                    console.error('Failed to update tier no_games', err);
+                                    alert('Failed to update tier No games setting.');
+                                  }
                                 }}
-                                className="ml-3 text-sm text-[#B20000] hover:text-[#8B0000] hover:underline font-medium transition-colors"
-                              >
-                                Submit scores
-                              </button>
-                            )}
-
+                                className="rounded"
+                              />
+                              No games
+                            </label>
+                          )}
+                          
                           {/* Admin Actions (only in edit mode) */}
                           {userProfile?.is_admin && isEditScheduleMode && (
                             <div className="flex items-center gap-2">
@@ -1296,6 +1315,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
                         {/* Location/Time/Court - EXACT same as public */}
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
+                          {tier.no_games && (
+                            <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
+                              No games
+                            </div>
+                          )}
                           <div className="flex items-center">
                             <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
                             <span className="text-sm text-[#6F6F6F]">{tier.location}</span>

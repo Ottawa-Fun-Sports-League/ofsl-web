@@ -450,10 +450,10 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
           ) : (
             // NEW: Display normal weekly schedule data
             weeklyTiers.map((tier) => (
-            <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
-              <CardContent className="p-0 overflow-hidden">
-                {/* Tier Header */}
-                <div className="bg-[#F8F8F8] border-b px-8 py-3">
+              <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
+                <CardContent className="p-0 overflow-hidden">
+                  {/* Tier Header */}
+                  <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
@@ -479,6 +479,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                     </div>
                     
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
+                      {tier.no_games && (
+                        <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
+                          No games
+                        </div>
+                      )}
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
                         <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
@@ -501,67 +506,44 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                 
                 {/* Teams Display */}
                 <div className="p-4">
-                  <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
-                    {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => {
-                      const team = getTeamForPosition(tier, position);
-                      
-                      return (
-                        <div key={position} className="text-center">
-                          <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                          <div className="text-sm text-[#6F6F6F]">
-                            {team?.name ? 
-                              `${team.name} (${team.ranking || '-'})` : 
-                              <span className="text-gray-400 italic">TBD</span>
-                            }
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 text-[#B20000] mr-1.5" />
-                          <span className="text-sm text-[#6F6F6F]">{tier.time_slot}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <svg
-                            className="h-4 w-4 text-[#B20000] mr-1.5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <rect x="3" y="6" width="18" height="12" rx="2" strokeWidth="2" />
-                            <line x1="3" y1="12" x2="21" y2="12" strokeWidth="1" />
-                            <line x1="12" y1="6" x2="12" y2="18" strokeWidth="1" />
-                          </svg>
-                          <span className="text-sm text-[#6F6F6F]">{tier.court}</span>
-                        </div>
+                  {tier.no_games ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="font-medium text-gray-400 mb-1">A</div>
+                        <div className="text-sm text-gray-400 italic">No Games</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-gray-400 mb-1">B</div>
+                        <div className="text-sm text-gray-400 italic">No Games</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-gray-400 mb-1">C</div>
+                        <div className="text-sm text-gray-400 italic">No Games</div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Teams Display */}
-                  <div className="p-4">
-                    <div
-                      className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || "3-teams-6-sets"))} gap-4`}
-                    >
-                      {getPositionsForFormat(tier.format || "3-teams-6-sets").map((position) => {
+                  ) : (
+                    <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                      {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => {
                         const team = getTeamForPosition(tier, position);
-
+                        
                         return (
                           <div key={position} className="text-center">
                             <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                             <div className="text-sm text-[#6F6F6F]">
-                              {team?.name ? (
-                                `${team.name} (${teamPositions.get(team.name) || team.ranking || "-"})`
-                              ) : (
+                              {team?.name ? 
+                                `${team.name} (${teamPositions.get(team.name) || team.ranking || '-'})` : 
                                 <span className="text-gray-400 italic">TBD</span>
-                              )}
+                              }
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
           )
         ) : currentWeek === 1 ? (
           <div className="text-center py-12">
