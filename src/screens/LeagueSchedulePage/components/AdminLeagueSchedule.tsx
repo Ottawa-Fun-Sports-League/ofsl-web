@@ -1237,7 +1237,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               )}
 
               {weeklyTiers.map((tier, tierIndex) => (
-                <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'opacity-60 bg-gray-50' : ''}`}>
+                <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'opacity-50 bg-gray-100' : ''}`}>
                   <CardContent className="p-0 overflow-hidden">
                     {/* Tier Header - EXACT same as public */}
                     <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
@@ -1265,7 +1265,13 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                               Submit scores
                             </button>
                           )}
-                          
+
+                          {tier.no_games && (
+                            <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                              No games
+                            </span>
+                          )}
+
                           {/* Tier-specific No Games toggle (admin edit mode) */}
                           {isEditScheduleMode && (
                             <label className="ml-3 flex items-center gap-2 text-sm text-gray-700">
@@ -1315,11 +1321,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
                         {/* Location/Time/Court - EXACT same as public */}
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-end sm:items-center text-right">
-                          {tier.no_games && (
-                            <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
-                              No games
-                            </div>
-                          )}
                           <div className="flex items-center">
                             <MapPin className="h-4 w-4 text-[#B20000] mr-1.5" />
                             <span className="text-sm text-[#6F6F6F]">{tier.location}</span>
