@@ -1,4 +1,0 @@
-﻿style(standings): subtle faint background on Points column
-
-- Header: bg-red-50
-- Cells: bg-red-50 for Points values; neutral text

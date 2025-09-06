@@ -1,0 +1,3 @@
+﻿chore(standings): tweak note wording for ordering sentence
+
+- Change: "Standings are updated weekly. Ordered by points, then wins, then point differential."
