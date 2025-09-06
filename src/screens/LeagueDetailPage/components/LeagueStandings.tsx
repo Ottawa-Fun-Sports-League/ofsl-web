@@ -64,10 +64,15 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       {/* Note about standings */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <p className="text-sm text-blue-800">
-          <strong>Note:</strong> {hasSchedule 
-            ? "Standings are updated weekly once league play begins."
-            : "Game records and standings will be available once league play begins. Below shows the current registered teams."
-          }
+          {hasSchedule ? (
+            <>
+              <strong>Note:</strong> Standings are updated weekly. Standings are ordered by points, then wins, then point differential.
+            </>
+          ) : (
+            <>
+              <strong>Note:</strong> Game records and standings will be available once league play begins. Below shows the current registered teams.
+            </>
+          )}
         </p>
       </div>
 
