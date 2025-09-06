@@ -1,0 +1,4 @@
+﻿fix(standings): show wins/losses/points/differential on public table
+
+- Render values from useLeagueStandings instead of placeholders
+- Keeps DB-driven ordering by current_position intact
