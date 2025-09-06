@@ -1275,26 +1275,37 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
                           {/* Tier-specific No Games toggle (admin edit mode) */}
                           {isEditScheduleMode && (
-                            <label className="ml-3 flex items-center gap-2 text-sm text-gray-700">
+                            <label className="ml-3 flex items-center gap-2 text-sm text-gray-700" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={!!tier.no_games}
+                                onClick={(e) => e.stopPropagation()}
                                 onChange={async (e) => {
+                                  const nextValue = e.target.checked;
+                                  // Optimistic UI update
+                                  let previousValue = !!tier.no_games;
+                                  setWeeklyTiers(prev => {
+                                    const next = prev.map(t => t.id === tier.id ? { ...t, no_games: nextValue } : t);
+                                    const allNoGamesLocal = next.length > 0 && next.every(t => !!t.no_games);
+                                    setNoGamesWeek(allNoGamesLocal);
+                                    return next;
+                                  });
                                   try {
                                     const { error } = await supabase
                                       .from('weekly_schedules')
-                                      .update({ no_games: e.target.checked })
+                                      .update({ no_games: nextValue })
                                       .eq('id', tier.id);
                                     if (error) throw error;
+                                  } catch (err) {
+                                    console.error('Failed to update tier no_games', err);
+                                    alert('Failed to update tier No games setting. Reverting.');
+                                    // Revert UI
                                     setWeeklyTiers(prev => {
-                                      const next = prev.map(t => t.id === tier.id ? { ...t, no_games: e.target.checked } : t);
+                                      const next = prev.map(t => t.id === tier.id ? { ...t, no_games: previousValue } : t);
                                       const allNoGamesLocal = next.length > 0 && next.every(t => !!t.no_games);
                                       setNoGamesWeek(allNoGamesLocal);
                                       return next;
                                     });
-                                  } catch (err) {
-                                    console.error('Failed to update tier no_games', err);
-                                    alert('Failed to update tier No games setting.');
                                   }
                                 }}
                                 className="rounded"
