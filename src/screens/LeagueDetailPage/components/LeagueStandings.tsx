@@ -66,7 +66,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
         <p className="text-sm text-blue-800">
           {hasSchedule ? (
             <>
-              <strong>Note:</strong> Standings are updated weekly. Standings are ordered by points, then wins, then point differential.
+              <strong>Note:</strong> Standings are updated weekly. Ordered by points, then wins, then point differential.
             </>
           ) : (
             <>
