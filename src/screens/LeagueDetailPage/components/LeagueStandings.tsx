@@ -130,20 +130,20 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                       {team.name}
                     </td>
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
-                      -
+                      {team.wins}
                     </td>
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
-                      -
+                      {team.losses}
                     </td>
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
-                      -
+                      {team.points}
                     </td>
                     <td
                       className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${
                         index === teams.length - 1 ? "rounded-br-lg" : ""
                       }`}
                     >
-                      -
+                      {team.differential}
                     </td>
                   </tr>
                 ))}
