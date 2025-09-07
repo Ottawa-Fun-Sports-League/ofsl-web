@@ -69,10 +69,10 @@ export function AddTeamModal({
 
       // Then, get all teams that are already scheduled for this week
       const { data: scheduledTeams, error: scheduleError } = await supabase
-        .from("weekly_schedules")
-        .select("team_a_name, team_b_name, team_c_name")
-        .eq("league_id", parseInt(leagueId))
-        .eq("week_number", currentWeek);
+        .from('weekly_schedules')
+        .select('team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
+        .eq('league_id', parseInt(leagueId))
+        .eq('week_number', currentWeek);
 
       if (scheduleError) throw scheduleError;
 
@@ -82,6 +82,9 @@ export function AddTeamModal({
         if (schedule.team_a_name) scheduledTeamNames.add(schedule.team_a_name);
         if (schedule.team_b_name) scheduledTeamNames.add(schedule.team_b_name);
         if (schedule.team_c_name) scheduledTeamNames.add(schedule.team_c_name);
+        if ((schedule as any).team_d_name) scheduledTeamNames.add((schedule as any).team_d_name);
+        if ((schedule as any).team_e_name) scheduledTeamNames.add((schedule as any).team_e_name);
+        if ((schedule as any).team_f_name) scheduledTeamNames.add((schedule as any).team_f_name);
       });
 
       // Map teams and mark which ones are already scheduled

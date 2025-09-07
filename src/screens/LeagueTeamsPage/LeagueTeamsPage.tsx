@@ -170,6 +170,8 @@ export function LeagueTeamsPage() {
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [showScheduleConfirmation, setShowScheduleConfirmation] = useState(false);
   const [hasSchedule, setHasSchedule] = useState(false);
+  const [deleteScheduleOpen, setDeleteScheduleOpen] = useState(false);
+  const [deletingSchedule, setDeletingSchedule] = useState(false);
 
   // Game format options - using centralized definitions for consistent ordering
   const gameFormats = getFormatOptions();
@@ -580,6 +582,37 @@ export function LeagueTeamsPage() {
 
   const handleCloseScheduleConfirmation = () => {
     setShowScheduleConfirmation(false);
+  };
+
+  const handleOpenDeleteScheduleModal = () => {
+    setDeleteScheduleOpen(true);
+  };
+
+  const handleConfirmDeleteSchedule = async () => {
+    if (!leagueId) return;
+    try {
+      setDeletingSchedule(true);
+      // Delete generated weekly schedule rows
+      await supabase
+        .from('weekly_schedules')
+        .delete()
+        .eq('league_id', parseInt(leagueId));
+
+      // Delete league_schedules master record
+      await supabase
+        .from('league_schedules')
+        .delete()
+        .eq('league_id', parseInt(leagueId));
+
+      setHasSchedule(false);
+      setDeleteScheduleOpen(false);
+      showToast('Season schedule deleted. You can generate a new one.', 'success');
+    } catch (err) {
+      console.error('Error deleting schedule:', err);
+      showToast('Failed to delete schedule. Please try again.', 'error');
+    } finally {
+      setDeletingSchedule(false);
+    }
   };
 
   // Calculate total weeks: Regular season (start to end date) + playoff weeks (beyond end date)
@@ -2155,19 +2188,34 @@ export function LeagueTeamsPage() {
               <div className="flex-1">
                 <p className="text-[#6F6F6F] text-base">
                   {hasSchedule 
-                    ? "Season schedule has been generated and is now available!"
+                    ? (() => {
+                        const start = league?.start_date ? new Date(league.start_date + 'T00:00:00') : null;
+                        const today = new Date();
+                        const deleteDisabled = !!start && today >= start;
+                        return deleteDisabled
+                          ? 'Season schedule has been generated. Cannot delete once season has started.'
+                          : 'Season schedule has been generated. You can delete it and start over.';
+                      })()
                     : "Ready to start the season? Set the order of the teams below and then generate the schedule."
                   }
                 </p>
               </div>
               <div className="flex-shrink-0">
-                <Button
-                  onClick={hasSchedule ? () => navigate(`/leagues/${leagueId}/schedule`) : handleOpenScheduleModal}
-                  className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-lg px-6 py-2.5 text-sm font-medium whitespace-nowrap flex items-center gap-2"
-                >
-                  <CalendarDays className="h-4 w-4" />
-                  {hasSchedule ? 'View Schedule' : 'Generate Schedule'}
-                </Button>
+                {(() => {
+                  const start = league?.start_date ? new Date(league.start_date + 'T00:00:00') : null;
+                  const today = new Date();
+                  const deleteDisabled = hasSchedule && !!start && today >= start;
+                  return (
+                    <Button
+                      onClick={hasSchedule ? (deleteDisabled ? undefined : handleOpenDeleteScheduleModal) : handleOpenScheduleModal}
+                      disabled={hasSchedule ? deleteDisabled : false}
+                      className="bg-[#B20000] disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed hover:bg-[#8A0000] text-white rounded-lg px-6 py-2.5 text-sm font-medium whitespace-nowrap flex items-center gap-2"
+                    >
+                      {hasSchedule ? <Trash2 className="h-4 w-4" /> : <CalendarDays className="h-4 w-4" />}
+                      {hasSchedule ? 'Delete Schedule' : 'Generate Schedule'}
+                    </Button>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -2470,8 +2518,8 @@ export function LeagueTeamsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Schedule Generation Confirmation Modal */}
-      <Dialog open={showScheduleConfirmation} onOpenChange={handleCloseScheduleConfirmation}>
+  {/* Schedule Generation Confirmation Modal */}
+  <Dialog open={showScheduleConfirmation} onOpenChange={handleCloseScheduleConfirmation}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#6F6F6F] flex items-center gap-2">
@@ -2529,7 +2577,20 @@ export function LeagueTeamsPage() {
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+  </Dialog>
+
+  {/* Delete Schedule Confirmation */}
+  <ConfirmationModal
+    isOpen={deleteScheduleOpen}
+    onClose={() => setDeleteScheduleOpen(false)}
+    onConfirm={handleConfirmDeleteSchedule}
+    title="Delete Schedule"
+    message={"This will delete the current season schedule for this league, including all generated weekly schedule entries. You can generate a new schedule afterwards."}
+    confirmText="Delete Schedule"
+    cancelText="Cancel"
+    variant="danger"
+    isLoading={deletingSchedule}
+  />
     </div>
   );
 }

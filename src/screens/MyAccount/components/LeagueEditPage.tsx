@@ -62,6 +62,7 @@ export function LeagueEditPage() {
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [hasScores, setHasScores] = useState(false);
   const [lastWeekWithScores, setLastWeekWithScores] = useState(0);
+  const [hasSchedule, setHasSchedule] = useState(false);
 
   const [editLeague, setEditLeague] = useState<{
     name: string;
@@ -178,6 +179,22 @@ export function LeagueEditPage() {
         }
 
         setLeague(leagueData);
+
+        // Check if a schedule has been generated for this league
+        try {
+          const { data: scheduleRow, error: scheduleErr } = await supabase
+            .from('league_schedules')
+            .select('id')
+            .eq('league_id', parseInt(id))
+            .maybeSingle();
+          if (scheduleErr && scheduleErr.code !== 'PGRST116') {
+            console.warn('Failed to load schedule status for league', scheduleErr);
+          }
+          setHasSchedule(!!scheduleRow);
+        } catch (e) {
+          console.warn('Error checking schedule status', e);
+          setHasSchedule(false);
+        }
 
         setEditLeague({
           name: leagueData.name,
@@ -705,9 +722,9 @@ export function LeagueEditPage() {
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                     Start Date
-                    {hasScores && (
+                    {(hasSchedule && league && (new Date() >= new Date(league.start_date + 'T00:00:00'))) && (
                       <span className="ml-2 text-xs text-gray-500">
-                        (Locked - league has started with scores)
+                        (Locked - schedule exists and season has started)
                       </span>
                     )}
                   </label>
@@ -722,7 +739,7 @@ export function LeagueEditPage() {
                     }
                     className="w-full"
                     required
-                    disabled={hasScores}
+                    disabled={hasSchedule && league ? (new Date() >= new Date(league.start_date + 'T00:00:00')) : false}
                   />
                 </div>
 
