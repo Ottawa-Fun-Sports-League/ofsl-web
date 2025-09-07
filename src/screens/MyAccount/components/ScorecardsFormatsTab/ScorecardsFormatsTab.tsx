@@ -41,9 +41,54 @@ export function ScorecardsFormatsTab() {
             <div className="space-y-4">
               <h3 className="text-xl font-semibold text-[#6F6F6F]">{selected.label}</h3>
               {selected.value === '3-teams-6-sets' ? (
-                <Scorecard3Teams6Sets
-                  teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }}
-                />
+                <>
+                  <Scorecard3Teams6Sets
+                    teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }}
+                  />
+
+                  {/* Format logic reference */}
+                  <div className="mt-6 space-y-5">
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Points System</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>
+                          Baseline (Lowest Tier): <span className="font-medium">3 / 4 / 5</span> (loser / neutral / winner)
+                        </li>
+                        <li>
+                          Tier Bonus: <span className="font-medium">+2</span> per tier up from bottom tier
+                        </li>
+                        <li>
+                          Example (Tier 2): <span className="font-medium">5 / 6 / 7</span> (loser / neutral / winner)
+                        </li>
+                        <li>
+                          Note: Middle team (neutral) remains in the same tier
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tie-Breaker Rules</h4>
+                      <ol className="list-decimal pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Tie exists: Compare overall set wins</li>
+                        <li>3-way tie: Compare overall points differential (lowest differential wins)</li>
+                        <li>2-way tie: Compare head-to-head points differential (lowest differential wins)</li>
+                        <li>Still tied: Use previous week’s standings (higher ranked team wins)</li>
+                      </ol>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tier Movement</h4>
+                      <p className="text-[15px] text-[#4B5563] mb-2">Current week results move teams to the following week:</p>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Winners: move up one tier to position C</li>
+                        <li>Losers: move down one tier to position A</li>
+                        <li>Neutral (non-winning/non-losing): stays in the same tier, moves to position B</li>
+                        <li>Top tier winners: stay in the same tier (cannot move up)</li>
+                        <li>Bottom tier losers: stay in the same tier (cannot move down)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="border rounded-md p-4 text-sm text-gray-700">
                   This view will show the scorecard for "{selected.label}". Build-out will follow after the 3-team reference.

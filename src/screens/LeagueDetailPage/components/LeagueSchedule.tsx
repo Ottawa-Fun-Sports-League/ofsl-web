@@ -475,7 +475,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                           No games
                         </span>
                       )}
-                      {canSubmitScores && !tier.is_completed && !tier.no_games && 
+                      {canSubmitScores && !tier.is_completed && !tier.no_games &&
+                       tier.format === '3-teams-6-sets' &&
                        getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                         <button
                           onClick={() => {

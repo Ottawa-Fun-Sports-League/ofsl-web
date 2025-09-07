@@ -30,13 +30,19 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier }: SubmitScoresM
         </DialogHeader>
 
         <div className="py-2">
-          <Scorecard3Teams6Sets
-            teamNames={teamNames as any}
-            onSubmit={() => {
-              // TODO: integrate persistence when backend is ready
-              onClose();
-            }}
-          />
+          {weeklyTier.format !== '3-teams-6-sets' ? (
+            <div className="text-sm text-gray-700">
+              Score submission for this format is not available yet. Please check back after the scorecard is built.
+            </div>
+          ) : (
+            <Scorecard3Teams6Sets
+              teamNames={teamNames as any}
+              onSubmit={() => {
+                // TODO: integrate persistence when backend is ready
+                onClose();
+              }}
+            />
+          )}
         </div>
 
         <DialogFooter>

@@ -26,6 +26,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier }: SubmitScoresM
 
   const title = `Submit Scores - Tier ${weeklyTier.tier_number ?? ''}`;
 
+  const unsupported = weeklyTier.format !== '3-teams-6-sets';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="submit-scores-description">
@@ -34,13 +36,19 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier }: SubmitScoresM
         </DialogHeader>
 
         <div className="py-2">
-          <Scorecard3Teams6Sets
-            teamNames={teamNames as any}
-            onSubmit={() => {
-              // TODO: integrate API to persist scores
-              onClose();
-            }}
-          />
+          {unsupported ? (
+            <div className="text-sm text-gray-700">
+              Score submission for this format is not available yet. Please check back after the scorecard is built.
+            </div>
+          ) : (
+            <Scorecard3Teams6Sets
+              teamNames={teamNames as any}
+              onSubmit={() => {
+                // TODO: integrate API to persist scores
+                onClose();
+              }}
+            />
+          )}
         </div>
 
         <DialogFooter>

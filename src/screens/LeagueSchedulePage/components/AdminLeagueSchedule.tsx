@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { MapPin, Clock, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
 import { SubmitScoresModal } from './SubmitScoresModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -1270,7 +1269,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           </h3>
 
                           {/* Submit Scores link (when not in edit mode) */}
-                          {!isEditScheduleMode && !tier.is_completed && !tier.no_games && 
+                          {!isEditScheduleMode && !tier.is_completed && !tier.no_games &&
+                           tier.format === '3-teams-6-sets' &&
                            getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                             <button
                               onClick={() => openSubmitScores(tier)}
@@ -1463,13 +1463,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 flex justify-end">
-                    {tier.format === '3-teams-6-sets' && (
-                      <Button size="sm" onClick={() => openSubmitScores(tier)}>
-                        Submit Scores
-                      </Button>
-                    )}
-                  </div>
+                  
                 </div>
               </CardContent>
             </Card>
