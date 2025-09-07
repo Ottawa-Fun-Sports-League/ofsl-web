@@ -1,5 +1,6 @@
 import { Edit, ArrowRightLeft } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip';
 
 interface Team {
   id: number;
@@ -81,28 +82,41 @@ export function ManageTeamsTableView({ teams, onEditTeam, onTransferTeam }: Mana
                 {new Date(team.created_at).toLocaleDateString()}
               </td>
               <td className="p-4">
-                <div className="flex items-center justify-end gap-1">
-                  {onTransferTeam && (
-                    <Button
-                      onClick={() => onTransferTeam(team)}
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center gap-1 text-xs hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
-                      title="Transfer to different league"
-                    >
-                      <ArrowRightLeft className="h-3 w-3" />
-                      <span className="hidden lg:inline">Transfer</span>
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => onEditTeam(team)}
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-1 text-xs hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
-                  >
-                    <Edit className="h-3 w-3" />
-                    <span className="hidden lg:inline">Edit</span>
-                  </Button>
+                <div className="flex items-center justify-end gap-2">
+                  <TooltipProvider>
+                    <div className="flex items-center gap-2">
+                      {onTransferTeam && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="Transfer"
+                              onClick={() => onTransferTeam(team)}
+                              size="sm"
+                              variant="outline"
+                              className="hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Transfer</TooltipContent>
+                        </Tooltip>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            aria-label="Edit"
+                            onClick={() => onEditTeam(team)}
+                            size="sm"
+                            variant="outline"
+                            className="hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                 </div>
               </td>
             </tr>

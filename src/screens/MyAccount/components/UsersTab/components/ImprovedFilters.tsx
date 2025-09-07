@@ -104,6 +104,17 @@ export function ImprovedFilters({
             placeholder="Search users by name, email, or phone..."
             value={localSearchTerm}
             onChange={(e) => setLocalSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              // Prevent accidental form submissions or page refresh on Enter
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
+            autoComplete="off"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="none"
             className="pl-10 w-full h-10"
           />
         </div>
