@@ -8,6 +8,8 @@ import {
 import { Button } from '../../../components/ui/button';
 import type { WeeklyScheduleTier } from '../types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../../lib/supabase';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -27,6 +29,39 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier }: SubmitScoresM
   const title = `Submit Scores - Tier ${weeklyTier.tier_number ?? ''}`;
 
   const unsupported = weeklyTier.format !== '3-teams-6-sets';
+  const [pointsOffset, setPointsOffset] = useState<number>(0);
+  const [isTopTier, setIsTopTier] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchMaxTier = async () => {
+      try {
+        const leagueId = (weeklyTier as any).league_id as number | undefined;
+        const week = (weeklyTier as any).week_number as number | undefined;
+        if (!leagueId || !week) {
+          setPointsOffset(0);
+          setIsTopTier((weeklyTier.tier_number || 1) === 1);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('weekly_schedules')
+          .select('tier_number')
+          .eq('league_id', leagueId)
+          .eq('week_number', week);
+        if (error) throw error;
+        const maxTier = Math.max(
+          weeklyTier.tier_number || 1,
+          ...((data || []).map(r => (r as any).tier_number as number) || [1])
+        );
+        const offset = Math.max(0, (maxTier - (weeklyTier.tier_number || 1)));
+        setPointsOffset(offset);
+        setIsTopTier((weeklyTier.tier_number || 1) === 1);
+      } catch {
+        setPointsOffset(0);
+        setIsTopTier((weeklyTier.tier_number || 1) === 1);
+      }
+    };
+    fetchMaxTier();
+  }, [weeklyTier]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -43,6 +78,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier }: SubmitScoresM
           ) : (
             <Scorecard3Teams6Sets
               teamNames={teamNames as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
               onSubmit={() => {
                 // TODO: integrate API to persist scores
                 onClose();

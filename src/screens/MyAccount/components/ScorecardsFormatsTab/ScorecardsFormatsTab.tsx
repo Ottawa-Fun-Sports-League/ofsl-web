@@ -58,7 +58,7 @@ export function ScorecardsFormatsTab() {
                           Tier Bonus: <span className="font-medium">+2</span> per tier up from bottom tier
                         </li>
                         <li>
-                          Example (Tier 2): <span className="font-medium">5 / 6 / 7</span> (loser / neutral / winner)
+                          Example (Second tier from bottom): <span className="font-medium">5 / 6 / 7</span> (loser / neutral / winner)
                         </li>
                         <li>
                           Note: Middle team (neutral) remains in the same tier
