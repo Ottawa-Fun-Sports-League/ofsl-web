@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { Button } from '../../../../../components/ui/button';
 import { UserFilters } from '../types';
+ 
+import { supabase } from '../../../../../lib/supabase';
 
 interface ImprovedMobileFilterDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   filters: UserFilters;
   handleFilterChange: (filterKey: keyof UserFilters) => void;
+  onToggleSportInLeague: (sportId: number) => void;
+  onToggleSportWithSkill: (sportId: number) => void;
   clearFilters: () => void;
   isAnyFilterActive: () => boolean;
 }
@@ -25,12 +29,6 @@ const FILTER_OPTIONS: FilterOption[] = [
   // Role filters
   { key: 'administrator', label: 'Administrator', category: 'role' },
   { key: 'facilitator', label: 'Facilitator', category: 'role' },
-  
-  // Sport filters
-  { key: 'volleyballPlayersInLeague', label: 'Volleyball (Active)', category: 'sport', description: 'In volleyball league' },
-  { key: 'volleyballPlayersAll', label: 'Volleyball (All)', category: 'sport', description: 'Has volleyball skills' },
-  { key: 'badmintonPlayersInLeague', label: 'Badminton (Active)', category: 'sport', description: 'In badminton league' },
-  { key: 'badmintonPlayersAll', label: 'Badminton (All)', category: 'sport', description: 'Has badminton skills' },
   
   // Status filters
   { key: 'activePlayer', label: 'Active Player', category: 'status', description: 'Currently on a team in an active league' },
@@ -61,10 +59,25 @@ export function ImprovedMobileFilterDrawer({
   onClose,
   filters,
   handleFilterChange,
+  onToggleSportInLeague,
+  onToggleSportWithSkill,
   clearFilters,
   isAnyFilterActive
 }: ImprovedMobileFilterDrawerProps) {
   const [expandedCategory, setExpandedCategory] = useState<FilterCategory | null>(null);
+  const [sports, setSports] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    const loadSports = async () => {
+      const { data, error } = await supabase
+        .from('sports')
+        .select('id, name')
+        .eq('active', true)
+        .order('name');
+      if (!error) setSports(data || []);
+    };
+    loadSports();
+  }, []);
 
   const getCategoryOptions = (category: FilterCategory) => {
     return FILTER_OPTIONS.filter(option => option.category === category);
@@ -155,7 +168,7 @@ export function ImprovedMobileFilterDrawer({
                       >
                         <input
                           type="checkbox"
-                          checked={filters[option.key]}
+                          checked={Boolean(filters[option.key] as any)}
                           onChange={() => handleFilterChange(option.key)}
                           className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
                         />
@@ -171,6 +184,43 @@ export function ImprovedMobileFilterDrawer({
                         </div>
                       </label>
                     ))}
+
+                    {categoryKey === 'sport' && (
+                      <div className="mt-2 space-y-4">
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 mb-2">In League (Active)</div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {sports.map((sport) => (
+                              <label key={`m_in_${sport.id}`} className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                                <input
+                                  type="checkbox"
+                                  checked={filters.sportsInLeague.includes(sport.id)}
+                                  onChange={() => onToggleSportInLeague(sport.id)}
+                                  className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
+                                />
+                                <span>{sport.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 mb-2">Has Skill</div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {sports.map((sport) => (
+                              <label key={`m_skill_${sport.id}`} className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                                <input
+                                  type="checkbox"
+                                  checked={filters.sportsWithSkill.includes(sport.id)}
+                                  onChange={() => onToggleSportWithSkill(sport.id)}
+                                  className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
+                                />
+                                <span>{sport.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

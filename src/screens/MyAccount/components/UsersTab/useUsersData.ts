@@ -113,11 +113,9 @@ export function useUsersData() {
           p_facilitator: filters.facilitator,
           p_active_player: filters.activePlayer,
           p_pending_users: filters.pendingUsers,
-          p_volleyball_players_in_league: filters.volleyballPlayersInLeague,
-          p_badminton_players_in_league: filters.badmintonPlayersInLeague,
-          p_volleyball_players_all: filters.volleyballPlayersAll,
-          p_badminton_players_all: filters.badmintonPlayersAll,
           p_players_not_in_league: filters.playersNotInLeague,
+          p_sports_in_league: filters.sportsInLeague,
+          p_sports_has_skill: filters.sportsWithSkill,
         }
       );
 
@@ -213,9 +211,24 @@ export function useUsersData() {
   const handleFilterChange = useCallback((filterKey: keyof UserFilters) => {
     setFilters((prev) => ({
       ...prev,
-      [filterKey]: !prev[filterKey],
+      [filterKey]: typeof prev[filterKey] === 'boolean' ? !prev[filterKey] : prev[filterKey],
     }));
-    // Reset to first page when filters change
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
+  const toggleSportInLeague = useCallback((sportId: number) => {
+    setFilters((prev) => {
+      const exists = prev.sportsInLeague.includes(sportId);
+      return { ...prev, sportsInLeague: exists ? prev.sportsInLeague.filter(id => id !== sportId) : [...prev.sportsInLeague, sportId] };
+    });
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
+  const toggleSportWithSkill = useCallback((sportId: number) => {
+    setFilters((prev) => {
+      const exists = prev.sportsWithSkill.includes(sportId);
+      return { ...prev, sportsWithSkill: exists ? prev.sportsWithSkill.filter(id => id !== sportId) : [...prev.sportsWithSkill, sportId] };
+    });
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   }, []);
 
@@ -231,11 +244,9 @@ export function useUsersData() {
       filters.facilitator ||
       filters.activePlayer ||
       filters.pendingUsers ||
-      filters.volleyballPlayersInLeague ||
-      filters.badmintonPlayersInLeague ||
       filters.playersNotInLeague ||
-      filters.volleyballPlayersAll ||
-      filters.badmintonPlayersAll
+      (filters.sportsInLeague && filters.sportsInLeague.length > 0) ||
+      (filters.sportsWithSkill && filters.sportsWithSkill.length > 0)
     );
   }, [filters]);
 
@@ -274,6 +285,8 @@ export function useUsersData() {
     loadUsers,
     handleSort,
     handleFilterChange,
+    toggleSportInLeague,
+    toggleSportWithSkill,
     clearFilters,
     isAnyFilterActive,
     handlePageChange,

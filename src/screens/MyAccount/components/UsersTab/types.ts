@@ -49,11 +49,9 @@ export interface UserFilters {
   facilitator: boolean;
   activePlayer: boolean;
   pendingUsers: boolean;
-  volleyballPlayersInLeague: boolean;
-  badmintonPlayersInLeague: boolean;
   playersNotInLeague: boolean;
-  volleyballPlayersAll: boolean;
-  badmintonPlayersAll: boolean;
+  sportsInLeague: number[];      // sport IDs where user is active in a league
+  sportsWithSkill: number[];     // sport IDs where user has a skill set
 }
 
 export interface UserRegistration {

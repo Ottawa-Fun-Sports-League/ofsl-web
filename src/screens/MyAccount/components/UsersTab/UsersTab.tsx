@@ -31,6 +31,8 @@ export function UsersTab() {
     loadUsers,
     handleSort,
     handleFilterChange,
+    toggleSportInLeague,
+    toggleSportWithSkill,
     clearFilters,
     isAnyFilterActive,
     handlePageChange,
@@ -174,7 +176,13 @@ export function UsersTab() {
             onOpenMobileFilter={() => setShowMobileFilterDrawer(true)}
             onRefresh={loadUsers}
             onExportCSV={() => setShowExportModal(true)}
-            activeFilterCount={Object.values(filters).filter(Boolean).length}
+            activeFilterCount={[
+              filters.administrator,
+              filters.facilitator,
+              filters.activePlayer,
+              filters.pendingUsers,
+              filters.playersNotInLeague,
+            ].filter(Boolean).length + (filters.sportsInLeague?.length || 0) + (filters.sportsWithSkill?.length || 0)}
           />
 
           <ImprovedFilters
@@ -183,6 +191,8 @@ export function UsersTab() {
             isAnyFilterActive={isAnyFilterActive()}
             onSearchChange={setSearchTerm}
             onFilterChange={handleFilterChange}
+            onToggleSportInLeague={toggleSportInLeague}
+            onToggleSportWithSkill={toggleSportWithSkill}
             onClearFilters={clearFilters}
           />
         </div>
@@ -192,6 +202,8 @@ export function UsersTab() {
           onClose={() => setShowMobileFilterDrawer(false)}
           filters={filters}
           handleFilterChange={handleFilterChange}
+          onToggleSportInLeague={toggleSportInLeague}
+          onToggleSportWithSkill={toggleSportWithSkill}
           clearFilters={clearFilters}
           isAnyFilterActive={isAnyFilterActive}
         />

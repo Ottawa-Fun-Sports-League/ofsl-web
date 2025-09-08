@@ -4,6 +4,7 @@ import { Input } from '../../../../../components/ui/input';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { UserFilters } from '../types';
 import { useDebounce } from '../../../../../hooks/useDebounce';
+import { supabase } from '../../../../../lib/supabase';
 
 interface ImprovedFiltersProps {
   searchTerm: string;
@@ -11,6 +12,8 @@ interface ImprovedFiltersProps {
   isAnyFilterActive: boolean;
   onSearchChange: (term: string) => void;
   onFilterChange: (filterKey: keyof UserFilters) => void;
+  onToggleSportInLeague: (sportId: number) => void;
+  onToggleSportWithSkill: (sportId: number) => void;
   onClearFilters: () => void;
 }
 
@@ -27,12 +30,6 @@ const FILTER_OPTIONS: FilterOption[] = [
   // Role filters
   { key: 'administrator', label: 'Administrator', category: 'role' },
   { key: 'facilitator', label: 'Facilitator', category: 'role' },
-  
-  // Sport filters
-  { key: 'volleyballPlayersInLeague', label: 'Volleyball (Active)', category: 'sport', description: 'Currently in a volleyball league' },
-  { key: 'volleyballPlayersAll', label: 'Volleyball (All)', category: 'sport', description: 'Has volleyball skills' },
-  { key: 'badmintonPlayersInLeague', label: 'Badminton (Active)', category: 'sport', description: 'Currently in a badminton league' },
-  { key: 'badmintonPlayersAll', label: 'Badminton (All)', category: 'sport', description: 'Has badminton skills' },
   
   // Status filters
   { key: 'activePlayer', label: 'Active Player', category: 'status', description: 'Currently on a team in an active league' },
@@ -52,6 +49,8 @@ export function ImprovedFilters({
   isAnyFilterActive,
   onSearchChange,
   onFilterChange,
+  onToggleSportInLeague,
+  onToggleSportWithSkill,
   onClearFilters
 }: ImprovedFiltersProps) {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -59,6 +58,7 @@ export function ImprovedFilters({
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   const debouncedSearchTerm = useDebounce(localSearchTerm, 300); // 300ms delay
   const lastSentSearchTerm = useRef(searchTerm); // Track what we last sent to parent
+  const [sports, setSports] = useState<{ id: number; name: string }[]>([]);
 
   // Update parent component with debounced value - but only if it actually changed
   useEffect(() => {
@@ -77,8 +77,21 @@ export function ImprovedFilters({
     lastSentSearchTerm.current = searchTerm; // Also update our tracking ref
   }, [searchTerm]);
 
-  const activeFilters = FILTER_OPTIONS.filter(option => filters[option.key]);
-  const filterCount = activeFilters.length;
+  // Load sports for dynamic filters
+  useEffect(() => {
+    const loadSports = async () => {
+      const { data, error } = await supabase
+        .from('sports')
+        .select('id, name')
+        .eq('active', true)
+        .order('name');
+      if (!error) setSports(data || []);
+    };
+    loadSports();
+  }, []);
+
+  const activeFilters = FILTER_OPTIONS.filter(option => typeof filters[option.key] === 'boolean' && filters[option.key]);
+  const filterCount = activeFilters.length + (filters.sportsInLeague?.length || 0) + (filters.sportsWithSkill?.length || 0);
 
   const getCategoryOptions = (category: FilterCategory) => {
     return FILTER_OPTIONS.filter(option => option.category === category);
@@ -179,7 +192,7 @@ export function ImprovedFilters({
                         >
                           <input
                             type="checkbox"
-                            checked={filters[option.key]}
+                            checked={Boolean(filters[option.key] as any)}
                             onChange={() => handleFilterClick(option.key)}
                             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
                           />
@@ -201,6 +214,44 @@ export function ImprovedFilters({
                       </div>
                     )}
                   </div>
+
+                  {/* Dynamic Sport Filters */}
+                  {selectedCategory === 'sport' && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-2">In League (Active)</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {sports.map((sport) => (
+                            <label key={`in_${sport.id}`} className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                              <input
+                                type="checkbox"
+                                checked={filters.sportsInLeague.includes(sport.id)}
+                                onChange={() => onToggleSportInLeague(sport.id)}
+                                className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
+                              />
+                              <span>{sport.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-2">Has Skill</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {sports.map((sport) => (
+                            <label key={`skill_${sport.id}`} className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                              <input
+                                type="checkbox"
+                                checked={filters.sportsWithSkill.includes(sport.id)}
+                                onChange={() => onToggleSportWithSkill(sport.id)}
+                                className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
+                              />
+                              <span>{sport.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Actions */}
                   {isAnyFilterActive && (

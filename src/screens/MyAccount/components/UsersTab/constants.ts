@@ -3,18 +3,12 @@ export const INITIAL_FILTERS = {
   facilitator: false,
   activePlayer: false,
   pendingUsers: false,
-  volleyballPlayersInLeague: false,
-  badmintonPlayersInLeague: false,
   playersNotInLeague: false,
-  volleyballPlayersAll: false,
-  badmintonPlayersAll: false
+  sportsInLeague: [] as number[],
+  sportsWithSkill: [] as number[]
 };
 
-// Sport IDs - these should match the IDs in your sports table
-export const SPORT_IDS = {
-  VOLLEYBALL: 1,
-  BADMINTON: 2
-};
+// Sports are loaded dynamically from DB for filters
 
 export const POSITION_OPTIONS = [
   { value: '', label: 'Select position...' },

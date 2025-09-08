@@ -74,60 +74,8 @@ export function SearchAndFilters({
             </label>
           </div>
           
-          {/* Sport Filters */}
+          {/* Participation */}
           <div className="border-l pl-4 flex flex-wrap gap-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="filter-volleyball-league"
-                checked={filters.volleyballPlayersInLeague}
-                onChange={() => onFilterChange('volleyballPlayersInLeague')}
-                className="mr-2"
-              />
-              <label htmlFor="filter-volleyball-league" className="text-sm text-[#6F6F6F]">
-                Volleyball (In League)
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="filter-volleyball-all"
-                checked={filters.volleyballPlayersAll}
-                onChange={() => onFilterChange('volleyballPlayersAll')}
-                className="mr-2"
-              />
-              <label htmlFor="filter-volleyball-all" className="text-sm text-[#6F6F6F]">
-                Volleyball (All)
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="filter-badminton-league"
-                checked={filters.badmintonPlayersInLeague}
-                onChange={() => onFilterChange('badmintonPlayersInLeague')}
-                className="mr-2"
-              />
-              <label htmlFor="filter-badminton-league" className="text-sm text-[#6F6F6F]">
-                Badminton (In League)
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="filter-badminton-all"
-                checked={filters.badmintonPlayersAll}
-                onChange={() => onFilterChange('badmintonPlayersAll')}
-                className="mr-2"
-              />
-              <label htmlFor="filter-badminton-all" className="text-sm text-[#6F6F6F]">
-                Badminton (All)
-              </label>
-            </div>
-            
             <div className="flex items-center">
               <input
                 type="checkbox"
