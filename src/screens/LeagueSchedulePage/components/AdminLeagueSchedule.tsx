@@ -1143,7 +1143,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                     </span>
                   )}
                   {currentWeek <= 2 && !isPlayoffWeek(currentWeek) && (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-semibold bg-red-50 text-[#B20000] rounded-full border border-red-200">
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
                       Seeding week
                     </span>
                   )}
