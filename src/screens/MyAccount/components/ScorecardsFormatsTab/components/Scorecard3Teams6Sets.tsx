@@ -178,7 +178,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
         </div>
 
         {/* Weekly summary (wins/losses, differential, movement, points) */}
-        <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-[10px]">
+        <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-[10px] relative">
           {(() => {
             const stats: Record<TeamKey, { wins: number; losses: number; diff: number }> = {
               A: { wins: 0, losses: 0, diff: 0 },
@@ -254,10 +254,8 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             const tierNumber = Math.max(0, pointsTierOffset) + 1;
             return (
               <div>
-                <div className="text-[12px] font-medium mb-2 text-[#B20000]">
-                  {resultsLabel ?? 'Weekly Summary'}{' '}
-                  <span className="text-[#4B5563] font-normal">(Tier {tierNumber} bonus: +{tierBonus})</span>
-                </div>
+                <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
+                <span className="absolute right-4 top-3 text-[11px] font-medium text-[#4B5563]">Tier {tierNumber} bonus: +{tierBonus}</span>
                 <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}
                   {headerCell('Record')}
