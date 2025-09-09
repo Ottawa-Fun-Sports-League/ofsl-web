@@ -80,6 +80,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier }: SubmitScoresM
               teamNames={teamNames as any}
               isTopTier={isTopTier}
               pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
               onSubmit={() => {
                 // TODO: integrate API to persist scores
                 onClose();

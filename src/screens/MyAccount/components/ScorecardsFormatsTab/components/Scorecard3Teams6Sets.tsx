@@ -29,9 +29,10 @@ interface Scorecard3Teams6SetsProps {
   isTopTier?: boolean;
   pointsTierOffset?: number; // 0 for bottom tier, 1 for second-from-bottom, etc.
   resultsLabel?: string;
+  tierNumber?: number; // Actual league tier number for display (1 = top tier)
 }
 
-export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, pointsTierOffset = 0, resultsLabel }: Scorecard3Teams6SetsProps) {
+export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, pointsTierOffset = 0, resultsLabel, tierNumber }: Scorecard3Teams6SetsProps) {
   const [scores, setScores] = useState<Record<number, { A?: string; B?: string; C?: string }>>({});
   const [spares, setSpares] = useState<Record<TeamKey, string>>({ A: '', B: '', C: '' });
 
@@ -178,7 +179,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
         </div>
 
         {/* Weekly summary (wins/losses, differential, movement, points) */}
-        <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-[10px]">
+        <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-[10px] relative">
           {(() => {
             const stats: Record<TeamKey, { wins: number; losses: number; diff: number }> = {
               A: { wins: 0, losses: 0, diff: 0 },
@@ -251,19 +252,17 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               <div className={`text-[12px] text-[#4B5563] ${emphasize ? 'font-semibold' : ''}`}>{content}</div>
             );
             const tierBonus = 2 * Math.max(0, pointsTierOffset);
-            const tierNumber = Math.max(0, pointsTierOffset) + 1;
+            const tierDisplay = typeof tierNumber === 'number' ? tierNumber : (Math.max(0, pointsTierOffset) + 1);
             return (
               <div>
                 <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
+                <span className="absolute right-4 top-3 text-[11px] font-medium text-[#4B5563]">Tier {tierDisplay} bonus: +{tierBonus}</span>
                 <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}
                   {headerCell('Record')}
                   {headerCell('Differential')}
                   {headerCell('Movement')}
-                  <div className="flex flex-col items-end">
-                    <div className="text-[12px] font-semibold text-[#B20000]">Points</div>
-                    <div className="text-[11px] font-medium text-[#4B5563]">Tier {tierNumber} bonus: +{tierBonus}</div>
-                  </div>
+                  {headerCell('Points')}
                   {(order as TeamKey[]).map(k => (
                     <>
                       {rowCell(
