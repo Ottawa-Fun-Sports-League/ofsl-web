@@ -260,7 +260,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                   {headerCell('Points')}
                   {(order as TeamKey[]).map(k => (
                     <>
-                      {rowCell(k, true)}
+                      {rowCell(role[k] === 'winner' ? `${k} (W)` : role[k] === 'loser' ? `${k} (L)` : k, true)}
                       {rowCell(`${stats[k].wins}-${stats[k].losses}`)}
                       {rowCell(fmtDiff(stats[k].diff))}
                       {rowCell(movement[k])}
