@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '../../../../../components/ui/button';
 
 type TeamKey = 'A' | 'B' | 'C';
@@ -246,12 +247,17 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             const headerCell = (text: string) => (
               <div className="text-[12px] font-semibold text-[#B20000]">{text}</div>
             );
-            const rowCell = (content: string | number, emphasize = false) => (
+            const rowCell = (content: ReactNode, emphasize = false) => (
               <div className={`text-[12px] text-[#4B5563] ${emphasize ? 'font-semibold' : ''}`}>{content}</div>
             );
+            const tierBonus = 2 * Math.max(0, pointsTierOffset);
+            const tierNumber = Math.max(0, pointsTierOffset) + 1;
             return (
               <div>
-                <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
+                <div className="text-[12px] font-medium mb-2 text-[#B20000]">
+                  {resultsLabel ?? 'Weekly Summary'}{' '}
+                  <span className="text-[#4B5563] font-normal">(Tier {tierNumber} bonus: +{tierBonus})</span>
+                </div>
                 <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}
                   {headerCell('Record')}
@@ -260,7 +266,18 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                   {headerCell('Points')}
                   {(order as TeamKey[]).map(k => (
                     <>
-                      {rowCell(role[k] === 'winner' ? `${k} (W)` : role[k] === 'loser' ? `${k} (L)` : k, true)}
+                      {rowCell(
+                        <div className="flex items-center gap-1">
+                          <span>{k}</span>
+                          {role[k] === 'winner' && (
+                            <span className="inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
+                          )}
+                          {role[k] === 'loser' && (
+                            <span className="inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
+                          )}
+                        </div>,
+                        true
+                      )}
                       {rowCell(`${stats[k].wins}-${stats[k].losses}`)}
                       {rowCell(fmtDiff(stats[k].diff))}
                       {rowCell(movement[k])}
