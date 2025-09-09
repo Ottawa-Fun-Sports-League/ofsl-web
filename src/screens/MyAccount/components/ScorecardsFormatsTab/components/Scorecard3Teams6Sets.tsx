@@ -266,7 +266,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             return (
               <div>
                 <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
-                <span className="absolute right-4 top-3 text-[11px] font-medium text-[#4B5563]">Tier {tierDisplay} bonus: +{tierBonus}</span>
+                <span className="absolute right-4 top-3 text-[11px] font-medium text-[#4B5563]">Tier {tierDisplay} Base 3/4/5 Bonus +{tierBonus}</span>
                 <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}
                   {headerCell('Record')}
