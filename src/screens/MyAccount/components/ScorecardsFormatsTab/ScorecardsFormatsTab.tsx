@@ -72,7 +72,7 @@ export function ScorecardsFormatsTab() {
                         <li>Tie exists: Compare overall set wins</li>
                         <li>3-way tie: Compare overall points differential (lowest differential wins)</li>
                         <li>2-way tie: Compare head-to-head points differential (lowest differential wins)</li>
-                        <li>Still tied: Use previous week’s standings (higher ranked team wins)</li>
+                        <li>Still tied: Use previous week’s schedule position (A &gt; B &gt; C)</li>
                       </ol>
                     </div>
 
@@ -103,3 +103,4 @@ export function ScorecardsFormatsTab() {
     </div>
   );
 }
+
