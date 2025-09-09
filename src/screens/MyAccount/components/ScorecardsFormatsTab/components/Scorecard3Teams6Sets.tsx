@@ -289,7 +289,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       )}
                       {rowCell(`${stats[k].wins}-${stats[k].losses}`)}
                       {rowCell(fmtDiff(stats[k].diff))}
-                      {rowCell(movement[k])}
+                      {rowCell(allEntered ? movement[k] : '-')}
                       {rowCell(allEntered ? `+${points[k]}` : '-', true)}
                     </>
                   ))}
