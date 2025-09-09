@@ -210,6 +210,16 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               }
             });
             const order: TeamKey[] = ['A','B','C'];
+            // Determine if all sets have valid, non-tie scores entered
+            const allEntered = SETS.every((entry, i) => {
+              const row = (scores[i] || {}) as Record<TeamKey, string>;
+              const sLeft = row[entry.teams[0]] ?? '';
+              const sRight = row[entry.teams[1]] ?? '';
+              if (sLeft === '' || sRight === '') return false;
+              const nLeft = Number(sLeft);
+              const nRight = Number(sRight);
+              return !Number.isNaN(nLeft) && !Number.isNaN(nRight) && nLeft !== nRight;
+            });
             const sorted = [...order].sort((x, y) => {
               const a = stats[x];
               const b = stats[y];
@@ -219,7 +229,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             });
             const movement: Record<TeamKey, string> = { A: 'Stay', B: 'Stay', C: 'Stay' };
             const role: Record<TeamKey, 'winner' | 'neutral' | 'loser'> = { A: 'neutral', B: 'neutral', C: 'neutral' };
-            if (sorted.length === 3) {
+            if (allEntered && sorted.length === 3) {
               role[sorted[0]] = 'winner';
               role[sorted[1]] = 'neutral';
               role[sorted[2]] = 'loser';
@@ -268,10 +278,10 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       {rowCell(
                         <div className="flex items-center gap-1">
                           <span>{k}</span>
-                          {role[k] === 'winner' && (
+                          {allEntered && role[k] === 'winner' && (
                             <span className="inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
                           )}
-                          {role[k] === 'loser' && (
+                          {allEntered && role[k] === 'loser' && (
                             <span className="inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
                           )}
                         </div>,
