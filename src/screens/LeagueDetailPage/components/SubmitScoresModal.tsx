@@ -3,9 +3,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '../../../components/ui/dialog';
-import { Button } from '../../../components/ui/button';
 import type { WeeklyScheduleTier } from '../../LeagueSchedulePage/types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
 import { useEffect, useState } from 'react';
@@ -104,9 +102,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier }: SubmitScoresM
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
-        </DialogFooter>
+        {/* Footer intentionally omitted to match admin: close via overlay or X */}
       </DialogContent>
     </Dialog>
   );
