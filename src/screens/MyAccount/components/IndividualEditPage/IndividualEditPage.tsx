@@ -106,7 +106,7 @@ export function IndividualEditPage() {
       // Load league data
       const { data: leagueData, error: leagueError } = await supabase
         .from('leagues')
-        .select('id, name, cost')
+        .select('id, name, cost, early_bird_cost, early_bird_due_date')
         .eq('id', leagueIdNum)
         .single();
 
@@ -125,6 +125,20 @@ export function IndividualEditPage() {
 
       // Initialize mutable payment variable
       let payment = initialPayment;
+
+      // Compute effective amount due based on current early-bird status
+      const today = new Date();
+      const earlyDeadline = leagueData?.early_bird_due_date
+        ? new Date(leagueData.early_bird_due_date + 'T23:59:59')
+        : null;
+      const earlyActive = !!(
+        (leagueData as any)?.early_bird_cost &&
+        earlyDeadline &&
+        today.getTime() <= earlyDeadline.getTime()
+      );
+      const dynamicDue = earlyActive
+        ? ((leagueData as any)?.early_bird_cost || leagueData.cost || 0)
+        : (leagueData.cost || 0);
 
       // Verify user is registered for this league (either in league_ids or has a payment record)
       const isInLeagueIds = userData.league_ids && userData.league_ids.includes(leagueIdNum);
@@ -148,7 +162,8 @@ export function IndividualEditPage() {
             user_id: userId,
             league_id: leagueIdNum,
             team_id: null,
-            amount_due: leagueData.cost,
+            // Use dynamic amount due (early-bird if active, otherwise regular)
+            amount_due: dynamicDue,
             amount_paid: 0,
             status: 'pending',
             notes: '[]' // Initialize with empty payment history
@@ -160,7 +175,20 @@ export function IndividualEditPage() {
         payment = newPayment;
       }
 
-      setPaymentInfo(payment);
+      // For display and calculations, use dynamic amount due unless already fully paid
+      const effectiveAmountDue = payment?.status === 'paid' ? payment.amount_due : dynamicDue;
+      const recomputedStatus = (() => {
+        if (!payment) return 'pending';
+        if (payment.amount_paid >= effectiveAmountDue) return 'paid';
+        if (payment.amount_paid > 0) return 'partial';
+        return 'pending';
+      })();
+
+      setPaymentInfo({
+        ...payment!,
+        amount_due: effectiveAmountDue,
+        status: recomputedStatus as 'pending' | 'partial' | 'paid'
+      });
 
       // Parse payment history from notes field (stored as JSON)
       let history: PaymentHistoryItem[] = [];

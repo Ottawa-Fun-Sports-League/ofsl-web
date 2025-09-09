@@ -189,6 +189,8 @@ export function LeagueTeamsPage() {
           name,
           location,
           cost,
+          early_bird_cost,
+          early_bird_due_date,
           team_registration,
           sports:sport_id(name)
         `)
@@ -207,7 +209,10 @@ export function LeagueTeamsPage() {
             : ''),
         location: data.location || '',
         cost: data.cost || 0,
-        team_registration: data.team_registration
+        team_registration: data.team_registration,
+        // attach early bird fields for dynamic pricing display
+        ...(data as any).early_bird_cost !== undefined ? { early_bird_cost: (data as any).early_bird_cost } : {},
+        ...(data as any).early_bird_due_date !== undefined ? { early_bird_due_date: (data as any).early_bird_due_date } : {}
       });
       
       return data.team_registration;
@@ -241,7 +246,7 @@ export function LeagueTeamsPage() {
           display_order,
           users:captain_id(name),
           skills:skill_level_id(name),
-          leagues:league_id(id, name, cost, location, sports(name))
+          leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
         `)
         .eq('league_id', parseInt(leagueId!))
         .eq('active', true)
@@ -259,7 +264,7 @@ export function LeagueTeamsPage() {
           display_order,
           users:captain_id(name),
           skills:skill_level_id(name),
-          leagues:league_id(id, name, cost, location, sports(name))
+          leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
         `)
         .eq('league_id', parseInt(leagueId!))
         .eq('active', false)
@@ -281,7 +286,7 @@ export function LeagueTeamsPage() {
             skill_level_id,
             users:captain_id(name),
             skills:skill_level_id(name),
-            leagues:league_id(id, name, cost, location, sports(name))
+            leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', true)
@@ -298,7 +303,7 @@ export function LeagueTeamsPage() {
             skill_level_id,
             users:captain_id(name),
             skills:skill_level_id(name),
-            leagues:league_id(id, name, cost, location, sports(name))
+            leagues:league_id(id, name, cost, early_bird_cost, early_bird_due_date, location, sports(name))
           `)
           .eq('league_id', parseInt(leagueId!))
           .eq('active', false)
@@ -448,6 +453,9 @@ export function LeagueTeamsPage() {
             id: parseInt(leagueId!),
             name: league?.name || '',
             cost: league?.cost || null,
+            // pass through early bird fields from loaded league for dynamic pricing
+            early_bird_cost: (league as any)?.early_bird_cost ?? null,
+            early_bird_due_date: (league as any)?.early_bird_due_date ?? null,
             location: league?.location || null,
             sports: league?.sport_name ? { name: league.sport_name } : null
           }
@@ -638,8 +646,14 @@ export function LeagueTeamsPage() {
           updateData.status = 'paid'; // No payment needed for waitlist
         }
         // If moving to active, set amount_due to the league cost
-        else if (league?.cost) {
-          updateData.amount_due = league.cost;
+        else if (league?.cost !== undefined) {
+          // When moving to active, set amount_due based on current early-bird status
+          const ebCost = (league as any)?.early_bird_cost as number | null | undefined;
+          const ebDue = (league as any)?.early_bird_due_date as string | null | undefined;
+          const today = new Date();
+          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
+          const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
+          updateData.amount_due = effective;
           // Check if they've already paid something
           const { data: currentPayment } = await supabase
             .from('league_payments')
@@ -905,10 +919,22 @@ export function LeagueTeamsPage() {
               <div className="flex items-center gap-1.5 col-span-2 md:col-span-1" title="Payment">
                 <DollarSign className="h-4 w-4 flex-shrink-0 text-purple-500" />
                 <div className="flex items-center gap-1 min-w-0">
-                  {team.amount_due && team.amount_paid !== null ? (
+                  {team.amount_paid !== null ? (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
-                        ${team.amount_paid.toFixed(2)} / ${(team.amount_due * 1.13).toFixed(2)}
+                        ${team.amount_paid.toFixed(2)} / ${(() => {
+                          const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
+                          const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
+                          const today = new Date();
+                          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
+                          const baseCost = earlyActive 
+                            ? (ebCost ?? (team.league?.cost ?? 0)) 
+                            : (team.league?.cost ?? 0);
+                          const effectiveDue = team.payment_status === 'paid' && team.amount_due
+                            ? (team.amount_due || 0)
+                            : baseCost;
+                          return (effectiveDue * 1.13).toFixed(2);
+                        })()}
                       </span>
                       {team.payment_status && (
                         <PaymentStatusBadge 
@@ -920,7 +946,16 @@ export function LeagueTeamsPage() {
                   ) : (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
-                        $0.00 / ${team.league?.cost ? (parseFloat(team.league.cost.toString()) * 1.13).toFixed(2) : '0.00'}
+                        $0.00 / ${(() => {
+                          const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
+                          const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
+                          const today = new Date();
+                          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
+                          const baseCost = earlyActive 
+                            ? (ebCost ?? (team.league?.cost ?? 0)) 
+                            : (team.league?.cost ?? 0);
+                          return (baseCost * 1.13).toFixed(2);
+                        })()}
                       </span>
                       <PaymentStatusBadge 
                         status="pending" 
@@ -1027,10 +1062,18 @@ export function LeagueTeamsPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {teams.map((team) => {
-                // Calculate payment details
-                const totalAmount = team.amount_due 
-                  ? team.amount_due * 1.13 
-                  : (team.league?.cost ? parseFloat(team.league.cost.toString()) * 1.13 : 0);
+                // Calculate dynamic payment details (early-bird aware)
+                const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
+                const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
+                const today = new Date();
+                const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
+                const baseCost = earlyActive 
+                  ? (ebCost ?? (team.league?.cost ?? 0)) 
+                  : (team.league?.cost ?? 0);
+                const effectiveDue = team.payment_status === 'paid' && team.amount_due
+                  ? (team.amount_due || 0)
+                  : baseCost;
+                const totalAmount = (effectiveDue || 0) * 1.13;
                 const amountPaid = team.amount_paid || 0;
                 const amountOwing = totalAmount - amountPaid;
 
