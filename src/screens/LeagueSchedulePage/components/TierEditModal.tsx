@@ -33,10 +33,10 @@ interface DefaultSettings {
 }
 
 const TIME_PRESETS = [
-  '6:00-8:00pm',
-  '6:30-8:00pm', 
-  '8:00-10:00pm',
-  '8:30-10:00pm',
+  '6:00pm-8:00pm',
+  '6:30pm-8:00pm', 
+  '8:00pm-10:00pm',
+  '8:30pm-10:00pm',
   'Custom'
 ];
 
