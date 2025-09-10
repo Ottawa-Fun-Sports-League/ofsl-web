@@ -37,7 +37,7 @@ const TIME_PRESETS = [
   '6:30-8:00pm', 
   '8:00-10:00pm',
   '8:30-10:00pm',
-  'Set time...'
+  'Custom'
 ];
 
 
@@ -248,7 +248,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
 
   const handleTimeChange = (value: string) => {
     setEditValues(prev => ({ ...prev, time: value }));
-    if (value === 'Set time...') {
+    if (value === 'Custom') {
       // Ensure custom fields are reflected in the string immediately
       const assembled = assembleCustomTime(startHour, startMinute, startMeridiem, endHour, endMinute, endMeridiem);
       setEditValues(prev => ({ ...prev, customTime: assembled }));
@@ -393,18 +393,19 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                 Time
               </label>
               <select
-                value={TIME_PRESETS.includes(editValues.time) ? editValues.time : 'Set time...'}
+                value={TIME_PRESETS.includes(editValues.time) ? editValues.time : ''}
                 onChange={(e) => handleTimeChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
               >
+                <option value="" disabled>SET TIME</option>
                 {TIME_PRESETS.map((time) => (
                   <option key={time} value={time}>
-                    {time}
+                    {time === 'Custom' ? 'CUSTOM' : time}
                   </option>
                 ))}
               </select>
               
-              {editValues.time === 'Set time...' && (
+              {editValues.time === 'Custom' && (
                 <div className="mt-2 space-y-2">
                   {/* Structured time inputs */}
                   <div className="flex flex-wrap items-end gap-2">
