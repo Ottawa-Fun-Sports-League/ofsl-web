@@ -37,7 +37,7 @@ const TIME_PRESETS = [
   '6:30-8:00pm', 
   '8:00-10:00pm',
   '8:30-10:00pm',
-  'Custom'
+  'Set time...'
 ];
 
 
@@ -59,7 +59,8 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   const [startMinute, setStartMinute] = useState<string>('');
   const [endHour, setEndHour] = useState<string>('');
   const [endMinute, setEndMinute] = useState<string>('');
-  const [meridiem, setMeridiem] = useState<'am' | 'pm'>('pm');
+  const [startMeridiem, setStartMeridiem] = useState<'am' | 'pm'>('pm');
+  const [endMeridiem, setEndMeridiem] = useState<'am' | 'pm'>('pm');
   
   const [setAsDefault, setSetAsDefault] = useState({
     location: false,
@@ -137,7 +138,8 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
           setStartMinute(parsed.sm);
           setEndHour(parsed.eh);
           setEndMinute(parsed.em);
-          setMeridiem(parsed.meridiem);
+          setStartMeridiem(parsed.startMer);
+          setEndMeridiem(parsed.endMer);
         }
       } else {
         // Default values
@@ -145,7 +147,8 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
         setStartMinute('00');
         setEndHour('8');
         setEndMinute('00');
-        setMeridiem('pm');
+        setStartMeridiem('pm');
+        setEndMeridiem('pm');
       }
       setSetAsDefault({ location: false, time: false, court: false });
       setFormatValidation(null);
@@ -245,9 +248,9 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
 
   const handleTimeChange = (value: string) => {
     setEditValues(prev => ({ ...prev, time: value }));
-    if (value === 'Custom') {
+    if (value === 'Set time...') {
       // Ensure custom fields are reflected in the string immediately
-      const assembled = assembleCustomTime(startHour, startMinute, endHour, endMinute, meridiem);
+      const assembled = assembleCustomTime(startHour, startMinute, startMeridiem, endHour, endMinute, endMeridiem);
       setEditValues(prev => ({ ...prev, customTime: assembled }));
     }
   };
@@ -270,15 +273,39 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   };
 
   // Helpers to parse/assemble the standardized custom time
-  function parseCustomTime(s: string): { sh: string; sm: string; eh: string; em: string; meridiem: 'am' | 'pm' } | null {
-    const re = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})(am|pm)$/i;
-    const m = s.trim().match(re);
-    if (!m) return null;
-    const [, sh, sm, eh, em, mer] = m;
-    return { sh: String(Number(sh)), sm, eh: String(Number(eh)), em, meridiem: mer.toLowerCase() as 'am' | 'pm' };
+  function parseCustomTime(s: string): { sh: string; sm: string; startMer: 'am'|'pm'; eh: string; em: string; endMer: 'am'|'pm' } | null {
+    const trimmed = s.trim();
+    // Pattern 1: 6:00am-8:30pm
+    let m = trimmed.match(/^(\d{1,2}):(\d{2})(am|pm)-(\d{1,2}):(\d{2})(am|pm)$/i);
+    if (m) {
+      const [, sh, sm, sMer, eh, em, eMer] = m;
+      return {
+        sh: String(Number(sh)),
+        sm,
+        startMer: sMer.toLowerCase() as 'am'|'pm',
+        eh: String(Number(eh)),
+        em,
+        endMer: eMer.toLowerCase() as 'am'|'pm'
+      };
+    }
+    // Pattern 2: 6:00-8:30pm (apply same meridiem to both)
+    m = trimmed.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})(am|pm)$/i);
+    if (m) {
+      const [, sh, sm, eh, em, mer] = m;
+      const merLower = mer.toLowerCase() as 'am'|'pm';
+      return {
+        sh: String(Number(sh)),
+        sm,
+        startMer: merLower,
+        eh: String(Number(eh)),
+        em,
+        endMer: merLower
+      };
+    }
+    return null;
   }
 
-  function assembleCustomTime(sh: string, sm: string, eh: string, em: string, mer: 'am' | 'pm'): string {
+  function assembleCustomTime(sh: string, sm: string, sMer: 'am'|'pm', eh: string, em: string, eMer: 'am' | 'pm'): string {
     const pad2 = (v: string) => (v.length === 1 ? `0${v}` : v);
     const cleanHour = (v: string) => String(Math.max(1, Math.min(12, Number(v) || 0)));
     const cleanMin = (v: string) => {
@@ -291,7 +318,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     const m1 = sm ? cleanMin(sm) : '00';
     const h2 = eh ? cleanHour(eh) : '8';
     const m2 = em ? cleanMin(em) : '00';
-    return `${h1}:${m1}-${h2}:${m2}${mer}`;
+    return `${h1}:${m1}${sMer}-${h2}:${m2}${eMer}`;
   }
 
   if (!isOpen) return null;
@@ -366,7 +393,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                 Time
               </label>
               <select
-                value={TIME_PRESETS.includes(editValues.time) ? editValues.time : 'Custom'}
+                value={TIME_PRESETS.includes(editValues.time) ? editValues.time : 'Set time...'}
                 onChange={(e) => handleTimeChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
               >
@@ -377,7 +404,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                 ))}
               </select>
               
-              {editValues.time === 'Custom' && (
+              {editValues.time === 'Set time...' && (
                 <div className="mt-2 space-y-2">
                   {/* Structured time inputs */}
                   <div className="flex flex-wrap items-end gap-2">
@@ -389,7 +416,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                         onChange={(e) => {
                           const v = e.target.value.replace(/[^0-9]/g, '');
                           setStartHour(v);
-                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(v, startMinute, endHour, endMinute, meridiem) }));
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(v, startMinute, startMeridiem, endHour, endMinute, endMeridiem) }));
                         }}
                         placeholder="6"
                         className="w-16"
@@ -403,11 +430,40 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                         onChange={(e) => {
                           const v = e.target.value.replace(/[^0-9]/g, '');
                           setStartMinute(v);
-                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, v, endHour, endMinute, meridiem) }));
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, v, startMeridiem, endHour, endMinute, endMeridiem) }));
                         }}
                         placeholder="00"
                         className="w-16"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Start AM / PM</label>
+                      <div className="flex items-center gap-3 py-2">
+                        <label className="inline-flex items-center gap-1 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name="start-meridiem"
+                            checked={startMeridiem === 'am'}
+                            onChange={() => {
+                              setStartMeridiem('am');
+                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, 'am', endHour, endMinute, endMeridiem) }));
+                            }}
+                          />
+                          am
+                        </label>
+                        <label className="inline-flex items-center gap-1 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name="start-meridiem"
+                            checked={startMeridiem === 'pm'}
+                            onChange={() => {
+                              setStartMeridiem('pm');
+                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, 'pm', endHour, endMinute, endMeridiem) }));
+                            }}
+                          />
+                          pm
+                        </label>
+                      </div>
                     </div>
                     <div className="px-1 text-gray-500 pb-2">to</div>
                     <div>
@@ -418,7 +474,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                         onChange={(e) => {
                           const v = e.target.value.replace(/[^0-9]/g, '');
                           setEndHour(v);
-                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, v, endMinute, meridiem) }));
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, startMeridiem, v, endMinute, endMeridiem) }));
                         }}
                         placeholder="8"
                         className="w-16"
@@ -432,23 +488,23 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                         onChange={(e) => {
                           const v = e.target.value.replace(/[^0-9]/g, '');
                           setEndMinute(v);
-                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, endHour, v, meridiem) }));
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, startMeridiem, endHour, v, endMeridiem) }));
                         }}
                         placeholder="00"
                         className="w-16"
                       />
                     </div>
                     <div className="ml-2">
-                      <label className="block text-xs text-gray-600 mb-1">AM / PM</label>
+                      <label className="block text-xs text-gray-600 mb-1">End AM / PM</label>
                       <div className="flex items-center gap-3 py-2">
                         <label className="inline-flex items-center gap-1 text-sm text-gray-700">
                           <input
                             type="radio"
-                            name="meridiem"
-                            checked={meridiem === 'am'}
+                            name="end-meridiem"
+                            checked={endMeridiem === 'am'}
                             onChange={() => {
-                              setMeridiem('am');
-                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, endHour, endMinute, 'am') }));
+                              setEndMeridiem('am');
+                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, startMeridiem, endHour, endMinute, 'am') }));
                             }}
                           />
                           am
@@ -456,11 +512,11 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                         <label className="inline-flex items-center gap-1 text-sm text-gray-700">
                           <input
                             type="radio"
-                            name="meridiem"
-                            checked={meridiem === 'pm'}
+                            name="end-meridiem"
+                            checked={endMeridiem === 'pm'}
                             onChange={() => {
-                              setMeridiem('pm');
-                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, endHour, endMinute, 'pm') }));
+                              setEndMeridiem('pm');
+                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, startMeridiem, endHour, endMinute, 'pm') }));
                             }}
                           />
                           pm
@@ -468,7 +524,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500">Formatted as: {assembleCustomTime(startHour, startMinute, endHour, endMinute, meridiem)}</div>
+                  <div className="text-xs text-gray-500">Formatted as: {assembleCustomTime(startHour, startMinute, startMeridiem, endHour, endMinute, endMeridiem)}</div>
                 </div>
               )}
               
