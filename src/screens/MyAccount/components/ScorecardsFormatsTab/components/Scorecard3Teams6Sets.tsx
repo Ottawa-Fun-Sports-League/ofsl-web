@@ -103,7 +103,9 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             const s2 = row[t2] ?? '';
             const n1 = s1 === '' ? null : Number(s1);
             const n2 = s2 === '' ? null : Number(s2);
-            const bothEntered = n1 !== null && n2 !== null && !Number.isNaN(n1) && !Number.isNaN(n2);
+            const hasLeft = n1 !== null && !Number.isNaN(n1);
+            const hasRight = n2 !== null && !Number.isNaN(n2);
+            const bothEntered = hasLeft && hasRight;
             const isTie = bothEntered && n1 === n2;
             const winner: TeamKey | null = bothEntered && !isTie ? (n1! > n2! ? t1 : t2) : null;
             return (
@@ -121,7 +123,9 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       value={row[t1] ?? ''}
                       onChange={(e) => handleScoreChange(idx, t1, e.target.value)}
                       aria-invalid={isTie}
-                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : 'border-gray-300'}`}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${
+                        isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')
+                      }`}
                       placeholder="0"
                     />
                     {winner === t1 && (
@@ -142,7 +146,9 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       value={row[t2] ?? ''}
                       onChange={(e) => handleScoreChange(idx, t2, e.target.value)}
                       aria-invalid={isTie}
-                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : 'border-gray-300'}`}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${
+                        isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')
+                      }`}
                       placeholder="0"
                     />
                     {winner === t2 && (
@@ -302,27 +308,52 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
         </div>
         {/* Actions */}
         <div className="flex items-center justify-between pt-0.5">
-          {SETS.some((entry, i) => {
-            const row = scores[i] || {} as Record<TeamKey, string>;
-            const s1 = row[entry.teams[0]] ?? '';
-            const s2 = row[entry.teams[1]] ?? '';
-            if (s1 === '' || s2 === '') return false;
-            const n1 = Number(s1), n2 = Number(s2);
-            return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 === n2;
-          }) && (
-            <span className="text-[11px] text-red-600">Resolve all ties: scores cannot be equal.</span>
-          )}
-          <Button
-            type="submit"
-            size="sm"
-            disabled={SETS.some((entry, i) => {
+          {(() => {
+            const anyTie = SETS.some((entry, i) => {
               const row = scores[i] || {} as Record<TeamKey, string>;
               const s1 = row[entry.teams[0]] ?? '';
               const s2 = row[entry.teams[1]] ?? '';
               if (s1 === '' || s2 === '') return false;
               const n1 = Number(s1), n2 = Number(s2);
               return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 === n2;
-            })}
+            });
+            const allComplete = SETS.every((entry, i) => {
+              const row = scores[i] || {} as Record<TeamKey, string>;
+              const s1 = row[entry.teams[0]] ?? '';
+              const s2 = row[entry.teams[1]] ?? '';
+              if (s1 === '' || s2 === '') return false;
+              const n1 = Number(s1), n2 = Number(s2);
+              return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 !== n2;
+            });
+            return (
+              <span className="text-[11px]">
+                {anyTie && <span className="text-red-600">Resolve all ties: scores cannot be equal.</span>}
+                {!anyTie && !allComplete && <span className="text-gray-600">Enter all scores to enable submit.</span>}
+              </span>
+            );
+          })()}
+          <Button
+            type="submit"
+            size="sm"
+            disabled={(() => {
+              const anyTie = SETS.some((entry, i) => {
+                const row = scores[i] || {} as Record<TeamKey, string>;
+                const s1 = row[entry.teams[0]] ?? '';
+                const s2 = row[entry.teams[1]] ?? '';
+                if (s1 === '' || s2 === '') return false;
+                const n1 = Number(s1), n2 = Number(s2);
+                return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 === n2;
+              });
+              const allComplete = SETS.every((entry, i) => {
+                const row = scores[i] || {} as Record<TeamKey, string>;
+                const s1 = row[entry.teams[0]] ?? '';
+                const s2 = row[entry.teams[1]] ?? '';
+                if (s1 === '' || s2 === '') return false;
+                const n1 = Number(s1), n2 = Number(s2);
+                return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 !== n2;
+              });
+              return anyTie || !allComplete;
+            })()}
             className="rounded-[10px] px-4 py-2 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
           >
             Submit
