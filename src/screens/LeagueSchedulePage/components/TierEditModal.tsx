@@ -54,6 +54,13 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     format: tier.format || '3-teams-6-sets'
   });
   
+  // Custom time structured inputs (for consistent formatting)
+  const [startHour, setStartHour] = useState<string>('');
+  const [startMinute, setStartMinute] = useState<string>('');
+  const [endHour, setEndHour] = useState<string>('');
+  const [endMinute, setEndMinute] = useState<string>('');
+  const [meridiem, setMeridiem] = useState<'am' | 'pm'>('pm');
+  
   const [setAsDefault, setSetAsDefault] = useState({
     location: false,
     time: false,
@@ -121,6 +128,25 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
         customTime: TIME_PRESETS.includes(tier.time) ? '' : tier.time,
         format: tier.format || '3-teams-6-sets'
       });
+      // Initialize custom time fields from tier.time if it's not a preset
+      const timeToParse = TIME_PRESETS.includes(tier.time) ? '' : (tier.time || '');
+      if (timeToParse) {
+        const parsed = parseCustomTime(timeToParse);
+        if (parsed) {
+          setStartHour(parsed.sh);
+          setStartMinute(parsed.sm);
+          setEndHour(parsed.eh);
+          setEndMinute(parsed.em);
+          setMeridiem(parsed.meridiem);
+        }
+      } else {
+        // Default values
+        setStartHour('6');
+        setStartMinute('00');
+        setEndHour('8');
+        setEndMinute('00');
+        setMeridiem('pm');
+      }
       setSetAsDefault({ location: false, time: false, court: false });
       setFormatValidation(null);
       setPreviewTeams(null);
@@ -219,6 +245,11 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
 
   const handleTimeChange = (value: string) => {
     setEditValues(prev => ({ ...prev, time: value }));
+    if (value === 'Custom') {
+      // Ensure custom fields are reflected in the string immediately
+      const assembled = assembleCustomTime(startHour, startMinute, endHour, endMinute, meridiem);
+      setEditValues(prev => ({ ...prev, customTime: assembled }));
+    }
   };
   
   const handleFormatChange = (newFormat: string) => {
@@ -237,6 +268,31 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   const getAllGymNames = () => {
     return gyms.map(gym => gym.gym).sort();
   };
+
+  // Helpers to parse/assemble the standardized custom time
+  function parseCustomTime(s: string): { sh: string; sm: string; eh: string; em: string; meridiem: 'am' | 'pm' } | null {
+    const re = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})(am|pm)$/i;
+    const m = s.trim().match(re);
+    if (!m) return null;
+    const [, sh, sm, eh, em, mer] = m;
+    return { sh: String(Number(sh)), sm, eh: String(Number(eh)), em, meridiem: mer.toLowerCase() as 'am' | 'pm' };
+  }
+
+  function assembleCustomTime(sh: string, sm: string, eh: string, em: string, mer: 'am' | 'pm'): string {
+    const pad2 = (v: string) => (v.length === 1 ? `0${v}` : v);
+    const cleanHour = (v: string) => String(Math.max(1, Math.min(12, Number(v) || 0)));
+    const cleanMin = (v: string) => {
+      const n = Number(v);
+      if (Number.isNaN(n)) return '00';
+      const clamped = Math.max(0, Math.min(59, n));
+      return pad2(String(clamped));
+    };
+    const h1 = sh ? cleanHour(sh) : '6';
+    const m1 = sm ? cleanMin(sm) : '00';
+    const h2 = eh ? cleanHour(eh) : '8';
+    const m2 = em ? cleanMin(em) : '00';
+    return `${h1}:${m1}-${h2}:${m2}${mer}`;
+  }
 
   if (!isOpen) return null;
 
@@ -322,13 +378,97 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
               </select>
               
               {editValues.time === 'Custom' && (
-                <div className="mt-2">
-                  <Input
-                    value={editValues.customTime}
-                    onChange={(e) => setEditValues(prev => ({ ...prev, customTime: e.target.value }))}
-                    placeholder="Enter custom time (e.g., 7:00-9:00pm)"
-                    className="w-full"
-                  />
+                <div className="mt-2 space-y-2">
+                  {/* Structured time inputs */}
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Start hour</label>
+                      <Input
+                        value={startHour}
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '');
+                          setStartHour(v);
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(v, startMinute, endHour, endMinute, meridiem) }));
+                        }}
+                        placeholder="6"
+                        className="w-16"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Start min</label>
+                      <Input
+                        value={startMinute}
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '');
+                          setStartMinute(v);
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, v, endHour, endMinute, meridiem) }));
+                        }}
+                        placeholder="00"
+                        className="w-16"
+                      />
+                    </div>
+                    <div className="px-1 text-gray-500 pb-2">to</div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">End hour</label>
+                      <Input
+                        value={endHour}
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '');
+                          setEndHour(v);
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, v, endMinute, meridiem) }));
+                        }}
+                        placeholder="8"
+                        className="w-16"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">End min</label>
+                      <Input
+                        value={endMinute}
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '');
+                          setEndMinute(v);
+                          setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, endHour, v, meridiem) }));
+                        }}
+                        placeholder="00"
+                        className="w-16"
+                      />
+                    </div>
+                    <div className="ml-2">
+                      <label className="block text-xs text-gray-600 mb-1">AM / PM</label>
+                      <div className="flex items-center gap-3 py-2">
+                        <label className="inline-flex items-center gap-1 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name="meridiem"
+                            checked={meridiem === 'am'}
+                            onChange={() => {
+                              setMeridiem('am');
+                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, endHour, endMinute, 'am') }));
+                            }}
+                          />
+                          am
+                        </label>
+                        <label className="inline-flex items-center gap-1 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name="meridiem"
+                            checked={meridiem === 'pm'}
+                            onChange={() => {
+                              setMeridiem('pm');
+                              setEditValues(prev => ({ ...prev, customTime: assembleCustomTime(startHour, startMinute, endHour, endMinute, 'pm') }));
+                            }}
+                          />
+                          pm
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">Formatted as: {assembleCustomTime(startHour, startMinute, endHour, endMinute, meridiem)}</div>
                 </div>
               )}
               
