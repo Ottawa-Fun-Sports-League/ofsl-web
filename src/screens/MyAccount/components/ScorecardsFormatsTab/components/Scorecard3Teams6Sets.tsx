@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '../../../../../components/ui/button';
 
@@ -30,11 +30,37 @@ interface Scorecard3Teams6SetsProps {
   pointsTierOffset?: number; // 0 for bottom tier, 1 for second-from-bottom, etc.
   resultsLabel?: string;
   tierNumber?: number; // Actual league tier number for display (1 = top tier)
+  initialSets?: Array<{ label: string; teams: [TeamKey, TeamKey]; scores: Record<TeamKey, string> }>;
+  initialSpares?: Record<TeamKey, string>;
+  submitting?: boolean;
 }
 
-export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, pointsTierOffset = 0, resultsLabel, tierNumber }: Scorecard3Teams6SetsProps) {
+export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, pointsTierOffset = 0, resultsLabel, tierNumber, initialSets, initialSpares, submitting = false }: Scorecard3Teams6SetsProps) {
   const [scores, setScores] = useState<Record<number, { A?: string; B?: string; C?: string }>>({});
   const [spares, setSpares] = useState<Record<TeamKey, string>>({ A: '', B: '', C: '' });
+
+  // Prefill from initial values when provided
+  useEffect(() => {
+    if (initialSpares) {
+      setSpares({ A: initialSpares.A || '', B: initialSpares.B || '', C: initialSpares.C || '' });
+    }
+    if (initialSets && initialSets.length) {
+      const byLabel = new Map(initialSets.map((s) => [s.label, s] as const));
+      const pre: Record<number, { A?: string; B?: string; C?: string }> = {};
+      SETS.forEach((entry, idx) => {
+        const found = byLabel.get(entry.setLabel);
+        if (found) {
+          pre[idx] = {
+            A: (found.scores as any).A ?? '',
+            B: (found.scores as any).B ?? '',
+            C: (found.scores as any).C ?? '',
+          };
+        }
+      });
+      setScores(pre);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSets, initialSpares]);
 
   // Clamp score inputs to 0..21 and integers; allow empty while typing
   const clampScore = (value: string): string => {
@@ -335,7 +361,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
           <Button
             type="submit"
             size="sm"
-            disabled={(() => {
+            disabled={submitting || (() => {
               const anyTie = SETS.some((entry, i) => {
                 const row = scores[i] || {} as Record<TeamKey, string>;
                 const s1 = row[entry.teams[0]] ?? '';
@@ -356,7 +382,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             })()}
             className="rounded-[10px] px-4 py-2 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
           >
-            Submit
+            {submitting ? 'Saving…' : 'Submit'}
           </Button>
         </div>
       </div>

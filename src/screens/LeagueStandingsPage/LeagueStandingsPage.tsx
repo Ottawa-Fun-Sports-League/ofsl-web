@@ -53,6 +53,7 @@ export function LeagueStandingsPage() {
   const { leagueId } = useParams<{ leagueId: string }>();
   const navigate = useNavigate();
   const { userProfile } = useAuth();
+  const formatDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
   
   const [league, setLeague] = useState<League | null>(null);
   const [standings, setStandings] = useState<StandingRow[]>([]);
@@ -609,7 +610,7 @@ export function LeagueStandingsPage() {
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
                       Losses
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">
                       Points
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
@@ -679,7 +680,7 @@ export function LeagueStandingsPage() {
                             <span className="text-sm font-medium text-[#6F6F6F]">{totalLosses}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center bg-red-50">
                           {isEditMode ? (
                             <Input
                               type="number"
@@ -715,7 +716,7 @@ export function LeagueStandingsPage() {
                               className="w-16 h-8 text-center text-sm mx-auto"
                             />
                           ) : (
-                            <span className="text-sm font-medium text-[#6F6F6F]">{totalDifferential}</span>
+                            <span className="text-sm font-medium text-[#6F6F6F]">{formatDiff(totalDifferential)}</span>
                           )}
                         </td>
                       </tr>

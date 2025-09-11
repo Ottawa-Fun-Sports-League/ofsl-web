@@ -1,0 +1,17 @@
+﻿feat(scorecards): wire weekly score submission + standings updates; add edit window, saving state, and prefill
+
+- Persist weekly results per tier with match_details JSON and league_points
+- Update standings cumulatively; subtract prior week/tier before applying edits
+- Enforce previous-week-only edit window; allow admins/facilitators to submit
+- Show Completed when results exist; swap Submit/Edit/View dynamically; remove duplicate text
+- Add admin Reset scores action per tier (deletes results, clears completion)
+- Align standings UI (points highlight) and show + for positive differentials
+
+build(db): add migrations for scoring + cascade
+
+- add match_details and facilitator policies (game_results manage)
+- restrict weekly_schedules manage to admins only
+- add league_points to game_results for precise adjustments
+- ensure ON DELETE CASCADE on league FKs (scores, schedules, standings)
+
+refactor(ui): enhance scorecard with prefill and Saving state

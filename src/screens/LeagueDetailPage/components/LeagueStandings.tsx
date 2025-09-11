@@ -7,6 +7,7 @@ interface LeagueStandingsProps {
 
 export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const { teams, loading, error, hasSchedule } = useLeagueStandings(leagueId);
+  const formatDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
   if (loading) {
     return (
       <div>
@@ -143,7 +144,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                         index === teams.length - 1 ? "rounded-br-lg" : ""
                       }`}
                     >
-                      {team.differential}
+                      {formatDiff(team.differential as number)}
                     </td>
                   </tr>
                 ))}
