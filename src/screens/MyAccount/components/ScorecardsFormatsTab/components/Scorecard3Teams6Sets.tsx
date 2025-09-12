@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '../../../../../components/ui/button';
 
@@ -308,7 +308,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                   {headerCell('Movement')}
                   {headerCell('Points')}
                   {(order as TeamKey[]).map(k => (
-                    <>
+                    <Fragment key={`summary-${k}`}>
                       {rowCell(
                         <div className="flex items-center gap-1">
                           <span>{k}</span>
@@ -325,7 +325,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       {rowCell(fmtDiff(stats[k].diff))}
                       {rowCell(allEntered ? movement[k] : '-')}
                       {rowCell(allEntered ? `+${points[k]}` : '-', true)}
-                    </>
+                    </Fragment>
                   ))}
                 </div>
               </div>

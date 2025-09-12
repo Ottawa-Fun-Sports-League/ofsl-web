@@ -10,6 +10,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
+import { submitThreeTeamScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
+import { applyThreeTeamTierMovementNextWeek } from '../../LeagueSchedulePage/database/scheduleDatabase';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -352,6 +354,27 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   });
                   if (recalcErr) {
                     console.warn('Positions recalculation failed', recalcErr);
+                  }
+
+                  // Consolidated submission + standings + movement
+                  try {
+                    await submitThreeTeamScoresAndMove({
+                      leagueId,
+                      weekNumber,
+                      tierNumber,
+                      tierId: (weeklyTier as any).id as number,
+                      teamNames: {
+                        A: (submittedNames as any).A || (teamNames as any).A || '',
+                        B: (submittedNames as any).B || (teamNames as any).B || '',
+                        C: (submittedNames as any).C || (teamNames as any).C || '',
+                      },
+                      sets,
+                      spares,
+                      pointsTierOffset: pointsOffset,
+                      isTopTier,
+                    });
+                  } catch (moveErr) {
+                    console.warn('Failed to submit scores + movement', moveErr);
                   }
 
                   showToast('Scores submitted and standings updated.', 'success');
