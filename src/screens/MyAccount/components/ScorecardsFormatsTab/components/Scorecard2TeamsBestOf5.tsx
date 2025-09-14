@@ -80,6 +80,7 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
       className="max-w-xl shadow-sm"
       onSubmit={(e) => {
         e.preventDefault();
+        // Reject ties anywhere
         const hasTie = SETS.some((entry, i) => {
           const row = (scores[i] || {}) as Record<TeamKey, string>;
           const s1 = row[entry.teams[0]] ?? '';
@@ -89,6 +90,20 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
           return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 === n2;
         });
         if (hasTie) return;
+        // Require match decided (first to 3 set wins)
+        let aWins = 0, bWins = 0;
+        let decided = false;
+        for (let i = 0; i < SETS.length; i++) {
+          const row = (scores[i] || {}) as Record<TeamKey, string>;
+          const s1 = row['A'] ?? '';
+          const s2 = row['B'] ?? '';
+          if (s1 === '' || s2 === '') break; // allow remaining sets blank
+          const n1 = Number(s1), n2 = Number(s2);
+          if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) break;
+          if (n1 > n2) aWins++; else bWins++;
+          if (aWins === 3 || bWins === 3) { decided = true; break; }
+        }
+        if (!decided) return;
         if (onSubmit) {
           const sets = SETS.map((entry, idx) => ({
             label: entry.setLabel,
@@ -209,43 +224,39 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
               A: { wins: 0, losses: 0, diff: 0, setWins: 0, setLosses: 0 },
               B: { wins: 0, losses: 0, diff: 0, setWins: 0, setLosses: 0 },
             };
-            SETS.forEach((entry, i) => {
+            // Traverse sets in order; stop counting once a team reaches 3 set wins
+            let aWins = 0, bWins = 0;
+            for (let i = 0; i < SETS.length; i++) {
+              if (aWins === 3 || bWins === 3) break;
+              const entry = SETS[i];
               const row = (scores[i] || {}) as Record<TeamKey, string>;
               const sLeft = row[entry.teams[0]] ?? '';
               const sRight = row[entry.teams[1]] ?? '';
-              if (sLeft !== '' && sRight !== '') {
-                const nLeft = Number(sLeft);
-                const nRight = Number(sRight);
-                if (!Number.isNaN(nLeft) && !Number.isNaN(nRight) && nLeft !== nRight) {
-                  const left = entry.teams[0];
-                  const right = entry.teams[1];
-                  const diff = nLeft - nRight;
-                  stats[left].diff += diff;
-                  stats[right].diff -= diff;
-                  if (nLeft > nRight) {
-                    stats[left].wins += 1; // per-set win marker
-                    stats[left].setWins += 1;
-                    stats[right].losses += 1;
-                    stats[right].setLosses += 1;
-                  } else {
-                    stats[right].wins += 1;
-                    stats[right].setWins += 1;
-                    stats[left].losses += 1;
-                    stats[left].setLosses += 1;
-                  }
-                }
-              }
-            });
-            const order: TeamKey[] = ['A','B'];
-            const allEntered = SETS.every((entry, i) => {
-              const row = (scores[i] || {}) as Record<TeamKey, string>;
-              const sLeft = row[entry.teams[0]] ?? '';
-              const sRight = row[entry.teams[1]] ?? '';
-              if (sLeft === '' || sRight === '') return false;
+              if (sLeft === '' || sRight === '') break; // allow remaining sets empty
               const nLeft = Number(sLeft);
               const nRight = Number(sRight);
-              return !Number.isNaN(nLeft) && !Number.isNaN(nRight) && nLeft !== nRight;
-            });
+              if (Number.isNaN(nLeft) || Number.isNaN(nRight) || nLeft === nRight) {
+                // invalid or tie -> handled elsewhere; don't count further
+                break;
+              }
+              const left = entry.teams[0];
+              const right = entry.teams[1];
+              const diff = nLeft - nRight;
+              stats[left].diff += diff;
+              stats[right].diff -= diff;
+              if (nLeft > nRight) {
+                stats[left].wins += 1; stats[left].setWins += 1;
+                stats[right].losses += 1; stats[right].setLosses += 1;
+                if (left === 'A') aWins++; else bWins++;
+              } else {
+                stats[right].wins += 1; stats[right].setWins += 1;
+                stats[left].losses += 1; stats[left].setLosses += 1;
+                if (right === 'A') aWins++; else bWins++;
+              }
+            }
+            const order: TeamKey[] = ['A','B'];
+            // Match considered entered/decided when A or B reached 3 set wins with valid non-tie scores
+            const allEntered = (stats.A.setWins === 3 || stats.B.setWins === 3);
             const sorted = [...order].sort((x, y) => {
               const a = stats[x];
               const b = stats[y];
@@ -336,18 +347,22 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
               const n1 = Number(s1), n2 = Number(s2);
               return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 === n2;
             });
-            const allComplete = SETS.every((entry, i) => {
+            // Decide completeness: first to 3 with valid non-tie scores in that deciding path
+            let aWins = 0, bWins = 0, decided = false;
+            for (let i = 0; i < SETS.length; i++) {
               const row = scores[i] || {} as Record<TeamKey, string>;
-              const s1 = row[entry.teams[0]] ?? '';
-              const s2 = row[entry.teams[1]] ?? '';
-              if (s1 === '' || s2 === '') return false;
+              const s1 = row['A'] ?? '';
+              const s2 = row['B'] ?? '';
+              if (s1 === '' || s2 === '') break;
               const n1 = Number(s1), n2 = Number(s2);
-              return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 !== n2;
-            });
+              if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) break;
+              if (n1 > n2) aWins++; else bWins++;
+              if (aWins === 3 || bWins === 3) { decided = true; break; }
+            }
             return (
               <span className="text-[11px]">
                 {anyTie && <span className="text-red-600">Resolve all ties: scores cannot be equal.</span>}
-                {!anyTie && !allComplete && <span className="text-gray-600">Enter all scores to enable submit.</span>}
+                {!anyTie && !decided && <span className="text-gray-600">Enter sets until a team reaches 3 wins.</span>}
               </span>
             );
           })()}
@@ -363,15 +378,18 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
                 const n1 = Number(s1), n2 = Number(s2);
                 return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 === n2;
               });
-              const allComplete = SETS.every((entry, i) => {
+              let aWins = 0, bWins = 0, decided = false;
+              for (let i = 0; i < SETS.length; i++) {
                 const row = scores[i] || {} as Record<TeamKey, string>;
-                const s1 = row[entry.teams[0]] ?? '';
-                const s2 = row[entry.teams[1]] ?? '';
-                if (s1 === '' || s2 === '') return false;
+                const s1 = row['A'] ?? '';
+                const s2 = row['B'] ?? '';
+                if (s1 === '' || s2 === '') break;
                 const n1 = Number(s1), n2 = Number(s2);
-                return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 !== n2;
-              });
-              return anyTie || !allComplete;
+                if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) break;
+                if (n1 > n2) aWins++; else bWins++;
+                if (aWins === 3 || bWins === 3) { decided = true; break; }
+              }
+              return anyTie || !decided;
             })()}
             className="rounded-[10px] px-4 py-2 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
           >
