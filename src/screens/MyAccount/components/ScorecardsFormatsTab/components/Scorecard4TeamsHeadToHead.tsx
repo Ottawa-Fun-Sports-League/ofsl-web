@@ -388,30 +388,55 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
             const order: TeamKey[] = ['A','B','C','D'];
             const allEntered = summary.game2Done && !anySetTie;
 
-            // Movement: Based on Game 2 Court 1 result only — Winner Up, Loser Down; Court 2 teams stay.
+            // Movement (courts are sub-tiers):
+            // - Court 1 winner: Up one tier to highest position (e.g., D). If top tier, Stay -> D
+            // - Court 1 loser: Stay in same tier -> Court 2 C
+            // - Court 2 winner: Stay in same tier -> Court 1 B
+            // - Court 2 loser: Down one tier to A. If bottom tier, Stay -> A
             let move: Record<TeamKey, string> = { A:'Stay', B:'Stay', C:'Stay', D:'Stay' };
             if (summary.game2Done && g1Outcome.c1.decided && g1Outcome.c2.decided) {
-              // Determine participants of G2 Court 1
               const w1 = (g1Outcome.c1.winner === 'L') ? 'A' : 'B';
+              const l1 = (g1Outcome.c1.loser  === 'L') ? 'A' : 'B';
               const w2 = (g1Outcome.c2.winner === 'L') ? 'C' : 'D';
-              // Evaluate G2 Court1 winner by set wins then diff
-              let w1Set = 0, w2Set = 0, diff = 0;
+              const l2 = (g1Outcome.c2.loser  === 'L') ? 'C' : 'D';
+
+              // Evaluate Game 2 Court 1 (winners match)
+              let wc1Wins = 0, wc2Wins = 0, wcDiff = 0;
               for (const row of g2c1) {
                 const s1 = row.WC1 ?? ''; const s2 = row.WC2 ?? '';
-                if (s1 === '' || s2 === '') { w1Set = w2Set = 0; diff = 0; break; }
+                if (s1 === '' || s2 === '') { wc1Wins = wc2Wins = 0; wcDiff = 0; break; }
                 const n1 = Number(s1), n2 = Number(s2);
-                if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) { w1Set = w2Set = 0; diff = 0; break; }
-                diff += (n1 - n2);
-                if (n1 > n2) w1Set++; else w2Set++;
+                if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) { wc1Wins = wc2Wins = 0; wcDiff = 0; break; }
+                wcDiff += (n1 - n2);
+                if (n1 > n2) wc1Wins++; else wc2Wins++;
               }
-              let g2c1Winner: TeamKey | null = null;
-              let g2c1Loser: TeamKey | null = null;
-              if (w1Set !== w2Set) { g2c1Winner = (w1Set > w2Set) ? (w1 as TeamKey) : (w2 as TeamKey); }
-              else if (diff !== 0) { g2c1Winner = (diff > 0) ? (w1 as TeamKey) : (w2 as TeamKey); }
+              let g2c1Winner: TeamKey | null = null; let g2c1Loser: TeamKey | null = null;
+              if (wc1Wins !== wc2Wins) { g2c1Winner = (wc1Wins > wc2Wins) ? (w1 as TeamKey) : (w2 as TeamKey); }
+              else if (wcDiff !== 0) { g2c1Winner = (wcDiff > 0) ? (w1 as TeamKey) : (w2 as TeamKey); }
               if (g2c1Winner) {
                 g2c1Loser = (g2c1Winner === (w1 as TeamKey)) ? (w2 as TeamKey) : (w1 as TeamKey);
-                move[g2c1Winner] = 'Up';
-                move[g2c1Loser] = 'Down';
+                move[g2c1Winner] = isTopTier ? 'Stay -> D' : 'Up';
+                move[g2c1Loser] = 'Stay -> Court 2 C';
+              }
+
+              // Evaluate Game 2 Court 2 (losers match)
+              let lc1Wins = 0, lc2Wins = 0, lcDiff = 0;
+              for (const row of g2c2) {
+                const s1 = row.LC1 ?? ''; const s2 = row.LC2 ?? '';
+                if (s1 === '' || s2 === '') { lc1Wins = lc2Wins = 0; lcDiff = 0; break; }
+                const n1 = Number(s1), n2 = Number(s2);
+                if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) { lc1Wins = lc2Wins = 0; lcDiff = 0; break; }
+                lcDiff += (n1 - n2);
+                if (n1 > n2) lc1Wins++; else lc2Wins++;
+              }
+              let g2c2Winner: TeamKey | null = null; let g2c2Loser: TeamKey | null = null;
+              if (lc1Wins !== lc2Wins) { g2c2Winner = (lc1Wins > lc2Wins) ? (l1 as TeamKey) : (l2 as TeamKey); }
+              else if (lcDiff !== 0) { g2c2Winner = (lcDiff > 0) ? (l1 as TeamKey) : (l2 as TeamKey); }
+              if (g2c2Winner) {
+                g2c2Loser = (g2c2Winner === (l1 as TeamKey)) ? (l2 as TeamKey) : (l1 as TeamKey);
+                move[g2c2Winner] = 'Stay -> Court 1 B';
+                const isBottomTier = pointsTierOffset === 0;
+                move[g2c2Loser] = isBottomTier ? 'Stay -> A' : 'Down';
               }
             }
 
@@ -452,4 +477,3 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
     </form>
   );
 }
-
