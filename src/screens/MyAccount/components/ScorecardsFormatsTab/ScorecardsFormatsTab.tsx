@@ -4,6 +4,7 @@ import { ScorecardsHeader } from './components/ScorecardsHeader';
 import { Scorecard3Teams6Sets } from './components/Scorecard3Teams6Sets';
 import { Scorecard2Teams4Sets } from './components/Scorecard2Teams4Sets';
 import { Scorecard2TeamsBestOf5 } from './components/Scorecard2TeamsBestOf5';
+import { Scorecard4TeamsHeadToHead } from './components/Scorecard4TeamsHeadToHead';
 
 export function ScorecardsFormatsTab() {
   const [selectedId, setSelectedId] = useState<string>(GAME_FORMATS[0]?.value ?? '');
@@ -176,6 +177,45 @@ export function ScorecardsFormatsTab() {
                         <li>Losers: move down one tier</li>
                         <li>Top tier winners: stay in the same tier (cannot move up)</li>
                         <li>Bottom tier losers: stay in the same tier (cannot move down)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              ) : selected.value === '4-teams-head-to-head' ? (
+                <>
+                  <Scorecard4TeamsHeadToHead
+                    teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net', D: 'Block Party' }}
+                  />
+
+                  {/* Format logic reference */}
+                  <div className="mt-6 space-y-5">
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Weekly Structure</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Game 1: Court 1 — A vs B (2 sets); Court 2 — C vs D (2 sets)</li>
+                        <li>Game 2: Court 1 — Winner (Court 1) vs Winner (Court 2) (2 sets)</li>
+                        <li>Game 2: Court 2 — Loser (Court 1) vs Loser (Court 2) (2 sets)</li>
+                        <li>No per-set ties allowed; resolve equal scores</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tie-Breaker Rules (within a game)</h4>
+                      <ol className="list-decimal pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Compare set wins across the two sets</li>
+                        <li>If 1–1, compare total points differential (higher differential wins)</li>
+                        <li>If still tied: re-enter scores (ties are not allowed)</li>
+                      </ol>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tier Movement</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Game 2 Court 1 winner: moves up one tier to highest position (e.g., D)</li>
+                        <li>Game 2 Court 1 loser: moves down one tier to lowest position (A)</li>
+                        <li>Game 2 Court 2 participants: remain in current tier</li>
+                        <li>Top tier winners: stay in current tier (cannot move up)</li>
+                        <li>Bottom tier losers: stay in current tier (cannot move down)</li>
                       </ul>
                     </div>
                   </div>
