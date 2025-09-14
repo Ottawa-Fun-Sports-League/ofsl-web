@@ -211,11 +211,10 @@ export function ScorecardsFormatsTab() {
                     <div>
                       <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tier Movement</h4>
                       <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
-                        <li>Game 2 Court 1 winner: moves up one tier to highest position (e.g., D)</li>
-                        <li>Game 2 Court 1 loser: moves down one tier to lowest position (A)</li>
-                        <li>Game 2 Court 2 participants: remain in current tier</li>
-                        <li>Top tier winners: stay in current tier (cannot move up)</li>
-                        <li>Bottom tier losers: stay in current tier (cannot move down)</li>
+                        <li>Game 2 Court 1 winner: moves up one tier to highest position (e.g., D). Top tier: stay → A.</li>
+                        <li>Game 2 Court 1 loser: stays in current tier → Court 2, position C.</li>
+                        <li>Game 2 Court 2 winner: stays in current tier → Court 1, position B.</li>
+                        <li>Game 2 Court 2 loser: moves down one tier to lowest position (A). Bottom tier: stay → D.</li>
                       </ul>
                     </div>
                   </div>
