@@ -422,6 +422,46 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                 }
               }}
             />
+          ) : isFourTeamHH ? (
+            <Scorecard4TeamsHeadToHead
+              teamNames={{ A: teamNames.A, B: teamNames.B, C: teamNames.C, D: (weeklyTier as any).team_d_name || '' } as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, game1, game2 }) => {
+                try {
+                  setSaving(true);
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitFourTeamHeadToHeadScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: {
+                      A: (submittedNames as any).A || (teamNames as any).A || '',
+                      B: (submittedNames as any).B || (teamNames as any).B || '',
+                      C: (submittedNames as any).C || (teamNames as any).C || '',
+                      D: (submittedNames as any).D || ((weeklyTier as any).team_d_name || ''),
+                    },
+                    game1,
+                    game2,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (4-team H2H)', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
           ) : (
             <Scorecard2TeamsBestOf5
               teamNames={{ A: teamNames.A, B: teamNames.B } as any}

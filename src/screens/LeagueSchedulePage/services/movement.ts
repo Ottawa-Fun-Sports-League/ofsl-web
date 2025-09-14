@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/supabase';
 import { applyThreeTeamTierMovementNextWeek } from '../database/scheduleDatabase';
+import { applyFourTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 import { applyTwoTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 
 type ABC = 'A' | 'B' | 'C';
@@ -93,4 +94,19 @@ export async function applyTwoTeamMovementAfterStandings({
     teamNames,
     sortedKeys,
   });
+}
+
+// 4-team H2H movement wrapper
+export async function applyFourTeamMovementAfterStandings(params: {
+  leagueId: number;
+  weekNumber: number;
+  tierNumber: number;
+  isTopTier: boolean;
+  pointsTierOffset: number;
+  teamNames: { A: string; B: string; C: string; D: string };
+  game1: { court1: Array<{ label: string; scores: Record<'A'|'B', string> }>; court2: Array<{ label: string; scores: Record<'C'|'D', string> }>; };
+  game2: { court1: Array<{ label: string; scores: Record<'WC1'|'WC2', string> }>; court2: Array<{ label: string; scores: Record<'LC1'|'LC2', string> }>; };
+}): Promise<void> {
+  const { leagueId, weekNumber, tierNumber, isTopTier, pointsTierOffset, teamNames, game1, game2 } = params;
+  await applyFourTeamTierMovementNextWeek({ leagueId, currentWeek: weekNumber, tierNumber, isTopTier, isBottomTier: pointsTierOffset===0, teamNames, game1, game2 });
 }

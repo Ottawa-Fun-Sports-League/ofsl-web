@@ -6,13 +6,14 @@ import {
 } from '../../../components/ui/dialog';
 import type { WeeklyScheduleTier } from '../../LeagueSchedulePage/types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
+import { Scorecard4TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard4TeamsHeadToHead';
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
 import { applyThreeTeamTierMovementNextWeek } from '../../LeagueSchedulePage/database/scheduleDatabase';
 
 interface SubmitScoresModalProps {
@@ -462,6 +463,51 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                     },
                     sets: sets as any,
                     spares: (spares as any) || {},
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted and standings updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err: any) {
+                  console.error('Failed to submit scores', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : weeklyTier.format === '4-teams-head-to-head' ? (
+            <Scorecard4TeamsHeadToHead
+              teamNames={{ A: teamNames.A, B: teamNames.B, C: teamNames.C, D: (weeklyTier as any).team_d_name || '' } as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, game1, game2 }) => {
+                try {
+                  setSaving(true);
+                  const canSubmit = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+                  if (!canSubmit) {
+                    showToast('Only admins or facilitators can submit scores.', 'error');
+                    return;
+                  }
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitFourTeamHeadToHeadScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: {
+                      A: (submittedNames as any).A || (teamNames as any).A || '',
+                      B: (submittedNames as any).B || (teamNames as any).B || '',
+                      C: (submittedNames as any).C || (teamNames as any).C || '',
+                      D: (submittedNames as any).D || ((weeklyTier as any).team_d_name || ''),
+                    },
+                    game1,
+                    game2,
                     pointsTierOffset: pointsOffset,
                     isTopTier,
                   });

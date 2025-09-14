@@ -190,6 +190,21 @@ export function ScorecardsFormatsTab() {
                   {/* Format logic reference */}
                   <div className="mt-6 space-y-5">
                     <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Points System</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>
+                          Lowest tier baseline: <span className="font-medium">3 / 4 / 5 / 6</span> (4th → 1st)
+                        </li>
+                        <li>
+                          Tier bonus: <span className="font-medium">+3</span> points per tier above lowest
+                        </li>
+                        <li>
+                          Example (2nd from bottom): <span className="font-medium">6 / 7 / 8 / 9</span>
+                          <span className="text-[13px] text-[#6B7280]"> (loser G2 Court 2 / winner G2 Court 2 / loser G2 Court 1 / winner G2 Court 1)</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
                       <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Weekly Structure</h4>
                       <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
                         <li>Game 1: Court 1 — A vs B (2 sets); Court 2 — C vs D (2 sets)</li>

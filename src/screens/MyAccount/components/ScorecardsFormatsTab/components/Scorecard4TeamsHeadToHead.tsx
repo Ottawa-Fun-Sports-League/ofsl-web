@@ -235,6 +235,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               const hasRight = n2 !== null && !Number.isNaN(n2);
               const both = hasLeft && hasRight;
               const isTie = both && n1 === n2;
+              const diff = both && !isTie ? Math.abs((n1 as number) - (n2 as number)) : 0;
               return (
                 <div key={`g1c1-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
                   <div className="text-[13px] text-[#4B5563]">Court 1 (Set {i+1})</div>
@@ -244,6 +245,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.A ?? ''} onChange={e => setInput(setG1C1, i, 'A', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n1 as number) > (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n1 as number) < (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <label className="text-[11px] text-gray-600 w-8 text-right">B</label>
@@ -251,6 +258,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.B ?? ''} onChange={e => setInput(setG1C1, i, 'B', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n2 as number) > (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n2 as number) < (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -264,6 +277,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               const hasRight = n2 !== null && !Number.isNaN(n2);
               const both = hasLeft && hasRight;
               const isTie = both && n1 === n2;
+              const diff = both && !isTie ? Math.abs((n1 as number) - (n2 as number)) : 0;
               return (
                 <div key={`g1c2-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
                   <div className="text-[13px] text-[#4B5563]">Court 2 (Set {i+1})</div>
@@ -273,6 +287,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.C ?? ''} onChange={e => setInput(setG1C2, i, 'C', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n1 as number) > (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n1 as number) < (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <label className="text-[11px] text-gray-600 w-8 text-right">D</label>
@@ -280,6 +300,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.D ?? ''} onChange={e => setInput(setG1C2, i, 'D', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n2 as number) > (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n2 as number) < (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -301,6 +327,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               const hasRight = n2 !== null && !Number.isNaN(n2);
               const both = hasLeft && hasRight;
               const isTie = both && n1 === n2;
+              const diff = both && !isTie ? Math.abs((n1 as number) - (n2 as number)) : 0;
               return (
                 <div key={`g2c1-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
                   <div className="text-[13px] text-[#4B5563]">Court 1 (Set {i+1})</div>
@@ -310,6 +337,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.WC1 ?? ''} onChange={e => setInput(setG2C1, i, 'WC1', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n1 as number) > (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n1 as number) < (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <label className="text-[11px] text-gray-600 w-14 text-right">WC2</label>
@@ -317,6 +350,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.WC2 ?? ''} onChange={e => setInput(setG2C1, i, 'WC2', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n2 as number) > (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n2 as number) < (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -331,6 +370,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               const hasRight = n2 !== null && !Number.isNaN(n2);
               const both = hasLeft && hasRight;
               const isTie = both && n1 === n2;
+              const diff = both && !isTie ? Math.abs((n1 as number) - (n2 as number)) : 0;
               return (
                 <div key={`g2c2-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
                   <div className="text-[13px] text-[#4B5563]">Court 2 (Set {i+1})</div>
@@ -340,6 +380,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.LC1 ?? ''} onChange={e => setInput(setG2C2, i, 'LC1', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n1 as number) > (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n1 as number) < (n2 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <label className="text-[11px] text-gray-600 w-14 text-right">LC2</label>
@@ -347,6 +393,12 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                       value={row.LC2 ?? ''} onChange={e => setInput(setG2C2, i, 'LC2', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
                       placeholder="0" />
+                    {both && !isTie && (n2 as number) > (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
+                    )}
+                    {both && !isTie && (n2 as number) < (n1 as number) && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -412,20 +464,78 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               }
             }
 
+            // Points recap: Base 3/4/5/6 (4th->1st) +3 per tier above lowest
+            const tierDisplay = typeof tierNumber === 'number' ? tierNumber : (Math.max(0, pointsTierOffset) + 1);
+            const tierBonus = 3 * Math.max(0, pointsTierOffset);
+            const points: Record<TeamKey, number> = { A: 0, B: 0, C: 0, D: 0 };
+            if (summary.game2Done) {
+              // Determine ranks from Game 2 results
+              const w1 = (g1Outcome.c1.winner === 'L') ? 'A' : 'B';
+              const l1 = (g1Outcome.c1.loser  === 'L') ? 'A' : 'B';
+              const w2 = (g1Outcome.c2.winner === 'L') ? 'C' : 'D';
+              const l2 = (g1Outcome.c2.loser  === 'L') ? 'C' : 'D';
+              // Winners match result
+              let wc1Wins = 0, wc2Wins = 0, wcDiff = 0;
+              for (const row of g2c1) {
+                const s1 = row.WC1 ?? ''; const s2 = row.WC2 ?? '';
+                if (s1 === '' || s2 === '') { wc1Wins = wc2Wins = 0; wcDiff = 0; break; }
+                const n1 = Number(s1), n2 = Number(s2);
+                if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) { wc1Wins = wc2Wins = 0; wcDiff = 0; break; }
+                wcDiff += (n1 - n2);
+                if (n1 > n2) wc1Wins++; else wc2Wins++;
+              }
+              let c1Winner: TeamKey | null = null; let c1Loser: TeamKey | null = null;
+              if (wc1Wins !== wc2Wins) { c1Winner = (wc1Wins > wc2Wins) ? (w1 as TeamKey) : (w2 as TeamKey); }
+              else if (wcDiff !== 0) { c1Winner = (wcDiff > 0) ? (w1 as TeamKey) : (w2 as TeamKey); }
+              if (c1Winner) c1Loser = (c1Winner === (w1 as TeamKey)) ? (w2 as TeamKey) : (w1 as TeamKey);
+
+              // Losers match result
+              let lc1Wins = 0, lc2Wins = 0, lcDiff = 0;
+              for (const row of g2c2) {
+                const s1 = row.LC1 ?? ''; const s2 = row.LC2 ?? '';
+                if (s1 === '' || s2 === '') { lc1Wins = lc2Wins = 0; lcDiff = 0; break; }
+                const n1 = Number(s1), n2 = Number(s2);
+                if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) { lc1Wins = lc2Wins = 0; lcDiff = 0; break; }
+                lcDiff += (n1 - n2);
+                if (n1 > n2) lc1Wins++; else lc2Wins++;
+              }
+              let c2Winner: TeamKey | null = null; let c2Loser: TeamKey | null = null;
+              if (lc1Wins !== lc2Wins) { c2Winner = (lc1Wins > lc2Wins) ? (l1 as TeamKey) : (l2 as TeamKey); }
+              else if (lcDiff !== 0) { c2Winner = (lcDiff > 0) ? (l1 as TeamKey) : (l2 as TeamKey); }
+              if (c2Winner) c2Loser = (c2Winner === (l1 as TeamKey)) ? (l2 as TeamKey) : (l1 as TeamKey);
+
+              if (c1Winner && c1Loser && c2Winner && c2Loser) {
+                const rank4 = c2Loser as TeamKey; // 4th
+                const rank3 = c2Winner as TeamKey; // 3rd
+                const rank2 = c1Loser as TeamKey;  // 2nd
+                const rank1 = c1Winner as TeamKey; // 1st
+                const base = [3,4,5,6];
+                points[rank4] = base[0] + tierBonus;
+                points[rank3] = base[1] + tierBonus;
+                points[rank2] = base[2] + tierBonus;
+                points[rank1] = base[3] + tierBonus;
+              }
+            }
+
             return (
               <div>
                 <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
-                <div className="grid grid-cols-4 gap-x-4 items-center">
+                <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
+                  <span className="font-semibold">Tier {tierDisplay}:</span> Base 3/4/5/6 Bonus +{tierBonus}
+                </span>
+                <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}
                   {headerCell('Record')}
                   {headerCell('Differential')}
                   {headerCell('Movement')}
+                  {headerCell('Points')}
                   {order.map(k => (
                     <Fragment key={`sum-${k}`}>
                       {rowCell(k, true)}
                       {rowCell(`${summary.stats[k].setWins}-${summary.stats[k].setLosses}`)}
                       {rowCell(fmtDiff(summary.stats[k].diff))}
                       {rowCell(allEntered ? move[k] : '-')}
+                      {rowCell(allEntered ? `+${points[k] || 0}` : '-', true)}
                     </Fragment>
                   ))}
                 </div>
