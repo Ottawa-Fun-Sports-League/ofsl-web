@@ -3,6 +3,7 @@ import { GAME_FORMATS } from '../../../LeagueSchedulePage/utils/formatUtils';
 import { ScorecardsHeader } from './components/ScorecardsHeader';
 import { Scorecard3Teams6Sets } from './components/Scorecard3Teams6Sets';
 import { Scorecard2Teams4Sets } from './components/Scorecard2Teams4Sets';
+import { Scorecard2TeamsBestOf5 } from './components/Scorecard2TeamsBestOf5';
 
 export function ScorecardsFormatsTab() {
   const [selectedId, setSelectedId] = useState<string>(GAME_FORMATS[0]?.value ?? '');
@@ -126,6 +127,50 @@ export function ScorecardsFormatsTab() {
                     <div>
                       <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tier Movement</h4>
                       <p className="text-[15px] text-[#4B5563] mb-2">Current week results move teams to the following week:</p>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Winners: move up one tier</li>
+                        <li>Losers: move down one tier</li>
+                        <li>Top tier winners: stay in the same tier (cannot move up)</li>
+                        <li>Bottom tier losers: stay in the same tier (cannot move down)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              ) : selected.value === '2-teams-best-of-5' ? (
+                <>
+                  <Scorecard2TeamsBestOf5
+                    teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves' }}
+                  />
+
+                  {/* Format logic reference */}
+                  <div className="mt-6 space-y-5">
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Points System</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>
+                          Start: <span className="font-medium">2 points each</span>
+                        </li>
+                        <li>
+                          Set Bonus: <span className="font-medium">+1 per set win</span> (max <span className="font-medium">+3</span>)
+                        </li>
+                        <li>
+                          Tier Baseline: <span className="font-medium">+1</span> per tier (Tier 1 adds 0, Tier 2 adds 1, etc.)
+                        </li>
+                        <li>
+                          Examples: <span className="font-medium">Tier 1</span> 3–2 → 5–4; <span className="font-medium">Tier 2</span> 0–3 → 3–6
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tie-Breaker Rules</h4>
+                      <ol className="list-decimal pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Tie exists: Compare overall set wins</li>
+                        <li>Still tied: Compare overall points differential (higher differential wins)</li>
+                        <li>Still tied: Use previous week’s schedule position (A &gt; B)</li>
+                      </ol>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tier Movement</h4>
                       <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
                         <li>Winners: move up one tier</li>
                         <li>Losers: move down one tier</li>
