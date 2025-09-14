@@ -553,6 +553,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
   const handleNoGamesChange = async (noGames: boolean) => {
     try {
+      // Guard: disable week-level no-games edits if week is completed or in the past
+      const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
+      const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
+      if (weekCompleted || isPastWeek) return;
+
       setSavingNoGames(true);
       
         // Movement will be applied after flags are updated (via RPC)
@@ -1263,7 +1268,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 type="checkbox"
                 checked={noGamesWeek}
                 onChange={(e) => handleNoGamesChange(e.target.checked)}
-                disabled={savingNoGames}
+                disabled={(() => {
+                  const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
+                  const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
+                  return savingNoGames || weekCompleted || isPastWeek;
+                })()}
                 className="rounded"
               />
               <span className="text-sm text-gray-700">No Games This Week</span>
