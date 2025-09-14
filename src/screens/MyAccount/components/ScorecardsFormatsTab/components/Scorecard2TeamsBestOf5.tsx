@@ -292,7 +292,7 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
               <div>
                 <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
                 <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
-                  <span className="font-semibold">Tier {tierDisplay}:</span> Start 2, +1/set win (max +3) Bonus +{tierBonus}
+                  <span className="font-semibold">Tier {tierDisplay}:</span> Base 2, +1/set win (max +3) Bonus +{tierBonus}
                 </span>
                 <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}

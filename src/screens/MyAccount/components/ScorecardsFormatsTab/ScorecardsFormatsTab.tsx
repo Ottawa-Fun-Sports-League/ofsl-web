@@ -148,7 +148,7 @@ export function ScorecardsFormatsTab() {
                       <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Points System</h4>
                       <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
                         <li>
-                          Start: <span className="font-medium">2 points each</span>
+                          Base: <span className="font-medium">2 points each</span>
                         </li>
                         <li>
                           Set Bonus: <span className="font-medium">+1 per set win</span> (max <span className="font-medium">+3</span>)
