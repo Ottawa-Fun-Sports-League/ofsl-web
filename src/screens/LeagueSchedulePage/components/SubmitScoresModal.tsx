@@ -6,12 +6,13 @@ import {
 } from '../../../components/ui/dialog';
 import type { WeeklyScheduleTier } from '../types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
+import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove } from '../services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove } from '../services/scoreSubmission';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -39,7 +40,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
 
   const isThreeTeam = weeklyTier.format === '3-teams-6-sets';
   const isTwoTeamFourSets = weeklyTier.format === '2-teams-4-sets';
-  const unsupported = !(isThreeTeam || isTwoTeamFourSets);
+  const isTwoTeamBo5 = weeklyTier.format === '2-teams-best-of-5';
+  const unsupported = !(isThreeTeam || isTwoTeamFourSets || isTwoTeamBo5);
   const [pointsOffset, setPointsOffset] = useState<number>(0);
   const [isTopTier, setIsTopTier] = useState<boolean>(false);
 
@@ -380,7 +382,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                 }
               }}
             />
-          ) : (
+          ) : isTwoTeamFourSets ? (
             <Scorecard2Teams4Sets
               teamNames={{ A: teamNames.A, B: teamNames.B } as any}
               isTopTier={isTopTier}
@@ -414,6 +416,46 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   onClose();
                 } catch (err) {
                   console.error('Failed to submit scores (2-team)', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : (
+            <Scorecard2TeamsBestOf5
+              teamNames={{ A: teamNames.A, B: teamNames.B } as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitTwoTeamBestOf5ScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: {
+                      A: (submittedNames as any).A || (teamNames as any).A || '',
+                      B: (submittedNames as any).B || (teamNames as any).B || '',
+                    },
+                    sets: sets as any,
+                    spares: (spares as any) || {},
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (2-team Bo5)', err);
                   showToast('Failed to submit scores. Please try again.', 'error');
                 } finally {
                   setSaving(false);
