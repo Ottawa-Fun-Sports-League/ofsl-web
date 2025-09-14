@@ -226,159 +226,131 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
         {/* Game 1 */}
         <div className="bg-white border border-gray-200 rounded-md p-3">
           <div className="text-sm font-semibold text-[#B20000] mb-2">Game 1</div>
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] font-semibold text-[#6B7280]">Court 1</div>
-                <div className="text-[12px] text-[#6B7280]">{teamNames.A || 'A'} vs {teamNames.B || 'B'}</div>
-              </div>
-              <div className="mt-1 grid grid-cols-1 gap-0.5">
-                {[0,1].map(i => {
-                  const row = g1c1[i] || {};
-                  const n1 = row.A === '' ? null : Number(row.A);
-                  const n2 = row.B === '' ? null : Number(row.B);
-                  const hasLeft = n1 !== null && !Number.isNaN(n1);
-                  const hasRight = n2 !== null && !Number.isNaN(n2);
-                  const both = hasLeft && hasRight;
-                  const isTie = both && n1 === n2;
-                  return (
-                    <div key={`g1c1-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
-                      <div className="text-[13px] text-[#4B5563]">Set {i+1}</div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-8 text-right">A</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.A ?? ''} onChange={e => setInput(setG1C1, i, 'A', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-8 text-right">B</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.B ?? ''} onChange={e => setInput(setG1C1, i, 'B', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200 pt-2">
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] font-semibold text-[#6B7280]">Court 2</div>
-                <div className="text-[12px] text-[#6B7280]">{teamNames.C || 'C'} vs {teamNames.D || 'D'}</div>
-              </div>
-              <div className="mt-1 grid grid-cols-1 gap-0.5">
-                {[0,1].map(i => {
-                  const row = g1c2[i] || {};
-                  const n1 = row.C === '' ? null : Number(row.C);
-                  const n2 = row.D === '' ? null : Number(row.D);
-                  const hasLeft = n1 !== null && !Number.isNaN(n1);
-                  const hasRight = n2 !== null && !Number.isNaN(n2);
-                  const both = hasLeft && hasRight;
-                  const isTie = both && n1 === n2;
-                  return (
-                    <div key={`g1c2-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
-                      <div className="text-[13px] text-[#4B5563]">Set {i+1}</div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-8 text-right">C</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.C ?? ''} onChange={e => setInput(setG1C2, i, 'C', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-8 text-right">D</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.D ?? ''} onChange={e => setInput(setG1C2, i, 'D', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="grid grid-cols-1 gap-0.5">
+            {[0,1].map(i => {
+              const row = g1c1[i] || {};
+              const n1 = row.A === '' ? null : Number(row.A);
+              const n2 = row.B === '' ? null : Number(row.B);
+              const hasLeft = n1 !== null && !Number.isNaN(n1);
+              const hasRight = n2 !== null && !Number.isNaN(n2);
+              const both = hasLeft && hasRight;
+              const isTie = both && n1 === n2;
+              return (
+                <div key={`g1c1-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
+                  <div className="text-[13px] text-[#4B5563]">Court 1 (Set {i+1})</div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-8 text-right">A</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.A ?? ''} onChange={e => setInput(setG1C1, i, 'A', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-8 text-right">B</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.B ?? ''} onChange={e => setInput(setG1C1, i, 'B', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="h-px bg-gray-200 my-3" />
+            {[0,1].map(i => {
+              const row = g1c2[i] || {};
+              const n1 = row.C === '' ? null : Number(row.C);
+              const n2 = row.D === '' ? null : Number(row.D);
+              const hasLeft = n1 !== null && !Number.isNaN(n1);
+              const hasRight = n2 !== null && !Number.isNaN(n2);
+              const both = hasLeft && hasRight;
+              const isTie = both && n1 === n2;
+              return (
+                <div key={`g1c2-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
+                  <div className="text-[13px] text-[#4B5563]">Court 2 (Set {i+1})</div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-8 text-right">C</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.C ?? ''} onChange={e => setInput(setG1C2, i, 'C', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-8 text-right">D</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.D ?? ''} onChange={e => setInput(setG1C2, i, 'D', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Game 2 (dynamic) */}
         <div className="bg-white border border-gray-200 rounded-md p-3">
           <div className="text-sm font-semibold text-[#B20000] mb-2">Game 2</div>
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] font-semibold text-[#6B7280]">Court 1</div>
-                <div className="text-[12px] text-[#6B7280]">{g2Labels.WC1 || 'Winner Court 1'} vs {g2Labels.WC2 || 'Winner Court 2'}</div>
-              </div>
-              <div className="mt-1 grid grid-cols-1 gap-0.5">
-                {[0,1].map(i => {
-                  const row = g2c1[i] || {};
-                  const n1 = row.WC1 === '' ? null : Number(row.WC1);
-                  const n2 = row.WC2 === '' ? null : Number(row.WC2);
-                  const hasLeft = n1 !== null && !Number.isNaN(n1);
-                  const hasRight = n2 !== null && !Number.isNaN(n2);
-                  const both = hasLeft && hasRight;
-                  const isTie = both && n1 === n2;
-                  return (
-                    <div key={`g2c1-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
-                      <div className="text-[13px] text-[#4B5563]">Set {i+1}</div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-14 text-right">WC1</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.WC1 ?? ''} onChange={e => setInput(setG2C1, i, 'WC1', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-14 text-right">WC2</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.WC2 ?? ''} onChange={e => setInput(setG2C1, i, 'WC2', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="border-t border-gray-200 pt-2">
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] font-semibold text-[#6B7280]">Court 2</div>
-                <div className="text-[12px] text-[#6B7280]">{g2Labels.LC1 || 'Loser Court 1'} vs {g2Labels.LC2 || 'Loser Court 2'}</div>
-              </div>
-              <div className="mt-1 grid grid-cols-1 gap-0.5">
-                {[0,1].map(i => {
-                  const row = g2c2[i] || {};
-                  const n1 = row.LC1 === '' ? null : Number(row.LC1);
-                  const n2 = row.LC2 === '' ? null : Number(row.LC2);
-                  const hasLeft = n1 !== null && !Number.isNaN(n1);
-                  const hasRight = n2 !== null && !Number.isNaN(n2);
-                  const both = hasLeft && hasRight;
-                  const isTie = both && n1 === n2;
-                  return (
-                    <div key={`g2c2-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
-                      <div className="text-[13px] text-[#4B5563]">Set {i+1}</div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-14 text-right">LC1</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.LC1 ?? ''} onChange={e => setInput(setG2C2, i, 'LC1', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-[11px] text-gray-600 w-14 text-right">LC2</label>
-                        <input type="number" inputMode="numeric" min={0} max={21} step={1}
-                          value={row.LC2 ?? ''} onChange={e => setInput(setG2C2, i, 'LC2', e.target.value)} aria-invalid={isTie}
-                          className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
-                          placeholder="0" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          {/* Legend for dynamic pairings */}
+          <div className="text-[12px] text-[#6B7280] mb-1">{g2Labels.WC1 || 'Winner Court 1'} vs {g2Labels.WC2 || 'Winner Court 2'}</div>
+          <div className="grid grid-cols-1 gap-0.5">
+            {[0,1].map(i => {
+              const row = g2c1[i] || {};
+              const n1 = row.WC1 === '' ? null : Number(row.WC1);
+              const n2 = row.WC2 === '' ? null : Number(row.WC2);
+              const hasLeft = n1 !== null && !Number.isNaN(n1);
+              const hasRight = n2 !== null && !Number.isNaN(n2);
+              const both = hasLeft && hasRight;
+              const isTie = both && n1 === n2;
+              return (
+                <div key={`g2c1-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
+                  <div className="text-[13px] text-[#4B5563]">Court 1 (Set {i+1})</div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-14 text-right">WC1</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.WC1 ?? ''} onChange={e => setInput(setG2C1, i, 'WC1', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-14 text-right">WC2</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.WC2 ?? ''} onChange={e => setInput(setG2C1, i, 'WC2', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                </div>
+              );
+            })}
+            {/* Legend for losers pairing */}
+            <div className="text-[12px] text-[#6B7280] mt-2 mb-1">{g2Labels.LC1 || 'Loser Court 1'} vs {g2Labels.LC2 || 'Loser Court 2'}</div>
+            {[0,1].map(i => {
+              const row = g2c2[i] || {};
+              const n1 = row.LC1 === '' ? null : Number(row.LC1);
+              const n2 = row.LC2 === '' ? null : Number(row.LC2);
+              const hasLeft = n1 !== null && !Number.isNaN(n1);
+              const hasRight = n2 !== null && !Number.isNaN(n2);
+              const both = hasLeft && hasRight;
+              const isTie = both && n1 === n2;
+              return (
+                <div key={`g2c2-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
+                  <div className="text-[13px] text-[#4B5563]">Court 2 (Set {i+1})</div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-14 text-right">LC1</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.LC1 ?? ''} onChange={e => setInput(setG2C2, i, 'LC1', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-14 text-right">LC2</label>
+                    <input type="number" inputMode="numeric" min={0} max={21} step={1}
+                      value={row.LC2 ?? ''} onChange={e => setInput(setG2C2, i, 'LC2', e.target.value)} aria-invalid={isTie}
+                      className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
+                      placeholder="0" />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
