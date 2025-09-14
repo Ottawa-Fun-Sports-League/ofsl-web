@@ -415,7 +415,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               else if (wcDiff !== 0) { g2c1Winner = (wcDiff > 0) ? (w1 as TeamKey) : (w2 as TeamKey); }
               if (g2c1Winner) {
                 g2c1Loser = (g2c1Winner === (w1 as TeamKey)) ? (w2 as TeamKey) : (w1 as TeamKey);
-                move[g2c1Winner] = isTopTier ? 'Stay -> D' : 'Up';
+                move[g2c1Winner] = isTopTier ? 'Stay -> A' : 'Up';
                 move[g2c1Loser] = 'Stay -> Court 2 C';
               }
 
@@ -436,7 +436,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                 g2c2Loser = (g2c2Winner === (l1 as TeamKey)) ? (l2 as TeamKey) : (l1 as TeamKey);
                 move[g2c2Winner] = 'Stay -> Court 1 B';
                 const isBottomTier = pointsTierOffset === 0;
-                move[g2c2Loser] = isBottomTier ? 'Stay -> A' : 'Down';
+                move[g2c2Loser] = isBottomTier ? 'Stay -> D' : 'Down';
               }
             }
 
