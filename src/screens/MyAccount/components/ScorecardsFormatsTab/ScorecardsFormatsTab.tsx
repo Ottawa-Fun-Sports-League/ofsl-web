@@ -154,7 +154,7 @@ export function ScorecardsFormatsTab() {
                           Set Bonus: <span className="font-medium">+1 per set win</span> (max <span className="font-medium">+3</span>)
                         </li>
                         <li>
-                          Tier Baseline: <span className="font-medium">+1</span> per tier (Tier 1 adds 0, Tier 2 adds 1, etc.)
+                          Tier Bonus: <span className="font-medium">+1</span> per tier up from bottom (Tier 1 adds 0, Tier 2 adds 1, etc.)
                         </li>
                         <li>
                           Examples: <span className="font-medium">Tier 1</span> 3–2 → 5–4; <span className="font-medium">Tier 2</span> 0–3 → 3–6

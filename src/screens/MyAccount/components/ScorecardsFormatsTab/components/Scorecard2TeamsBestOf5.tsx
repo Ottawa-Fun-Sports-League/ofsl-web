@@ -271,15 +271,15 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
             }
             const fmtDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
-            // Points system:
-            // Start 2 points, +1 per set win (max +3), +1 baseline per tier (Tier N adds N-1)
+            // Points system (standardized):
+            // Start 2 points, +1 per set win (max +3), +1 bonus per tier up from bottom
             const tierDisplay = typeof tierNumber === 'number' ? tierNumber : (Math.max(0, pointsTierOffset) + 1);
-            const tierBaselineAdd = Math.max(0, tierDisplay - 1);
+            const tierBonus = Math.max(0, pointsTierOffset);
             const points: Record<TeamKey, number> = { A: 0, B: 0 };
             (['A','B'] as TeamKey[]).forEach(k => {
               const start = 2;
               const setBonus = Math.min(stats[k].setWins, 3);
-              points[k] = start + setBonus + tierBaselineAdd;
+              points[k] = start + setBonus + tierBonus;
             });
 
             const headerCell = (text: string) => (
@@ -292,7 +292,7 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
               <div>
                 <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
                 <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
-                  <span className="font-semibold">Tier {tierDisplay}:</span> Start 2, +1/set win (max +3), +{tierBaselineAdd} tier baseline
+                  <span className="font-semibold">Tier {tierDisplay}:</span> Start 2, +1/set win (max +3) Bonus +{tierBonus}
                 </span>
                 <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}
@@ -384,4 +384,3 @@ export function Scorecard2TeamsBestOf5({ teamNames, onSubmit, isTopTier = false,
     </form>
   );
 }
-
