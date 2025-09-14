@@ -234,4 +234,3 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     sortedKeys: sorted,
   });
 }
-

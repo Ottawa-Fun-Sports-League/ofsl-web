@@ -373,18 +373,10 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
   const nextWeek = (currentWeek || 0) + 1;
   if (!leagueId || !nextWeek || !tierNumber) return;
 
-  // Determine destination week: skip a week if destination week is marked no games (all tiers no_games)
-  let destWeek = nextWeek;
-  try {
-    const { data: destRows } = await supabase
-      .from('weekly_schedules')
-      .select('no_games')
-      .eq('league_id', leagueId)
-      .eq('week_number', destWeek);
-    if (Array.isArray(destRows) && destRows.length > 0 && destRows.every((r: any) => !!r.no_games)) {
-      destWeek = nextWeek + 1; // Skip the no-games week
-    }
-  } catch { /* ignore */ }
+  // Find next playable destination week (skip any full no-games stretches)
+  const destWeek = await getNextPlayableWeek(leagueId, nextWeek);
+
+  // destWeek chosen via getNextPlayableWeek
 
   // Determine target assignments based on movement rules
   const winnerKey = sortedKeys[0];
@@ -394,29 +386,9 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
   type Pos = 'A' | 'B' | 'C';
   const assignments: Array<{ name: string; targetTier: number; targetPos: Pos }> = [];
 
-  // Determine adjacency-based boundaries for this week
-  let aboveNoGames = false;
-  let belowNoGames = false;
-  try {
-    const neighborTiers = [tierNumber - 1, tierNumber + 1].filter(n => n >= 1);
-    if (neighborTiers.length) {
-      const { data: neighborRows } = await supabase
-        .from('weekly_schedules')
-        .select('tier_number,no_games')
-        .eq('league_id', leagueId)
-        .eq('week_number', currentWeek)
-        .in('tier_number', neighborTiers as number[]);
-      aboveNoGames = !!(neighborRows || []).find(r => (r as any).tier_number === tierNumber - 1 && (r as any).no_games);
-      belowNoGames = !!(neighborRows || []).find(r => (r as any).tier_number === tierNumber + 1 && (r as any).no_games);
-    }
-  } catch { /* ignore */ }
-
-  const effectiveTop = isTopTier || aboveNoGames;
-  const effectiveBottom = isBottomTier || belowNoGames;
-
   // Winner
   if (teamNames[winnerKey]) {
-    if (effectiveTop) {
+    if (isTopTier) {
       assignments.push({ name: teamNames[winnerKey], targetTier: tierNumber, targetPos: 'A' });
     } else {
       assignments.push({ name: teamNames[winnerKey], targetTier: Math.max(1, tierNumber - 1), targetPos: 'C' });
@@ -428,7 +400,7 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
   }
   // Loser
   if (teamNames[loserKey]) {
-    if (effectiveBottom) {
+    if (isBottomTier) {
       assignments.push({ name: teamNames[loserKey], targetTier: tierNumber, targetPos: 'C' });
     } else {
       assignments.push({ name: teamNames[loserKey], targetTier: tierNumber + 1, targetPos: 'A' });
@@ -554,6 +526,27 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
 }
 
 /**
+ * Returns the next playable week number starting from startWeek, skipping any weeks
+ * where all tiers are marked no_games = true. If no rows exist for a week, treat as playable.
+ */
+export async function getNextPlayableWeek(leagueId: number, startWeek: number): Promise<number> {
+  let candidate = startWeek;
+  for (let i = 0; i < 52; i++) { // safety cap
+    const { data, error } = await supabase
+      .from('weekly_schedules')
+      .select('no_games')
+      .eq('league_id', leagueId)
+      .eq('week_number', candidate);
+    if (error) return candidate; // fallback: treat as playable
+    if (!Array.isArray(data) || data.length === 0) return candidate; // no rows: playable
+    const allNoGames = data.every((r: any) => !!r.no_games);
+    if (!allNoGames) return candidate; // playable week
+    candidate += 1; // skip to next
+  }
+  return candidate;
+}
+
+/**
  * Carry forward A/B/C assignments unchanged to next week for a tier marked no_games.
  */
 export async function carryForwardNoGamesTierNextWeek(params: {
@@ -589,14 +582,14 @@ export async function carryForwardNoGamesTierNextWeek(params: {
   const names = [curRow.team_a_name, curRow.team_b_name, curRow.team_c_name].filter(Boolean) as string[];
 
   // Ensure next week tier exists matching current week template
-  const { data: nextRow } = await supabase
+  let { data: nextRowFull } = await supabase
     .from('weekly_schedules')
-    .select('id')
+    .select('*')
     .eq('league_id', leagueId)
     .eq('week_number', destWeek)
     .eq('tier_number', tierNumber)
     .maybeSingle();
-  if (!nextRow) {
+  if (!nextRowFull) {
     const { error: insErr } = await supabase
       .from('weekly_schedules')
       .insert([{
@@ -618,36 +611,21 @@ export async function carryForwardNoGamesTierNextWeek(params: {
         is_playoff: false,
       }]);
     if (insErr) handleDatabaseError(insErr);
+    // Re-read inserted row
+    const { data: reread } = await supabase
+      .from('weekly_schedules')
+      .select('*')
+      .eq('league_id', leagueId)
+      .eq('week_number', destWeek)
+      .eq('tier_number', tierNumber)
+      .maybeSingle();
+    nextRowFull = reread as any;
   }
 
-  // Clear these team names anywhere in next week first
-  const { data: allNext } = await supabase
-    .from('weekly_schedules')
-    .select('id, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
-    .eq('league_id', leagueId)
-    .eq('week_number', destWeek);
-  const namesSet = new Set(names);
-  for (const row of (allNext || [])) {
-    const updates: Record<string, any> = {};
-    (['a','b','c','d','e','f'] as const).forEach((p) => {
-      const key = `team_${p}_name` as const;
-      const rk = `team_${p}_ranking` as const;
-      const val = (row as any)[key] as string | null;
-      if (val && namesSet.has(val)) {
-        updates[key] = null;
-        updates[rk] = null;
-      }
-    });
-    if (Object.keys(updates).length > 0) {
-      const { error: clrErr } = await supabase
-        .from('weekly_schedules')
-        .update(updates)
-        .eq('id', (row as any).id);
-      if (clrErr) handleDatabaseError(clrErr);
-    }
-  }
+    // Removed: per-tier carry-forward duplicate clearing and overwriting logic by request
 
   // Apply A/B/C identical to current week
+
   const updates: Record<string, any> = {
     team_a_name: curRow.team_a_name,
     team_a_ranking: curRow.team_a_ranking,
@@ -717,6 +695,41 @@ export async function moveWeekPlacements(params: {
 }): Promise<void> {
   const { leagueId, fromWeek, toWeek } = params;
   if (fromWeek === toWeek) return;
+
+  // Attempt to use transactional RPC if available
+  try {
+    const { error: rpcErr } = await supabase.rpc('apply_week_bump', {
+      p_league_id: leagueId,
+      p_from_week: fromWeek,
+      p_to_week: toWeek,
+    });
+    if (!rpcErr) {
+      // Optional debug summary
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const env: any = (import.meta as any)?.env;
+        if (env?.VITE_DEBUG_MOVEMENT) {
+          const { data: moved } = await supabase
+            .from('weekly_schedules')
+            .select('tier_number, team_a_name, team_b_name, team_c_name')
+            .eq('league_id', leagueId)
+            .eq('week_number', toWeek)
+            .order('tier_number');
+          const summary = (moved || [])
+            .map((r: any) => `T${r.tier_number}: A=${r.team_a_name || '-'} B=${r.team_b_name || '-'} C=${r.team_c_name || '-'}`)
+            .join(' | ');
+          console.info('[Week bump][RPC]', `W${fromWeek} -> W${toWeek}:`, summary);
+        }
+      } catch { /* ignore logging errors */ }
+      return;
+    }
+    // If RPC not found or not defined, fall through to client fallback
+    if (rpcErr && rpcErr.code !== '42883' && rpcErr.code !== 'PGRST202') {
+      // Unexpected error
+      handleDatabaseError(rpcErr);
+    }
+  } catch { /* ignore and fallback */ }
+
   const { data: fromRows, error: fromErr } = await supabase
     .from('weekly_schedules')
     .select('*')
@@ -803,7 +816,31 @@ export async function moveWeekPlacements(params: {
       if (clrErr) handleDatabaseError(clrErr);
     }
   }
+
+  // Optional debug summary (client fallback)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const env: any = (import.meta as any)?.env;
+    if (env?.VITE_DEBUG_MOVEMENT) {
+      const { data: moved } = await supabase
+        .from('weekly_schedules')
+        .select('tier_number, team_a_name, team_b_name, team_c_name')
+        .eq('league_id', leagueId)
+        .eq('week_number', toWeek)
+        .order('tier_number');
+      const summary = (moved || [])
+        .map((r: any) => `T${r.tier_number}: A=${r.team_a_name || '-'} B=${r.team_b_name || '-'} C=${r.team_c_name || '-'}`)
+        .join(' | ');
+      console.info('[Week bump][Client]', `W${fromWeek} -> W${toWeek}:`, summary);
+    }
+  } catch { /* ignore logging errors */ }
 }
+
+/**
+ * Revert a prior per-tier no_games carry-forward: remove carried A/B/C from dest week
+ * and restore previously displaced teams (lower A back to dest C, upper C back to dest A).
+ */
+// Note: Removed per-tier revert logic by request; weekly-level bump still available.
 
 /**
  * Gets all available teams for a league that aren't already scheduled

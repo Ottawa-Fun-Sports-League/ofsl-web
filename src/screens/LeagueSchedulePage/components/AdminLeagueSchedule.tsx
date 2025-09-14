@@ -11,7 +11,7 @@ import type { WeeklyScheduleTier, TeamPositionId } from '../types';
 import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
 import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../utils/formatUtils';
 import { getTeamForPosition } from '../utils/scheduleLogic';
-import { addTierToAllWeeks, removeTierFromAllWeeks, carryForwardNoGamesTierNextWeek, clearTeamPlacementsFromNextWeek, moveWeekPlacements } from '../database/scheduleDatabase';
+import { addTierToAllWeeks, removeTierFromAllWeeks, moveWeekPlacements, getNextPlayableWeek } from '../database/scheduleDatabase';
 import { calculateCurrentWeekToDisplay } from '../utils/weekCalculation';
 
 interface AdminLeagueScheduleProps {
@@ -554,8 +554,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const handleNoGamesChange = async (noGames: boolean) => {
     try {
       setSavingNoGames(true);
+      
+        // Movement will be applied after flags are updated (via RPC)
 
-      const { error } = await supabase.rpc("set_week_no_games", {
+      // Then persist the weekly no_games flag
+      const { error } = await supabase.rpc('set_week_no_games', {
         p_league_id: parseInt(leagueId),
         p_week_number: currentWeek,
         p_no_games: noGames,
@@ -576,19 +579,41 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         .eq('week_number', currentWeek);
       if (updAllErr) console.warn('Failed to update no_games across tiers for week', updAllErr);
 
-      // Move placements as required by weekly no-games toggle
-      try {
-        const leagueIdNum = parseInt(leagueId);
-        if (noGames) {
-          // Bump all current placements from this week to next week
-          await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek: currentWeek, toWeek: currentWeek + 1 });
-        } else {
-          // Bring back placements from next week to this week
-          await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek: currentWeek + 1, toWeek: currentWeek });
+        // Apply movement after flags are updated (RPC preferred, fallback to client)
+        try {
+          const leagueIdNum = parseInt(leagueId);
+          if (noGames) {
+            const { error: rpcErr } = await supabase.rpc('apply_week_bump_auto', {
+              p_league_id: leagueIdNum,
+              p_from_week: currentWeek,
+            });
+            if (rpcErr) {
+              const toWeek = await getNextPlayableWeek(leagueIdNum, currentWeek + 1);
+              await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek: currentWeek, toWeek });
+            }
+          } else {
+            const { error: rpcErr } = await supabase.rpc('apply_week_rewind_auto', {
+              p_league_id: leagueIdNum,
+              p_to_week: currentWeek,
+            });
+            if (rpcErr) {
+              let fromWeek = currentWeek + 1;
+              for (let i = 0; i < 52; i++) {
+                const candidate = currentWeek + 1 + i;
+                const { data } = await supabase
+                  .from('weekly_schedules')
+                  .select('id')
+                  .eq('league_id', leagueIdNum)
+                  .eq('week_number', candidate)
+                  .limit(1);
+                if (Array.isArray(data) && data.length > 0) { fromWeek = candidate; break; }
+              }
+              await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek, toWeek: currentWeek });
+            }
+          }
+        } catch (mvErr) {
+          console.warn('Weekly no-games movement bump failed', mvErr);
         }
-      } catch (mvErr) {
-        console.warn('Weekly no-games movement bump failed', mvErr);
-      }
 
       await loadWeeklySchedule(currentWeek);
     } catch (error) {
@@ -1450,14 +1475,14 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                             </button>
                           )}
                           {isAdmin && (submittedTierNumbers.has(tier.tier_number) || tier.is_completed) && (
-                            <button
-                              onClick={() => handleResetTierScores(tier)}
-                              className="ml-3 text-sm text-red-600 hover:text-red-700 hover:underline font-medium transition-colors"
-                              title="Delete submitted results and mark this tier incomplete"
-                            >
-                              Reset scores
-                            </button>
-                          )}
+                              <button
+                                onClick={() => handleResetTierScores(tier)}
+                                className="ml-3 text-sm text-gray-500 hover:text-gray-700 hover:underline font-medium transition-colors"
+                                title="Delete submitted results and mark this tier incomplete"
+                              >
+                                Reset scores
+                              </button>
+                            )}
                           {/* Removed duplicate status text; Completed badge covers this state */}
 
                           {tier.no_games && (
@@ -1483,41 +1508,14 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                                     setNoGamesWeek(allNoGamesLocal);
                                     return next;
                                   });
-                                    try {
-                                      const { error } = await supabase
-                                        .from('weekly_schedules')
-                                        .update({ no_games: nextValue })
-                                        .eq('id', tier.id);
-                                      if (error) throw error;
-                                      // If tier marked as no-games, immediately carry forward A/B/C to next week
-                                      if (nextValue) {
-                                        await carryForwardNoGamesTierNextWeek({
-                                          leagueId: parseInt(leagueId),
-                                          currentWeek: currentWeek,
-                                          tierNumber: tier.tier_number,
-                                        });
-                                      } else {
-                                        // If no-games unchecked, remove any placements that were carried forward
-                                        try {
-                                          const leagueIdNum = parseInt(leagueId);
-                                          const { data: cur } = await supabase
-                                            .from('weekly_schedules')
-                                            .select('team_a_name, team_b_name, team_c_name')
-                                            .eq('id', tier.id)
-                                            .single();
-                                          const names = [cur?.team_a_name, cur?.team_b_name, cur?.team_c_name].filter(Boolean) as string[];
-                                          if (names.length > 0) {
-                                            await clearTeamPlacementsFromNextWeek({
-                                              leagueId: leagueIdNum,
-                                              currentWeek: currentWeek,
-                                              teamNames: names,
-                                            });
-                                          }
-                                        } catch (mvErr) {
-                                          console.warn('Failed to clear next-week placements after unchecking no-games', mvErr);
-                                        }
-                                      }
-                                    } catch (err) {
+                                      try {
+                                        const { error } = await supabase
+                                          .from('weekly_schedules')
+                                          .update({ no_games: nextValue })
+                                          .eq('id', tier.id);
+                                        if (error) throw error;
+                                        // No automatic movement when toggling tier no-games; admins will manage placements manually
+                                      } catch (err) {
                                       console.error('Failed to update tier no_games', err);
                                       alert('Failed to update tier No games setting. Reverting.');
                                       // Revert UI

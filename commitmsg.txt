@@ -1,11 +1,6 @@
-﻿feat(schedule): movement, no-games, reset rollback, refactor
+﻿chore: comment out VITE_DEBUG_MOVEMENT and finalize weekly movement
 
-- Next-week movement with row creation, precise clearing, immediate A/B/C placement
-- Centralize score submission + movement services; both modals call shared flow
-- Edit-safe: clear only affected teams’ placements before reapplying
-- Reset: rollback standings deltas; clear next-week placements for the tier
-- Per-tier no-games: carry forward A/B/C; skip full no-games destination week
-- Weekly no-games: bump placements to next week; on uncheck, move back
-- Adjacency: treat neighbor no-games as temp top/bottom boundaries
-- DB: relax positional constraints (A/B/C) via migrations
-- UI: fix unique key warning in summary
+- Comment VITE_DEBUG_MOVEMENT in .env (keep for local debugging when needed)
+- Wire weekly no-games toggle to server RPCs (apply_week_bump_auto / apply_week_rewind_auto) with client fallback
+- Fix duplicate destWeek declaration in scheduleDatabase
+- Keep submission movement simple with next playable week skip; remove per-tier auto carry-forward
