@@ -6,11 +6,12 @@ import {
 } from '../../../components/ui/dialog';
 import type { WeeklyScheduleTier } from '../../LeagueSchedulePage/types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
+import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
 import { applyThreeTeamTierMovementNextWeek } from '../../LeagueSchedulePage/database/scheduleDatabase';
 
 interface SubmitScoresModalProps {
@@ -113,11 +114,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
         </DialogHeader>
 
         <div className="py-2">
-          {weeklyTier.format !== '3-teams-6-sets' ? (
-            <div className="text-sm text-gray-700">
-              Score submission for this format is not available yet. Please check back after the scorecard is built.
-            </div>
-          ) : (
+          {weeklyTier.format === '3-teams-6-sets' ? (
             <Scorecard3Teams6Sets
               teamNames={teamNames as any}
               isTopTier={isTopTier}
@@ -388,6 +385,55 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                 }
               }}
             />
+          ) : weeklyTier.format === '2-teams-4-sets' ? (
+            <Scorecard2Teams4Sets
+              teamNames={{ A: teamNames.A, B: teamNames.B } as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  const canSubmit = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+                  if (!canSubmit) {
+                    showToast('Only admins or facilitators can submit scores.', 'error');
+                    return;
+                  }
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitTwoTeamScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: {
+                      A: (submittedNames as any).A || (teamNames as any).A || '',
+                      B: (submittedNames as any).B || (teamNames as any).B || '',
+                    },
+                    sets: sets as any,
+                    spares: (spares as any) || {},
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted and standings updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err: any) {
+                  console.error('Failed to submit scores', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : (
+            <div className="text-sm text-gray-700">
+              Score submission for this format is not available yet. Please check back after the scorecard is built.
+            </div>
           )}
         </div>
 

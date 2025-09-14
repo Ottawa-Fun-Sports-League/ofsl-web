@@ -1,6 +1,22 @@
-﻿chore: comment out VITE_DEBUG_MOVEMENT and finalize weekly movement
+feat(scorecards): add 2-team (4 sets) scorecard and admin/detail wiring
 
-- Comment VITE_DEBUG_MOVEMENT in .env (keep for local debugging when needed)
-- Wire weekly no-games toggle to server RPCs (apply_week_bump_auto / apply_week_rewind_auto) with client fallback
-- Fix duplicate destWeek declaration in scheduleDatabase
-- Keep submission movement simple with next playable week skip; remove per-tier auto carry-forward
+- New Scorecard2Teams4Sets with A vs B x4
+- Standardized points copy; added tie-breakers and tier movement text
+- Matched row layout to 3-team; removed unnecessary divider
+
+feat(schedule): enable 2-team score submission + movement
+
+- Submit modals (admin + league detail) render 2-team scorecard
+- New submitTwoTeamScoresAndMove updates results and standings
+- Added applyTwoTeamMovementAfterStandings wrapper
+
+feat(movement): format-aware, scalable cross-format placement
+
+- Winner d highest position of target tier format
+- Loser d lowest position of target tier format
+- Neutral (3-team) d middle position of same tier
+- Dynamic updates for team_<pos> columns (A..F)
+
+fix(ui): show "Submit scores" for 2-team tiers in weekly schedule
+
+chore(copy): standardize tie-breaker phrasing (higher differential wins)

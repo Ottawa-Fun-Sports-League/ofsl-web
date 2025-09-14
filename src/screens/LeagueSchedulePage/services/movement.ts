@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/supabase';
 import { applyThreeTeamTierMovementNextWeek } from '../database/scheduleDatabase';
+import { applyTwoTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 
 type ABC = 'A' | 'B' | 'C';
 
@@ -61,3 +62,35 @@ export async function applyMovementAfterStandings({
   } catch {}
 }
 
+// 2-team movement wrapper
+type AB = 'A' | 'B';
+interface ApplyTwoTeamMovementParams {
+  leagueId: number;
+  weekNumber: number;
+  tierNumber: number;
+  isTopTier: boolean;
+  pointsTierOffset: number; // 0 = bottom tier
+  teamNames: Record<AB, string>;
+  sortedKeys: AB[]; // best -> worst
+}
+
+export async function applyTwoTeamMovementAfterStandings({
+  leagueId,
+  weekNumber,
+  tierNumber,
+  isTopTier,
+  pointsTierOffset,
+  teamNames,
+  sortedKeys,
+}: ApplyTwoTeamMovementParams): Promise<void> {
+  const isBottomTier = pointsTierOffset === 0;
+  await applyTwoTeamTierMovementNextWeek({
+    leagueId,
+    currentWeek: weekNumber,
+    tierNumber,
+    isTopTier,
+    isBottomTier,
+    teamNames,
+    sortedKeys,
+  });
+}

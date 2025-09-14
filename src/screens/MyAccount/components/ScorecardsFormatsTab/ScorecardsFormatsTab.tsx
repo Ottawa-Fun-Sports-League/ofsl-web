@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GAME_FORMATS } from '../../../LeagueSchedulePage/utils/formatUtils';
 import { ScorecardsHeader } from './components/ScorecardsHeader';
 import { Scorecard3Teams6Sets } from './components/Scorecard3Teams6Sets';
+import { Scorecard2Teams4Sets } from './components/Scorecard2Teams4Sets';
 
 export function ScorecardsFormatsTab() {
   const [selectedId, setSelectedId] = useState<string>(GAME_FORMATS[0]?.value ?? '');
@@ -70,8 +71,8 @@ export function ScorecardsFormatsTab() {
                       <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tie-Breaker Rules</h4>
                       <ol className="list-decimal pl-5 space-y-1 text-[15px] text-[#4B5563]">
                         <li>Tie exists: Compare overall set wins</li>
-                        <li>3-way tie: Compare overall points differential (lowest differential wins)</li>
-                        <li>2-way tie: Compare head-to-head points differential (lowest differential wins)</li>
+                        <li>3-way tie: Compare overall points differential (higher differential wins)</li>
+                        <li>2-way tie: Compare head-to-head points differential (higher differential wins)</li>
                         <li>Still tied: Use previous week’s schedule position (A &gt; B &gt; C)</li>
                       </ol>
                     </div>
@@ -83,6 +84,51 @@ export function ScorecardsFormatsTab() {
                         <li>Winners: move up one tier to position C</li>
                         <li>Losers: move down one tier to position A</li>
                         <li>Neutral (non-winning/non-losing): stays in the same tier, moves to position B</li>
+                        <li>Top tier winners: stay in the same tier (cannot move up)</li>
+                        <li>Bottom tier losers: stay in the same tier (cannot move down)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              ) : selected.value === '2-teams-4-sets' ? (
+                <>
+                  <Scorecard2Teams4Sets
+                    teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves' }}
+                  />
+
+                  {/* Format logic reference */}
+                  <div className="mt-6 space-y-5">
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Points System</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>
+                          Baseline (Lowest Tier): <span className="font-medium">3 / 5</span> (loser / winner)
+                        </li>
+                        <li>
+                          Tier Bonus: <span className="font-medium">+2</span> per tier up from bottom tier
+                        </li>
+                        <li>
+                          Example (Second tier from bottom): <span className="font-medium">5 / 7</span> (loser / winner)
+                        </li>
+                        <li>
+                          Note: No neutral team in 2-team format
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tie-Breaker Rules</h4>
+                      <ol className="list-decimal pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Tie exists: Compare overall set wins</li>
+                        <li>Still tied: Compare overall points differential (higher differential wins)</li>
+                        <li>Still tied: Use previous week’s schedule position (A &gt; B)</li>
+                      </ol>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tier Movement</h4>
+                      <p className="text-[15px] text-[#4B5563] mb-2">Current week results move teams to the following week:</p>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Winners: move up one tier</li>
+                        <li>Losers: move down one tier</li>
                         <li>Top tier winners: stay in the same tier (cannot move up)</li>
                         <li>Bottom tier losers: stay in the same tier (cannot move down)</li>
                       </ul>
