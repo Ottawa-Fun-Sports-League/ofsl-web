@@ -694,16 +694,28 @@ export async function applyFourTeamTierMovementNextWeek(params: {
   }
 
   // Apply assignments
+  // Group updates by target tier so we can update multiple positions atomically
+  const updatesByTier = new Map<number, Record<string, any>>();
   for (const a of assignments) {
-    const updates: Record<string, any> = {};
-    updates[`team_${a.targetPos.toLowerCase()}_name`] = a.name;
-    updates[`team_${a.targetPos.toLowerCase()}_ranking`] = null;
+    const lower = a.targetPos.toLowerCase();
+    const rec = updatesByTier.get(a.targetTier) || {};
+    rec[`team_${lower}_name`] = a.name;
+    rec[`team_${lower}_ranking`] = null;
+    // If placing into C or D, ensure the row format supports 4 teams to satisfy DB constraints
+    if (lower === 'c' || lower === 'd') {
+      rec.format = '4-teams-head-to-head';
+    }
+    updatesByTier.set(a.targetTier, rec);
+  }
+
+  // Apply grouped updates per tier (ensures C before D constraints are satisfied in one statement)
+  for (const [tier, updates] of updatesByTier.entries()) {
     const { error: updErr } = await supabase
       .from('weekly_schedules')
       .update(updates)
       .eq('league_id', leagueId)
       .eq('week_number', destWeek)
-      .eq('tier_number', a.targetTier);
+      .eq('tier_number', tier);
     if (updErr) handleDatabaseError(updErr);
   }
 }
@@ -1098,10 +1110,11 @@ export async function moveWeekPlacements(params: {
   if (fromErr) handleDatabaseError(fromErr);
   if (!fromRows || fromRows.length === 0) return;
 
-  // Gather names to clear in target
+  // Gather names to clear in target (include all possible positions A-F)
   const names: string[] = [];
   fromRows.forEach((r: any) => {
-    ['team_a_name','team_b_name','team_c_name'].forEach((k) => { if (r[k]) names.push(r[k]); });
+    ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name']
+      .forEach((k) => { if ((r as any)[k]) names.push((r as any)[k]); });
   });
 
   // Ensure target rows exist for each tier
@@ -1147,12 +1160,26 @@ export async function moveWeekPlacements(params: {
   // Clear duplicates in target
   await clearTeamPlacementsFromNextWeek({ leagueId, currentWeek: toWeek - 1, teamNames: names });
 
-  // Copy A/B/C to target same tier; then clear from source
+  // Copy A/B/C/D/E/F to target same tier when present; then clear from source
   for (const src of fromRows) {
     const updates: Record<string, any> = {};
     if (src.team_a_name) { updates.team_a_name = src.team_a_name; updates.team_a_ranking = src.team_a_ranking; }
     if (src.team_b_name) { updates.team_b_name = src.team_b_name; updates.team_b_ranking = src.team_b_ranking; }
     if (src.team_c_name) { updates.team_c_name = src.team_c_name; updates.team_c_ranking = src.team_c_ranking; }
+    // Include D/E/F if present (e.g., 4- or 6-team head-to-head formats)
+    if (src.team_d_name) {
+      updates.team_d_name = src.team_d_name; updates.team_d_ranking = src.team_d_ranking;
+      // Ensure destination format supports D position; prefer source format when available
+      if (src.format) updates.format = src.format; else updates.format = '4-teams-head-to-head';
+    }
+    if (src.team_e_name) {
+      updates.team_e_name = src.team_e_name; updates.team_e_ranking = src.team_e_ranking;
+      if (src.format) updates.format = src.format; else updates.format = '6-teams-head-to-head';
+    }
+    if (src.team_f_name) {
+      updates.team_f_name = src.team_f_name; updates.team_f_ranking = src.team_f_ranking;
+      if (src.format) updates.format = src.format; else updates.format = '6-teams-head-to-head';
+    }
     if (Object.keys(updates).length > 0) {
       const { error: updErr } = await supabase
         .from('weekly_schedules')
@@ -1168,6 +1195,9 @@ export async function moveWeekPlacements(params: {
     if (src.team_a_name) { clear.team_a_name = null; clear.team_a_ranking = null; }
     if (src.team_b_name) { clear.team_b_name = null; clear.team_b_ranking = null; }
     if (src.team_c_name) { clear.team_c_name = null; clear.team_c_ranking = null; }
+    if (src.team_d_name) { clear.team_d_name = null; clear.team_d_ranking = null; }
+    if (src.team_e_name) { clear.team_e_name = null; clear.team_e_ranking = null; }
+    if (src.team_f_name) { clear.team_f_name = null; clear.team_f_ranking = null; }
     if (Object.keys(clear).length > 0) {
       const { error: clrErr } = await supabase
         .from('weekly_schedules')

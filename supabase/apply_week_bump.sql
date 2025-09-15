@@ -18,10 +18,11 @@ BEGIN
 
   PERFORM 1;
   -- Clear duplicates in destination for any names that will be copied
-  -- Collect names first
+  -- Collect names first (including D/E/F positions for 4-team and 6-team formats)
   CREATE TEMP TABLE tmp_names(name text) ON COMMIT DROP;
   INSERT INTO tmp_names(name)
-  SELECT DISTINCT unnest(ARRAY[ws.team_a_name, ws.team_b_name, ws.team_c_name])
+  SELECT DISTINCT unnest(ARRAY[ws.team_a_name, ws.team_b_name, ws.team_c_name,
+                                ws.team_d_name, ws.team_e_name, ws.team_f_name])
   FROM weekly_schedules ws
   WHERE ws.league_id = p_league_id AND ws.week_number = p_from_week;
 
@@ -31,11 +32,17 @@ BEGIN
   -- Clear any matching names in destination week (A..F)
   UPDATE weekly_schedules d
   SET team_a_name = CASE WHEN d.team_a_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_a_name END,
-      team_a_ranking = CASE WHEN d.team_a_name IS NULL THEN NULL ELSE d.team_a_ranking END,
+      team_a_ranking = CASE WHEN d.team_a_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_a_ranking END,
       team_b_name = CASE WHEN d.team_b_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_b_name END,
-      team_b_ranking = CASE WHEN d.team_b_name IS NULL THEN NULL ELSE d.team_b_ranking END,
+      team_b_ranking = CASE WHEN d.team_b_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_b_ranking END,
       team_c_name = CASE WHEN d.team_c_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_c_name END,
-      team_c_ranking = CASE WHEN d.team_c_name IS NULL THEN NULL ELSE d.team_c_ranking END
+      team_c_ranking = CASE WHEN d.team_c_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_c_ranking END,
+      team_d_name = CASE WHEN d.team_d_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_d_name END,
+      team_d_ranking = CASE WHEN d.team_d_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_d_ranking END,
+      team_e_name = CASE WHEN d.team_e_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_e_name END,
+      team_e_ranking = CASE WHEN d.team_e_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_e_ranking END,
+      team_f_name = CASE WHEN d.team_f_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_f_name END,
+      team_f_ranking = CASE WHEN d.team_f_name IN (SELECT name FROM tmp_names) THEN NULL ELSE d.team_f_ranking END
   WHERE d.league_id = p_league_id AND d.week_number = p_to_week;
 
   -- Ensure destination rows exist for all tiers present in source
@@ -66,23 +73,34 @@ BEGIN
       WHERE d.league_id = p_league_id AND d.week_number = p_to_week AND d.tier_number = s.tier_number
     );
 
-  -- Copy A/B/C to destination same tier
+  -- Copy all team positions (A/B/C/D/E/F) to destination same tier
+  -- Also preserve the format to ensure compatibility with 4-team and 6-team formats
   UPDATE weekly_schedules d
   SET team_a_name = s.team_a_name,
       team_a_ranking = s.team_a_ranking,
       team_b_name = s.team_b_name,
       team_b_ranking = s.team_b_ranking,
       team_c_name = s.team_c_name,
-      team_c_ranking = s.team_c_ranking
+      team_c_ranking = s.team_c_ranking,
+      team_d_name = s.team_d_name,
+      team_d_ranking = s.team_d_ranking,
+      team_e_name = s.team_e_name,
+      team_e_ranking = s.team_e_ranking,
+      team_f_name = s.team_f_name,
+      team_f_ranking = s.team_f_ranking,
+      format = COALESCE(s.format, d.format)  -- Preserve source format if it exists
   FROM weekly_schedules s
   WHERE s.league_id = p_league_id AND s.week_number = p_from_week
     AND d.league_id = p_league_id AND d.week_number = p_to_week AND d.tier_number = s.tier_number;
 
-  -- Clear A/B/C in source after copy
+  -- Clear all team positions (A/B/C/D/E/F) in source after copy
   UPDATE weekly_schedules s
   SET team_a_name = NULL, team_a_ranking = NULL,
       team_b_name = NULL, team_b_ranking = NULL,
-      team_c_name = NULL, team_c_ranking = NULL
+      team_c_name = NULL, team_c_ranking = NULL,
+      team_d_name = NULL, team_d_ranking = NULL,
+      team_e_name = NULL, team_e_ranking = NULL,
+      team_f_name = NULL, team_f_ranking = NULL
   WHERE s.league_id = p_league_id AND s.week_number = p_from_week;
 
 END;
