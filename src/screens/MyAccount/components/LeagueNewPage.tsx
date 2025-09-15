@@ -461,14 +461,8 @@ export function LeagueNewPage() {
                           }
                         }}
                         className="mr-2"
-                        disabled={skill.name === "Beginner"}
                       />
-                      <span
-                        className={`text-sm ${skill.name === "Beginner" ? "text-gray-400" : ""}`}
-                      >
-                        {skill.name}
-                        {skill.name === "Beginner" && " (not available)"}
-                      </span>
+                      <span className="text-sm">{skill.name}</span>
                     </label>
                   ))}
                 </div>
