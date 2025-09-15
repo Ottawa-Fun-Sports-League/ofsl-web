@@ -317,7 +317,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
         <div className="bg-white border border-gray-200 rounded-md p-3">
           <div className="text-sm font-semibold text-[#B20000] mb-2">Game 2</div>
           {/* Legend for dynamic pairings */}
-          <div className="text-[12px] text-[#6B7280] mb-1">{g2Labels.WC1 || 'Winner Court 1'} vs {g2Labels.WC2 || 'Winner Court 2'}</div>
+          <div className="text-[12px] text-[#6B7280] mb-1">{g2Labels.WC1 || 'W-C1'} vs {g2Labels.WC2 || 'W-C2'}</div>
           <div className="grid grid-cols-1 gap-0.5">
             {[0,1].map(i => {
               const row = g2c1[i] || {};
@@ -332,7 +332,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                 <div key={`g2c1-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
                   <div className="text-[13px] text-[#4B5563]">Court 1 (Set {i+1})</div>
                   <div className="flex items-center gap-1">
-                    <label className="text-[11px] text-gray-600 w-14 text-right">WC1</label>
+                    <label className="text-[11px] text-gray-600 w-14 text-right">W-C1</label>
                     <input type="number" inputMode="numeric" min={0} max={21} step={1}
                       value={row.WC1 ?? ''} onChange={e => setInput(setG2C1, i, 'WC1', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
@@ -345,7 +345,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <label className="text-[11px] text-gray-600 w-14 text-right">WC2</label>
+                    <label className="text-[11px] text-gray-600 w-14 text-right">W-C2</label>
                     <input type="number" inputMode="numeric" min={0} max={21} step={1}
                       value={row.WC2 ?? ''} onChange={e => setInput(setG2C1, i, 'WC2', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}
@@ -361,7 +361,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               );
             })}
             {/* Legend for losers pairing */}
-            <div className="text-[12px] text-[#6B7280] mt-2 mb-1">{g2Labels.LC1 || 'Loser Court 1'} vs {g2Labels.LC2 || 'Loser Court 2'}</div>
+            <div className="text-[12px] text-[#6B7280] mt-2 mb-1">{g2Labels.LC1 || 'L-C1'} vs {g2Labels.LC2 || 'L-C2'}</div>
             {[0,1].map(i => {
               const row = g2c2[i] || {};
               const n1 = row.LC1 === '' ? null : Number(row.LC1);
@@ -375,7 +375,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                 <div key={`g2c2-${i}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
                   <div className="text-[13px] text-[#4B5563]">Court 2 (Set {i+1})</div>
                   <div className="flex items-center gap-1">
-                    <label className="text-[11px] text-gray-600 w-14 text-right">LC1</label>
+                    <label className="text-[11px] text-gray-600 w-14 text-right">L-C1</label>
                     <input type="number" inputMode="numeric" min={0} max={21} step={1}
                       value={row.LC1 ?? ''} onChange={e => setInput(setG2C2, i, 'LC1', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`}
@@ -388,7 +388,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <label className="text-[11px] text-gray-600 w-14 text-right">LC2</label>
+                    <label className="text-[11px] text-gray-600 w-14 text-right">L-C2</label>
                     <input type="number" inputMode="numeric" min={0} max={21} step={1}
                       value={row.LC2 ?? ''} onChange={e => setInput(setG2C2, i, 'LC2', e.target.value)} aria-invalid={isTie}
                       className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`}

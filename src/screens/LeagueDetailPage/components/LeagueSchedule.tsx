@@ -546,9 +546,18 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                       </div>
                     </div>
                   ) : (
-                    tier.format === '4-teams-head-to-head' ? (
+                    (() => {
+                      const fmt = String(tier.format || '').toLowerCase().trim();
+                      return (
+                        fmt === '4-teams-head-to-head' ||
+                        fmt.includes('4 teams') ||
+                        fmt.includes('4-teams') ||
+                        getTeamCountForFormat(tier.format || '3-teams-6-sets') === 4 ||
+                        Boolean((tier as any).team_c_name || (tier as any).team_d_name)
+                      );
+                    })() ? (
                       <div className="relative">
-                        <div className="hidden sm:grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
+                        <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
                           <div className="col-span-2 text-center font-semibold">Court 1</div>
                           <div className="col-span-2 text-center font-semibold">Court 2</div>
                         </div>

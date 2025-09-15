@@ -1593,13 +1593,37 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
                     {/* Teams Display - EXACT same as public but with admin controls */}
                     <div className="p-4">
-                      <div
-                        className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || "3-teams-6-sets"))} gap-4`}
-                      >
-                        {getPositionsForFormat(tier.format || "3-teams-6-sets")
-                          .map((position) => renderTeamSlot(tier, position, tierIndex))
-                          .filter(Boolean)}
-                      </div>
+                      {(() => {
+                        const fmt = String(tier.format || '').toLowerCase().trim();
+                        const isFourTeam = (
+                          fmt === '4-teams-head-to-head' ||
+                          fmt.includes('4 teams') ||
+                          fmt.includes('4-teams') ||
+                          getTeamCountForFormat(tier.format || '3-teams-6-sets') === 4 ||
+                          Boolean((tier as any).team_c_name || (tier as any).team_d_name)
+                        );
+                        if (!isFourTeam) {
+                          return (
+                            <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                              {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => 
+                                renderTeamSlot(tier, position, tierIndex)
+                              ).filter(Boolean)}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="relative">
+                            <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
+                              <div className="col-span-2 text-center font-semibold">Court 1</div>
+                              <div className="col-span-2 text-center font-semibold">Court 2</div>
+                            </div>
+                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                            <div className="grid grid-cols-4 gap-4">
+                              {(['A','B','C','D'] as const).map((position) => renderTeamSlot(tier, position, tierIndex)).filter(Boolean)}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </CardContent>
 
@@ -1662,10 +1686,20 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 </div>
 
                 <div className="p-4">
-                  {tier.format === '4-teams-head-to-head' ? (
+                  {(() => {
+                    const fmt = String(tier.format || '').toLowerCase().trim();
+                    const likelyFourTeam = (
+                      fmt === '4-teams-head-to-head' ||
+                      fmt.includes('4 teams') ||
+                      fmt.includes('4-teams') ||
+                      getTeamCountForFormat(tier.format || '3-teams-6-sets') === 4 ||
+                      Boolean((tier as any).team_c_name || (tier as any).team_d_name)
+                    );
+                    return likelyFourTeam;
+                  })() ? (
                     <div className="relative">
                       {/* Court labels */}
-                      <div className="hidden sm:grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
+                      <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
                         <div className="col-span-2 text-center font-semibold">Court 1</div>
                         <div className="col-span-2 text-center font-semibold">Court 2</div>
                       </div>

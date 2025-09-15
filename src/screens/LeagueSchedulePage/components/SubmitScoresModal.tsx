@@ -8,11 +8,12 @@ import type { WeeklyScheduleTier } from '../types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
+import { Scorecard4TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard4TeamsHeadToHead';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove } from '../services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove } from '../services/scoreSubmission';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -28,6 +29,10 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
   const [saving, setSaving] = useState(false);
   const [initialSets, setInitialSets] = useState<any[] | undefined>(undefined);
   const [initialSpares, setInitialSpares] = useState<Record<'A'|'B'|'C', string> | undefined>(undefined);
+  const [initialH2H, setInitialH2H] = useState<{
+    game1?: { court1?: Array<{ label: string; scores: Record<'A'|'B', string> }>; court2?: Array<{ label: string; scores: Record<'C'|'D', string> }> };
+    game2?: { court1?: Array<{ label: string; scores: Record<'WC1'|'WC2', string> }>; court2?: Array<{ label: string; scores: Record<'LC1'|'LC2', string> }> };
+  } | undefined>(undefined);
   const [currentWeekNumber, setCurrentWeekNumber] = useState<number | null>(null);
 
   const teamNames = {
@@ -41,7 +46,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
   const isThreeTeam = weeklyTier.format === '3-teams-6-sets';
   const isTwoTeamFourSets = weeklyTier.format === '2-teams-4-sets';
   const isTwoTeamBo5 = weeklyTier.format === '2-teams-best-of-5';
-  const unsupported = !(isThreeTeam || isTwoTeamFourSets || isTwoTeamBo5);
+  const isFourTeamHH = weeklyTier.format === '4-teams-head-to-head';
+  const unsupported = !(isThreeTeam || isTwoTeamFourSets || isTwoTeamBo5 || isFourTeamHH);
   const [pointsOffset, setPointsOffset] = useState<number>(0);
   const [isTopTier, setIsTopTier] = useState<boolean>(false);
 
@@ -71,8 +77,11 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
             .eq('tier_number', (weeklyTier as any).tier_number)
             .limit(1);
           const md = (existing && existing[0] && (existing[0] as any).match_details) || null;
-          if (md && md.sets) setInitialSets(md.sets);
-          if (md && md.spares) setInitialSpares(md.spares);
+          if (md) {
+            if (md.sets) setInitialSets(md.sets);
+            if (md.spares) setInitialSpares(md.spares);
+            if (md.game1 || md.game2) setInitialH2H({ game1: md.game1, game2: md.game2 });
+          }
         } catch {/* ignore */}
         const maxTier = Math.max(
           weeklyTier.tier_number || 1,
@@ -428,6 +437,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
               isTopTier={isTopTier}
               pointsTierOffset={pointsOffset}
               tierNumber={weeklyTier.tier_number}
+              initial={initialH2H as any}
               submitting={saving}
               onSubmit={async ({ teamNames: submittedNames, game1, game2 }) => {
                 try {
