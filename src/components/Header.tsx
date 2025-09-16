@@ -23,6 +23,63 @@ export function Header({ isCompact = false }: HeaderProps) {
   const { user, userProfile, signOut } = useAuth();
   const { showToast } = useToast();
 
+  const adminNavItems = [
+    {
+      label: "Manage Leagues",
+      path: "/my-account/leagues",
+      icon: (
+        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12,5.5A3.5,3.5 0 0,1 15.5,9A3.5,3.5 0 0,1 12,12.5A3.5,3.5 0 0,1 8.5,9A3.5,3.5 0 0,1 12,5.5M5,8C5.56,8 6.08,8.15 6.53,8.42C6.38,9.85 6.8,11.27 7.66,12.38C7.16,13.34 6.16,14 5,14A3,3 0 0,1 2,11A3,3 0 0,1 5,8M19,8A3,3 0 0,1 22,11A3,3 0 0,1 19,14C17.84,14 16.84,13.34 16.34,12.38C17.2,11.27 17.62,9.85 17.47,8.42C17.92,8.15 18.44,8 19,8M5.5,18.25C5.5,16.18 8.41,14.5 12,14.5C15.59,14.5 18.5,16.18 18.5,18.25V20H5.5V18.25M0,20V18.5C0,17.11 1.89,15.94 4.45,15.6C3.86,16.28 3.5,17.22 3.5,18.25V20H0M24,20H20.5V18.25C20.5,17.22 20.14,16.28 19.55,15.6C22.11,15.94 24,17.11 24,18.5V20Z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Manage Gyms",
+      path: "/my-account/schools",
+      icon: (
+        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Manage Users",
+      path: "/my-account/users",
+      icon: (
+        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M16,4C16.88,4 17.67,4.38 18.18,5H20C21.11,5 22,5.89 22,7V17C22,18.11 21.11,19 20,19H4C2.89,19 2,18.11 2,17V7C2,5.89 2.89,5 4,5H5.82C6.33,4.38 7.12,4 8,4H16M8,6A1,1 0 0,0 7,7A1,1 0 0,0 8,8A1,1 0 0,0 9,7A1,1 0 0,0 8,6M16,6A1,1 0 0,0 15,7A1,1 0 0,0 16,8A1,1 0 0,0 17,7A1,1 0 0,0 16,6M4,9V17H20V9H4M6,11H8V13H6V11M6,15H14V17H6V15M10,11H18V13H10V11Z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Manage Waivers",
+      path: "/my-account/waivers",
+      icon: (
+        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Manage Teams",
+      path: "/my-account/manage-teams",
+      icon: (
+        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Site Settings",
+      path: "/my-account/site-settings",
+      icon: (
+        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12,8A4,4 0 1,0 16,12A4,4 0 0,0 12,8M4.94,6.34L3.53,4.93L2.12,6.34L3.53,7.75A8.94,8.94 0 0,0 3,12A8.94,8.94 0 0,0 3.53,16.25L2.12,17.66L3.53,19.07L4.94,17.66A8.94,8.94 0 0,0 9,21.47V23H11V21.47A8.94,8.94 0 0,0 13,21.47V23H15V21.47A8.94,8.94 0 0,0 19.06,17.66L20.47,19.07L21.88,17.66L20.47,16.25A8.94,8.94 0 0,0 21,12A8.94,8.94 0 0,0 20.47,7.75L21.88,6.34L20.47,4.93L19.06,6.34A8.94,8.94 0 0,0 15,2.53V1H13V2.53A8.94,8.94 0 0,0 11,2.53V1H9V2.53A8.94,8.94 0 0,0 4.94,6.34M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6Z" />
+        </svg>
+      ),
+    },
+  ];
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -199,41 +256,16 @@ export function Header({ isCompact = false }: HeaderProps) {
                             Admin
                           </p>
                         </div>
-                        <Link
-                          to="/my-account/leagues"
-                          className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
-                          onClick={() => setIsUserDropdownOpen(false)}
-                        >
-                          Manage Leagues
-                        </Link>
-                        <Link
-                          to="/my-account/schools"
-                          className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
-                          onClick={() => setIsUserDropdownOpen(false)}
-                        >
-                          Manage Gyms
-                        </Link>
-                        <Link
-                          to="/my-account/users"
-                          className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
-                          onClick={() => setIsUserDropdownOpen(false)}
-                        >
-                          Manage Users
-                        </Link>
-                        <Link
-                          to="/my-account/waivers"
-                          className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
-                          onClick={() => setIsUserDropdownOpen(false)}
-                        >
-                          Manage Waivers
-                        </Link>
-                        <Link
-                          to="/my-account/manage-teams"
-                          className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
-                          onClick={() => setIsUserDropdownOpen(false)}
-                        >
-                          Manage Teams
-                        </Link>
+                        {adminNavItems.map((item) => (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            className="block px-4 py-2 text-[#6F6F6F] hover:bg-gray-50 hover:text-[#B20000] transition-colors"
+                            onClick={() => setIsUserDropdownOpen(false)}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
                       </>
                     )}
 
@@ -363,76 +395,17 @@ export function Header({ isCompact = false }: HeaderProps) {
                           Admin
                         </span>
                       </div>
-                      <Link
-                        to="/my-account/leagues"
-                        className={`${getMobileLinkClasses("/my-account/leagues")} flex items-center`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <svg
-                          className="h-4 w-4 mr-2"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
+                      {adminNavItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          className={`${getMobileLinkClasses(item.path)} flex items-center`}
+                          onClick={() => setIsMenuOpen(false)}
                         >
-                          <path d="M12,5.5A3.5,3.5 0 0,1 15.5,9A3.5,3.5 0 0,1 12,12.5A3.5,3.5 0 0,1 8.5,9A3.5,3.5 0 0,1 12,5.5M5,8C5.56,8 6.08,8.15 6.53,8.42C6.38,9.85 6.8,11.27 7.66,12.38C7.16,13.34 6.16,14 5,14A3,3 0 0,1 2,11A3,3 0 0,1 5,8M19,8A3,3 0 0,1 22,11A3,3 0 0,1 19,14C17.84,14 16.84,13.34 16.34,12.38C17.2,11.27 17.62,9.85 17.47,8.42C17.92,8.15 18.44,8 19,8M5.5,18.25C5.5,16.18 8.41,14.5 12,14.5C15.59,14.5 18.5,16.18 18.5,18.25V20H5.5V18.25M0,20V18.5C0,17.11 1.89,15.94 4.45,15.6C3.86,16.28 3.5,17.22 3.5,18.25V20H0M24,20H20.5V18.25C20.5,17.22 20.14,16.28 19.55,15.6C22.11,15.94 24,17.11 24,18.5V20Z" />
-                        </svg>
-                        Manage Leagues
-                      </Link>
-                      <Link
-                        to="/my-account/schools"
-                        className={`${getMobileLinkClasses("/my-account/schools")} flex items-center`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <svg
-                          className="h-4 w-4 mr-2"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
-                        </svg>
-                        Manage Gyms
-                      </Link>
-                      <Link
-                        to="/my-account/users"
-                        className={`${getMobileLinkClasses("/my-account/users")} flex items-center`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <svg
-                          className="h-4 w-4 mr-2"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M16,4C16.88,4 17.67,4.38 18.18,5H20C21.11,5 22,5.89 22,7V17C22,18.11 21.11,19 20,19H4C2.89,19 2,18.11 2,17V7C2,5.89 2.89,5 4,5H5.82C6.33,4.38 7.12,4 8,4H16M8,6A1,1 0 0,0 7,7A1,1 0 0,0 8,8A1,1 0 0,0 9,7A1,1 0 0,0 8,6M16,6A1,1 0 0,0 15,7A1,1 0 0,0 16,8A1,1 0 0,0 17,7A1,1 0 0,0 16,6M4,9V17H20V9H4M6,11H8V13H6V11M6,15H14V17H6V15M10,11H18V13H10V11Z" />
-                        </svg>
-                        Manage Users
-                      </Link>
-                      <Link
-                        to="/my-account/waivers"
-                        className={`${getMobileLinkClasses("/my-account/waivers")} flex items-center`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <svg
-                          className="h-4 w-4 mr-2"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                        </svg>
-                        Manage Waivers
-                      </Link>
-                      <Link
-                        to="/my-account/manage-teams"
-                        className={`${getMobileLinkClasses("/my-account/manage-teams")} flex items-center`}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <svg
-                          className="h-4 w-4 mr-2"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z" />
-                        </svg>
-                        Manage Teams
-                      </Link>
+                          {item.icon}
+                          {item.label}
+                        </Link>
+                      ))}
                     </>
                   )}
 
@@ -464,4 +437,3 @@ export function Header({ isCompact = false }: HeaderProps) {
     </div>
   );
 }
-

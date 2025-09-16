@@ -31,6 +31,7 @@ import {
   WaiversTab,
   ManageTeamsTab,
   SparesTab,
+  SiteSettingsTab,
   LeagueEditPage,
   TeamEditPage,
   IndividualEditPage,
@@ -156,6 +157,14 @@ export function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <ManageTeamsTab />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="site-settings"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <SiteSettingsTab />
                   </ProtectedRoute>
                 }
               />

@@ -187,6 +187,35 @@ export interface Database {
           max_players?: number | null
         }
       }
+      site_announcements: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          message: string
+          link_text: string | null
+          link_url: string | null
+          is_active: boolean
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          message: string
+          link_text?: string | null
+          link_url?: string | null
+          is_active?: boolean
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          message?: string
+          link_text?: string | null
+          link_url?: string | null
+          is_active?: boolean
+        }
+      }
       attendance: {
         Row: {
           id: number
