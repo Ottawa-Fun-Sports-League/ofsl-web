@@ -957,7 +957,9 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     teamNames,
     teamStats,
   });
-}\r\n\r\nexport async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTeamParams): Promise<void> {
+}
+
+export async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTeamParams): Promise<void> {
   const { leagueId, weekNumber, tierNumber, tierId, teamNames, game1, game2, pointsTierOffset, isTopTier } = params;
 
   // Helper to tally a pair of sets
@@ -1125,6 +1127,8 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     game2,
   });
 }
+
+
 
 
 
