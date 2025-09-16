@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../components/ui/dialog';
+import { getTierDisplayLabel } from '../utils/formatUtils';
 import type { WeeklyScheduleTier } from '../types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
@@ -648,4 +649,6 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     </Dialog>
   );
 }
+
+
 

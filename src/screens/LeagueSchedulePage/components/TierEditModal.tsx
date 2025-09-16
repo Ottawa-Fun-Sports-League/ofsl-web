@@ -330,7 +330,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-[#6F6F6F]">
-              Tier {tier.tierNumber}: {leagueName}
+              Tier {tier.displayLabel ?? tier.tierNumber}: {leagueName}
             </h2>
             <button 
               onClick={onClose}
@@ -706,3 +706,4 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     </div>
   );
 }
+

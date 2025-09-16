@@ -15,6 +15,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
 import { applyThreeTeamTierMovementNextWeek } from '../../LeagueSchedulePage/database/scheduleDatabase';
+import { getTierDisplayLabel } from '../../LeagueSchedulePage/utils/formatUtils';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -119,7 +120,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="submit-scores-description">
         <DialogHeader>
-          <DialogTitle>Submit Scores - Tier {weeklyTier.tier_number}</DialogTitle>
+          <DialogTitle>Submit Scores - Tier {getTierDisplayLabel(weeklyTier.format, weeklyTier.tier_number ?? 0)}</DialogTitle>
         </DialogHeader>
 
         <div className="py-2">
@@ -542,3 +543,4 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     </Dialog>
   );
 }
+

@@ -187,21 +187,9 @@ export async function addTierToAllWeeks(
   tierTemplate: Partial<WeeklyScheduleTier>
 ): Promise<void> {
   try {
-    // Use optimized RPC function if available
-    const { error: rpcError } = await supabase.rpc('add_tier_optimized', {
-      p_league_id: leagueId,
-      p_current_week: currentWeek,
-      p_after_tier: afterTierNumber
-    });
-
-    if (rpcError) {
-      // Fallback to manual insertion if RPC doesn't exist
-      if (rpcError.code === 'PGRST202' || rpcError.code === '42883') {
-        await addTierManually(leagueId, currentWeek, afterTierNumber, tierTemplate);
-      } else {
-        handleDatabaseError(rpcError);
-      }
-    }
+    // Use manual path so we can preserve and apply the desired format (e.g., 2-teams-elite) for the new tier.
+    // The RPC version defaults format to '3-teams-6-sets' and cannot accept a custom format parameter.
+    await addTierManually(leagueId, currentWeek, afterTierNumber, tierTemplate);
   } catch (error) {
     handleDatabaseError(error);
   }
@@ -1406,15 +1394,35 @@ async function addTierManually(
 
     const maxWeek = maxWeekData?.[0]?.week_number || currentWeek;
 
-    // Shift existing tiers up by 1
-    const { error: shiftError } = await supabase
+    // Shift existing tiers up by 1 (manual grouping by current tier_number)
+    const { data: toShift, error: selectShiftErr } = await supabase
       .from('weekly_schedules')
-      .update({ tier_number: { increment: 1 } } as Record<string, unknown>)
+      .select('id, tier_number')
       .eq('league_id', leagueId)
       .gte('week_number', currentWeek)
-      .gt('tier_number', afterTierNumber);
+      .gt('tier_number', afterTierNumber)
+      .order('tier_number', { ascending: false });
 
-    if (shiftError) handleDatabaseError(shiftError);
+    if (selectShiftErr) handleDatabaseError(selectShiftErr);
+
+    if (toShift && toShift.length > 0) {
+      // Group by current (old) tier_number: all rows with tn -> update to tn+1
+      const byTier = new Map<number, number[]>();
+      toShift.forEach((row: any) => {
+        const tn = row.tier_number as number;
+        if (!byTier.has(tn)) byTier.set(tn, []);
+        byTier.get(tn)!.push(row.id as number);
+      });
+
+      for (const [oldTier, ids] of byTier) {
+        const newTier = oldTier + 1;
+        const { error: updErr } = await supabase
+          .from('weekly_schedules')
+          .update({ tier_number: newTier })
+          .in('id', ids as number[]);
+        if (updErr) handleDatabaseError(updErr);
+      }
+    }
 
     // Insert new tiers for all weeks
     const newTiers = [];

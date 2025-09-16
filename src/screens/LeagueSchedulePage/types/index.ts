@@ -92,6 +92,8 @@ export type TeamPositionId = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
  */
 export type GameFormatId = 
   | '3-teams-6-sets'
+  | '3-teams-elite-6-sets'
+  | '3-teams-elite-9-sets'
   | '2-teams-4-sets'
   | '2-teams-best-of-5'
   | '2-teams-best-of-3'
@@ -327,6 +329,8 @@ export function isValidTeamPosition(position: string): position is TeamPositionI
 export function isValidGameFormat(format: string): format is GameFormatId {
   const validFormats: GameFormatId[] = [
     '3-teams-6-sets',
+    '3-teams-elite-6-sets',
+    '3-teams-elite-9-sets',
     '2-teams-4-sets',
     '2-teams-best-of-5',
     '2-teams-best-of-3',
@@ -336,3 +340,4 @@ export function isValidGameFormat(format: string): format is GameFormatId {
   ];
   return validFormats.includes(format as GameFormatId);
 }
+

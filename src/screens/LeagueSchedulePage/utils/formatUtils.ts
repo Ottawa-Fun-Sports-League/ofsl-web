@@ -67,6 +67,20 @@ export const GAME_FORMATS: readonly GameFormat[] = [
     teamCount: 2,
     positions: ['A', 'B'],
     description: 'Elite level 2-team format'
+  },
+  {
+    value: '3-teams-elite-6-sets',
+    label: '3 teams (Elite 6 sets)',
+    teamCount: 3,
+    positions: ['A', 'B', 'C'],
+    description: 'Elite division 3-team format with 6 sets played'
+  },
+  {
+    value: '3-teams-elite-9-sets',
+    label: '3 teams (Elite 9 sets)',
+    teamCount: 3,
+    positions: ['A', 'B', 'C'],
+    description: 'Elite division 3-team format with 9 sets played'
   }
 ] as const;
 
@@ -481,3 +495,67 @@ export function getFormatCategories() {
     sixTeam: GAME_FORMATS.filter(f => f.teamCount === 6)
   } as const;
 }
+
+/**
+ * Builds display labels for all tiers in a week, producing sequential labels:
+ * - For 2-teams-elite: pairs become N A then N B
+ * - For all other formats: single label N
+ * This is context-aware so mixed formats remain in numeric order without gaps.
+ */
+export function buildWeekTierLabels(
+  weeklyTiers: Array<{ id?: number; tier_number: number; format: string }>
+): Map<number, string> {
+  const map = new Map<number, string>();
+  if (!weeklyTiers || weeklyTiers.length === 0) return map;
+
+  const sorted = [...weeklyTiers].sort((a, b) => (a.tier_number || 0) - (b.tier_number || 0));
+  let index = 1;
+  let pendingEliteA = false;
+
+  for (const t of sorted) {
+    const idKey = (t.id ?? t.tier_number) as number;
+    if (t.format === '2-teams-elite') {
+      // Label A then B for each contiguous elite row
+      const label = `${index}${pendingEliteA ? 'B' : 'A'}`;
+      map.set(idKey, label);
+      if (pendingEliteA) {
+        // Completed the pair, advance index
+        index += 1;
+        pendingEliteA = false;
+      } else {
+        // Mark that next elite row in sequence should be B
+        pendingEliteA = true;
+      }
+    } else {
+      // Non-elite: single entry for index
+      map.set(idKey, `${index}`);
+      index += 1;
+      // If we had an unmatched 'A' before a non-elite, keep pending until we hit next elite
+    }
+  }
+  return map;
+}
+
+/**
+ * Builds a human-readable tier label for a given format.
+ * Elite 2-team tiers are grouped into A/B sub-tiers (e.g. 1A, 1B).
+ */
+export function getTierDisplayLabel(formatId: string | undefined, tierNumber: number | null | undefined): string {
+  if (tierNumber === null || tierNumber === undefined) {
+    return '';
+  }
+
+  const numericTier = Number(tierNumber);
+  if (!Number.isFinite(numericTier) || numericTier <= 0) {
+    return String(tierNumber);
+  }
+
+  if (formatId === '2-teams-elite') {
+    const baseTier = Math.floor((numericTier - 1) / 2) + 1;
+    const suffix = numericTier % 2 === 1 ? 'A' : 'B';
+    return baseTier.toString() + suffix;
+  }
+
+  return numericTier.toString();
+}
+

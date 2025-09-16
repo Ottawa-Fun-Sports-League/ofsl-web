@@ -14,6 +14,8 @@ interface League {
   location: string;
   cost: number;
   team_registration?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 interface StandingRow {
@@ -33,10 +35,10 @@ interface StandingRow {
   schedule_ranking?: number;
 }
 
-function extractTeamRankings(scheduleData: {schedule_data?: {tiers?: Array<{teams?: Record<string, {name: string; ranking: number} | null>}>}} | null): Map<string, number> {
+function extractTeamRankings(scheduleRecord: {schedule_data?: {tiers?: Array<{teams?: Record<string, {name: string; ranking: number} | null>}>}} | null): Map<string, number> {
   const teamRankings = new Map<string, number>();
-  if (scheduleData?.schedule_data?.tiers) {
-    scheduleData.schedule_data.tiers.forEach((tier: {teams?: Record<string, {name: string; ranking: number} | null>}) => {
+  if (scheduleRecord?.schedule_data?.tiers) {
+    scheduleRecord.schedule_data.tiers.forEach((tier: {teams?: Record<string, {name: string; ranking: number} | null>}) => {
       if (tier.teams) {
         Object.values(tier.teams).forEach((team: {name: string; ranking: number} | null) => {
           if (team && team.name && team.ranking) {
@@ -48,6 +50,19 @@ function extractTeamRankings(scheduleData: {schedule_data?: {tiers?: Array<{team
   }
   return teamRankings;
 }
+
+const calculateRegularSeasonWeeks = (startDate?: string | null, endDate?: string | null): number => {
+  if (!startDate || !endDate) {
+    return 12;
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const weeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+
+  return Math.max(1, weeks);
+};
 
 export function LeagueStandingsPage() {
   const { leagueId } = useParams<{ leagueId: string }>();
@@ -65,26 +80,35 @@ export function LeagueStandingsPage() {
   const [clearing, setClearing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isWeek2Completed, setIsWeek2Completed] = useState(false);
+  const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
+  const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
+
+  const isEliteFormat = scheduleFormat === '2-teams-elite';
+  const weeklyColumns = Array.from({ length: Math.max(regularSeasonWeeks, 0) }, (_, i) => i + 1);
 
   // Check if user is admin
   const isAdmin = userProfile?.is_admin === true;
 
   useEffect(() => {
+
     if (!isAdmin) {
       navigate('/');
       return;
     }
     
     if (leagueId) {
-      loadLeagueData();
-      loadStandings();
-      checkWeek2Completion();
+      const initialize = async () => {
+        const leagueInfo = await loadLeagueData();
+        await loadStandings(leagueInfo ?? null);
+        await checkWeek2Completion();
+      };
+      void initialize();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId, isAdmin]);
 
-  const loadLeagueData = async () => {
-    if (!leagueId) return;
+  const loadLeagueData = async (): Promise<League | null> => {
+    if (!leagueId) return null;
 
     try {
       const { data, error } = await supabase
@@ -102,7 +126,7 @@ export function LeagueStandingsPage() {
 
       if (error) throw error;
 
-      setLeague({
+      const leagueInfo: League = {
         id: data.id,
         name: data.name,
         sport_name: data.sports && Array.isArray(data.sports) && data.sports.length > 0 
@@ -112,15 +136,22 @@ export function LeagueStandingsPage() {
             : ''),
         location: data.location || '',
         cost: data.cost || 0,
-        team_registration: data.team_registration
-      });
+        team_registration: data.team_registration,
+        start_date: data.start_date,
+        end_date: data.end_date
+      };
+      setLeague(leagueInfo);
+      return leagueInfo;
+
     } catch (error) {
       console.error('Error loading league data:', error);
     }
+    return null;
   };
 
-  const loadStandings = async () => {
-    if (!leagueId) return;
+  const loadStandings = async (leagueOverride?: League | null) => {
+    if (!leagueId) return null;
+    const baseLeague = leagueOverride ?? league;
     
     setLoading(true);
     try {
@@ -136,12 +167,11 @@ export function LeagueStandingsPage() {
         .eq('league_id', parseInt(leagueId))
         .eq('active', true);
 
-
       if (teamsError) throw teamsError;
 
-      const { data: scheduleData, error: scheduleError } = await supabase
+      const { data: scheduleRecord, error: scheduleError } = await supabase
         .from('league_schedules')
-        .select('schedule_data')
+        .select('schedule_data, format')
         .eq('league_id', parseInt(leagueId))
         .maybeSingle();
 
@@ -149,8 +179,12 @@ export function LeagueStandingsPage() {
         console.warn('Error loading schedule data:', scheduleError);
       }
 
-      const teamRankings = extractTeamRankings(scheduleData);
+      setScheduleFormat(scheduleRecord?.format ?? null);
 
+      const weeks = calculateRegularSeasonWeeks(baseLeague?.start_date ?? null, baseLeague?.end_date ?? null);
+      setRegularSeasonWeeks(weeks);
+
+      const teamRankings = extractTeamRankings(scheduleRecord);
 
       let standingsData = null;
       try {
@@ -158,7 +192,6 @@ export function LeagueStandingsPage() {
           .from('standings')
           .select('*')
           .eq('league_id', parseInt(leagueId));
-
 
         if (standingsError) {
           if (standingsError.code === '42P01') {
@@ -198,7 +231,6 @@ export function LeagueStandingsPage() {
         };
       });
 
-
       const hasValidPositions = standingsData && standingsData.length > 0 && 
         standingsData.some(s => s.current_position && s.current_position > 0);
 
@@ -226,7 +258,6 @@ export function LeagueStandingsPage() {
       setLoading(false);
     }
   };
-
 
   const handleFieldChange = (standing: StandingRow, field: string, value: string) => {
     const numValue = value === '' || value === '-' ? 0 : parseInt(value) || 0;
@@ -266,7 +297,7 @@ export function LeagueStandingsPage() {
   };
 
   const checkWeek2Completion = async () => {
-    if (!leagueId) return;
+    if (!leagueId) return null;
 
     try {
       const { data, error } = await supabase
@@ -357,13 +388,13 @@ export function LeagueStandingsPage() {
 
       if (needsInitialPositions) {
         
-        const { data: scheduleData } = await supabase
+        const { data: scheduleRecord } = await supabase
           .from('league_schedules')
-          .select('schedule_data')
+          .select('schedule_data, format')
           .eq('league_id', parseInt(leagueId!))
           .maybeSingle();
 
-        const teamRankings = extractTeamRankings(scheduleData);
+        const teamRankings = extractTeamRankings(scheduleRecord);
 
         for (const standing of currentStandings) {
           const teamName = (standing as any).teams.name;
@@ -440,7 +471,6 @@ export function LeagueStandingsPage() {
         }
       }
 
-      
       await loadStandings();
       setShowClearConfirm(false);
     } catch (error) {
@@ -587,143 +617,207 @@ export function LeagueStandingsPage() {
         <Card className="shadow-md overflow-hidden rounded-lg">
           <CardContent className="p-0 overflow-hidden">
             <div className="overflow-hidden">
-              <table className="w-full table-fixed">
-                <colgroup>
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "40%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "13%" }} />
-                  <col style={{ width: "13%" }} />
-                </colgroup>
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">
-                      #
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">
-                      Team
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
-                      Wins
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
-                      Losses
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">
-                      Points
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
-                      +/-
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {standings.map((standing, index) => {
-                    const totalWins = getTotalValue(standing, 'wins', 'manual_wins_adjustment');
-                    const totalLosses = getTotalValue(standing, 'losses', 'manual_losses_adjustment');
-                    const totalPoints = getTotalValue(standing, 'points', 'manual_points_adjustment');
-                    const totalDifferential = getTotalValue(standing, 'point_differential', 'manual_differential_adjustment');
-                    const editKey = standing.id === 0 ? `team_${standing.team_id}` : standing.id.toString();
-                    const isEdited = !!editedStandings[editKey];
-
-                    return (
-                      <tr
-                        key={standing.id === 0 ? `team_${standing.team_id}` : standing.id}
-                        className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
-                          index === standings.length - 1 ? "last-row" : ""
-                        } ${isEdited ? "ring-2 ring-yellow-400 ring-opacity-50" : ""}`}
-                      >
-                        <td
-                          className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${
-                            index === standings.length - 1 ? "rounded-bl-lg" : ""
-                          }`}
-                        >
-                          {index + 1}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">
-                          {standing.team_name}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {isEditMode ? (
-                            <Input
-                              type="number"
-                              value={totalWins}
-                              onChange={(e) => {
-                                const newTotal = parseInt(e.target.value) || 0;
-                                const base = getDisplayValue(standing, 'wins') as number;
-                                const adjustment = newTotal - base;
-                                handleFieldChange(standing, 'manual_wins_adjustment', adjustment.toString());
-                              }}
-                              className="w-16 h-8 text-center text-sm mx-auto"
-                              min="0"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium text-[#6F6F6F]">{totalWins}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {isEditMode ? (
-                            <Input
-                              type="number"
-                              value={totalLosses}
-                              onChange={(e) => {
-                                const newTotal = parseInt(e.target.value) || 0;
-                                const base = getDisplayValue(standing, 'losses') as number;
-                                const adjustment = newTotal - base;
-                                handleFieldChange(standing, 'manual_losses_adjustment', adjustment.toString());
-                              }}
-                              className="w-16 h-8 text-center text-sm mx-auto"
-                              min="0"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium text-[#6F6F6F]">{totalLosses}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center bg-red-50">
-                          {isEditMode ? (
-                            <Input
-                              type="number"
-                              value={totalPoints}
-                              onChange={(e) => {
-                                const newTotal = parseInt(e.target.value) || 0;
-                                const base = getDisplayValue(standing, 'points') as number;
-                                const adjustment = newTotal - base;
-                                handleFieldChange(standing, 'manual_points_adjustment', adjustment.toString());
-                              }}
-                              className="w-16 h-8 text-center text-sm mx-auto"
-                              min="0"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium text-[#6F6F6F]">{totalPoints}</span>
-                          )}
-                        </td>
-                        <td
-                          className={`px-4 py-3 text-center ${
-                            index === standings.length - 1 ? "rounded-br-lg" : ""
-                          }`}
-                        >
-                          {isEditMode ? (
-                            <Input
-                              type="number"
-                              value={totalDifferential}
-                              onChange={(e) => {
-                                const newTotal = parseInt(e.target.value) || 0;
-                                const base = getDisplayValue(standing, 'point_differential') as number;
-                                const adjustment = newTotal - base;
-                                handleFieldChange(standing, 'manual_differential_adjustment', adjustment.toString());
-                              }}
-                              className="w-16 h-8 text-center text-sm mx-auto"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium text-[#6F6F6F]">{formatDiff(totalDifferential)}</span>
-                          )}
-                        </td>
+              {isEliteFormat ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full table-auto">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">
+                          Ranking
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">
+                          Team
+                        </th>
+                        {weeklyColumns.map(week => (
+                          <th key={`week-${week}`} className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
+                            Week {week}
+                          </th>
+                        ))}
+                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
+                          +/-
+                        </th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {standings.map((standing, index) => {
+                        const totalDifferential = getTotalValue(standing, 'point_differential', 'manual_differential_adjustment');
+                        const editKey = standing.id === 0 ? `team_${standing.team_id}` : standing.id.toString();
+                        const isEdited = !!editedStandings[editKey];
+
+                        return (
+                          <tr
+                            key={standing.id === 0 ? `team_${standing.team_id}` : standing.id}
+                            className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
+                              index === standings.length - 1 ? "last-row" : ""
+                            } ${isEdited ? "ring-2 ring-yellow-400 ring-opacity-50" : ""}`}
+                          >
+                            <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>-</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">
+                              {standing.team_name}
+                            </td>
+                            {weeklyColumns.map(week => (
+                              <td key={`week-${standing.team_id}-${week}`} className="px-4 py-3 text-center text-sm text-[#6F6F6F]">
+                                -
+                              </td>
+                            ))}
+                            <td className={`px-4 py-3 text-center ${index === standings.length - 1 ? "rounded-br-lg" : ""}`}>
+                              {isEditMode ? (
+                                <Input
+                                  type="number"
+                                  value={totalDifferential}
+                                  onChange={(e) => {
+                                    const newTotal = parseInt(e.target.value) || 0;
+                                    const base = getDisplayValue(standing, 'point_differential') as number;
+                                    const adjustment = newTotal - base;
+                                    handleFieldChange(standing, 'manual_differential_adjustment', adjustment.toString());
+                                  }}
+                                  className="w-16 h-8 text-center text-sm mx-auto"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium text-[#6F6F6F]">{formatDiff(totalDifferential)}</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <table className="w-full table-fixed">
+                  <colgroup>
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "40%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "13%" }} />
+                    <col style={{ width: "13%" }} />
+                  </colgroup>
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">
+                        #
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">
+                        Team
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
+                        Wins
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
+                        Losses
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">
+                        Points
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
+                        +/-
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {standings.map((standing, index) => {
+                      const totalWins = getTotalValue(standing, 'wins', 'manual_wins_adjustment');
+                      const totalLosses = getTotalValue(standing, 'losses', 'manual_losses_adjustment');
+                      const totalPoints = getTotalValue(standing, 'points', 'manual_points_adjustment');
+                      const totalDifferential = getTotalValue(standing, 'point_differential', 'manual_differential_adjustment');
+                      const editKey = standing.id === 0 ? `team_${standing.team_id}` : standing.id.toString();
+                      const isEdited = !!editedStandings[editKey];
+
+                      return (
+                        <tr
+                          key={standing.id === 0 ? `team_${standing.team_id}` : standing.id}
+                          className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
+                            index === standings.length - 1 ? "last-row" : ""
+                          } ${isEdited ? "ring-2 ring-yellow-400 ring-opacity-50" : ""}`}
+                        >
+                          <td
+                            className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${
+                              index === standings.length - 1 ? "rounded-bl-lg" : ""
+                            }`}
+                          >
+                            {index + 1}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">
+                            {standing.team_name}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {isEditMode ? (
+                              <Input
+                                type="number"
+                                value={totalWins}
+                                onChange={(e) => {
+                                  const newTotal = parseInt(e.target.value) || 0;
+                                  const base = getDisplayValue(standing, 'wins') as number;
+                                  const adjustment = newTotal - base;
+                                  handleFieldChange(standing, 'manual_wins_adjustment', adjustment.toString());
+                                }}
+                                className="w-16 h-8 text-center text-sm mx-auto"
+                                min="0"
+                              />
+                            ) : (
+                              <span className="text-sm font-medium text-[#6F6F6F]">{totalWins}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {isEditMode ? (
+                              <Input
+                                type="number"
+                                value={totalLosses}
+                                onChange={(e) => {
+                                  const newTotal = parseInt(e.target.value) || 0;
+                                  const base = getDisplayValue(standing, 'losses') as number;
+                                  const adjustment = newTotal - base;
+                                  handleFieldChange(standing, 'manual_losses_adjustment', adjustment.toString());
+                                }}
+                                className="w-16 h-8 text-center text-sm mx-auto"
+                                min="0"
+                              />
+                            ) : (
+                              <span className="text-sm font-medium text-[#6F6F6F]">{totalLosses}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {isEditMode ? (
+                              <Input
+                                type="number"
+                                value={totalPoints}
+                                onChange={(e) => {
+                                  const newTotal = parseInt(e.target.value) || 0;
+                                  const base = getDisplayValue(standing, 'points') as number;
+                                  const adjustment = newTotal - base;
+                                  handleFieldChange(standing, 'manual_points_adjustment', adjustment.toString());
+                                }}
+                                className="w-16 h-8 text-center text-sm mx-auto"
+                                min="0"
+                              />
+                            ) : (
+                              <span className="text-sm font-medium text-[#6F6F6F]">{totalPoints}</span>
+                            )}
+                          </td>
+                          <td className={`px-4 py-3 text-center ${index === standings.length - 1 ? "rounded-br-lg" : ""}`}>
+                            {isEditMode ? (
+                              <Input
+                                type="number"
+                                value={totalDifferential}
+                                onChange={(e) => {
+                                  const newTotal = parseInt(e.target.value) || 0;
+                                  const base = getDisplayValue(standing, 'point_differential') as number;
+                                  const adjustment = newTotal - base;
+                                  handleFieldChange(standing, 'manual_differential_adjustment', adjustment.toString());
+                                }}
+                                className="w-16 h-8 text-center text-sm mx-auto"
+                              />
+                            ) : (
+                              <span className="text-sm font-medium text-[#6F6F6F]">{formatDiff(totalDifferential)}</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -9,7 +9,7 @@ import { AddPlayoffWeeksModal } from './AddPlayoffWeeksModal';
 import { AddTeamModal } from './AddTeamModal';
 import type { WeeklyScheduleTier, TeamPositionId } from '../types';
 import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
-import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat } from '../utils/formatUtils';
+import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat, getTierDisplayLabel, buildWeekTierLabels } from '../utils/formatUtils';
 import { getTeamForPosition } from '../utils/scheduleLogic';
 import { addTierToAllWeeks, removeTierFromAllWeeks, moveWeekPlacements, getNextPlayableWeek } from '../database/scheduleDatabase';
 import { calculateCurrentWeekToDisplay } from '../utils/weekCalculation';
@@ -668,20 +668,17 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       }
 
       // Use template from last tier or defaults
-      const tierTemplate =
-        weeklyTiers.length > 0
-          ? {
-              location: weeklyTiers[weeklyTiers.length - 1].location || "TBD",
-              time_slot: weeklyTiers[weeklyTiers.length - 1].time_slot || "TBD",
-              court: "TBD",
-              format: weeklyTiers[weeklyTiers.length - 1].format || "3-teams-6-sets",
-            }
-          : {
-              location: "TBD",
-              time_slot: "TBD",
-              court: "TBD",
-              format: "3-teams-6-sets",
-            };
+      const tierTemplate = weeklyTiers.length > 0 ? {
+        location: weeklyTiers[weeklyTiers.length - 1].location || 'TBD',
+        time_slot: weeklyTiers[weeklyTiers.length - 1].time_slot || 'TBD',
+        court: 'TBD',
+        format: weeklyTiers[weeklyTiers.length - 1].format || '3-teams-6-sets'
+      } : {
+        location: 'TBD',
+        time_slot: 'TBD',
+        court: 'TBD',
+        format: '3-teams-6-sets'
+      };
 
       await addTierToAllWeeks(parseInt(leagueId), currentWeek, afterTierNumber, tierTemplate);
       await loadWeeklySchedule(currentWeek);
@@ -1394,7 +1391,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
-                          Tier {tier.tier_number}
+                          Tier {getTierDisplayLabel(tier.format, tier.tier_number)}
                         </h3>
                       </div>
 
@@ -1453,7 +1450,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                   </button>
                 </div>
               )}
-
+              
               {weeklyTiers.map((tier, tierIndex) => (
                 <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'bg-gray-100' : ''}`}>
                   <CardContent className="p-0 overflow-hidden">
@@ -1462,7 +1459,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
                       <h3 className={`font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
-                        Tier {tier.tier_number}
+                        Tier {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                             Completed
@@ -1628,18 +1625,19 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                   </CardContent>
 
                   {/* Add Tier Button (Admin only, Edit mode only) */}
-                  {userProfile?.is_admin && isEditScheduleMode && (
-                    <div className="border-t bg-gray-50 p-2 text-center">
-                      <button
-                        onClick={() => handleAddTier(tier.tier_number)}
-                        className="text-sm text-green-600 hover:text-green-700 hover:underline"
-                      >
-                        + Add Tier After {tier.tier_number}
-                      </button>
-                    </div>
-                  )}
-                </Card>
-              ))}
+                    {userProfile?.is_admin && isEditScheduleMode && (
+                      <div className="border-t bg-gray-50 p-2 text-center">
+                        <button
+                          onClick={() => handleAddTier(tier.tier_number)}
+                          className="text-sm text-green-600 hover:text-green-700 hover:underline"
+                        >
+                        + Add Tier After {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        </button>
+                      </div>
+                    )}
+                  </Card>
+                ));
+              })()}
             </>
           )
         ) : currentWeek === 1 ? (
@@ -1649,14 +1647,14 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           </div>
         ) : week1TierStructure.length > 0 ? (
           // Template tiers for future weeks
-          week1TierStructure.map((tier) => (
+          (() => { const templateLabelMap = buildWeekTierLabels(week1TierStructure); return week1TierStructure.map((tier) => (
             <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
               <CardContent className="p-0 overflow-hidden">
                 <div className="bg-[#F8F8F8] border-b px-8 py-3">
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
-                        Tier {tier.tier_number}
+                        Tier {templateLabelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                       </h3>
                     </div>
 
@@ -1740,7 +1738,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 </div>
               </CardContent>
             </Card>
-          ))
+          ))})()
         ) : (
           <div className="text-center py-12">
             <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Schedule Available</h3>

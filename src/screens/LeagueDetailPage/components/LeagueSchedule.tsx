@@ -1,18 +1,15 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "../../../components/ui/card";
-import { MapPin, Clock, ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "../../../lib/supabase";
-import { fetchLeagueById } from "../../../lib/leagues";
-import { useAuth } from "../../../contexts/AuthContext";
-import { SubmitScoresModal } from "./SubmitScoresModal";
-import type { WeeklyScheduleTier } from "../../LeagueSchedulePage/types";
-import {
-  getPositionsForFormat,
-  getGridColsClass,
-  getTeamCountForFormat,
-} from "../../LeagueSchedulePage/utils/formatUtils";
-import { getTeamForPosition } from "../../LeagueSchedulePage/utils/scheduleLogic";
-import { calculateCurrentWeekToDisplay } from "../../LeagueSchedulePage/utils/weekCalculation";
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '../../../components/ui/card';
+import { MapPin, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import { fetchLeagueById } from '../../../lib/leagues';
+import { useAuth } from '../../../contexts/AuthContext';
+import { SubmitScoresModal } from './SubmitScoresModal';
+import type { WeeklyScheduleTier } from '../../LeagueSchedulePage/types';
+import { getPositionsForFormat, getGridColsClass, getTeamCountForFormat, getTierDisplayLabel, buildWeekTierLabels } from '../../LeagueSchedulePage/utils/formatUtils';
+import { getTeamForPosition } from '../../LeagueSchedulePage/utils/scheduleLogic';
+import { calculateCurrentWeekToDisplay } from '../../LeagueSchedulePage/utils/weekCalculation';
+
 
 interface LeagueScheduleProps {
   leagueId: string;
@@ -36,9 +33,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     null,
   );
   const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
-  const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
+  // const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   const [isScheduleVisible, setIsScheduleVisible] = useState<boolean>(true);
   const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
+  const labelMap = buildWeekTierLabels(weeklyTiers);
+  const templateLabelMap = buildWeekTierLabels(week1TierStructure);
   
   // Check if user is admin or facilitator
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
@@ -80,7 +79,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     loadWeekStartDate();
     loadWeeklySchedule(currentWeek);
     loadWeek1Structure();
-    loadTeamPositions(); // Load current standings positions for display
+    // loadTeamPositions(); // Load current standings positions for display
   }, [leagueId]);
   useEffect(() => {
     loadWeeklySchedule(currentWeek);
@@ -90,7 +89,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
       if (!document.hidden) {
         loadWeekStartDate();
         loadWeeklySchedule(currentWeek);
-        loadTeamPositions();
+        // loadTeamPositions();
       }
     };
 
@@ -131,37 +130,35 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     }
   };
 
-  const loadTeamPositions = async () => {
-    try {
-      const { data: standingsData, error } = await supabase
-        .from("standings")
-        .select(
-          `
-          teams!inner(name),
-          current_position
-        `,
-        )
-        .eq("league_id", parseInt(leagueId))
-        .order("current_position", { ascending: true, nullsFirst: false });
+  // const loadTeamPositions = async () => {
+  //   try {
+  //     const { data: standingsData, error } = await supabase
+  //       .from('standings')
+  //       .select(`
+  //         teams!inner(name),
+  //         current_position
+  //       `)
+  //       .eq('league_id', parseInt(leagueId))
+  //       .order('current_position', { ascending: true, nullsFirst: false });
 
-      if (error && error.code !== "PGRST116") {
-        console.warn("Error loading team standings for positions:", error);
-        return;
-      }
+  //     if (error && error.code !== 'PGRST116') {
+  //       console.warn('Error loading team standings for positions:', error);
+  //       return;
+  //     }
 
-      if (standingsData && standingsData.length > 0) {
-        const positionsMap = new Map<string, number>();
-        standingsData.forEach((standing: any) => {
-          positionsMap.set(standing.teams.name, standing.current_position || 1);
-        });
+  //     if (standingsData && standingsData.length > 0) {
+  //       const positionsMap = new Map<string, number>();
+  //       standingsData.forEach((standing: any) => {
+  //         positionsMap.set(standing.teams.name, standing.current_position || 1);
+  //       });
 
-        setTeamPositions(positionsMap);
-      }
-    } catch (error) {
-      console.warn("Error loading team positions for schedule:", error);
-    }
-  };
-
+  //       setTeamPositions(positionsMap);
+  //     }
+  //   } catch (error) {
+  //     console.warn('Error loading team positions for schedule:', error);
+  //   }
+  // };
+  
   const getCurrentWeek = (): number => {
     if (!startDate) return 1;
 
@@ -417,7 +414,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
-                          Tier {tier.tier_number}
+                          Tier {templateLabelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                         </h3>
                       </div>
 
@@ -476,10 +473,10 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                 <div className={`${(tier.tier_number ?? 0) % 2 === 1 ? 'bg-red-50' : 'bg-[#F8F8F8]'} border-b px-8 py-3`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <h3 className={`font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
-                        Tier {tier.tier_number}
+                      <h3 className={`flex items-center font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
+                        Tier {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                          <span className="ml-2 inline-flex items-center align-middle px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                             Completed
                           </span>
                         )}
@@ -490,7 +487,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                         </span>
                       )}
                       {canSubmitScores && !tier.no_games &&
-                        (tier.format === '3-teams-6-sets' || tier.format === '2-teams-4-sets' || tier.format === '2-teams-best-of-5' || tier.format === '4-teams-head-to-head') &&
+                        (tier.format === '3-teams-6-sets' || tier.format === '2-teams-4-sets' || tier.format === '2-teams-best-of-5' || tier.format === '4-teams-head-to-head' || tier.format === '6-teams-head-to-head') &&
                         getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                          <button
                            onClick={() => {
@@ -548,55 +545,96 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                   ) : (
                     (() => {
                       const fmt = String(tier.format || '').toLowerCase().trim();
-                      return (
+                      const isFourTeam = (
                         fmt === '4-teams-head-to-head' ||
                         fmt.includes('4 teams') ||
                         fmt.includes('4-teams') ||
                         getTeamCountForFormat(tier.format || '3-teams-6-sets') === 4 ||
-                        Boolean((tier as any).team_c_name || (tier as any).team_d_name)
+                        Boolean((tier as any).team_d_name)
                       );
-                    })() ? (
-                      <div className="relative">
-                        <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
-                          <div className="col-span-2 text-center font-semibold">Court 1</div>
-                          <div className="col-span-2 text-center font-semibold">Court 2</div>
-                        </div>
-                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                        <div className="grid grid-cols-4 gap-4">
-                          {(['A','B','C','D'] as const).map((position) => {
-                            const team = getTeamForPosition(tier, position);
-                            return (
-                              <div key={position} className="text-center">
-                                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                                <div className="text-sm text-[#6F6F6F]">
-                                  {team?.name ? 
-                                    `${team.name} (${teamPositions.get(team.name) || team.ranking || '-'})` : 
-                                    <span className="text-gray-400 italic">TBD</span>
-                                  }
+                      const isSixTeam = (
+                        fmt === '6-teams-head-to-head' ||
+                        fmt.includes('6 teams') ||
+                        fmt.includes('6-teams') ||
+                        getTeamCountForFormat(tier.format || '3-teams-6-sets') === 6 ||
+                        Boolean((tier as any).team_e_name || (tier as any).team_f_name)
+                      );
+                      if (!isFourTeam && !isSixTeam) {
+                        return (
+                          <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                            {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => {
+                              const team = getTeamForPosition(tier, position);
+                              return (
+                                <div key={position} className="text-center">
+                                  <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                  <div className="text-sm text-[#6F6F6F]">
+                                    {team?.name ?
+                                      team.name :
+                                      <span className="text-gray-400 italic">TBD</span>
+                                    }
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
-                        {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => {
-                          const team = getTeamForPosition(tier, position);
-                          return (
-                            <div key={position} className="text-center">
-                              <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                              <div className="text-sm text-[#6F6F6F]">
-                                {team?.name ? 
-                                  `${team.name} (${teamPositions.get(team.name) || team.ranking || '-'})` : 
-                                  <span className="text-gray-400 italic">TBD</span>
-                                }
-                              </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      if (isSixTeam) {
+                        return (
+                          <div className="relative">
+                            <div className="grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
+                              <div className="col-span-2 text-center font-semibold">Court 1</div>
+                              <div className="col-span-2 text-center font-semibold">Court 2</div>
+                              <div className="col-span-2 text-center font-semibold">Court 3</div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )
+                            <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                            <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                            <div className="grid grid-cols-6 gap-4">
+                              {(['A','B','C','D','E','F'] as const).map((position) => {
+                                const team = getTeamForPosition(tier, position);
+                                return (
+                                  <div key={position} className="text-center">
+                                    <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                    <div className="text-sm text-[#6F6F6F]">
+                                      {team?.name ?
+                                        team.name :
+                                        <span className="text-gray-400 italic">TBD</span>
+                                      }
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+                      // Four-team head-to-head layout (Courts 1-2)
+                      return (
+                        <div className="relative">
+                          <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
+                            <div className="col-span-2 text-center font-semibold">Court 1</div>
+                            <div className="col-span-2 text-center font-semibold">Court 2</div>
+                          </div>
+                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="grid grid-cols-4 gap-4">
+                            {(['A','B','C','D'] as const).map((position) => {
+                              const team = getTeamForPosition(tier, position);
+                              return (
+                                <div key={position} className="text-center">
+                                  <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                  <div className="text-sm text-[#6F6F6F]">
+                                    {team?.name ?
+                                      team.name :
+                                      <span className="text-gray-400 italic">TBD</span>
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               </CardContent>
@@ -618,7 +656,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
-                        Tier {tier.tier_number}
+                        Tier {getTierDisplayLabel(tier.format, tier.tier_number)}
                       </h3>
                     </div>
 
@@ -650,20 +688,93 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
 
                 {/* Teams Display - Empty positions */}
                 <div className="p-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">A</div>
-                      <div className="text-sm text-gray-400 italic">TBD</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">B</div>
-                      <div className="text-sm text-gray-400 italic">TBD</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-[#6F6F6F] mb-1">C</div>
-                      <div className="text-sm text-gray-400 italic">TBD</div>
-                    </div>
-                  </div>
+                  {(() => {
+                    const fmt = String(tier.format || '').toLowerCase().trim();
+                    const likelyFourTeam = (
+                      fmt === '4-teams-head-to-head' ||
+                      fmt.includes('4 teams') ||
+                      fmt.includes('4-teams') ||
+                      getTeamCountForFormat(tier.format || '3-teams-6-sets') === 4 ||
+                      Boolean((tier as any).team_d_name)
+                    );
+                    const likelySixTeam = (
+                      fmt === '6-teams-head-to-head' ||
+                      fmt.includes('6 teams') ||
+                      fmt.includes('6-teams') ||
+                      getTeamCountForFormat(tier.format || '3-teams-6-sets') === 6 ||
+                      Boolean((tier as any).team_e_name || (tier as any).team_f_name)
+                    );
+                    if (likelySixTeam) {
+                      return (
+                        <div className="relative">
+                          <div className="grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
+                            <div className="col-span-2 text-center font-semibold">Court 1</div>
+                            <div className="col-span-2 text-center font-semibold">Court 2</div>
+                            <div className="col-span-2 text-center font-semibold">Court 3</div>
+                          </div>
+                          <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="grid grid-cols-6 gap-4">
+                            {(['A','B','C','D','E','F'] as const).map((position) => (
+                              <div key={position} className="text-center">
+                                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                <div className="text-sm text-gray-400 italic">
+                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                  ) : (
+                                    <span className="text-gray-400 italic">TBD</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (likelyFourTeam) {
+                      return (
+                        <div className="relative">
+                          {/* Court labels */}
+                          <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
+                            <div className="col-span-2 text-center font-semibold">Court 1</div>
+                            <div className="col-span-2 text-center font-semibold">Court 2</div>
+                          </div>
+                          {/* Vertical separator between courts */}
+                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="grid grid-cols-4 gap-4">
+                            {(['A','B','C','D'] as const).map((position) => (
+                              <div key={position} className="text-center">
+                                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                <div className="text-sm text-[#6F6F6F]">
+                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                  ) : (
+                                    <span className="text-gray-400 italic">TBD</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                        {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => (
+                          <div key={position} className="text-center">
+                            <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                            <div className="text-sm text-[#6F6F6F]">
+                              {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                              ) : (
+                                <span className="text-gray-400 italic">TBD</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -701,3 +812,4 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     </div>
   );
 }
+

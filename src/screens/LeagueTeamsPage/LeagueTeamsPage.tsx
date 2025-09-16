@@ -50,10 +50,12 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { getFormatOptions } from "../LeagueSchedulePage/utils/formatUtils";
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { getFormatOptions, getTierDisplayLabel } from '../LeagueSchedulePage/utils/formatUtils';
 
 interface TeamData {
   id: number | string; // number for teams, string for individual users
@@ -784,6 +786,7 @@ export function LeagueTeamsPage() {
     // Return legacy format for backward compatibility (temporary)
     const legacyTiers = weeklyScheduleRows.map((row) => ({
       tierNumber: row.tier_number,
+      displayLabel: getTierDisplayLabel(row.format, row.tier_number),
       location: row.location,
       time: row.time_slot,
       court: row.court,

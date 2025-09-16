@@ -84,6 +84,8 @@ CHECK (
     '2-teams-best-of-5', 
     '2-teams-elite',
     '3-teams-6-sets',
+    '3-teams-elite-6-sets',
+    '3-teams-elite-9-sets',
     '4-teams-head-to-head',
     '6-teams-head-to-head'
   )
@@ -194,7 +196,7 @@ BEGIN
   -- Get format capacity
   format_capacity := CASE 
     WHEN p_new_format IN ('2-teams-4-sets', '2-teams-best-of-3', '2-teams-best-of-5', '2-teams-elite') THEN 2
-    WHEN p_new_format = '3-teams-6-sets' THEN 3
+    WHEN p_new_format IN ('3-teams-6-sets', '3-teams-elite-6-sets', '3-teams-elite-9-sets') THEN 3
     WHEN p_new_format = '4-teams-head-to-head' THEN 4
     WHEN p_new_format = '6-teams-head-to-head' THEN 6
     ELSE 3
@@ -295,3 +297,4 @@ COMMENT ON FUNCTION validate_tier_team_capacity IS 'Validates if a tier can acco
 COMMENT ON MATERIALIZED VIEW league_schedule_summary IS 'Performance-optimized summary view for league schedule dashboards';
 COMMENT ON FUNCTION refresh_league_schedule_summary IS 'Refreshes the materialized view after schedule modifications';
 COMMENT ON FUNCTION cleanup_invalid_schedule_entries IS 'Identifies and cleans up data integrity issues in schedule tables';
+
