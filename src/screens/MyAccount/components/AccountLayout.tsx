@@ -11,9 +11,7 @@ export function AccountLayout() {
   }
 
   const isActive = (path: string) => {
-    return (
-      location.pathname === path || location.pathname.startsWith(path + "/")
-    );
+    return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
   return (
@@ -97,11 +95,7 @@ export function AccountLayout() {
                     : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
                 }`}
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M19,4H5C3.89,4 3,4.9 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6A2,2 0 0,0 19,4M19,18H5V8H19V18Z" />
                   <path d="M12,9H7V11H12V9M17,9H14V11H17V9M7,12V14H10V12H7M11,12V14H14V12H11M15,12V14H17V12H15Z" />
                 </svg>
@@ -116,11 +110,7 @@ export function AccountLayout() {
                     : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
                 }`}
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
                 </svg>
                 Gyms
@@ -134,31 +124,21 @@ export function AccountLayout() {
                     : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
                 }`}
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
                 </svg>
                 Users
               </Link>
 
-              
-
               <Link
-                  to="/my-account/waivers"
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm cursor-pointer relative transition-all whitespace-nowrap ${
-                    isActive("/my-account/waivers")
-                      ? "text-[#B20000] font-semibold border-b-2 border-[#B20000]"
+                to="/my-account/waivers"
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm cursor-pointer relative transition-all whitespace-nowrap ${
+                  isActive("/my-account/waivers")
+                    ? "text-[#B20000] font-semibold border-b-2 border-[#B20000]"
                     : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
                 }`}
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
                 </svg>
                 Waivers
@@ -172,11 +152,7 @@ export function AccountLayout() {
                     : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
                 }`}
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12,5A3.5,3.5 0 0,0 8.5,8.5A3.5,3.5 0 0,0 12,12A3.5,3.5 0 0,0 15.5,8.5A3.5,3.5 0 0,0 12,5M12,7A1.5,1.5 0 0,1 13.5,8.5A1.5,1.5 0 0,1 12,10A1.5,1.5 0 0,1 10.5,8.5A1.5,1.5 0 0,1 12,7M5.5,8A2.5,2.5 0 0,0 3,10.5C3,11.44 3.53,12.25 4.29,12.68C4.65,12.88 5.06,13 5.5,13C5.94,13 6.35,12.88 6.71,12.68C7.08,12.47 7.39,12.17 7.62,11.81C6.89,10.86 6.5,9.7 6.5,8.5C6.5,8.41 6.5,8.31 6.5,8.22C6.2,8.08 5.86,8 5.5,8M18.5,8C18.14,8 17.8,8.08 17.5,8.22C17.5,8.31 17.5,8.41 17.5,8.5C17.5,9.7 17.11,10.86 16.38,11.81C16.5,12 16.63,12.15 16.78,12.3C16.94,12.45 17.1,12.58 17.29,12.68C17.65,12.88 18.06,13 18.5,13C18.94,13 19.35,12.88 19.71,12.68C20.47,12.25 21,11.44 21,10.5A2.5,2.5 0 0,0 18.5,8M12,14C9.66,14 5,15.17 5,17.5V19H19V17.5C19,15.17 14.34,14 12,14M4.71,14.55C2.78,14.78 0,15.76 0,17.5V19H3V17.07C3,16.06 3.69,15.22 4.71,14.55M19.29,14.55C20.31,15.22 21,16.06 21,17.07V19H24V17.5C24,15.76 21.22,14.78 19.29,14.55M12,16C13.53,16 15.24,16.5 16.23,17H7.77C8.76,16.5 10.47,16 12,16Z" />
                 </svg>
                 Teams
@@ -190,11 +166,7 @@ export function AccountLayout() {
                     : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
                 }`}
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   {/* Clipboard-text icon */}
                   <path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V21A2,2 0 0,0 5,23H19A2,2 0 0,0 21,21V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3M8,9H16V11H8V9M8,13H16V15H8V13M8,17H14V19H8V17Z" />
                 </svg>
