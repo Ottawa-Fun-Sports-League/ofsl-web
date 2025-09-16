@@ -16,6 +16,7 @@ interface Scorecard4TeamsHeadToHeadProps {
       court1: Array<{ label: string; scores: Record<'WC1'|'WC2', string> }>;
       court2: Array<{ label: string; scores: Record<'LC1'|'LC2', string> }>;
     };
+    spares: Record<TeamKey, string>;
   }) => void;
   isTopTier?: boolean;
   pointsTierOffset?: number;
@@ -30,6 +31,7 @@ interface Scorecard4TeamsHeadToHeadProps {
       court1?: Array<{ label: string; scores: Record<'WC1'|'WC2', string> }>;
       court2?: Array<{ label: string; scores: Record<'LC1'|'LC2', string> }>;
     };
+    spares?: Record<TeamKey, string>;
   };
   submitting?: boolean;
 }
@@ -50,6 +52,9 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
   const [g2c1, setG2C1] = useState<Array<{ WC1?: string; WC2?: string }>>([{},{ }]);
   const [g2c2, setG2C2] = useState<Array<{ LC1?: string; LC2?: string }>>([{},{ }]);
 
+  // Spares
+  const [spares, setSpares] = useState<Record<TeamKey, string>>({ A: '', B: '', C: '', D: '' });
+
   useEffect(() => {
     if (!initial) return;
     if (initial.game1?.court1 && initial.game1.court1.length) {
@@ -67,6 +72,9 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
     if (initial.game2?.court2 && initial.game2.court2.length) {
       const pre = initial.game2.court2.map(r => ({ LC1: (r.scores as any).LC1 ?? '', LC2: (r.scores as any).LC2 ?? '' }));
       setG2C2(pre as any);
+    }
+    if (initial.spares) {
+      setSpares({ A: initial.spares.A || '', B: initial.spares.B || '', C: initial.spares.C || '', D: initial.spares.D || '' });
     }
   }, [initial]);
 
@@ -187,6 +195,10 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
 
   const canSubmit = summary.game2Done && !anySetTie;
 
+  const handleSparesChange = (team: TeamKey, value: string) => {
+    setSpares(prev => ({ ...prev, [team]: value }));
+  };
+
   return (
     <form
       className="max-w-2xl shadow-sm"
@@ -203,7 +215,8 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
             game2: {
               court1: g2c1.map((r, i) => ({ label: `Game 2 - Court 1 (Set ${i+1})`, scores: { WC1: r.WC1 ?? '', WC2: r.WC2 ?? '' } })),
               court2: g2c2.map((r, i) => ({ label: `Game 2 - Court 2 (Set ${i+1})`, scores: { LC1: r.LC1 ?? '', LC2: r.LC2 ?? '' } })),
-            }
+            },
+            spares
           });
         }
       }}
@@ -404,6 +417,21 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
               );
             })}
           </div>
+        </div>
+
+        {/* Spare players sections */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+          {(['A','B','C','D'] as TeamKey[]).map((t) => (
+            <div key={`spares-${t}`}>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Team {t}</label>
+              <textarea
+                value={spares[t]}
+                onChange={(e) => handleSparesChange(t, e.target.value)}
+                className="w-full min-h-[64px] px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60"
+                placeholder="List spare players, one per line"
+              />
+            </div>
+          ))}
         </div>
 
         {/* Weekly summary */}

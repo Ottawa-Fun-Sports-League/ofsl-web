@@ -108,5 +108,101 @@ export async function applyFourTeamMovementAfterStandings(params: {
   game2: { court1: Array<{ label: string; scores: Record<'WC1'|'WC2', string> }>; court2: Array<{ label: string; scores: Record<'LC1'|'LC2', string> }>; };
 }): Promise<void> {
   const { leagueId, weekNumber, tierNumber, isTopTier, pointsTierOffset, teamNames, game1, game2 } = params;
-  await applyFourTeamTierMovementNextWeek({ leagueId, currentWeek: weekNumber, tierNumber, isTopTier, isBottomTier: pointsTierOffset===0, teamNames, game1, game2 });
+  await applyFourTeamTierMovementNextWeek({
+    leagueId,
+    currentWeek: weekNumber,
+    tierNumber,
+    isTopTier,
+    isBottomTier: pointsTierOffset === 0,
+    teamNames,
+    game1,
+    game2,
+  });
+}
+
+export async function applySixTeamMovementAfterStandings(params: {
+  leagueId: number;
+  weekNumber: number;
+  tierNumber: number;
+  isTopTier: boolean;
+  pointsTierOffset: number;
+  teamNames: { A: string; B: string; C: string; D: string; E: string; F: string };
+  teamStats: Array<{ team: string; setWins: number; setLosses: number; diff: number; prevPosition: string }>;
+}): Promise<void> {
+  const { leagueId, weekNumber, tierNumber, isTopTier, pointsTierOffset, teamNames, teamStats } = params;
+
+  const nextWeek = weekNumber + 1;
+  const isBottomTier = pointsTierOffset === 0;
+
+  const positionColumns = ['team_a_name', 'team_b_name', 'team_c_name', 'team_d_name', 'team_e_name', 'team_f_name'] as const;
+
+  const uniqueNames = new Set(
+    teamStats.map((stat) => teamNames[stat.team as keyof typeof teamNames]).filter((name): name is string => Boolean(name))
+  );
+
+  for (const name of uniqueNames) {
+    for (const column of positionColumns) {
+      const { error: clearErr } = await supabase
+        .from('weekly_schedules')
+        .update({ [column]: null, updated_at: new Date().toISOString() })
+        .eq('league_id', leagueId)
+        .eq('week_number', nextWeek)
+        .eq(column, name);
+      if (clearErr && (clearErr as any).code !== 'PGRST116') {
+        console.warn(`Error clearing team ${name} from ${column} in week ${nextWeek}:`, clearErr);
+      }
+    }
+  }
+
+  const movements = [
+    { rank: 0, targetTier: isTopTier ? tierNumber : Math.max(1, tierNumber - 1), targetPosition: isTopTier ? 'A' : 'F' },
+    { rank: 1, targetTier: tierNumber, targetPosition: 'B' },
+    { rank: 2, targetTier: tierNumber, targetPosition: 'C' },
+    { rank: 3, targetTier: tierNumber, targetPosition: 'D' },
+    { rank: 4, targetTier: tierNumber, targetPosition: 'E' },
+    { rank: 5, targetTier: isBottomTier ? tierNumber : tierNumber + 1, targetPosition: isBottomTier ? 'F' : 'A' },
+  ] as const;
+
+  for (const movement of movements) {
+    const teamStat = teamStats[movement.rank];
+    if (!teamStat) continue;
+
+    const teamName = teamNames[teamStat.team as keyof typeof teamNames];
+    if (!teamName) continue;
+
+    const { targetTier, targetPosition } = movement;
+    if (targetTier < 1) continue;
+
+    const { data: targetTierRow, error: findErr } = await supabase
+      .from('weekly_schedules')
+      .select('id')
+      .eq('league_id', leagueId)
+      .eq('week_number', nextWeek)
+      .eq('tier_number', targetTier)
+      .maybeSingle();
+
+    if (findErr && (findErr as any).code !== 'PGRST116') {
+      console.warn(`Error locating tier ${targetTier} for week ${nextWeek}:`, findErr);
+      continue;
+    }
+
+    if (!targetTierRow) {
+      console.warn(`Target tier ${targetTier} not found for week ${nextWeek}; unable to place ${teamName}.`);
+      continue;
+    }
+
+    const updatePayload: Record<string, unknown> = {
+      [`team_${targetPosition.toLowerCase()}_name`]: teamName,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: updateErr } = await supabase
+      .from('weekly_schedules')
+      .update(updatePayload)
+      .eq('id', targetTierRow.id);
+
+    if (updateErr) {
+      console.warn(`Error updating ${teamName} into tier ${targetTier} slot ${targetPosition}:`, updateErr);
+    }
+  }
 }

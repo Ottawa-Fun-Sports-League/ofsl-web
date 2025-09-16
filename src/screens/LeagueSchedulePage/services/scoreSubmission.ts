@@ -1,8 +1,9 @@
 import { supabase } from '../../../lib/supabase';
 import { applyMovementAfterStandings, applyTwoTeamMovementAfterStandings } from './movement';
-import { applyFourTeamMovementAfterStandings } from './movement';
+import { applyFourTeamMovementAfterStandings, applySixTeamMovementAfterStandings } from './movement';
 
 type TeamKey = 'A' | 'B' | 'C';
+type SixTeamKey = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 export interface ScoreSet {
   label: string;
@@ -676,7 +677,287 @@ export interface SubmitFourTeamParams {
   isTopTier: boolean;
 }
 
-export async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTeamParams): Promise<void> {
+export interface SubmitSixTeamParams {
+  leagueId: number;
+  weekNumber: number;
+  tierNumber: number;
+  tierId: number;
+  teamNames: Record<SixTeamKey, string>;
+  game1: {
+    court1: Array<{ label: string; scores: Record<'A'|'B', string> }>;
+    court2: Array<{ label: string; scores: Record<'C'|'D', string> }>;
+    court3: Array<{ label: string; scores: Record<'E'|'F', string> }>;
+  };
+  game2: {
+    court1: Array<{ label: string; scores: Record<'G2C1_L'|'G2C1_R', string> }>;
+    court2: Array<{ label: string; scores: Record<'G2C2_L'|'G2C2_R', string> }>;
+    court3: Array<{ label: string; scores: Record<'G2C3_L'|'G2C3_R', string> }>;
+  };
+  spares: Record<SixTeamKey, string>;
+  pointsTierOffset: number;
+  isTopTier: boolean;
+}
+
+export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeamParams): Promise<void> {
+  const { leagueId, weekNumber, tierNumber, tierId, teamNames, game1, game2, spares, pointsTierOffset, isTopTier } = params;
+
+  console.log('6-team submission params:', {
+    tierNumber,
+    pointsTierOffset,
+    isTopTier,
+    expectedBonus: pointsTierOffset * 8,
+    isBottomTier: pointsTierOffset === 0,
+  });
+
+  type Totals = { setWins: number; setLosses: number; pf: number; pa: number };
+  const totals: Record<SixTeamKey, Totals> = {
+    A: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
+    B: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
+    C: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
+    D: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
+    E: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
+    F: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
+  };
+
+  type PairStat = { left: SixTeamKey; right: SixTeamKey; leftWins: number; rightWins: number; diff: number };
+  const makePair = (left: SixTeamKey, right: SixTeamKey): PairStat => ({ left, right, leftWins: 0, rightWins: 0, diff: 0 });
+
+  const applySet = (leftKey: SixTeamKey, rightKey: SixTeamKey, rawLeft: string | undefined, rawRight: string | undefined, pair: PairStat, context: string) => {
+    const left = rawLeft ?? '';
+    const right = rawRight ?? '';
+    if (left === '' || right === '') {
+      throw new Error(`Incomplete 6-team head-to-head scorecard: missing scores for ${context}`);
+    }
+    const leftNum = Number(left);
+    const rightNum = Number(right);
+    if (Number.isNaN(leftNum) || Number.isNaN(rightNum)) {
+      throw new Error(`Invalid numeric value in 6-team head-to-head scorecard (${context})`);
+    }
+    if (leftNum === rightNum) {
+      throw new Error(`Tied set detected in 6-team head-to-head scorecard (${context})`);
+    }
+
+    totals[leftKey].pf += leftNum;
+    totals[leftKey].pa += rightNum;
+    totals[rightKey].pf += rightNum;
+    totals[rightKey].pa += leftNum;
+
+    if (leftNum > rightNum) {
+      totals[leftKey].setWins += 1;
+      totals[rightKey].setLosses += 1;
+      pair.leftWins += 1;
+    } else {
+      totals[rightKey].setWins += 1;
+      totals[leftKey].setLosses += 1;
+      pair.rightWins += 1;
+    }
+
+    pair.diff += leftNum - rightNum;
+  };
+
+  const pairC1 = makePair('A', 'B');
+  const pairC2 = makePair('C', 'D');
+  const pairC3 = makePair('E', 'F');
+
+  game1.court1.forEach((row, idx) => applySet('A', 'B', row.scores?.A, row.scores?.B, pairC1, `Game 1 Court 1 Set ${idx + 1}`));
+  game1.court2.forEach((row, idx) => applySet('C', 'D', row.scores?.C, row.scores?.D, pairC2, `Game 1 Court 2 Set ${idx + 1}`));
+  game1.court3.forEach((row, idx) => applySet('E', 'F', row.scores?.E, row.scores?.F, pairC3, `Game 1 Court 3 Set ${idx + 1}`));
+
+  const decidePair = (pair: PairStat): { winner: SixTeamKey; loser: SixTeamKey } => {
+    if (pair.leftWins !== pair.rightWins) {
+      return pair.leftWins > pair.rightWins
+        ? { winner: pair.left, loser: pair.right }
+        : { winner: pair.right, loser: pair.left };
+    }
+    if (pair.diff !== 0) {
+      return pair.diff > 0
+        ? { winner: pair.left, loser: pair.right }
+        : { winner: pair.right, loser: pair.left };
+    }
+    // Fall back to positional priority (left beats right) to mirror scorecard tie-breaker
+    return { winner: pair.left, loser: pair.right };
+  };
+
+  const g1c1 = decidePair(pairC1);
+  const g1c2 = decidePair(pairC2);
+  const g1c3 = decidePair(pairC3);
+
+  const pairG2C1 = makePair(g1c1.winner, g1c2.winner);
+  const pairG2C2 = makePair(g1c1.loser, g1c3.winner);
+  const pairG2C3 = makePair(g1c2.loser, g1c3.loser);
+
+  game2.court1.forEach((row, idx) => applySet(g1c1.winner, g1c2.winner, row.scores?.G2C1_L, row.scores?.G2C1_R, pairG2C1, `Game 2 Court 1 Set ${idx + 1}`));
+  game2.court2.forEach((row, idx) => applySet(g1c1.loser, g1c3.winner, row.scores?.G2C2_L, row.scores?.G2C2_R, pairG2C2, `Game 2 Court 2 Set ${idx + 1}`));
+  game2.court3.forEach((row, idx) => applySet(g1c2.loser, g1c3.loser, row.scores?.G2C3_L, row.scores?.G2C3_R, pairG2C3, `Game 2 Court 3 Set ${idx + 1}`));
+
+  const teamStats = (['A', 'B', 'C', 'D', 'E', 'F'] as SixTeamKey[]).map((team) => ({
+    team,
+    setWins: totals[team].setWins,
+    setLosses: totals[team].setLosses,
+    diff: totals[team].pf - totals[team].pa,
+    prevPosition: team,
+  }));
+
+  teamStats.sort((a, b) => {
+    if (a.setWins !== b.setWins) return b.setWins - a.setWins;
+    if (a.diff !== b.diff) return b.diff - a.diff;
+    return a.prevPosition.localeCompare(b.prevPosition);
+  });
+
+  const tierBonus = 8 * Math.max(0, pointsTierOffset);
+  const basePoints = [3, 4, 5, 6, 7, 8];
+  const weeklyLeaguePoints: Record<SixTeamKey, number> = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+  teamStats.forEach((teamStat, rank) => {
+    weeklyLeaguePoints[teamStat.team] = basePoints[5 - rank] + tierBonus;
+  });
+
+  console.log('Points calculation (6-team H2H):', {
+    tierBonus,
+    weeklyLeaguePoints,
+    rankings: teamStats.map((ts, idx) => ({ rank: idx + 1, team: ts.team, name: teamNames[ts.team], points: weeklyLeaguePoints[ts.team] })),
+  });
+
+  const movementSummary = teamStats.reduce<Record<number, string>>((acc, teamStat, idx) => {
+    const place = idx + 1;
+    switch (place) {
+      case 1:
+        acc[place] = isTopTier ? 'Stay -> A' : 'Up tier -> F';
+        break;
+      case 2:
+        acc[place] = 'Same tier -> B';
+        break;
+      case 3:
+        acc[place] = 'Same tier -> C';
+        break;
+      case 4:
+        acc[place] = 'Same tier -> D';
+        break;
+      case 5:
+        acc[place] = 'Same tier -> E';
+        break;
+      default:
+        acc[place] = pointsTierOffset === 0 ? 'Stay -> F' : 'Down tier -> A';
+        break;
+    }
+    return acc;
+  }, {});
+
+  const matchDetails = {
+    game1,
+    game2,
+    spares,
+    teamStats: teamStats.map((ts) => ({ team: ts.team, setWins: ts.setWins, setLosses: ts.setLosses, diff: ts.diff })),
+    movement: movementSummary,
+  };
+
+  const { data: prevRows } = await supabase
+    .from('game_results')
+    .select('team_name,wins,losses,points_for,points_against,league_points')
+    .eq('league_id', leagueId)
+    .eq('week_number', weekNumber)
+    .eq('tier_number', tierNumber);
+
+  for (const teamStat of teamStats) {
+    const teamName = teamNames[teamStat.team];
+    if (!teamName) continue;
+
+    const payload = {
+      league_id: leagueId,
+      week_number: weekNumber,
+      tier_number: tierNumber,
+      team_name: teamName,
+      wins: teamStat.setWins,
+      losses: teamStat.setLosses,
+      points_for: totals[teamStat.team].pf,
+      points_against: totals[teamStat.team].pa,
+      league_points: weeklyLeaguePoints[teamStat.team],
+      match_details: matchDetails,
+    };
+
+    const { error: upsertErr } = await supabase
+      .from('game_results')
+      .upsert(payload, { onConflict: 'league_id,week_number,tier_number,team_name', ignoreDuplicates: false });
+    if (upsertErr) throw upsertErr;
+  }
+
+  const { error: scheduleErr } = await supabase
+    .from('weekly_schedules')
+    .update({ is_completed: true })
+    .eq('id', tierId);
+  if (scheduleErr) throw scheduleErr;
+
+  const { data: teamsRows, error: teamsErr } = await supabase
+    .from('teams')
+    .select('id, name')
+    .eq('league_id', leagueId)
+    .in('name', Object.values(teamNames).filter(Boolean));
+  if (teamsErr) throw teamsErr;
+  const nameToId = new Map<string, number>();
+  (teamsRows || []).forEach((row: any) => nameToId.set(row.name, row.id));
+
+  for (const teamStat of teamStats) {
+    const teamName = teamNames[teamStat.team];
+    const teamId = nameToId.get(teamName);
+    if (!teamId) continue;
+
+    const { data: standingRow, error: standingErr } = await supabase
+      .from('standings')
+      .select('id,wins,losses,points,point_differential')
+      .eq('league_id', leagueId)
+      .eq('team_id', teamId)
+      .maybeSingle();
+    if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
+
+    const addWins = teamStat.setWins;
+    const addLosses = teamStat.setLosses;
+    const addDiff = totals[teamStat.team].pf - totals[teamStat.team].pa;
+    const addPoints = weeklyLeaguePoints[teamStat.team];
+
+    const prevRow = (prevRows || []).find((row: any) => row.team_name === teamName);
+    const subWins = prevRow?.wins || 0;
+    const subLosses = prevRow?.losses || 0;
+    const subDiff = (prevRow?.points_for || 0) - (prevRow?.points_against || 0);
+    const subPoints = prevRow?.league_points || 0;
+
+    if (!standingRow) {
+      const { error: insertErr } = await supabase
+        .from('standings')
+        .insert({
+          league_id: leagueId,
+          team_id: teamId,
+          wins: addWins - subWins,
+          losses: addLosses - subLosses,
+          points: addPoints - subPoints,
+          point_differential: addDiff - subDiff,
+        });
+      if (insertErr) throw insertErr;
+    } else {
+      const { error: updateErr } = await supabase
+        .from('standings')
+        .update({
+          wins: (standingRow as any).wins - subWins + addWins,
+          losses: (standingRow as any).losses - subLosses + addLosses,
+          points: (standingRow as any).points - subPoints + addPoints,
+          point_differential: (standingRow as any).point_differential - subDiff + addDiff,
+        })
+        .eq('id', (standingRow as any).id);
+      if (updateErr) throw updateErr;
+    }
+  }
+
+  const { error: recalcErr } = await supabase.rpc('recalculate_standings_positions', { p_league_id: leagueId });
+  if (recalcErr) throw recalcErr;
+
+  await applySixTeamMovementAfterStandings({
+    leagueId,
+    weekNumber,
+    tierNumber,
+    isTopTier,
+    pointsTierOffset,
+    teamNames,
+    teamStats,
+  });
+}\r\n\r\nexport async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTeamParams): Promise<void> {
   const { leagueId, weekNumber, tierNumber, tierId, teamNames, game1, game2, pointsTierOffset, isTopTier } = params;
 
   // Helper to tally a pair of sets
@@ -844,3 +1125,7 @@ export async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTe
     game2,
   });
 }
+
+
+
+

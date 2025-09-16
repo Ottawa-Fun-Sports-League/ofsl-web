@@ -5,6 +5,7 @@ import { Scorecard3Teams6Sets } from './components/Scorecard3Teams6Sets';
 import { Scorecard2Teams4Sets } from './components/Scorecard2Teams4Sets';
 import { Scorecard2TeamsBestOf5 } from './components/Scorecard2TeamsBestOf5';
 import { Scorecard4TeamsHeadToHead } from './components/Scorecard4TeamsHeadToHead';
+import { Scorecard6TeamsHeadToHead } from './components/Scorecard6TeamsHeadToHead';
 
 export function ScorecardsFormatsTab() {
   const [selectedId, setSelectedId] = useState<string>(GAME_FORMATS[0]?.value ?? '');
@@ -231,6 +232,83 @@ export function ScorecardsFormatsTab() {
                         <li>Game 2 Court 2 winner: stays in current tier → Court 1, position B.</li>
                         <li>Game 2 Court 2 loser: moves down one tier to lowest position (A). Bottom tier: stay → D.</li>
                       </ul>
+                    </div>
+                  </div>
+                </>
+              ) : selected.value === '6-teams-head-to-head' ? (
+                <>
+                  <Scorecard6TeamsHeadToHead
+                    teamNames={{
+                      A: 'Setting Cobras',
+                      B: 'Hawk Serves',
+                      C: 'Prime Net',
+                      D: 'Block Party',
+                      E: 'Spike Force',
+                      F: 'Net Ninjas'
+                    }}
+                  />
+
+                  {/* Format logic reference */}
+                  <div className="mt-6 space-y-5">
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Points System</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>
+                          Lowest tier baseline: <span className="font-medium">3 / 4 / 5 / 6 / 7 / 8</span> (6th → 1st place)
+                        </li>
+                        <li>
+                          Tier bonus: <span className="font-medium">+8</span> points per tier above lowest
+                        </li>
+                        <li>
+                          Rankings based on Game 2 performance across all three courts
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Weekly Structure</h4>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Game 1: Court 1 — A vs B (2 sets); Court 2 — C vs D (2 sets); Court 3 — E vs F (2 sets)</li>
+                        <li>Game 2: Court 1 — Winner (Court 1) vs Winner (Court 2) (2 sets)</li>
+                        <li>Game 2: Court 2 — Loser (Court 1) vs Winner (Court 3) (2 sets)</li>
+                        <li>Game 2: Court 3 — Loser (Court 2) vs Loser (Court 3) (2 sets)</li>
+                        <li>No per-set ties allowed; resolve equal scores</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Final Rankings</h4>
+                      <ol className="list-decimal pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li><strong>1st Place:</strong> Winner of Game 2 Court 1 (Winner C1 vs Winner C2 champion)</li>
+                        <li><strong>2nd Place:</strong> Loser of Game 2 Court 1 (Winner C1 vs Winner C2 runner-up)</li>
+                        <li><strong>3rd Place:</strong> Winner of Game 2 Court 2 (Loser C1 vs Winner C3 champion)</li>
+                        <li><strong>4th Place:</strong> Loser of Game 2 Court 2 (Loser C1 vs Winner C3 runner-up)</li>
+                        <li><strong>5th Place:</strong> Winner of Game 2 Court 3 (Loser C2 vs Loser C3 champion)</li>
+                        <li><strong>6th Place:</strong> Loser of Game 2 Court 3 (Loser C2 vs Loser C3 runner-up)</li>
+                      </ol>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tier Movement</h4>
+                      <p className="text-[15px] text-[#4B5563] mb-2">Based on overall weekly performance (set wins → differential → previous position):</p>
+                      <ul className="list-disc pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li><strong>1st Place:</strong> Up tier → Position F (top tier stays → A)</li>
+                        <li><strong>2nd Place:</strong> Same tier → Position B (Court 1)</li>
+                        <li><strong>3rd Place:</strong> Same tier → Position C (Court 2)</li>
+                        <li><strong>4th Place:</strong> Same tier → Position D (Court 2)</li>
+                        <li><strong>5th Place:</strong> Same tier → Position E (Court 3)</li>
+                        <li><strong>6th Place:</strong> Down tier → Position F (bottom tier stays → F)</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h4 className="text-lg font-semibold text-[#6F6F6F] mb-2">Tie-Breaker Rules</h4>
+                      <ol className="list-decimal pl-5 space-y-1 text-[15px] text-[#4B5563]">
+                        <li>Head-to-head result (if teams played each other)</li>
+                        <li>Total set wins across both games</li>
+                        <li>Total points differential</li>
+                        <li>Previous week's position (A {'>'} B {'>'} C {'>'} D {'>'} E {'>'} F)</li>
+                      </ol>
                     </div>
                   </div>
                 </>

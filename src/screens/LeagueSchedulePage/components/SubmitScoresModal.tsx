@@ -9,11 +9,12 @@ import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsForma
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { Scorecard4TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard4TeamsHeadToHead';
+import { Scorecard6TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard6TeamsHeadToHead';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove } from '../services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove } from '../services/scoreSubmission';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -30,8 +31,17 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
   const [initialSets, setInitialSets] = useState<any[] | undefined>(undefined);
   const [initialSpares, setInitialSpares] = useState<Record<'A'|'B'|'C', string> | undefined>(undefined);
   const [initialH2H, setInitialH2H] = useState<{
-    game1?: { court1?: Array<{ label: string; scores: Record<'A'|'B', string> }>; court2?: Array<{ label: string; scores: Record<'C'|'D', string> }> };
-    game2?: { court1?: Array<{ label: string; scores: Record<'WC1'|'WC2', string> }>; court2?: Array<{ label: string; scores: Record<'LC1'|'LC2', string> }> };
+    game1?: {
+      court1?: Array<{ label: string; scores: Record<'A'|'B', string> }>;
+      court2?: Array<{ label: string; scores: Record<'C'|'D', string> }>;
+      court3?: Array<{ label: string; scores: Record<'E'|'F', string> }>;
+    };
+    game2?: {
+      court1?: Array<{ label: string; scores: Record<'G2C1_L'|'G2C1_R', string> }>;
+      court2?: Array<{ label: string; scores: Record<'G2C2_L'|'G2C2_R', string> }>;
+      court3?: Array<{ label: string; scores: Record<'G2C3_L'|'G2C3_R', string> }>;
+    };
+    spares?: Record<'A'|'B'|'C'|'D'|'E'|'F', string>;
   } | undefined>(undefined);
   const [currentWeekNumber, setCurrentWeekNumber] = useState<number | null>(null);
 
@@ -47,16 +57,23 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
   const isTwoTeamFourSets = weeklyTier.format === '2-teams-4-sets';
   const isTwoTeamBo5 = weeklyTier.format === '2-teams-best-of-5';
   const isFourTeamHH = weeklyTier.format === '4-teams-head-to-head';
-  const unsupported = !(isThreeTeam || isTwoTeamFourSets || isTwoTeamBo5 || isFourTeamHH);
+  const isSixTeamHH = weeklyTier.format === '6-teams-head-to-head';
+  const unsupported = !(isThreeTeam || isTwoTeamFourSets || isTwoTeamBo5 || isFourTeamHH || isSixTeamHH);
   const [pointsOffset, setPointsOffset] = useState<number>(0);
   const [isTopTier, setIsTopTier] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchMaxTier = async () => {
+      if (!isOpen) {
+        console.log('Modal not open, skipping tier calculation');
+        return;
+      }
+
       try {
         const leagueId = (weeklyTier as any).league_id as number | undefined;
         const week = (weeklyTier as any).week_number as number | undefined;
         if (!leagueId || !week) {
+          console.log('Missing leagueId or week, defaulting to 0 offset');
           setPointsOffset(0);
           setIsTopTier((weeklyTier.tier_number || 1) === 1);
           return;
@@ -65,8 +82,21 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
           .from('weekly_schedules')
           .select('tier_number')
           .eq('league_id', leagueId)
-          .eq('week_number', week);
-        if (error) throw error;
+          .eq('week_number', week)
+          .order('tier_number', { ascending: true });
+        if (error) {
+          console.error('Error fetching tiers:', error);
+          throw error;
+        }
+
+        console.log('Fetched tier data:', {
+          leagueId,
+          week,
+          tiersFound: data,
+          rawData: JSON.stringify(data),
+          dataLength: data?.length,
+          currentTier: weeklyTier.tier_number
+        });
         // Prefill existing scorecard if available
         try {
           const { data: existing } = await supabase
@@ -80,14 +110,48 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
           if (md) {
             if (md.sets) setInitialSets(md.sets);
             if (md.spares) setInitialSpares(md.spares);
-            if (md.game1 || md.game2) setInitialH2H({ game1: md.game1, game2: md.game2 });
+            if (md.game1 || md.game2 || md.spares) setInitialH2H({ game1: md.game1, game2: md.game2, spares: md.spares });
           }
         } catch {/* ignore */}
-        const maxTier = Math.max(
-          weeklyTier.tier_number || 1,
-          ...((data || []).map(r => (r as any).tier_number as number) || [1])
-        );
-        const offset = Math.max(0, (maxTier - (weeklyTier.tier_number || 1)));
+        // Find the maximum (bottom) tier number - ensure we handle nulls/undefined
+        const rawTiers = (data || []).map(r => (r as any).tier_number);
+        console.log('Raw tier numbers extracted:', rawTiers);
+
+        const allTiers = rawTiers
+          .filter(t => typeof t === 'number' && t > 0) as number[];
+        console.log('Filtered tier numbers:', allTiers);
+
+        // Ensure we have at least the current tier in our list
+        if (!allTiers.includes(weeklyTier.tier_number)) {
+          console.log('Adding current tier to list:', weeklyTier.tier_number);
+          allTiers.push(weeklyTier.tier_number);
+        }
+
+        // If no tiers found or empty, fallback to using current tier as max
+        const maxTier = allTiers.length > 0 ? Math.max(...allTiers) : (weeklyTier.tier_number || 1);
+        console.log('Max tier calculated:', maxTier, 'from tiers:', allTiers);
+
+        // Calculate offset from bottom tier (higher tier number = lower tier position)
+        // For example: if tiers are 1,2,3 and current is tier 2:
+        // offset = 3 - 2 = 1 (one tier above bottom)
+        // tierBonus = 1 * 8 = 8 points
+        const currentTierNum = weeklyTier.tier_number || 1;
+        const offset = Math.max(0, (maxTier - currentTierNum));
+
+        console.log('FINAL Tier calculation:', {
+          currentTier: currentTierNum,
+          maxTier: maxTier,
+          allTiers: allTiers,
+          calculatedOffset: offset,
+          expectedBonus: offset * 8,
+          willSetPointsOffset: offset
+        });
+
+        // CRITICAL: Ensure we're actually setting the right value
+        if (offset !== pointsOffset) {
+          console.log(`UPDATING pointsOffset from ${pointsOffset} to ${offset}`);
+        }
+
         setPointsOffset(offset);
         setIsTopTier((weeklyTier.tier_number || 1) === 1);
 
@@ -112,7 +176,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
       }
     };
     fetchMaxTier();
-  }, [weeklyTier]);
+  }, [weeklyTier, isOpen]); // Also re-run when modal opens
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -416,7 +480,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                       B: (submittedNames as any).B || (teamNames as any).B || '',
                     },
                     sets: sets as any,
-                    spares: (spares as any) || {},
+                    spares: (spares ?? {}) as any,
                     pointsTierOffset: pointsOffset,
                     isTopTier,
                   });
@@ -439,7 +503,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
               tierNumber={weeklyTier.tier_number}
               initial={initialH2H as any}
               submitting={saving}
-              onSubmit={async ({ teamNames: submittedNames, game1, game2 }) => {
+              onSubmit={async ({ teamNames: submittedNames, game1, game2, spares }) => {
                 try {
                   setSaving(true);
                   const leagueId = (weeklyTier as any).league_id as number;
@@ -472,6 +536,70 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                 }
               }}
             />
+          ) : isSixTeamHH ? (
+            <Scorecard6TeamsHeadToHead
+              teamNames={{
+                A: (weeklyTier as any).team_a_name || '',
+                B: (weeklyTier as any).team_b_name || '',
+                C: (weeklyTier as any).team_c_name || '',
+                D: (weeklyTier as any).team_d_name || '',
+                E: (weeklyTier as any).team_e_name || '',
+                F: (weeklyTier as any).team_f_name || '',
+              } as any}
+              submitting={saving}
+              initial={initialH2H as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              onSubmit={async ({ teamNames: submittedNames, game1, game2, spares }) => {
+                try {
+                  setSaving(true);
+
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  const tierId = (weeklyTier as any).id as number;
+
+                  const teamNames = {
+                    A: (submittedNames as any).A || (weeklyTier as any).team_a_name || '',
+                    B: (submittedNames as any).B || (weeklyTier as any).team_b_name || '',
+                    C: (submittedNames as any).C || (weeklyTier as any).team_c_name || '',
+                    D: (submittedNames as any).D || (weeklyTier as any).team_d_name || '',
+                    E: (submittedNames as any).E || (weeklyTier as any).team_e_name || '',
+                    F: (submittedNames as any).F || (weeklyTier as any).team_f_name || '',
+                  };
+
+                  console.log('About to submit 6-team scores with:', {
+                    tierNumber,
+                    pointsOffset,
+                    isTopTier,
+                    expectedBonus: pointsOffset * 8
+                  });
+
+                  await submitSixTeamHeadToHeadScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId,
+                    teamNames,
+                    game1: game1 as any,
+                    game2: game2 as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier: isTopTier,
+                    spares: (spares ?? {}) as any
+                  });
+
+                  showToast('6-team scores saved successfully with standings and movement applied!', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit 6-team scores:', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
           ) : (
             <Scorecard2TeamsBestOf5
               teamNames={{ A: teamNames.A, B: teamNames.B } as any}
@@ -497,7 +625,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                       B: (submittedNames as any).B || (teamNames as any).B || '',
                     },
                     sets: sets as any,
-                    spares: (spares as any) || {},
+                    spares: (spares ?? {}) as any,
                     pointsTierOffset: pointsOffset,
                     isTopTier,
                   });
@@ -520,3 +648,4 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     </Dialog>
   );
 }
+
