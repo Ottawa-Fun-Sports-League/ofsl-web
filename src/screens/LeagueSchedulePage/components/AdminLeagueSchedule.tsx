@@ -1592,26 +1592,44 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                     <div className="p-4">
                       {(() => {
                         const fmt = String(tier.format || '').toLowerCase().trim();
+                        const teamCount = getTeamCountForFormat(tier.format || '3-teams-6-sets');
+                        const isSixTeam = fmt === '6-teams-head-to-head' || teamCount === 6 || Boolean((tier as any).team_e_name || (tier as any).team_f_name);
                         const isFourTeam = fmt === '4-teams-head-to-head';
-                        if (!isFourTeam) {
+                        if (isSixTeam) {
                           return (
-                            <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
-                              {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => 
-                                renderTeamSlot(tier, position, tierIndex)
-                              ).filter(Boolean)}
+                            <div className="relative">
+                              <div className="grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
+                                <div className="col-span-2 text-center font-semibold">Court 1</div>
+                                <div className="col-span-2 text-center font-semibold">Court 2</div>
+                                <div className="col-span-2 text-center font-semibold">Court 3</div>
+                              </div>
+                              <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                              <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                              <div className="grid grid-cols-6 gap-4">
+                                {(['A','B','C','D','E','F'] as const).map((position) => renderTeamSlot(tier, position, tierIndex)).filter(Boolean)}
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (isFourTeam) {
+                          return (
+                            <div className="relative">
+                              <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
+                                <div className="col-span-2 text-center font-semibold">Court 1</div>
+                                <div className="col-span-2 text-center font-semibold">Court 2</div>
+                              </div>
+                              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                              <div className="grid grid-cols-4 gap-4">
+                                {(['A','B','C','D'] as const).map((position) => renderTeamSlot(tier, position, tierIndex)).filter(Boolean)}
+                              </div>
                             </div>
                           );
                         }
                         return (
-                          <div className="relative">
-                            <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
-                              <div className="col-span-2 text-center font-semibold">Court 1</div>
-                              <div className="col-span-2 text-center font-semibold">Court 2</div>
-                            </div>
-                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                            <div className="grid grid-cols-4 gap-4">
-                              {(['A','B','C','D'] as const).map((position) => renderTeamSlot(tier, position, tierIndex)).filter(Boolean)}
-                            </div>
+                          <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                            {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => 
+                              renderTeamSlot(tier, position, tierIndex)
+                            ).filter(Boolean)}
                           </div>
                         );
                       })()}
@@ -1680,18 +1698,66 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 <div className="p-4">
                   {(() => {
                     const fmt = String(tier.format || '').toLowerCase().trim();
-                    return fmt === '4-teams-head-to-head';
-                  })() ? (
-                    <div className="relative">
-                      {/* Court labels */}
-                      <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
-                        <div className="col-span-2 text-center font-semibold">Court 1</div>
-                        <div className="col-span-2 text-center font-semibold">Court 2</div>
-                      </div>
-                      {/* Vertical separator between courts */}
-                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                      <div className="grid grid-cols-4 gap-4">
-                        {(['A','B','C','D'] as const).map((position) => (
+                    const teamCount = getTeamCountForFormat(tier.format || '3-teams-6-sets');
+                    const isSixTeam = fmt === '6-teams-head-to-head' || teamCount === 6 || Boolean((tier as any).team_e_name || (tier as any).team_f_name);
+                    const isFourTeam = fmt === '4-teams-head-to-head';
+                    if (isSixTeam) {
+                      return (
+                        <div className="relative">
+                          <div className="grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
+                            <div className="col-span-2 text-center font-semibold">Court 1</div>
+                            <div className="col-span-2 text-center font-semibold">Court 2</div>
+                            <div className="col-span-2 text-center font-semibold">Court 3</div>
+                          </div>
+                          <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="grid grid-cols-6 gap-4">
+                            {(['A','B','C','D','E','F'] as const).map((position) => (
+                              <div key={position} className="text-center">
+                                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                <div className="text-sm text-[#6F6F6F]">
+                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                  ) : (
+                                    <span className="text-gray-400 italic">TBD</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (isFourTeam) {
+                      return (
+                        <div className="relative">
+                          {/* Court labels */}
+                          <div className="grid grid-cols-4 text-[12px] text-[#6B7280] mb-1">
+                            <div className="col-span-2 text-center font-semibold">Court 1</div>
+                            <div className="col-span-2 text-center font-semibold">Court 2</div>
+                          </div>
+                          {/* Vertical separator between courts */}
+                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="grid grid-cols-4 gap-4">
+                            {(['A','B','C','D'] as const).map((position) => (
+                              <div key={position} className="text-center">
+                                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                <div className="text-sm text-[#6F6F6F]">
+                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                  ) : (
+                                    <span className="text-gray-400 italic">TBD</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
+                        {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => (
                           <div key={position} className="text-center">
                             <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                             <div className="text-sm text-[#6F6F6F]">
@@ -1704,23 +1770,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           </div>
                         ))}
                       </div>
-                    </div>
-                  ) : (
-                    <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
-                      {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => (
-                        <div key={position} className="text-center">
-                          <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                          <div className="text-sm text-[#6F6F6F]">
-                            {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                              <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
-                            ) : (
-                              <span className="text-gray-400 italic">TBD</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    );
+                  })()}
                   
                 </div>
               </CardContent>
