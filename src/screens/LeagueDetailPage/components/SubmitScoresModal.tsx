@@ -9,11 +9,12 @@ import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsForma
 import { Scorecard4TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard4TeamsHeadToHead';
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
+import { Scorecard6TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard6TeamsHeadToHead';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
 import { applyThreeTeamTierMovementNextWeek } from '../../LeagueSchedulePage/database/scheduleDatabase';
 import { getTierDisplayLabel } from '../../LeagueSchedulePage/utils/formatUtils';
 
@@ -40,8 +41,17 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
   const [initialSets, setInitialSets] = useState<any[] | undefined>(undefined);
   const [initialSpares, setInitialSpares] = useState<Record<'A'|'B'|'C', string> | undefined>(undefined);
   const [initialH2H, setInitialH2H] = useState<{
-    game1?: { court1?: Array<{ label: string; scores: Record<'A'|'B', string> }>; court2?: Array<{ label: string; scores: Record<'C'|'D', string> }> };
-    game2?: { court1?: Array<{ label: string; scores: Record<'WC1'|'WC2', string> }>; court2?: Array<{ label: string; scores: Record<'LC1'|'LC2', string> }> };
+    game1?: {
+      court1?: Array<{ label: string; scores: Record<'A'|'B', string> }>;
+      court2?: Array<{ label: string; scores: Record<'C'|'D', string> }>;
+      court3?: Array<{ label: string; scores: Record<'E'|'F', string> }>;
+    };
+    game2?: {
+      court1?: Array<{ label: string; scores: Record<'G2C1_L'|'G2C1_R', string> }>;
+      court2?: Array<{ label: string; scores: Record<'G2C2_L'|'G2C2_R', string> }>;
+      court3?: Array<{ label: string; scores: Record<'G2C3_L'|'G2C3_R', string> }>;
+    };
+    spares?: Record<'A'|'B'|'C'|'D'|'E'|'F', string>;
   } | undefined>(undefined);
   const [currentWeekNumber, setCurrentWeekNumber] = useState<number | null>(null);
 
@@ -525,6 +535,67 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   onClose();
                 } catch (err: any) {
                   console.error('Failed to submit scores', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : weeklyTier.format === '6-teams-head-to-head' ? (
+            <Scorecard6TeamsHeadToHead
+              teamNames={{
+                A: (weeklyTier as any).team_a_name || '',
+                B: (weeklyTier as any).team_b_name || '',
+                C: (weeklyTier as any).team_c_name || '',
+                D: (weeklyTier as any).team_d_name || '',
+                E: (weeklyTier as any).team_e_name || '',
+                F: (weeklyTier as any).team_f_name || '',
+              } as any}
+              submitting={saving}
+              initial={initialH2H as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              onSubmit={async ({ teamNames: submittedNames, game1, game2, spares }) => {
+                try {
+                  setSaving(true);
+                  const canSubmit = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+                  if (!canSubmit) {
+                    showToast('Only admins or facilitators can submit scores.', 'error');
+                    return;
+                  }
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  const tierId = (weeklyTier as any).id as number;
+
+                  const names = {
+                    A: (submittedNames as any).A || (weeklyTier as any).team_a_name || '',
+                    B: (submittedNames as any).B || (weeklyTier as any).team_b_name || '',
+                    C: (submittedNames as any).C || (weeklyTier as any).team_c_name || '',
+                    D: (submittedNames as any).D || (weeklyTier as any).team_d_name || '',
+                    E: (submittedNames as any).E || (weeklyTier as any).team_e_name || '',
+                    F: (submittedNames as any).F || (weeklyTier as any).team_f_name || '',
+                  };
+
+                  await submitSixTeamHeadToHeadScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId,
+                    teamNames: names,
+                    game1: game1 as any,
+                    game2: game2 as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                    spares: (spares ?? {}) as any,
+                  });
+
+                  showToast('6-team scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit 6-team scores', err);
                   showToast('Failed to submit scores. Please try again.', 'error');
                 } finally {
                   setSaving(false);
