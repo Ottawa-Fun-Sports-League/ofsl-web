@@ -1592,13 +1592,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                     <div className="p-4">
                       {(() => {
                         const fmt = String(tier.format || '').toLowerCase().trim();
-                        const isFourTeam = (
-                          fmt === '4-teams-head-to-head' ||
-                          fmt.includes('4 teams') ||
-                          fmt.includes('4-teams') ||
-                          getTeamCountForFormat(tier.format || '3-teams-6-sets') === 4 ||
-                          Boolean((tier as any).team_c_name || (tier as any).team_d_name)
-                        );
+                        const isFourTeam = fmt === '4-teams-head-to-head';
                         if (!isFourTeam) {
                           return (
                             <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
@@ -1686,14 +1680,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 <div className="p-4">
                   {(() => {
                     const fmt = String(tier.format || '').toLowerCase().trim();
-                    const likelyFourTeam = (
-                      fmt === '4-teams-head-to-head' ||
-                      fmt.includes('4 teams') ||
-                      fmt.includes('4-teams') ||
-                      getTeamCountForFormat(tier.format || '3-teams-6-sets') === 4 ||
-                      Boolean((tier as any).team_c_name || (tier as any).team_d_name)
-                    );
-                    return likelyFourTeam;
+                    return fmt === '4-teams-head-to-head';
                   })() ? (
                     <div className="relative">
                       {/* Court labels */}
