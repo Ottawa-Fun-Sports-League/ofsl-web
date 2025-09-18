@@ -3,6 +3,7 @@ import { X, Users, Check, AlertCircle, Search } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { supabase } from "../../../lib/supabase";
+import type { TeamPositionId, WeeklyScheduleTier } from "../types";
 
 interface AddTeamModalProps {
   isOpen: boolean;
@@ -10,8 +11,8 @@ interface AddTeamModalProps {
   leagueId: string;
   currentWeek: number;
   tierIndex: number;
-  position: string;
-  onAddTeam: (teamName: string, tierIndex: number, position: string) => Promise<void>;
+  position: TeamPositionId;
+  onAddTeam: (teamName: string, tierIndex: number, position: TeamPositionId) => Promise<void>;
 }
 
 interface Team {
@@ -78,13 +79,27 @@ export function AddTeamModal({
 
       // Create a set of scheduled team names for quick lookup
       const scheduledTeamNames = new Set<string>();
-      scheduledTeams?.forEach((schedule) => {
-        if (schedule.team_a_name) scheduledTeamNames.add(schedule.team_a_name);
-        if (schedule.team_b_name) scheduledTeamNames.add(schedule.team_b_name);
-        if (schedule.team_c_name) scheduledTeamNames.add(schedule.team_c_name);
-        if ((schedule as any).team_d_name) scheduledTeamNames.add((schedule as any).team_d_name);
-        if ((schedule as any).team_e_name) scheduledTeamNames.add((schedule as any).team_e_name);
-        if ((schedule as any).team_f_name) scheduledTeamNames.add((schedule as any).team_f_name);
+      type ScheduleTeamNamesRow = Pick<
+        WeeklyScheduleTier,
+        | 'team_a_name'
+        | 'team_b_name'
+        | 'team_c_name'
+        | 'team_d_name'
+        | 'team_e_name'
+        | 'team_f_name'
+      >;
+      (scheduledTeams ?? []).forEach((schedule) => {
+        const row = schedule as ScheduleTeamNamesRow;
+        [
+          row.team_a_name,
+          row.team_b_name,
+          row.team_c_name,
+          row.team_d_name,
+          row.team_e_name,
+          row.team_f_name,
+        ].forEach((name) => {
+          if (name) scheduledTeamNames.add(name);
+        });
       });
 
       // Map teams and mark which ones are already scheduled

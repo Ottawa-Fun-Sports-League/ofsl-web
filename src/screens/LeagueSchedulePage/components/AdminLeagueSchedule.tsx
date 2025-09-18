@@ -14,6 +14,69 @@ import { getTeamForPosition } from '../utils/scheduleLogic';
 import { addTierToAllWeeks, removeTierFromAllWeeks, moveWeekPlacements, getNextPlayableWeek } from '../database/scheduleDatabase';
 import { calculateCurrentWeekToDisplay } from '../utils/weekCalculation';
 
+const TEAM_POSITIONS: TeamPositionId[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+type TeamNameKey = `team_${Lowercase<TeamPositionId>}_name`;
+type TeamRankingKey = `team_${Lowercase<TeamPositionId>}_ranking`;
+type TeamFieldKey = TeamNameKey | TeamRankingKey;
+
+const teamNameKey = (position: TeamPositionId): TeamNameKey =>
+  `team_${position.toLowerCase()}_name` as TeamNameKey;
+
+const teamRankingKey = (position: TeamPositionId): TeamRankingKey =>
+  `team_${position.toLowerCase()}_ranking` as TeamRankingKey;
+
+const getSupabaseErrorCode = (error: unknown): string | undefined =>
+  typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: string }).code)
+    : undefined;
+
+const getTeamNameFromTier = (tier: WeeklyScheduleTier, position: TeamPositionId): string | null => {
+  const value = tier[teamNameKey(position)];
+  return typeof value === 'string' ? value : null;
+};
+
+const isTeamPositionId = (value: string | null | undefined): value is TeamPositionId =>
+  typeof value === 'string' && TEAM_POSITIONS.includes(value as TeamPositionId);
+
+interface GameResultSummary {
+  team_name: string | null;
+  wins: number | null;
+  losses: number | null;
+  points_for: number | null;
+  points_against: number | null;
+  league_points: number | null;
+}
+
+interface TeamRowSummary {
+  id: number;
+  name: string;
+}
+
+interface StandingRowSummary {
+  id: number;
+  wins: number;
+  losses: number;
+  points: number;
+  point_differential: number;
+}
+
+type WeeklyScheduleTeamRow = Pick<
+  WeeklyScheduleTier,
+  | 'id'
+  | 'team_a_name'
+  | 'team_b_name'
+  | 'team_c_name'
+  | 'team_d_name'
+  | 'team_e_name'
+  | 'team_f_name'
+  | 'team_a_ranking'
+  | 'team_b_ranking'
+  | 'team_c_ranking'
+  | 'team_d_ranking'
+  | 'team_e_ranking'
+  | 'team_f_ranking'
+>;
+
 interface AdminLeagueScheduleProps {
   leagueId: string;
   leagueName: string;
@@ -53,7 +116,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
   const [addTeamModalData, setAddTeamModalData] = useState<{
     tierIndex: number;
-    position: string;
+    position: TeamPositionId;
   } | null>(null);
   const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
 
@@ -61,7 +124,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<{
     tierIndex: number;
-    position: string;
+    position: TeamPositionId;
     teamName: string;
   } | null>(null);
 
@@ -215,10 +278,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         .update({ schedule_visible: visible })
         .eq('id', parseInt(leagueId));
       if (error) throw error;
-      setLeagueInfo((prev) => prev ? { ...prev, schedule_visible: visible } : prev);
-    } catch (e: any) {
-      console.error('Failed to update schedule visibility', e);
-      if (e?.code === 'PGRST204') {
+      setLeagueInfo((prev) => (prev ? { ...prev, schedule_visible: visible } : prev));
+    } catch (error) {
+      console.error('Failed to update schedule visibility', error);
+      const errorCode = getSupabaseErrorCode(error);
+      if (errorCode === 'PGRST204') {
         alert("Schedule visibility setting isn't available yet. Apply the DB migration to add 'schedule_visible' to the 'leagues' table, then try again.");
       } else {
         alert('Failed to update schedule visibility. Please try again.');
@@ -254,22 +318,23 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       setLoadingWeekData(true);
 
       const { data, error } = await supabase
-        .from("weekly_schedules")
-        .select("*")
-        .eq("league_id", parseInt(leagueId))
-        .eq("week_number", weekNumber)
-        .order("tier_number", { ascending: true });
+        .from('weekly_schedules')
+        .select('*')
+        .eq('league_id', parseInt(leagueId))
+        .eq('week_number', weekNumber)
+        .order('tier_number', { ascending: true });
 
       if (error) {
-        console.error("Error loading weekly schedule:", error);
+        console.error('Error loading weekly schedule:', error);
         setWeeklyTiers([]);
         return;
       }
 
-      setWeeklyTiers(data || []);
-      
+      const tiers = (data ?? []) as WeeklyScheduleTier[];
+      setWeeklyTiers(tiers);
+
       // Week is considered no-games only if ALL tiers are marked no_games
-      const allNoGames = Array.isArray(data) && data.length > 0 && data.every((t: any) => !!t.no_games);
+      const allNoGames = tiers.length > 0 && tiers.every((tier) => Boolean(tier.no_games));
       setNoGamesWeek(allNoGames);
 
       // Load which tiers already have a submitted scorecard this week
@@ -281,9 +346,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           .eq('week_number', weekNumber)
           .limit(1000);
         const set = new Set<number>();
-        (submitted || []).forEach((r: any) => set.add(r.tier_number));
+        const submittedRows = (submitted ?? []) as { tier_number: number }[];
+        submittedRows.forEach((row) => set.add(row.tier_number));
         setSubmittedTierNumbers(set);
-      } catch {}
+      } catch (err) {
+        console.warn('Unable to load submitted score tiers for admin schedule', err);
+      }
       
     } catch (error) {
       console.error("Error loading weekly schedule:", error);
@@ -387,25 +455,33 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const loadTeamPositions = async () => {
     try {
       const { data: standingsData, error } = await supabase
-        .from("standings")
+        .from('standings')
         .select(
           `
           teams!inner(name),
           current_position
         `,
         )
-        .eq("league_id", parseInt(leagueId))
-        .order("current_position", { ascending: true, nullsFirst: false });
+        .eq('league_id', parseInt(leagueId))
+        .order('current_position', { ascending: true, nullsFirst: false });
 
-      if (error && error.code !== "PGRST116") {
-        console.warn("Error loading team standings for admin positions:", error);
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Error loading team standings for admin positions:', error);
         return;
       }
 
       if (standingsData && standingsData.length > 0) {
         const positionsMap = new Map<string, number>();
-        standingsData.forEach((standing: any) => {
-          positionsMap.set(standing.teams.name, standing.current_position || 1);
+        const rows = standingsData as Array<{
+          teams: { name: string | null } | Array<{ name: string | null }> | null;
+          current_position: number | null;
+        }>;
+
+        rows.forEach(({ teams, current_position }) => {
+          const candidate = Array.isArray(teams) ? teams[0]?.name : teams?.name;
+          if (candidate) {
+            positionsMap.set(candidate, current_position ?? 1);
+          }
         });
 
         setTeamPositions(positionsMap);
@@ -442,8 +518,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         .eq('tier_number', tier.tier_number);
       if (fetchResErr) throw fetchResErr;
 
+      const resultRows = (existingResults ?? []) as GameResultSummary[];
       // Roll back standings for affected teams
-      const teamNames = (existingResults || []).map((r: any) => r.team_name).filter(Boolean);
+      const teamNames = resultRows
+        .map((r) => r.team_name)
+        .filter((name): name is string => Boolean(name));
       if (teamNames.length > 0) {
         const { data: teamRows, error: teamsErr } = await supabase
           .from('teams')
@@ -452,10 +531,14 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           .in('name', teamNames);
         if (teamsErr) throw teamsErr;
         const nameToId = new Map<string, number>();
-        (teamRows || []).forEach((t: any) => nameToId.set(t.name, t.id));
+        (teamRows ?? []).forEach((team) => {
+          const row = team as TeamRowSummary;
+          nameToId.set(row.name, row.id);
+        });
 
-        for (const row of (existingResults || [])) {
-          const teamId = nameToId.get(row.team_name as string);
+        for (const row of resultRows) {
+          if (!row.team_name) continue;
+          const teamId = nameToId.get(row.team_name);
           if (!teamId) continue;
           const addWins = Number(row.wins || 0);
           const addLosses = Number(row.losses || 0);
@@ -470,18 +553,19 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
             .eq('league_id', leagueIdNum)
             .eq('team_id', teamId)
             .maybeSingle();
-          if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
-          if (!standingRow) continue;
+          if (standingErr && getSupabaseErrorCode(standingErr) !== 'PGRST116') throw standingErr;
+          const standing = standingRow as StandingRowSummary | null;
+          if (!standing) continue;
 
           const { error: updErr } = await supabase
             .from('standings')
             .update({
-              wins: (standingRow as any).wins - addWins,
-              losses: (standingRow as any).losses - addLosses,
-              points: (standingRow as any).points - addPoints,
-              point_differential: (standingRow as any).point_differential - addDiff,
+              wins: standing.wins - addWins,
+              losses: standing.losses - addLosses,
+              points: standing.points - addPoints,
+              point_differential: standing.point_differential - addDiff,
             })
-            .eq('id', (standingRow as any).id);
+            .eq('id', standing.id);
           if (updErr) throw updErr;
         }
 
@@ -503,22 +587,23 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
             .eq('week_number', nextWeek);
 
           const namesToClear = new Set(teamNames);
-          for (const row of (nextRows || [])) {
-            const updates: Record<string, any> = {};
-            (['a','b','c','d','e','f'] as const).forEach((p) => {
-              const key = `team_${p}_name` as const;
-              const rk = `team_${p}_ranking` as const;
-              const val = (row as any)[key] as string | null;
-              if (val && namesToClear.has(val)) {
-                updates[key] = null;
-                updates[rk] = null;
+          const nextWeekRows = (nextRows ?? []) as WeeklyScheduleTeamRow[];
+          for (const row of nextWeekRows) {
+            const updates: Partial<Record<TeamFieldKey, string | number | null>> = {};
+            TEAM_POSITIONS.forEach((position) => {
+              const nameKey = teamNameKey(position);
+              const rankKey = teamRankingKey(position);
+              const value = row[nameKey];
+              if (typeof value === 'string' && namesToClear.has(value)) {
+                updates[nameKey] = null;
+                updates[rankKey] = null;
               }
             });
             if (Object.keys(updates).length > 0) {
               const { error: clrErr } = await supabase
                 .from('weekly_schedules')
                 .update(updates)
-                .eq('id', (row as any).id);
+                .eq('id', row.id);
               if (clrErr) throw clrErr;
             }
           }
@@ -728,7 +813,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   };
 
   // Team management
-  const handleDeleteTeam = (tierIndex: number, position: string, teamName: string) => {
+  const handleDeleteTeam = (tierIndex: number, position: TeamPositionId, teamName: string) => {
     setTeamToDelete({ tierIndex, position, teamName });
     setDeleteConfirmOpen(true);
   };
@@ -739,8 +824,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     try {
       const { tierIndex, position } = teamToDelete;
       const tier = weeklyTiers[tierIndex];
-      const nameKey = `team_${position.toLowerCase()}_name`;
-      const rankingKey = `team_${position.toLowerCase()}_ranking`;
+      const nameKey = teamNameKey(position);
+      const rankingKey = teamRankingKey(position);
 
       const { error } = await supabase
         .from("weekly_schedules")
@@ -762,7 +847,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     }
   };
 
-  const handleAddTeam = (tierIndex: number, position: string) => {
+  const handleAddTeam = (tierIndex: number, position: TeamPositionId) => {
     setAddTeamModalData({ tierIndex, position });
     setAddTeamModalOpen(true);
   };
@@ -857,7 +942,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     }
   };
 
-  const handleAddTeamToSchedule = async (teamName: string, tierIndex: number, position: string) => {
+  const handleAddTeamToSchedule = async (
+    teamName: string,
+    tierIndex: number,
+    position: TeamPositionId,
+  ) => {
     try {
       // Find the tier to add the team to
       const targetTier = weeklyTiers[tierIndex];
@@ -870,8 +959,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
       // Update the tier with the new team
       const updatePayload = {
-        [`team_${position.toLowerCase()}_name`]: teamName,
-        [`team_${position.toLowerCase()}_ranking`]: teamRanking,
+        [teamNameKey(position)]: teamName,
+        [teamRankingKey(position)]: teamRanking,
         updated_at: new Date().toISOString(),
       };
 
@@ -984,8 +1073,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   };
 
   // Team rendering function with admin controls
-  const renderTeamSlot = (tier: WeeklyScheduleTier, position: string, tierIndex: number) => {
-    const team = getTeamForPosition(tier, position as TeamPositionId);
+  const renderTeamSlot = (tier: WeeklyScheduleTier, position: TeamPositionId, tierIndex: number) => {
+    const team = getTeamForPosition(tier, position);
     const maxTeamsForFormat = getTeamCountForFormat(tier.format);
     const positionIndex = ["A", "B", "C", "D", "E", "F"].indexOf(position);
 
@@ -1071,38 +1160,58 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                   return;
                 }
 
+                if (!isTeamPositionId(dragState.fromPosition)) {
+                  setDragState({
+                    isDragging: false,
+                    draggedTeam: null,
+                    fromTier: null,
+                    fromPosition: null,
+                    hoverTier: null,
+                    hoverPosition: null,
+                    mouseX: 0,
+                    mouseY: 0,
+                  });
+                  return;
+                }
+
                 try {
                   // Get source and target tiers
                   const sourceTier = weeklyTiers[dragState.fromTier];
                   const targetTier = weeklyTiers[tierIndex];
 
-                  if (!sourceTier || !targetTier) return;
+                  if (!sourceTier || !targetTier) {
+                    return;
+                  }
+
+                  const fromPosition = dragState.fromPosition;
+                  const sourceNameKey = teamNameKey(fromPosition);
+                  const sourceRankingKey = teamRankingKey(fromPosition);
 
                   // Update source tier (remove team)
-                  const sourceUpdatePayload = {
-                    [`team_${dragState.fromPosition.toLowerCase()}_name`]: null,
-                    [`team_${dragState.fromPosition.toLowerCase()}_ranking`]: null,
+                  const sourceUpdatePayload: Partial<Record<TeamFieldKey, string | number | null>> = {
+                    [sourceNameKey]: null,
+                    [sourceRankingKey]: null,
                   };
 
                   const { error: sourceError } = await supabase
-                    .from("weekly_schedules")
+                    .from('weekly_schedules')
                     .update(sourceUpdatePayload)
-                    .eq("id", sourceTier.id);
+                    .eq('id', sourceTier.id);
 
                   if (sourceError) throw sourceError;
 
                   // Update target tier (add team)
-                  const targetUpdatePayload = {
-                    [`team_${position.toLowerCase()}_name`]: dragState.draggedTeam,
-                    [`team_${position.toLowerCase()}_ranking`]:
-                      getTeamForPosition(sourceTier, dragState.fromPosition as TeamPositionId)
-                        ?.ranking || 0,
+                  const targetNameKey = teamNameKey(position);
+                  const targetRankingKey = teamRankingKey(position);
+                  const targetUpdatePayload: Partial<Record<TeamFieldKey, string | number | null>> = {
+                    [targetNameKey]: dragState.draggedTeam,
+                    [targetRankingKey]: getTeamForPosition(sourceTier, fromPosition)?.ranking || 0,
                   };
 
                   const { error: targetError } = await supabase
-                    .from("weekly_schedules")
+                    .from('weekly_schedules')
                     .update(targetUpdatePayload)
-                    .eq("id", targetTier.id);
+                    .eq('id', targetTier.id);
 
                   if (targetError) throw targetError;
 
@@ -1199,6 +1308,21 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       </div>
     );
   };
+
+  const renderTemplateSlot = (tier: WeeklyScheduleTier, position: TeamPositionId) => {
+    const teamName = getTeamNameFromTier(tier, position);
+    return (
+      <div key={position} className="text-center">
+        <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+        <div className="text-sm text-[#6F6F6F]">
+          {teamName ? <span>{teamName}</span> : <span className="text-gray-400 italic">TBD</span>}
+        </div>
+      </div>
+    );
+  };
+
+  const labelMap = buildWeekTierLabels(weeklyTiers);
+  const templateLabelMap = buildWeekTierLabels(week1TierStructure);
 
   return (
     <div>
@@ -1450,7 +1574,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                   </button>
                 </div>
               )}
-              
               {weeklyTiers.map((tier, tierIndex) => (
                 <Card key={tier.id} className={`shadow-md overflow-hidden rounded-lg ${tier.no_games ? 'bg-gray-100' : ''}`}>
                   <CardContent className="p-0 overflow-hidden">
@@ -1459,7 +1582,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
                       <h3 className={`font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
-                        Tier {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        Tier {labelMap.get(tier.tier_number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                             Completed
@@ -1506,28 +1629,36 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={async (e) => {
                                   const nextValue = e.target.checked;
+                                  const previousValue = Boolean(tier.no_games);
+
                                   // Optimistic UI update
-                                  let previousValue = !!tier.no_games;
-                                  setWeeklyTiers(prev => {
-                                    const next = prev.map(t => t.id === tier.id ? { ...t, no_games: nextValue } : t);
-                                    const allNoGamesLocal = next.length > 0 && next.every(t => !!t.no_games);
+                                  setWeeklyTiers((prev) => {
+                                    const next = prev.map((t) =>
+                                      t.id === tier.id ? { ...t, no_games: nextValue } : t,
+                                    );
+                                    const allNoGamesLocal =
+                                      next.length > 0 && next.every((t) => Boolean(t.no_games));
                                     setNoGamesWeek(allNoGamesLocal);
                                     return next;
                                   });
-                                      try {
-                                        const { error } = await supabase
-                                          .from('weekly_schedules')
-                                          .update({ no_games: nextValue })
-                                          .eq('id', tier.id);
-                                        if (error) throw error;
-                                        // No automatic movement when toggling tier no-games; admins will manage placements manually
-                                      } catch (err) {
-                                      console.error('Failed to update tier no_games', err);
-                                      alert('Failed to update tier No games setting. Reverting.');
-                                      // Revert UI
-                                      setWeeklyTiers(prev => {
-                                      const next = prev.map(t => t.id === tier.id ? { ...t, no_games: previousValue } : t);
-                                      const allNoGamesLocal = next.length > 0 && next.every(t => !!t.no_games);
+
+                                  try {
+                                    const { error } = await supabase
+                                      .from('weekly_schedules')
+                                      .update({ no_games: nextValue })
+                                      .eq('id', tier.id);
+                                    if (error) throw error;
+                                    // No automatic movement when toggling tier no-games; admins manage placements manually
+                                  } catch (err) {
+                                    console.error('Failed to update tier no_games', err);
+                                    alert('Failed to update tier No games setting. Reverting.');
+                                    // Revert UI
+                                    setWeeklyTiers((prev) => {
+                                      const next = prev.map((t) =>
+                                        t.id === tier.id ? { ...t, no_games: previousValue } : t,
+                                      );
+                                      const allNoGamesLocal =
+                                        next.length > 0 && next.every((t) => Boolean(t.no_games));
                                       setNoGamesWeek(allNoGamesLocal);
                                       return next;
                                     });
@@ -1593,7 +1724,10 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       {(() => {
                         const fmt = String(tier.format || '').toLowerCase().trim();
                         const teamCount = getTeamCountForFormat(tier.format || '3-teams-6-sets');
-                        const isSixTeam = fmt === '6-teams-head-to-head' || teamCount === 6 || Boolean((tier as any).team_e_name || (tier as any).team_f_name);
+                        const isSixTeam =
+                          fmt === '6-teams-head-to-head' ||
+                          teamCount === 6 ||
+                          Boolean(tier.team_e_name || tier.team_f_name);
                         const isFourTeam = fmt === '4-teams-head-to-head';
                         if (isSixTeam) {
                           return (
@@ -1643,13 +1777,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           onClick={() => handleAddTier(tier.tier_number)}
                           className="text-sm text-green-600 hover:text-green-700 hover:underline"
                         >
-                        + Add Tier After {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        + Add Tier After {labelMap.get(tier.tier_number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                         </button>
                       </div>
                     )}
                   </Card>
-                ));
-              })()}
+                ))}
             </>
           )
         ) : currentWeek === 1 ? (
@@ -1659,14 +1792,14 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           </div>
         ) : week1TierStructure.length > 0 ? (
           // Template tiers for future weeks
-          (() => { const templateLabelMap = buildWeekTierLabels(week1TierStructure); return week1TierStructure.map((tier) => (
+          week1TierStructure.map((tier) => (
             <Card key={tier.id} className="shadow-md overflow-hidden rounded-lg">
               <CardContent className="p-0 overflow-hidden">
                 <div className="bg-[#F8F8F8] border-b px-8 py-3">
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
-                        Tier {templateLabelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        Tier {templateLabelMap.get(tier.tier_number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                       </h3>
                     </div>
 
@@ -1697,9 +1830,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
                 <div className="p-4">
                   {(() => {
-                    const fmt = String(tier.format || '').toLowerCase().trim();
-                    const teamCount = getTeamCountForFormat(tier.format || '3-teams-6-sets');
-                    const isSixTeam = fmt === '6-teams-head-to-head' || teamCount === 6 || Boolean((tier as any).team_e_name || (tier as any).team_f_name);
+                        const fmt = String(tier.format || '').toLowerCase().trim();
+                        const teamCount = getTeamCountForFormat(tier.format || '3-teams-6-sets');
+                        const isSixTeam =
+                          fmt === '6-teams-head-to-head' ||
+                          teamCount === 6 ||
+                          Boolean(tier.team_e_name || tier.team_f_name);
                     const isFourTeam = fmt === '4-teams-head-to-head';
                     if (isSixTeam) {
                       return (
@@ -1712,18 +1848,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
                           <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
                           <div className="grid grid-cols-6 gap-4">
-                            {(['A','B','C','D','E','F'] as const).map((position) => (
-                              <div key={position} className="text-center">
-                                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                                <div className="text-sm text-[#6F6F6F]">
-                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
-                                  ) : (
-                                    <span className="text-gray-400 italic">TBD</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                            {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((position) =>
+                              renderTemplateSlot(tier, position)
+                            )}
                           </div>
                         </div>
                       );
@@ -1739,36 +1866,18 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           {/* Vertical separator between courts */}
                           <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
                           <div className="grid grid-cols-4 gap-4">
-                            {(['A','B','C','D'] as const).map((position) => (
-                              <div key={position} className="text-center">
-                                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                                <div className="text-sm text-[#6F6F6F]">
-                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
-                                  ) : (
-                                    <span className="text-gray-400 italic">TBD</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                            {(['A', 'B', 'C', 'D'] as const).map((position) =>
+                              renderTemplateSlot(tier, position)
+                            )}
                           </div>
                         </div>
                       );
                     }
                     return (
                       <div className={`grid ${getGridColsClass(getTeamCountForFormat(tier.format || '3-teams-6-sets'))} gap-4`}>
-                        {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) => (
-                          <div key={position} className="text-center">
-                            <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                            <div className="text-sm text-[#6F6F6F]">
-                              {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
-                              ) : (
-                                <span className="text-gray-400 italic">TBD</span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                        {getPositionsForFormat(tier.format || '3-teams-6-sets').map((position) =>
+                          renderTemplateSlot(tier, position)
+                        )}
                       </div>
                     );
                   })()}
@@ -1776,7 +1885,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 </div>
               </CardContent>
             </Card>
-          ))})()
+          ))
         ) : (
           <div className="text-center py-12">
             <h3 className="text-xl font-bold text-[#6F6F6F] mb-2">No Schedule Available</h3>
@@ -1832,7 +1941,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         onClose={closeSubmitScores}
         weeklyTier={submitScoresTier}
         onSuccess={async () => {
-          try { await loadWeeklySchedule(currentWeek); } catch {}
+          try {
+            await loadWeeklySchedule(currentWeek);
+          } catch (err) {
+            console.warn('Failed to refresh weekly schedule after submitting scores', err);
+          }
         }}
       />
 
@@ -1854,7 +1967,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         currentWeek={currentWeek}
         onAddTeam={handleAddTeamToSchedule}
         tierIndex={addTeamModalData?.tierIndex ?? 0}
-        position={addTeamModalData?.position ?? ""}
+        position={addTeamModalData?.position ?? 'A'}
       />
 
       {/* Delete Confirmation Modal */}

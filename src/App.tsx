@@ -37,6 +37,7 @@ import {
   IndividualEditPage,
   LeagueNewPage,
   UserRegistrationsPage,
+  SiteSettingsTab,
 } from "./screens/MyAccount";
 import { LeagueTeamsPage } from "./screens/LeagueTeamsPage";
 import { LeagueSchedulePage } from "./screens/LeagueSchedulePage";
@@ -60,7 +61,7 @@ import { AuthRedirectPage } from "./screens/AuthRedirectPage";
 export function App() {
   // Track page views for Google Analytics
   useGoogleAnalytics();
-  
+
   return (
     <ToastProvider>
       <AuthProvider>
@@ -69,37 +70,109 @@ export function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/complete-profile" element={<ProfileCompletionPage />} />
-            <Route path="/" element={<ConditionalRoute><HomePage /></ConditionalRoute>} />
-            <Route path="/volleyball" element={<ConditionalRoute><VolleyballPage /></ConditionalRoute>} />
-            <Route path="/badminton" element={<ConditionalRoute><BadmintonPage /></ConditionalRoute>} />
-            <Route path="/pickleball" element={<ConditionalRoute><PickleballPage /></ConditionalRoute>} />
-            <Route path="/leagues" element={<ConditionalRoute><LeaguesPage /></ConditionalRoute>} />
             <Route
-              path="/google-signup-redirect"
-              element={<GoogleSignupRedirect />}
+              path="/"
+              element={
+                <ConditionalRoute>
+                  <HomePage />
+                </ConditionalRoute>
+              }
             />
-            <Route path="/leagues/:id" element={<ConditionalRoute><LeagueDetailPage /></ConditionalRoute>} />
+            <Route
+              path="/volleyball"
+              element={
+                <ConditionalRoute>
+                  <VolleyballPage />
+                </ConditionalRoute>
+              }
+            />
+            <Route
+              path="/badminton"
+              element={
+                <ConditionalRoute>
+                  <BadmintonPage />
+                </ConditionalRoute>
+              }
+            />
+            <Route
+              path="/pickleball"
+              element={
+                <ConditionalRoute>
+                  <PickleballPage />
+                </ConditionalRoute>
+              }
+            />
+            <Route
+              path="/leagues"
+              element={
+                <ConditionalRoute>
+                  <LeaguesPage />
+                </ConditionalRoute>
+              }
+            />
+            <Route path="/google-signup-redirect" element={<GoogleSignupRedirect />} />
+            <Route
+              path="/leagues/:id"
+              element={
+                <ConditionalRoute>
+                  <LeagueDetailPage />
+                </ConditionalRoute>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/signup-confirmation" element={<SignupConfirmation />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             {/* Ensure reset-password route can handle both query params and hash fragments */}
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/about-us" element={<ConditionalRoute><AboutUsPage /></ConditionalRoute>} />
+            <Route
+              path="/about-us"
+              element={
+                <ConditionalRoute>
+                  <AboutUsPage />
+                </ConditionalRoute>
+              }
+            />
             <Route
               path="/standards-of-play"
-              element={<ConditionalRoute><StandardsOfPlayPage /></ConditionalRoute>}
+              element={
+                <ConditionalRoute>
+                  <StandardsOfPlayPage />
+                </ConditionalRoute>
+              }
             />
             <Route
               path="/skills-and-drills"
-              element={<ConditionalRoute><SkillsAndDrillsPage /></ConditionalRoute>}
+              element={
+                <ConditionalRoute>
+                  <SkillsAndDrillsPage />
+                </ConditionalRoute>
+              }
             />
             <Route
               path="/tournaments"
-              element={<ConditionalRoute><TournamentsPage /></ConditionalRoute>}
+              element={
+                <ConditionalRoute>
+                  <TournamentsPage />
+                </ConditionalRoute>
+              }
             />
-            <Route path="/success" element={<ConditionalRoute><SuccessPage /></ConditionalRoute>} />
-            <Route path="/cancel" element={<ConditionalRoute><CancelPage /></ConditionalRoute>} />
+            <Route
+              path="/success"
+              element={
+                <ConditionalRoute>
+                  <SuccessPage />
+                </ConditionalRoute>
+              }
+            />
+            <Route
+              path="/cancel"
+              element={
+                <ConditionalRoute>
+                  <CancelPage />
+                </ConditionalRoute>
+              }
+            />
             <Route path="/auth-redirect" element={<AuthRedirectPage />} />
 
             {/* My Account routes with proper routing */}
@@ -230,7 +303,6 @@ export function App() {
               }
             />
 
-
             {/* League Teams Page - separate route */}
             <Route
               path="/leagues/:leagueId/teams"
@@ -259,12 +331,18 @@ export function App() {
               }
             />
 
-
             {/* Coming Soon page route */}
             <Route path="/coming-soon" element={<ComingSoonPage />} />
 
             {/* Catch-all route for any unmatched routes */}
-            <Route path="*" element={<AdminOnlyRoute><Navigate to="/" replace /></AdminOnlyRoute>} />
+            <Route
+              path="*"
+              element={
+                <AdminOnlyRoute>
+                  <Navigate to="/" replace />
+                </AdminOnlyRoute>
+              }
+            />
 
             {/* Legacy redirects for backward compatibility */}
             <Route
