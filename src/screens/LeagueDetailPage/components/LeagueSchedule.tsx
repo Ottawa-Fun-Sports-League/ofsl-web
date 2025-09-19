@@ -35,11 +35,14 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
   // const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   const [isScheduleVisible, setIsScheduleVisible] = useState<boolean>(true);
+  // Restrict navigation to current week and the following week for all users on public schedule
+  const restrictToTwoWeeks = true;
+  // Public schedule: do not show per-team W/L badges
   const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
   const labelMap = buildWeekTierLabels(weeklyTiers);
   const templateLabelMap = buildWeekTierLabels(week1TierStructure);
   
-  // Check if user is admin or facilitator
+  // Check if user is admin or facilitator (used only for Submit Scores button visibility)
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
 
   // Fetch league info for playoff weeks calculation and set initial week
@@ -202,10 +205,24 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
       const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
       const maxWeeks = regularSeasonWeeks + (leagueInfo.playoff_weeks || 0);
 
+      // If user is a captain/player (not admin/facilitator), restrict to current and next week
+      if (restrictToTwoWeeks) {
+        const todayWeek = getCurrentWeek();
+        const minAllowed = Math.max(1, todayWeek);
+        const maxAllowed = Math.min(maxWeeks, todayWeek + 1);
+        return weekNumber >= minAllowed && weekNumber <= maxAllowed;
+      }
+
       return weekNumber <= maxWeeks;
     }
 
     // Fallback: allow navigation to reasonable number of weeks
+    if (restrictToTwoWeeks) {
+      const todayWeek = getCurrentWeek();
+      const minAllowed = Math.max(1, todayWeek);
+      const maxAllowed = todayWeek + 1;
+      return weekNumber >= minAllowed && weekNumber <= maxAllowed;
+    }
     return weekNumber <= 20;
   };
 
@@ -305,6 +322,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
         (submitted || []).forEach((r: any) => set.add(r.tier_number));
         setSubmittedTierNumbers(set);
       } catch {}
+
+      // No public W/L tags
     } catch (error) {
       console.error("Error loading weekly schedule:", error);
       setWeeklyTiers([]);
@@ -719,11 +738,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                               <div key={position} className="text-center">
                                 <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                                 <div className="text-sm text-gray-400 italic">
-                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
-                                  ) : (
-                                    <span className="text-gray-400 italic">TBD</span>
-                                  )}
+                          {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                              ) : (
+                                  <span className="text-gray-400 italic">TBD</span>
+                                )}
                                 </div>
                               </div>
                             ))}

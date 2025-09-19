@@ -119,6 +119,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     position: TeamPositionId;
   } | null>(null);
   const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
+  const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
+  const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
 
   // Team deletion confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -351,6 +353,36 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         setSubmittedTierNumbers(set);
       } catch (err) {
         console.warn('Unable to load submitted score tiers for admin schedule', err);
+      }
+      // Load results for W/L tags using tier_position (winner=1, loser=max)
+      try {
+        const { data: results } = await supabase
+          .from('game_results')
+          .select('team_name, tier_number, tier_position')
+          .eq('league_id', parseInt(leagueId))
+          .eq('week_number', weekNumber)
+          .limit(1000);
+        const map = new Map<string, 'W'|'L'|'T'>();
+        const maxPosByTier = new Map<number, number>();
+        (results || []).forEach((row: any) => {
+          const tierNum = Number(row.tier_number);
+          const pos = Number(row.tier_position || 0);
+          if (!Number.isFinite(tierNum) || !Number.isFinite(pos)) return;
+          const cur = maxPosByTier.get(tierNum) || 0;
+          if (pos > cur) maxPosByTier.set(tierNum, pos);
+        });
+        (results || []).forEach((row: any) => {
+          const name = (row.team_name as string) || '';
+          if (!name) return;
+          const tierNum = Number(row.tier_number);
+          const pos = Number(row.tier_position || 0);
+          const maxPos = maxPosByTier.get(tierNum) || 0;
+          if (pos === 1) map.set(norm(name), 'W');
+          else if (maxPos && pos === maxPos) map.set(norm(name), 'L');
+        });
+        setResultsByTeam(map);
+      } catch (e) {
+        console.warn('Unable to load W/L results for admin schedule', e);
       }
       
     } catch (error) {
@@ -1236,12 +1268,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               }
             : undefined
         }
-      >
-        <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-        <div className="text-sm text-[#6F6F6F] relative">
-          {team?.name ? (
-            <div className="relative group">
-              <span
+              >
+                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                <div className="text-sm text-[#6F6F6F] relative">
+                  {team?.name ? (
+                    <div className="relative group">
+                      <span
                 draggable={isEditScheduleMode}
                 onDragStart={() => {
                   if (!isEditScheduleMode) return;
@@ -1271,6 +1303,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 className={isEditScheduleMode ? "cursor-move" : "cursor-default"}
               >
                 {`${team.name} (${teamPositions.get(team.name) || team.ranking || "-"})`}
+                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(norm(team.name)) === 'W' && (
+                  <span className="ml-2 inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
+                )}
+                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(norm(team.name)) === 'L' && (
+                  <span className="ml-2 inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
+                )}
               </span>
               {isEditScheduleMode && (
                 <button
@@ -1396,11 +1434,24 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 disabled={(() => {
                   const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
                   const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
-                  return savingNoGames || weekCompleted || isPastWeek;
+                  const anySubmittedThisWeek = submittedTierNumbers.size > 0;
+                  // Disable if saving, if all tiers completed, if viewing a past week,
+                  // or if any scores have been submitted for this displayed week (movement already applied)
+                  return savingNoGames || weekCompleted || isPastWeek || anySubmittedThisWeek;
                 })()}
                 className="rounded"
               />
-              <span className="text-sm text-gray-700">No Games This Week</span>
+              <span
+                className={`text-sm ${(() => {
+                  const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
+                  const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
+                  const anySubmittedThisWeek = submittedTierNumbers.size > 0;
+                  const isDisabled = savingNoGames || weekCompleted || isPastWeek || anySubmittedThisWeek;
+                  return isDisabled ? 'text-gray-400' : 'text-gray-700';
+                })()}`}
+              >
+                No Games This Week
+              </span>
               {savingNoGames && <span className="text-xs text-gray-500">(Saving...)</span>}
             </label>
 

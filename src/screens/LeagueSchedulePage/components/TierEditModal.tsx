@@ -40,6 +40,13 @@ const TIME_PRESETS = [
   'Custom'
 ];
 
+const COURT_PRESETS = [
+  'Court 1',
+  'Court 2',
+  'Court 3',
+  'CUSTOM'
+];
+
 
 export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leagueId, leagueName, onSave }: TierEditModalProps) {
   const [gyms, setGyms] = useState<Gym[]>([]);
@@ -70,6 +77,27 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   
   const [formatValidation, setFormatValidation] = useState<FormatValidationResult | null>(null);
   const [previewTeams, setPreviewTeams] = useState<typeof tier.teams | null>(null);
+
+  // Treat placeholders like 'TBD' as unset
+  const isUnsetCourt = (val: string) => {
+    const t = (val || '').trim().toUpperCase();
+    return t === '' || t === 'TBD' || t === 'TBA';
+  };
+  // Dropdown selection state for court: '', preset, or 'CUSTOM'
+  const [courtSelection, setCourtSelection] = useState<'' | 'Court 1' | 'Court 2' | 'Court 3' | 'CUSTOM'>('');
+
+  // When modal opens or tier changes, initialize selection from tier value
+  useEffect(() => {
+    const v = (tier.court || '').trim();
+    if (isUnsetCourt(v)) {
+      setCourtSelection('');
+    } else if ((COURT_PRESETS as readonly string[]).includes(v)) {
+      setCourtSelection(v as any);
+    } else {
+      // Existing non-preset value: select CUSTOM and show text input with saved value
+      setCourtSelection('CUSTOM');
+    }
+  }, [isOpen, tier.court]);
 
   const loadGyms = async () => {
     try {
@@ -568,12 +596,40 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
               <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                 Court
               </label>
-              <Input
-                value={editValues.court}
-                onChange={(e) => setEditValues(prev => ({ ...prev, court: e.target.value }))}
-                placeholder="Enter court (e.g., Court 1, Court A)"
-                className="w-full"
-              />
+              <select
+                value={courtSelection}
+                onChange={(e) => {
+                  const v = e.target.value as typeof courtSelection;
+                  setCourtSelection(v);
+                  setEditValues(prev => {
+                    if (v === 'CUSTOM') {
+                      const prevVal = prev.court || '';
+                      const keep = (COURT_PRESETS as readonly string[]).includes(prevVal) ? '' : prevVal;
+                      return { ...prev, court: keep };
+                    }
+                    if (v === '') {
+                      return { ...prev, court: '' };
+                    }
+                    return { ...prev, court: v };
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
+              >
+                <option value="" disabled>SET COURT</option>
+                {COURT_PRESETS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              {courtSelection === 'CUSTOM' && (
+                <div className="mt-2">
+                  <Input
+                    value={editValues.court}
+                    onChange={(e) => setEditValues(prev => ({ ...prev, court: e.target.value }))}
+                    placeholder="Enter court (e.g., Court 1, Court A)"
+                    className="w-full"
+                  />
+                </div>
+              )}
               <div className="mt-2">
                 <label className="flex items-center">
                   <input
