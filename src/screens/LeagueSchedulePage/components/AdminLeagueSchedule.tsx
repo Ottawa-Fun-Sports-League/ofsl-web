@@ -1434,7 +1434,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 disabled={(() => {
                   const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
                   const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
-                  return savingNoGames || weekCompleted || isPastWeek;
+                  const isCurrentWeek = todayWeekNumber !== null && currentWeek === todayWeekNumber;
+                  const anySubmittedThisWeek = submittedTierNumbers.size > 0;
+                  // Disable if saving, if all tiers completed, if viewing a past week,
+                  // or if we are on the current week and any scores have been submitted (movement already applied)
+                  return savingNoGames || weekCompleted || isPastWeek || (isCurrentWeek && anySubmittedThisWeek);
                 })()}
                 className="rounded"
               />
