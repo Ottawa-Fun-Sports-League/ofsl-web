@@ -1323,6 +1323,10 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
   const labelMap = buildWeekTierLabels(weeklyTiers);
   const templateLabelMap = buildWeekTierLabels(week1TierStructure);
+  const getLabel = (tier: WeeklyScheduleTier) =>
+    labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number);
+  const getTemplateLabel = (tier: WeeklyScheduleTier) =>
+    templateLabelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number);
 
   return (
     <div>
@@ -1515,7 +1519,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
-                          Tier {getTierDisplayLabel(tier.format, tier.tier_number)}
+                          Tier {getLabel(tier)}
                         </h3>
                       </div>
 
@@ -1582,7 +1586,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
                       <h3 className={`font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
-                        Tier {labelMap.get(tier.tier_number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        Tier {getLabel(tier)}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                             Completed
@@ -1777,7 +1781,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           onClick={() => handleAddTier(tier.tier_number)}
                           className="text-sm text-green-600 hover:text-green-700 hover:underline"
                         >
-                        + Add Tier After {labelMap.get(tier.tier_number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        + Add Tier After {getLabel(tier)}
                         </button>
                       </div>
                     )}
@@ -1799,7 +1803,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="font-bold text-[#6F6F6F] text-xl leading-none m-0">
-                        Tier {templateLabelMap.get(tier.tier_number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        Tier {getTemplateLabel(tier)}
                       </h3>
                     </div>
 
