@@ -78,10 +78,15 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   const [formatValidation, setFormatValidation] = useState<FormatValidationResult | null>(null);
   const [previewTeams, setPreviewTeams] = useState<typeof tier.teams | null>(null);
 
+  // Treat placeholders like 'TBD' as unset
+  const isUnsetCourt = (val: string) => {
+    const t = (val || '').trim().toUpperCase();
+    return t === '' || t === 'TBD' || t === 'TBA';
+  };
   // Derive current court selection for the dropdown: '', preset, or 'CUSTOM'
   const courtSelection: '' | 'Court 1' | 'Court 2' | 'Court 3' | 'CUSTOM' = (() => {
     const v = (editValues.court || '').trim();
-    if (!v) return '';
+    if (isUnsetCourt(v)) return '';
     return (COURT_PRESETS as readonly string[]).includes(v) ? (v as any) : 'CUSTOM';
   })();
 
