@@ -1442,7 +1442,18 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 })()}
                 className="rounded"
               />
-              <span className="text-sm text-gray-700">No Games This Week</span>
+              <span
+                className={`text-sm ${(() => {
+                  const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
+                  const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
+                  const isCurrentWeek = todayWeekNumber !== null && currentWeek === todayWeekNumber;
+                  const anySubmittedThisWeek = submittedTierNumbers.size > 0;
+                  const isDisabled = savingNoGames || weekCompleted || isPastWeek || (isCurrentWeek && anySubmittedThisWeek);
+                  return isDisabled ? 'text-gray-400' : 'text-gray-700';
+                })()}`}
+              >
+                No Games This Week
+              </span>
               {savingNoGames && <span className="text-xs text-gray-500">(Saving...)</span>}
             </label>
 
