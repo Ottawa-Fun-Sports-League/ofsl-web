@@ -1434,11 +1434,10 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 disabled={(() => {
                   const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
                   const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
-                  const isCurrentWeek = todayWeekNumber !== null && currentWeek === todayWeekNumber;
                   const anySubmittedThisWeek = submittedTierNumbers.size > 0;
                   // Disable if saving, if all tiers completed, if viewing a past week,
-                  // or if we are on the current week and any scores have been submitted (movement already applied)
-                  return savingNoGames || weekCompleted || isPastWeek || (isCurrentWeek && anySubmittedThisWeek);
+                  // or if any scores have been submitted for this displayed week (movement already applied)
+                  return savingNoGames || weekCompleted || isPastWeek || anySubmittedThisWeek;
                 })()}
                 className="rounded"
               />
@@ -1446,9 +1445,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 className={`text-sm ${(() => {
                   const weekCompleted = weeklyTiers.length > 0 && weeklyTiers.every(t => submittedTierNumbers.has(t.tier_number) || !!t.is_completed);
                   const isPastWeek = todayWeekNumber !== null && currentWeek < todayWeekNumber;
-                  const isCurrentWeek = todayWeekNumber !== null && currentWeek === todayWeekNumber;
                   const anySubmittedThisWeek = submittedTierNumbers.size > 0;
-                  const isDisabled = savingNoGames || weekCompleted || isPastWeek || (isCurrentWeek && anySubmittedThisWeek);
+                  const isDisabled = savingNoGames || weekCompleted || isPastWeek || anySubmittedThisWeek;
                   return isDisabled ? 'text-gray-400' : 'text-gray-700';
                 })()}`}
               >
