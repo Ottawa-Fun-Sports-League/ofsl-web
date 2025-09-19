@@ -78,6 +78,13 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
   const [formatValidation, setFormatValidation] = useState<FormatValidationResult | null>(null);
   const [previewTeams, setPreviewTeams] = useState<typeof tier.teams | null>(null);
 
+  // Derive current court selection for the dropdown: '', preset, or 'CUSTOM'
+  const courtSelection: '' | 'Court 1' | 'Court 2' | 'Court 3' | 'CUSTOM' = (() => {
+    const v = (editValues.court || '').trim();
+    if (!v) return '';
+    return (COURT_PRESETS as readonly string[]).includes(v) ? (v as any) : 'CUSTOM';
+  })();
+
   const loadGyms = async () => {
     try {
       const { data: gymsData, error } = await supabase
@@ -576,15 +583,23 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                 Court
               </label>
               <select
-                value={COURT_PRESETS.includes(editValues.court) ? editValues.court : 'CUSTOM'}
+                value={courtSelection}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setEditValues(prev => ({
-                    ...prev,
-                    court: v === 'CUSTOM'
-                      ? (COURT_PRESETS.includes(prev.court) ? '' : prev.court)
-                      : v
-                  }));
+                  setEditValues(prev => {
+                    if (v === 'CUSTOM') {
+                      // Switch to custom mode: keep existing custom text if any, else blank
+                      const prevVal = prev.court || '';
+                      const keep = (COURT_PRESETS as readonly string[]).includes(prevVal) ? '' : prevVal;
+                      return { ...prev, court: keep };
+                    }
+                    if (v === '') {
+                      // Reset selection
+                      return { ...prev, court: '' };
+                    }
+                    // Chose a preset
+                    return { ...prev, court: v };
+                  });
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
               >
@@ -593,7 +608,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                   <option key={opt} value={opt}>{opt}</option>
                 ))}
               </select>
-              {(!COURT_PRESETS.includes(editValues.court)) && (
+              {courtSelection === 'CUSTOM' && (
                 <div className="mt-2">
                   <Input
                     value={editValues.court}
