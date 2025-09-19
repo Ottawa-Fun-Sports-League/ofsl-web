@@ -120,6 +120,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   } | null>(null);
   const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
+  const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
 
   // Team deletion confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -376,8 +377,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           const tierNum = Number(row.tier_number);
           const pos = Number(row.tier_position || 0);
           const maxPos = maxPosByTier.get(tierNum) || 0;
-          if (pos === 1) map.set(name, 'W');
-          else if (maxPos && pos === maxPos) map.set(name, 'L');
+          if (pos === 1) map.set(norm(name), 'W');
+          else if (maxPos && pos === maxPos) map.set(norm(name), 'L');
         });
         setResultsByTeam(map);
       } catch (e) {
@@ -1302,10 +1303,10 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 className={isEditScheduleMode ? "cursor-move" : "cursor-default"}
               >
                 {`${team.name} (${teamPositions.get(team.name) || team.ranking || "-"})`}
-                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(team.name) === 'W' && (
+                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(norm(team.name)) === 'W' && (
                   <span className="ml-2 inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
                 )}
-                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(team.name) === 'L' && (
+                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(norm(team.name)) === 'L' && (
                   <span className="ml-2 inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
                 )}
               </span>

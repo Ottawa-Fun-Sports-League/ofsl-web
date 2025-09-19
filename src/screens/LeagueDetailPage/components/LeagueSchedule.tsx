@@ -39,6 +39,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const restrictToTwoWeeks = true;
   // Map of team_name -> 'W' | 'L' | 'T' for current week
   const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
+  const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
   const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
   const labelMap = buildWeekTierLabels(weeklyTiers);
   const templateLabelMap = buildWeekTierLabels(week1TierStructure);
@@ -347,8 +348,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
           const tierNum = Number(row.tier_number);
           const pos = Number(row.tier_position || 0);
           const maxPos = maxPosByTier.get(tierNum) || 0;
-          if (pos === 1) map.set(name, 'W');
-          else if (maxPos && pos === maxPos) map.set(name, 'L');
+          if (pos === 1) map.set(norm(name), 'W');
+          else if (maxPos && pos === maxPos) map.set(norm(name), 'L');
         });
         setResultsByTeam(map);
       } catch {}
@@ -769,7 +770,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                           {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
                                 (() => {
                                   const name = (tier as any)[`team_${position.toLowerCase()}_name`] as string;
-                                  const outcome = resultsByTeam.get(name);
+                                  const outcome = resultsByTeam.get(norm(name));
                                   const completed = Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number));
                                   return (
                                     <span>
@@ -811,7 +812,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                                   {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
                                     (() => {
                                       const name = (tier as any)[`team_${position.toLowerCase()}_name`] as string;
-                                      const outcome = resultsByTeam.get(name);
+                                      const outcome = resultsByTeam.get(norm(name));
                                       const completed = Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number));
                                       return (
                                         <span>
@@ -844,7 +845,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                               {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
                                 (() => {
                                   const name = (tier as any)[`team_${position.toLowerCase()}_name`] as string;
-                                  const outcome = resultsByTeam.get(name);
+                                  const outcome = resultsByTeam.get(norm(name));
                                   const completed = Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number));
                                   return (
                                     <span>
