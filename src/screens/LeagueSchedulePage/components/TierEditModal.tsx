@@ -83,12 +83,20 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     const t = (val || '').trim().toUpperCase();
     return t === '' || t === 'TBD' || t === 'TBA';
   };
-  // Derive current court selection for the dropdown: '', preset, or 'CUSTOM'
-  const courtSelection: '' | 'Court 1' | 'Court 2' | 'Court 3' | 'CUSTOM' = (() => {
-    const v = (editValues.court || '').trim();
-    if (isUnsetCourt(v)) return '';
-    return (COURT_PRESETS as readonly string[]).includes(v) ? (v as any) : 'CUSTOM';
-  })();
+  // Dropdown selection state for court: '', preset, or 'CUSTOM'
+  const [courtSelection, setCourtSelection] = useState<'' | 'Court 1' | 'Court 2' | 'Court 3' | 'CUSTOM'>('');
+
+  // When modal opens or tier changes, initialize selection from tier value
+  useEffect(() => {
+    const v = (tier.court || '').trim();
+    if (isUnsetCourt(v)) {
+      setCourtSelection('');
+    } else if ((COURT_PRESETS as readonly string[]).includes(v)) {
+      setCourtSelection(v as any);
+    } else {
+      setCourtSelection('CUSTOM');
+    }
+  }, [isOpen, tier.court]);
 
   const loadGyms = async () => {
     try {
@@ -590,19 +598,17 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
               <select
                 value={courtSelection}
                 onChange={(e) => {
-                  const v = e.target.value;
+                  const v = e.target.value as typeof courtSelection;
+                  setCourtSelection(v);
                   setEditValues(prev => {
                     if (v === 'CUSTOM') {
-                      // Switch to custom mode: keep existing custom text if any, else blank
                       const prevVal = prev.court || '';
                       const keep = (COURT_PRESETS as readonly string[]).includes(prevVal) ? '' : prevVal;
                       return { ...prev, court: keep };
                     }
                     if (v === '') {
-                      // Reset selection
                       return { ...prev, court: '' };
                     }
-                    // Chose a preset
                     return { ...prev, court: v };
                   });
                 }}
