@@ -35,12 +35,68 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const [isScoresModalOpen, setIsScoresModalOpen] = useState(false);
   // const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   const [isScheduleVisible, setIsScheduleVisible] = useState<boolean>(true);
+  // When true, restrict navigation to current week and the following week
+  const [restrictToTwoWeeks, setRestrictToTwoWeeks] = useState<boolean>(false);
   const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
   const labelMap = buildWeekTierLabels(weeklyTiers);
   const templateLabelMap = buildWeekTierLabels(week1TierStructure);
   
   // Check if user is admin or facilitator
   const canSubmitScores = userProfile?.is_admin || userProfile?.is_facilitator;
+
+  // Determine if user is a captain or player on any active team in this league
+  useEffect(() => {
+    const checkMembership = async () => {
+      try {
+        // Only restrict for signed-in non-admin/facilitator users
+        if (!userProfile || userProfile.is_admin || userProfile.is_facilitator) {
+          setRestrictToTwoWeeks(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('teams')
+          .select('id, captain_id, roster, co_captain_id, co_captains')
+          .eq('league_id', parseInt(leagueId))
+          .eq('active', true);
+
+        if (error) {
+          // Fallback: try without optional columns if schema differs
+          const fallback = await supabase
+            .from('teams')
+            .select('id, captain_id, roster')
+            .eq('league_id', parseInt(leagueId))
+            .eq('active', true);
+          if (fallback.error) {
+            setRestrictToTwoWeeks(false);
+            return;
+          }
+          const rows = fallback.data || [];
+          const isMember = rows.some((t: any) => {
+            const onRoster = Array.isArray(t.roster) && t.roster.includes(userProfile.id);
+            const isCaptain = t.captain_id === userProfile.id;
+            return isCaptain || onRoster;
+          });
+          setRestrictToTwoWeeks(isMember);
+          return;
+        }
+
+        const teams = data || [];
+        const isMember = teams.some((t: any) => {
+          const onRoster = Array.isArray(t.roster) && t.roster.includes(userProfile.id);
+          const isCaptain = t.captain_id === userProfile.id;
+          const isCoCaptainId = (t as any).co_captain_id && (t as any).co_captain_id === userProfile.id;
+          const isCoCaptainInArray = Array.isArray((t as any).co_captains) && (t as any).co_captains.includes(userProfile.id);
+          return isCaptain || isCoCaptainId || isCoCaptainInArray || onRoster;
+        });
+        setRestrictToTwoWeeks(isMember);
+      } catch {
+        setRestrictToTwoWeeks(false);
+      }
+    };
+
+    if (leagueId) checkMembership();
+  }, [leagueId, userProfile]);
 
   // Fetch league info for playoff weeks calculation and set initial week
   useEffect(() => {
@@ -202,10 +258,24 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
       const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
       const maxWeeks = regularSeasonWeeks + (leagueInfo.playoff_weeks || 0);
 
+      // If user is a captain/player (not admin/facilitator), restrict to current and next week
+      if (restrictToTwoWeeks) {
+        const todayWeek = getCurrentWeek();
+        const minAllowed = Math.max(1, todayWeek);
+        const maxAllowed = Math.min(maxWeeks, todayWeek + 1);
+        return weekNumber >= minAllowed && weekNumber <= maxAllowed;
+      }
+
       return weekNumber <= maxWeeks;
     }
 
     // Fallback: allow navigation to reasonable number of weeks
+    if (restrictToTwoWeeks) {
+      const todayWeek = getCurrentWeek();
+      const minAllowed = Math.max(1, todayWeek);
+      const maxAllowed = todayWeek + 1;
+      return weekNumber >= minAllowed && weekNumber <= maxAllowed;
+    }
     return weekNumber <= 20;
   };
 
