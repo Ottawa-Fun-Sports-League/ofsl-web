@@ -60,6 +60,9 @@ export function LeagueEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [hasScores, setHasScores] = useState(false);
+  const [lastWeekWithScores, setLastWeekWithScores] = useState(0);
+  const [hasSchedule, setHasSchedule] = useState(false);
 
   const [editLeague, setEditLeague] = useState<{
     name: string;
@@ -157,6 +160,18 @@ export function LeagueEditPage() {
       if (!leagueData) {
         throw new Error("League not found");
       } else {
+        // Check for existing scores
+        const { data: scoresData, error: scoresError } = await supabase
+          .from('game_results')
+          .select('week_number')
+          .eq('league_id', parseInt(id!))
+          .order('week_number', { ascending: false })
+          .limit(1);
+
+        if (!scoresError && scoresData && scoresData.length > 0) {
+          setHasScores(true);
+          setLastWeekWithScores(scoresData[0].week_number);
+        }
         // Get the Stripe product linked to this league
         const linkedProduct = await getStripeProductByLeagueId(parseInt(id!));
         if (linkedProduct) {
@@ -164,6 +179,22 @@ export function LeagueEditPage() {
         }
 
         setLeague(leagueData);
+
+        // Check if a schedule has been generated for this league
+        try {
+          const { data: scheduleRow, error: scheduleErr } = await supabase
+            .from('league_schedules')
+            .select('id')
+            .eq('league_id', parseInt(id))
+            .maybeSingle();
+          if (scheduleErr && scheduleErr.code !== 'PGRST116') {
+            console.warn('Failed to load schedule status for league', scheduleErr);
+          }
+          setHasSchedule(!!scheduleRow);
+        } catch (e) {
+          console.warn('Error checking schedule status', e);
+          setHasSchedule(false);
+        }
 
         setEditLeague({
           name: leagueData.name,
@@ -200,6 +231,25 @@ export function LeagueEditPage() {
 
   const handleUpdateLeague = async () => {
     if (!id) return;
+
+    // Validate end date change if there are scores
+    if (hasScores && league) {
+      const originalStartDate = new Date(league.start_date + 'T00:00:00');
+      const newEndDate = new Date(editLeague.end_date + 'T00:00:00');
+      
+      // Calculate which week the new end date would be
+      const diffTime = Math.abs(newEndDate.getTime() - originalStartDate.getTime());
+      const newEndWeek = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+      
+      // Don't allow end date before the last week with scores
+      if (newEndWeek < lastWeekWithScores) {
+        showToast(
+          `Cannot set end date before week ${lastWeekWithScores} - this week has recorded scores. Please choose an end date after all weeks with existing data.`,
+          "error"
+        );
+        return;
+      }
+    }
 
     // Convert day_of_week from string to number
     const dayOfWeek =
@@ -258,10 +308,32 @@ export function LeagueEditPage() {
       }
 
       showToast("League updated successfully!", "success");
-      navigate(`/leagues/${id}`);
+      navigate(`/my-account/leagues`);
     } catch (error) {
       console.error("Error updating league:", error);
-      showToast("Failed to update league", "error");
+      console.error("Update payload:", {
+        name: editLeague.name,
+        description: editLeague.description,
+        league_type: editLeague.league_type,
+        gender: editLeague.gender,
+        location: editLeague.location,
+        sport_id: editLeague.sport_id,
+        skill_id: editLeague.skill_id,
+        skill_ids: editLeague.skill_ids.length > 0 ? editLeague.skill_ids : [editLeague.skill_id],
+        day_of_week: dayOfWeek,
+        year: editLeague.year,
+        start_date: editLeague.start_date,
+        end_date: editLeague.end_date,
+        hide_day: editLeague.hide_day,
+        cost: editLeague.cost,
+        max_teams: editLeague.max_teams,
+        gym_ids: editLeague.gym_ids,
+        payment_due_date: editLeague.payment_due_date,
+        deposit_amount: editLeague.deposit_amount,
+        deposit_date: editLeague.deposit_date || null,
+        team_registration: editLeague.team_registration,
+      });
+      showToast(`Failed to update league: ${error instanceof Error ? error.message : 'Unknown error'}`, "error");
     } finally {
       setSaving(false);
     }
@@ -650,6 +722,11 @@ export function LeagueEditPage() {
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                     Start Date
+                    {(hasSchedule && league && (new Date() >= new Date(league.start_date + 'T00:00:00'))) && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        (Locked - schedule exists and season has started)
+                      </span>
+                    )}
                   </label>
                   <Input
                     type="date"
@@ -662,12 +739,18 @@ export function LeagueEditPage() {
                     }
                     className="w-full"
                     required
+                    disabled={hasSchedule && league ? (new Date() >= new Date(league.start_date + 'T00:00:00')) : false}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                     End Date
+                    {hasScores && lastWeekWithScores > 0 && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        (Cannot end before week {lastWeekWithScores})
+                      </span>
+                    )}
                   </label>
                   <Input
                     type="date"
@@ -851,6 +934,7 @@ export function LeagueEditPage() {
                   required
                 />
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-[#6F6F6F] mb-2">

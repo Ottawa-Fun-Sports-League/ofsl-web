@@ -6,7 +6,8 @@ interface LeagueStandingsProps {
 }
 
 export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
-  const { teams, loading, error } = useLeagueStandings(leagueId);
+  const { teams, loading, error, hasSchedule } = useLeagueStandings(leagueId);
+  const formatDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
   if (loading) {
     return (
       <div>
@@ -64,8 +65,15 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       {/* Note about standings */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Game records and standings will be available
-          once league play begins. Below shows the current registered teams.
+          {hasSchedule ? (
+            <>
+              <strong>Note:</strong> Standings are updated weekly. Ordered by points, then wins, then point differential.
+            </>
+          ) : (
+            <>
+              <strong>Note:</strong> Game records and standings will be available once league play begins. Below shows the current registered teams.
+            </>
+          )}
         </p>
       </div>
 
@@ -76,10 +84,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
             <table className="w-full table-fixed">
               <colgroup>
                 <col style={{ width: "10%" }} />
-                <col style={{ width: "50%" }} />
+                <col style={{ width: "40%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "12%" }} />
                 <col style={{ width: "13%" }} />
                 <col style={{ width: "13%" }} />
-                <col style={{ width: "14%" }} />
               </colgroup>
               <thead className="bg-gray-50 border-b">
                 <tr>
@@ -95,8 +104,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
                     Losses
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
+                  <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">
                     Points
+                  </th>
+                  <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
+                    +/-
                   </th>
                 </tr>
               </thead>
@@ -119,17 +131,20 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                       {team.name}
                     </td>
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
-                      -
+                      {team.wins}
                     </td>
                     <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">
-                      -
+                      {team.losses}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50">
+                      {team.points}
                     </td>
                     <td
                       className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${
                         index === teams.length - 1 ? "rounded-br-lg" : ""
                       }`}
                     >
-                      -
+                      {formatDiff(team.differential as number)}
                     </td>
                   </tr>
                 ))}

@@ -1,0 +1,2 @@
+export { ScorecardsFormatsTab } from './ScorecardsFormatsTab';
+

@@ -1,0 +1,1 @@
+chore(copy): use "Base 2" wording for 2-team Bo5 points; update summary banner and reference text

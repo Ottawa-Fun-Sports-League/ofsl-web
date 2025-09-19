@@ -169,7 +169,7 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
     try {
       // Delete the record entirely to avoid unique constraint issues
       // For spares registration, we don't need to keep historical inactive records
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('spares')
         .delete()
         .eq('id', registrationId)

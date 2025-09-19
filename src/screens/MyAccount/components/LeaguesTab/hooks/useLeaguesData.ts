@@ -42,14 +42,34 @@ export function useLeaguesData() {
         const { data: leaguesData, error: leaguesError } = leaguesResponse;
         if (leaguesError) throw leaguesError;
         
-        // Get team counts for each league
-        const { data: teamCounts, error: teamCountsError } = await supabase
-          .from('teams')
-          .select('league_id, id')
-          .eq('active', true);
+        // Get team counts, schedule info, and standings info for each league
+        const [teamCountsResponse, schedulesResponse, standingsResponse] = await Promise.all([
+          supabase
+            .from('teams')
+            .select('league_id, id')
+            .eq('active', true),
+          supabase
+            .from('league_schedules')
+            .select('league_id'),
+          supabase
+            .from('standings')
+            .select('league_id')
+        ]);
+
+        const { data: teamCounts, error: teamCountsError } = teamCountsResponse;
+        const { data: schedules, error: schedulesError } = schedulesResponse;
+        const { data: standings, error: standingsError } = standingsResponse;
 
         if (teamCountsError) {
           console.error('Error fetching team counts:', teamCountsError);
+        }
+        
+        if (schedulesError) {
+          console.error('Error fetching schedules:', schedulesError);
+        }
+        
+        if (standingsError) {
+          console.error('Error fetching standings:', standingsError);
         }
         
         // Get individual registration counts from payment records (team_id is null for individual registrations)
@@ -73,6 +93,26 @@ export function useLeaguesData() {
         const gymsMap = new Map(gymsResponse.data?.map(gym => [gym.id, gym]) || []);
         const teamCountsMap = new Map<number, number>();
         const individualCountsMap = new Map<number, number>();
+        
+        // Create map of leagues with schedules
+        const schedulesMap = new Set<number>();
+        if (schedules) {
+          schedules.forEach(schedule => {
+            schedulesMap.add(schedule.league_id);
+          });
+        }
+        
+        // Create map of leagues with standings
+        const standingsMap = new Set<number>();
+        if (standings) {
+          standings.forEach(standing => {
+            standingsMap.add(standing.league_id);
+          });
+        }
+        
+        // Debug: Log schedule information
+        // console.log('Schedule IDs found:', Array.from(schedulesMap));
+        // console.log('Schedules data:', schedules);
         
         // Count teams per league
         teamCounts?.forEach(team => {
@@ -112,6 +152,9 @@ export function useLeaguesData() {
                 .filter((name: string | undefined): name is string => name !== undefined);
             }
 
+            const hasSchedule = schedulesMap.has(league.id);
+            const hasStandings = standingsMap.has(league.id);
+
             return {
               ...league,
               sport_name: league.sports?.name || null,
@@ -121,7 +164,9 @@ export function useLeaguesData() {
               gyms: leagueGyms,
               team_count: registrationCount,  // This now represents either teams or individuals
               spots_remaining: spotsRemaining,
-              is_individual: isIndividualLeague
+              is_individual: isIndividualLeague,
+              has_schedule: hasSchedule,
+              has_standings: hasStandings
             };
           });
           

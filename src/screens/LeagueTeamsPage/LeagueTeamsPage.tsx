@@ -9,6 +9,13 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { PaymentStatusBadge } from '../../components/ui/payment-status-badge';
 import { ConfirmationModal } from '../../components/ui/confirmation-modal';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle 
+} from '../../components/ui/dialog';
 import { useViewPreference } from '../../hooks/useViewPreference';
 import { 
   Users, 
@@ -22,7 +29,9 @@ import {
   Grid3X3,
   List,
   Edit,
-  Clock
+  Clock,
+  CalendarDays,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/toast';
@@ -46,6 +55,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getFormatOptions, getTierDisplayLabel } from '../LeagueSchedulePage/utils/formatUtils';
 
 interface TeamData {
   id: number | string;  // number for teams, string for individual users
@@ -65,6 +75,8 @@ interface TeamData {
     name: string;
     cost: number | null;
     location: string | null;
+    early_bird_cost?: number | null;
+    early_bird_due_date?: string | null;
     sports?: {
       name: string;
     } | null;
@@ -91,6 +103,8 @@ interface ExtendedTeam {
     name: string;
     cost: number | null;
     location: string | null;
+    early_bird_cost?: number | null;
+    early_bird_due_date?: string | null;
     sports?: {
       name: string;
     } | null;
@@ -104,7 +118,61 @@ interface League {
   location: string;
   cost: number;
   team_registration?: boolean;
+  start_date?: string;
+  end_date?: string;
+  playoff_weeks?: number;
+  early_bird_cost?: number | null;
+  early_bird_due_date?: string | null;
 }
+
+const HST_RATE = 1.13;
+
+const getEarlyBirdAdjustedCost = (
+  details:
+    | {
+        cost: number | null | undefined;
+        early_bird_cost?: number | null;
+        early_bird_due_date?: string | null;
+      }
+    | null
+    | undefined,
+  today: Date = new Date()
+) => {
+  if (!details) return 0;
+
+  const baseCost = details.cost ?? 0;
+  const earlyBirdCost = details.early_bird_cost;
+  const earlyBirdDue = details.early_bird_due_date;
+
+  if (earlyBirdCost === null || earlyBirdCost === undefined || !earlyBirdDue) {
+    return baseCost;
+  }
+
+  const deadline = new Date(`${earlyBirdDue}T23:59:59`);
+  return today.getTime() <= deadline.getTime() ? earlyBirdCost ?? baseCost : baseCost;
+};
+
+const calculateTeamAmounts = (team: TeamData, today: Date = new Date()) => {
+  const baseCost = getEarlyBirdAdjustedCost(team.league, today);
+  const effectiveDue =
+    team.payment_status === 'paid' && team.amount_due !== null && team.amount_due !== undefined
+      ? team.amount_due || 0
+      : baseCost;
+
+  const totalWithTax = effectiveDue * HST_RATE;
+  const baseWithTax = baseCost * HST_RATE;
+  const amountPaid = team.amount_paid || 0;
+  const amountOwing = totalWithTax - amountPaid;
+
+  return {
+    baseCost,
+    baseWithTax,
+    effectiveDue,
+    totalWithTax,
+    amountPaid,
+    amountOwing,
+  };
+};
 
 export function LeagueTeamsPage() {
   const { leagueId } = useParams<{ leagueId: string }>();
@@ -143,6 +211,18 @@ export function LeagueTeamsPage() {
     isIndividual: boolean;
   }>({ isOpen: false, teamId: null, teamName: '', isIndividual: false });
 
+  // Schedule generation modal states
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedGameFormat, setSelectedGameFormat] = useState<string>('');
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  const [showScheduleConfirmation, setShowScheduleConfirmation] = useState(false);
+  const [hasSchedule, setHasSchedule] = useState(false);
+  const [deleteScheduleOpen, setDeleteScheduleOpen] = useState(false);
+  const [deletingSchedule, setDeletingSchedule] = useState(false);
+
+  // Game format options - using centralized definitions for consistent ordering
+  const gameFormats = getFormatOptions();
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -152,7 +232,10 @@ export function LeagueTeamsPage() {
 
   useEffect(() => {
     if (leagueId) {
-      loadLeagueData().then((isTeamLeague) => {
+      Promise.all([
+        loadLeagueData(),
+        loadScheduleStatus()
+      ]).then(([isTeamLeague]) => {
         if (isTeamLeague !== false) {
           loadTeams();
         } else {
@@ -192,6 +275,9 @@ export function LeagueTeamsPage() {
           early_bird_cost,
           early_bird_due_date,
           team_registration,
+          start_date,
+          end_date,
+          playoff_weeks,
           sports:sport_id(name)
         `)
         .eq('id', parseInt(leagueId!))
@@ -210,9 +296,11 @@ export function LeagueTeamsPage() {
         location: data.location || '',
         cost: data.cost || 0,
         team_registration: data.team_registration,
-        // attach early bird fields for dynamic pricing display
-        ...(data as any).early_bird_cost !== undefined ? { early_bird_cost: (data as any).early_bird_cost } : {},
-        ...(data as any).early_bird_due_date !== undefined ? { early_bird_due_date: (data as any).early_bird_due_date } : {}
+        start_date: data.start_date,
+        end_date: data.end_date,
+        playoff_weeks: data.playoff_weeks,
+        early_bird_cost: data.early_bird_cost ?? null,
+        early_bird_due_date: data.early_bird_due_date ?? null
       });
       
       return data.team_registration;
@@ -220,6 +308,30 @@ export function LeagueTeamsPage() {
       console.error('Error loading league:', err);
       setError('Failed to load league data');
       return true; // Default to team registration
+    }
+  };
+
+  const loadScheduleStatus = async () => {
+    if (!leagueId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('league_schedules')
+        .select('id')
+        .eq('league_id', parseInt(leagueId))
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is "not found", which is expected if no schedule exists
+        console.error('Error loading schedule status:', error);
+      } else if (data) {
+        setHasSchedule(true);
+      } else {
+        setHasSchedule(false);
+      }
+    } catch (err) {
+      console.error('Error loading schedule status:', err);
+      setHasSchedule(false);
     }
   };
 
@@ -452,10 +564,9 @@ export function LeagueTeamsPage() {
           league: {
             id: parseInt(leagueId!),
             name: league?.name || '',
-            cost: league?.cost || null,
-            // pass through early bird fields from loaded league for dynamic pricing
-            early_bird_cost: (league as any)?.early_bird_cost ?? null,
-            early_bird_due_date: (league as any)?.early_bird_due_date ?? null,
+            cost: league?.cost ?? null,
+            early_bird_cost: league?.early_bird_cost ?? null,
+            early_bird_due_date: league?.early_bird_due_date ?? null,
             location: league?.location || null,
             sports: league?.sport_name ? { name: league.sport_name } : null
           }
@@ -479,6 +590,343 @@ export function LeagueTeamsPage() {
       setError('Failed to load registrations');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Schedule generation handlers
+  const handleOpenScheduleModal = () => {
+    setSelectedGameFormat('');
+    setShowScheduleModal(true);
+  };
+
+  const handleCloseScheduleModal = () => {
+    setShowScheduleModal(false);
+    setSelectedGameFormat('');
+    setGeneratingSchedule(false);
+  };
+
+  const handleCloseScheduleConfirmation = () => {
+    setShowScheduleConfirmation(false);
+  };
+
+  const handleOpenDeleteScheduleModal = () => {
+    setDeleteScheduleOpen(true);
+  };
+
+  const handleConfirmDeleteSchedule = async () => {
+    if (!leagueId) return;
+    try {
+      setDeletingSchedule(true);
+      // Delete generated weekly schedule rows
+      await supabase
+        .from('weekly_schedules')
+        .delete()
+        .eq('league_id', parseInt(leagueId));
+
+      // Delete league_schedules master record
+      await supabase
+        .from('league_schedules')
+        .delete()
+        .eq('league_id', parseInt(leagueId));
+
+      setHasSchedule(false);
+      setDeleteScheduleOpen(false);
+      showToast('Season schedule deleted. You can generate a new one.', 'success');
+    } catch (err) {
+      console.error('Error deleting schedule:', err);
+      showToast('Failed to delete schedule. Please try again.', 'error');
+    } finally {
+      setDeletingSchedule(false);
+    }
+  };
+
+  // Calculate total weeks: Regular season (start to end date) + playoff weeks (beyond end date)
+  const calculateRegularSeasonWeeks = (startDate: string | null, endDate: string | null): number => {
+    if (!startDate || !endDate) {
+      console.warn('League start or end date not set, defaulting to 12 weeks');
+      return 12;
+    }
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+    
+    return Math.max(1, regularSeasonWeeks);
+  };
+
+  const generateScheduleForFormat = async (teams: TeamData[], format: string) => {
+    // Determine teams per tier based on format
+    let teamsPerTier = 3; // default
+    let minTeamsRequired = 3;
+    
+    if (format.startsWith('2-teams')) {
+      teamsPerTier = 2;
+      minTeamsRequired = 2;
+    } else if (format === '3-teams-6-sets') {
+      teamsPerTier = 3;
+      minTeamsRequired = 3;
+    } else if (format === '4-teams-head-to-head') {
+      teamsPerTier = 4;
+      minTeamsRequired = 4;
+    } else if (format === '6-teams-head-to-head') {
+      teamsPerTier = 6;
+      minTeamsRequired = 6;
+    }
+    
+    if (teams.length < minTeamsRequired) {
+      throw new Error(`At least ${minTeamsRequired} teams are required for this format`);
+    }
+    const totalTiers = Math.ceil(teams.length / teamsPerTier);
+    
+    // Fetch tier-specific defaults from league_schedules table
+    let tierSpecificDefaults: Record<string, { location?: string; time_slot?: string; court?: string }> = {};
+    try {
+      const { data: scheduleData } = await supabase
+        .from('league_schedules')
+        .select('defaults')
+        .eq('league_id', parseInt(leagueId!))
+        .single();
+      
+      tierSpecificDefaults = scheduleData?.defaults || {};
+    } catch (error) {
+      console.warn('No tier-specific defaults found, using placeholders');
+    }
+    
+    // Helper function to get tier-specific default or placeholder
+    const getTierDefault = (tierNumber: number, field: 'location' | 'time_slot' | 'court') => {
+      const tierDefaults = tierSpecificDefaults[tierNumber.toString()];
+      if (tierDefaults && tierDefaults[field]) {
+        return tierDefaults[field];
+      }
+      
+      // Return placeholders when no tier-specific defaults exist
+      switch (field) {
+        case 'location': return 'SET_LOCATION';
+        case 'time_slot': return 'SET_TIME';
+        case 'court': return 'SET_COURT';
+        default: return null;
+      }
+    };
+
+    // Clear any existing schedule for this league
+    await supabase
+      .from('weekly_schedules')
+      .delete()
+      .eq('league_id', parseInt(leagueId!));
+
+    // Reset playoff_weeks to 0 when generating a new schedule
+    // This ensures UI doesn't show extra playoff weeks that don't exist
+    const { error: updateError } = await supabase
+      .from('leagues')
+      .update({ playoff_weeks: 0 })
+      .eq('id', parseInt(leagueId!));
+
+    if (updateError) {
+      console.error('Failed to reset playoff weeks:', updateError);
+      // Continue with schedule generation even if this fails
+    }
+
+    // Calculate weeks based ONLY on league start and end dates (no playoff weeks)
+    // All schedules are generated with 0 playoff weeks by default - admins add playoff weeks manually later
+    // NOTE: Intentionally ignoring league?.playoff_weeks value from database during generation
+    const regularSeasonWeeks = calculateRegularSeasonWeeks(league?.start_date, league?.end_date);
+    
+    // Generate schedule only for regular season weeks (playoff weeks are added separately by admins)
+    const weeklyScheduleRows = [];
+    
+    for (let weekNum = 1; weekNum <= regularSeasonWeeks; weekNum++) {
+      for (let i = 0; i < totalTiers; i++) {
+        const startIndex = i * teamsPerTier;
+        const tierTeams = teams.slice(startIndex, startIndex + teamsPerTier);
+        
+        // Skip if we don't have enough teams for this tier's format
+        if (tierTeams.length < minTeamsRequired) {
+          // For the last tier, we might have fewer teams than the format requires
+          // Only skip if we have no teams at all
+          if (tierTeams.length === 0) {
+            continue;
+          }
+          // If we have some teams but not enough for the format, 
+          // still create the tier but with empty slots
+        }
+
+        // Determine if this is a playoff week
+        const isPlayoffWeek = weekNum > regularSeasonWeeks;
+        
+        // Create weekly_schedules row with support for all formats
+        const scheduleRow = {
+          league_id: parseInt(leagueId!),
+          week_number: weekNum,
+          tier_number: i + 1,
+          location: getTierDefault(i + 1, 'location'),
+          time_slot: getTierDefault(i + 1, 'time_slot'),
+          court: getTierDefault(i + 1, 'court'),
+          format: format,
+          // Only assign teams for Week 1, other weeks will be populated later based on results
+          team_a_name: weekNum === 1 ? (tierTeams[0]?.name || null) : null,
+          team_a_ranking: weekNum === 1 && tierTeams[0] ? (startIndex + 1) : null,
+          team_b_name: weekNum === 1 ? (tierTeams[1]?.name || null) : null,
+          team_b_ranking: weekNum === 1 && tierTeams[1] ? (startIndex + 2) : null,
+          team_c_name: weekNum === 1 && teamsPerTier >= 3 ? (tierTeams[2]?.name || null) : null,
+          team_c_ranking: weekNum === 1 && tierTeams[2] && teamsPerTier >= 3 ? (startIndex + 3) : null,
+          team_d_name: weekNum === 1 && teamsPerTier >= 4 ? (tierTeams[3]?.name || null) : null,
+          team_d_ranking: weekNum === 1 && tierTeams[3] && teamsPerTier >= 4 ? (startIndex + 4) : null,
+          team_e_name: weekNum === 1 && teamsPerTier >= 5 ? (tierTeams[4]?.name || null) : null,
+          team_e_ranking: weekNum === 1 && tierTeams[4] && teamsPerTier >= 5 ? (startIndex + 5) : null,
+          team_f_name: weekNum === 1 && teamsPerTier >= 6 ? (tierTeams[5]?.name || null) : null,
+          team_f_ranking: weekNum === 1 && tierTeams[5] && teamsPerTier >= 6 ? (startIndex + 6) : null,
+          is_completed: false,
+          is_playoff: isPlayoffWeek,
+        };
+
+        weeklyScheduleRows.push(scheduleRow);
+      }
+    }
+
+    // Insert all weekly schedule data for the entire season
+    const { error: insertError } = await supabase
+      .from('weekly_schedules')
+      .insert(weeklyScheduleRows);
+
+    if (insertError) {
+      throw new Error(`Failed to save weekly schedule: ${insertError.message}`);
+    }
+
+    // Return legacy format for backward compatibility (temporary)
+    const legacyTiers = weeklyScheduleRows.map(row => ({
+      tierNumber: row.tier_number,
+      displayLabel: getTierDisplayLabel(row.format, row.tier_number),
+      location: row.location,
+      time: row.time_slot,
+      court: row.court,
+      format: row.format,
+      teams: {
+        A: row.team_a_name ? { name: row.team_a_name, ranking: row.team_a_ranking } : null,
+        B: row.team_b_name ? { name: row.team_b_name, ranking: row.team_b_ranking } : null,
+        C: row.team_c_name ? { name: row.team_c_name, ranking: row.team_c_ranking } : null,
+        D: row.team_d_name ? { name: row.team_d_name, ranking: row.team_d_ranking } : null,
+        E: row.team_e_name ? { name: row.team_e_name, ranking: row.team_e_ranking } : null,
+        F: row.team_f_name ? { name: row.team_f_name, ranking: row.team_f_ranking } : null,
+      },
+      courts: {
+        A: row.court,
+        B: row.court,
+        C: row.court,
+        D: row.court,
+        E: row.court,
+        F: row.court,
+      },
+    }));
+
+    return {
+      week: 1,
+      date: new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      tiers: legacyTiers,
+      format: format,
+      league_id: parseInt(leagueId!),
+    };
+  };
+
+  const handleGenerateSchedule = async () => {
+    if (!selectedGameFormat) {
+      showToast('Please select a game format', 'error');
+      return;
+    }
+
+    // Only handle volleyball leagues
+    if (league?.sport_name !== 'Volleyball') {
+      showToast('Schedule generation is only available for volleyball leagues', 'error');
+      return;
+    }
+
+    try {
+      setGeneratingSchedule(true);
+      
+      // Validate team count for selected format
+      let minTeamsForFormat = 3; // default
+      if (selectedGameFormat.startsWith('2-teams')) {
+        minTeamsForFormat = 2;
+      } else if (selectedGameFormat === '3-teams-6-sets') {
+        minTeamsForFormat = 3;
+      } else if (selectedGameFormat === '4-teams-head-to-head') {
+        minTeamsForFormat = 4;
+      } else if (selectedGameFormat === '6-teams-head-to-head') {
+        minTeamsForFormat = 6;
+      }
+      
+      if (activeTeams.length < minTeamsForFormat) {
+        showToast(`You need at least ${minTeamsForFormat} teams for the selected format. You currently have ${activeTeams.length} teams.`, 'error');
+        return;
+      }
+      
+      // Generate schedule for the selected format based on active teams order
+      const scheduleData = await generateScheduleForFormat(activeTeams, selectedGameFormat);
+      
+      // Save schedule to database
+      const { error: scheduleError } = await supabase
+        .from('league_schedules')
+        .upsert({
+          league_id: parseInt(leagueId!),
+          schedule_data: scheduleData,
+          format: selectedGameFormat,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'league_id'
+        });
+
+      if (scheduleError) {
+        console.error('Database error when saving schedule:', scheduleError);
+        throw new Error(`Failed to save schedule: ${scheduleError.message}`);
+      }
+
+      
+      for (let i = 0; i < activeTeams.length; i++) {
+        const team = activeTeams[i];
+        const { error: standingsError } = await supabase
+          .from('standings')
+          .upsert({
+            league_id: parseInt(leagueId!),
+            team_id: team.id,
+            wins: 0,
+            losses: 0,
+            points: 0,
+            point_differential: 0,
+            manual_wins_adjustment: 0,
+            manual_losses_adjustment: 0,
+            manual_points_adjustment: 0,
+            manual_differential_adjustment: 0,
+            current_position: i + 1
+          }, {
+            onConflict: 'league_id,team_id',
+            ignoreDuplicates: false
+          });
+
+        if (standingsError) {
+          console.error('Error creating standings for team:', team.name, standingsError);
+          showToast(`Warning: Could not create standings record for ${team.name}. You may need to create it manually.`, 'warning');
+        }
+      }
+
+      // Update local league state to reflect playoff_weeks reset
+      if (league) {
+        setLeague({ ...league, playoff_weeks: 0 });
+      }
+      
+      setHasSchedule(true);
+      setShowScheduleModal(false);
+      setShowScheduleConfirmation(true);
+      
+    } catch (error) {
+      console.error('Error generating schedule:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to generate schedule. Please try again.', 'error');
+    } finally {
+      setGeneratingSchedule(false);
     }
   };
   
@@ -648,11 +1096,15 @@ export function LeagueTeamsPage() {
         // If moving to active, set amount_due to the league cost
         else if (league?.cost !== undefined) {
           // When moving to active, set amount_due based on current early-bird status
-          const ebCost = (league as any)?.early_bird_cost as number | null | undefined;
-          const ebDue = (league as any)?.early_bird_due_date as string | null | undefined;
+          const leagueCost = league?.cost ?? 0;
+          const ebCost = league?.early_bird_cost;
+          const ebDue = league?.early_bird_due_date;
           const today = new Date();
-          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-          const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
+          const earlyActive =
+            ebCost !== null && ebCost !== undefined && ebDue
+              ? today.getTime() <= new Date(`${ebDue}T23:59:59`).getTime()
+              : false;
+          const effective = earlyActive ? (ebCost ?? leagueCost) : leagueCost;
           updateData.amount_due = effective;
           // Check if they've already paid something
           const { data: currentPayment } = await supabase
@@ -662,9 +1114,10 @@ export function LeagueTeamsPage() {
             .eq('league_id', leagueId)
             .is('team_id', null)
             .maybeSingle(); // Use maybeSingle to handle cases where no record exists
-          
+         
           const amountPaid = currentPayment?.amount_paid || 0;
-          if (amountPaid >= league.cost) {
+          const amountDue = updateData.amount_due ?? 0;
+          if (amountPaid >= amountDue) {
             updateData.status = 'paid';
           } else if (amountPaid > 0) {
             updateData.status = 'partial';
@@ -842,6 +1295,8 @@ export function LeagueTeamsPage() {
       opacity: isDragging ? 0.5 : 1,
     };
 
+    const { baseWithTax, totalWithTax } = calculateTeamAmounts(team);
+
     return (
       <Card 
         ref={setNodeRef} 
@@ -922,19 +1377,7 @@ export function LeagueTeamsPage() {
                   {team.amount_paid !== null ? (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
-                        ${team.amount_paid.toFixed(2)} / ${(() => {
-                          const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
-                          const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
-                          const today = new Date();
-                          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                          const baseCost = earlyActive 
-                            ? (ebCost ?? (team.league?.cost ?? 0)) 
-                            : (team.league?.cost ?? 0);
-                          const effectiveDue = team.payment_status === 'paid' && team.amount_due
-                            ? (team.amount_due || 0)
-                            : baseCost;
-                          return (effectiveDue * 1.13).toFixed(2);
-                        })()}
+                        ${team.amount_paid.toFixed(2)} / ${totalWithTax.toFixed(2)}
                       </span>
                       {team.payment_status && (
                         <PaymentStatusBadge 
@@ -946,16 +1389,7 @@ export function LeagueTeamsPage() {
                   ) : (
                     <>
                       <span className="text-[#6F6F6F] text-xs whitespace-nowrap">
-                        $0.00 / ${(() => {
-                          const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
-                          const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
-                          const today = new Date();
-                          const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                          const baseCost = earlyActive 
-                            ? (ebCost ?? (team.league?.cost ?? 0)) 
-                            : (team.league?.cost ?? 0);
-                          return (baseCost * 1.13).toFixed(2);
-                        })()}
+                        $0.00 / ${baseWithTax.toFixed(2)}
                       </span>
                       <PaymentStatusBadge 
                         status="pending" 
@@ -1022,180 +1456,375 @@ export function LeagueTeamsPage() {
     );
   };
 
+  // Sortable table row component
+  const SortableTableRow = ({ team, isWaitlisted = false }: { team: TeamData; isWaitlisted?: boolean }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: team.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    const { totalWithTax, amountPaid, amountOwing } = calculateTeamAmounts(team);
+
+    return (
+      <tr 
+        ref={setNodeRef} 
+        style={style}
+        className={`hover:bg-gray-50 transition-colors ${isDragging ? 'z-50' : ''}`}
+      >
+        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center gap-2">
+            {/* Drag Handle */}
+            {dragEnabled && (
+              <div 
+                {...attributes} 
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded flex-shrink-0"
+                title="Drag to reorder"
+              >
+                <GripVertical className="h-4 w-4 text-gray-400" />
+              </div>
+            )}
+            <div className="flex flex-col">
+              <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
+                {team.name}
+              </div>
+              {isWaitlisted && (
+                <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                  Waitlisted
+                </span>
+              )}
+            </div>
+          </div>
+        </td>
+        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center gap-1">
+            <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
+            <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
+              {team.captain_name || 'Unknown'}
+            </div>
+          </div>
+        </td>
+        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+          {team.skill_name ? (
+            <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+              {team.skill_name}
+            </span>
+          ) : (
+            <span className="text-sm text-gray-400">—</span>
+          )}
+        </td>
+        <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
+          <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
+            <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
+            <span className="font-medium">{team.roster.length}</span>
+          </div>
+        </td>
+        <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
+          <div className="text-xs text-gray-600">
+            {new Date(team.created_at).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric'
+            })}
+          </div>
+        </td>
+        {!isWaitlisted && (
+          <>
+            <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+              <PaymentStatusBadge 
+                status={team.payment_status || 'pending'} 
+                size="sm"
+              />
+            </td>
+            <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+              <div className="flex flex-col gap-0.5 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">P:</span>
+                  <span className="font-medium text-green-700">${amountPaid.toFixed(0)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">O:</span>
+                  <span className={`font-medium ${amountOwing > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                    ${amountOwing.toFixed(0)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
+                  <span className="text-gray-500">T:</span>
+                  ${totalWithTax.toFixed(0)}
+                </div>
+              </div>
+            </td>
+          </>
+        )}
+        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center justify-center gap-0.5">
+            <Link 
+              to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+              className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+              title={team.isIndividual ? "Edit payment" : "Edit team"}
+            >
+              <Edit className="h-3.5 w-3.5" />
+            </Link>
+            <button
+              onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
+              disabled={movingTeam === team.id}
+              className={`p-1 rounded transition-colors disabled:opacity-50 ${
+                isWaitlisted 
+                  ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
+                  : 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
+              }`}
+              title={isWaitlisted ? 'Move to active' : 'Move to waitlist'}
+            >
+              {movingTeam === team.id ? (
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+              ) : isWaitlisted ? (
+                <ArrowLeft className="h-3.5 w-3.5" />
+              ) : (
+                <Clock className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <button
+              onClick={() => handleDeleteTeam(team.id, team.name)}
+              disabled={deleting === team.id}
+              className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+              title="Delete team"
+            >
+              {deleting === team.id ? (
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   // Table view component
-  const TeamTable = ({ teams, isWaitlisted = false }: { teams: TeamData[]; isWaitlisted?: boolean }) => {
+  const TeamTable = ({ teams, isWaitlisted = false, onDragEnd }: { 
+    teams: TeamData[]; 
+    isWaitlisted?: boolean;
+    onDragEnd?: (event: DragEndEvent) => void;
+  }) => {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto xl:overflow-visible">
-          <table className="w-full xl:table-fixed divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Team Name
-                </th>
-                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Captain
-                </th>
-                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Skill
-                </th>
-                <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Players
-                </th>
-                <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
-                  Registered
-                </th>
-                {!isWaitlisted && (
-                  <>
+          {dragEnabled && onDragEnd ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={onDragEnd}
+            >
+              <table className="w-full xl:table-fixed divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
                     <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Status
+                      Team Name
                     </th>
                     <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Payment
+                      Captain
                     </th>
-                  </>
-                )}
-                <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {teams.map((team) => {
-                // Calculate dynamic payment details (early-bird aware)
-                const ebCost = (team.league as any)?.early_bird_cost as number | null | undefined;
-                const ebDue = (team.league as any)?.early_bird_due_date as string | null | undefined;
-                const today = new Date();
-                const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                const baseCost = earlyActive 
-                  ? (ebCost ?? (team.league?.cost ?? 0)) 
-                  : (team.league?.cost ?? 0);
-                const effectiveDue = team.payment_status === 'paid' && team.amount_due
-                  ? (team.amount_due || 0)
-                  : baseCost;
-                const totalAmount = (effectiveDue || 0) * 1.13;
-                const amountPaid = team.amount_paid || 0;
-                const amountOwing = totalAmount - amountPaid;
-
-                return (
-                  <tr key={team.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
-                          {team.name}
-                        </div>
-                        {isWaitlisted && (
-                          <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                            Waitlisted
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
-                        <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
-                          {team.captain_name || 'Unknown'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                      {team.skill_name ? (
-                        <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                          {team.skill_name}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
-                        <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
-                        <span className="font-medium">{team.roster.length}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-                      <div className="text-xs text-gray-600">
-                        {new Date(team.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </div>
-                    </td>
+                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Skill
+                    </th>
+                    <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Players
+                    </th>
+                    <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                      Registered
+                    </th>
                     {!isWaitlisted && (
                       <>
-                        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                          <PaymentStatusBadge 
-                            status={team.payment_status || 'pending'} 
-                            size="sm"
-                          />
-                        </td>
-                        <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                          <div className="flex flex-col gap-0.5 text-xs">
-                            <div className="flex items-center gap-1">
-                              <span className="text-gray-500">P:</span>
-                              <span className="font-medium text-green-700">${amountPaid.toFixed(0)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-gray-500">O:</span>
-                              <span className={`font-medium ${amountOwing > 0 ? 'text-red-700' : 'text-gray-700'}`}>
-                                ${amountOwing.toFixed(0)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
-                              <span className="text-gray-500">T:</span>
-                              ${totalAmount.toFixed(0)}
-                            </div>
-                          </div>
-                        </td>
+                        <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Status
+                        </th>
+                        <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Payment
+                        </th>
                       </>
                     )}
-                    <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-0.5">
-                        <Link 
-                          to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
-                          className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                          title={team.isIndividual ? "Edit payment" : "Edit team"}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Link>
-                        <button
-                          onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
-                          disabled={movingTeam === team.id}
-                          className={`p-1 rounded transition-colors disabled:opacity-50 ${
-                            isWaitlisted 
-                              ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
-                              : 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
-                          }`}
-                          title={isWaitlisted ? 'Move to active' : 'Move to waitlist'}
-                        >
-                          {movingTeam === team.id ? (
-                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
-                          ) : isWaitlisted ? (
-                            <ArrowLeft className="h-3.5 w-3.5" />
-                          ) : (
-                            <Clock className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTeam(team.id, team.name)}
-                          disabled={deleting === team.id}
-                          className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                          title="Delete team"
-                        >
-                          {deleting === team.id ? (
-                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
+                    <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Actions
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <SortableContext items={teams.map(team => team.id)} strategy={verticalListSortingStrategy}>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {teams.map((team) => (
+                      <SortableTableRow key={team.id} team={team} isWaitlisted={isWaitlisted} />
+                    ))}
+                  </tbody>
+                </SortableContext>
+              </table>
+            </DndContext>
+          ) : (
+            <table className="w-full xl:table-fixed divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Team Name
+                  </th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Captain
+                  </th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Skill
+                  </th>
+                  <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Players
+                  </th>
+                  <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                    Registered
+                  </th>
+                  {!isWaitlisted && (
+                    <>
+                      <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Status
+                      </th>
+                      <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Payment
+                      </th>
+                    </>
+                  )}
+                  <th className="px-3 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {teams.map((team) => {
+                  const { totalWithTax, amountPaid, amountOwing } = calculateTeamAmounts(team);
+
+                  return (
+                    <tr key={team.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <div className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={team.name}>
+                            {team.name}
+                          </div>
+                          {isWaitlisted && (
+                            <span className="inline-flex self-start mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                              Waitlisted
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <Crown className="h-3 w-3 text-blue-600 flex-shrink-0" data-testid="crown-icon" />
+                          <div className="text-sm text-gray-700 truncate max-w-[150px]" title={team.captain_name || 'Unknown'}>
+                            {team.captain_name || 'Unknown'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                        {team.skill_name ? (
+                          <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            {team.skill_name}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-1 text-sm text-gray-700">
+                          <Users className="h-3 w-3 text-blue-500" data-testid="users-icon" />
+                          <span className="font-medium">{team.roster.length}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap hidden sm:table-cell">
+                        <div className="text-xs text-gray-600">
+                          {new Date(team.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </td>
+                      {!isWaitlisted && (
+                        <>
+                          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                            <PaymentStatusBadge 
+                              status={team.payment_status || 'pending'} 
+                              size="sm"
+                            />
+                          </td>
+                          <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">P:</span>
+                                <span className="font-medium text-green-700">${amountPaid.toFixed(0)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">O:</span>
+                                <span className={`font-medium ${amountOwing > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                                  ${amountOwing.toFixed(0)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-900 font-semibold border-t pt-0.5">
+                                <span className="text-gray-500">T:</span>
+                                ${totalWithTax.toFixed(0)}
+                              </div>
+                            </div>
+                          </td>
+                        </>
+                      )}
+                      <td className="px-3 lg:px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-0.5">
+                          <Link 
+                            to={team.isIndividual ? `/my-account/individual/edit/${team.id}/${leagueId}` : `/my-account/teams/edit/${team.id}`}
+                            className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                            title={team.isIndividual ? "Edit payment" : "Edit team"}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Link>
+                          <button
+                            onClick={() => handleMoveTeam(team.id, team.name, !isWaitlisted, team.isIndividual)}
+                            disabled={movingTeam === team.id}
+                            className={`p-1 rounded transition-colors disabled:opacity-50 ${
+                              isWaitlisted 
+                                ? 'text-green-600 hover:text-green-700 hover:bg-green-50' 
+                                : 'text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50'
+                            }`}
+                            title={isWaitlisted ? 'Move to active' : 'Move to waitlist'}
+                          >
+                            {movingTeam === team.id ? (
+                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                            ) : isWaitlisted ? (
+                              <ArrowLeft className="h-3.5 w-3.5" />
+                            ) : (
+                              <Clock className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTeam(team.id, team.name)}
+                            disabled={deleting === team.id}
+                            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                            title="Delete team"
+                          >
+                            {deleting === team.id ? (
+                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     );
@@ -1252,59 +1881,122 @@ export function LeagueTeamsPage() {
                   <div className="flex items-center">
                     <DollarSign className="h-4 w-4 text-[#B20000] mr-1.5" />
                     <p className="text-sm font-medium text-[#6F6F6F]">
-                      ${(() => {
-                        const ebCost = (league as any).early_bird_cost as number | null | undefined;
-                        const ebDue = (league as any).early_bird_due_date as string | null | undefined;
-                        const today = new Date();
-                        const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                        const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
-                        return effective;
-                      })()} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
+                      ${getEarlyBirdAdjustedCost(league)} + HST {league.sport_name === "Volleyball" ? "per team" : "per player"}
                     </p>
                   </div>
                 )}
               </div>
               
-              {/* Admin Actions */}
-              {userProfile?.is_admin && league?.id && (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link
-                    to={`/my-account/leagues/edit/${league.id}`}
-                    className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
-                  >
-                    Edit league
-                  </Link>
-                  {league?.team_registration === false && (
-                    <Link
-                      to={`/leagues/${league.id}`}
-                      state={{ openWaitlistModal: true }}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium whitespace-nowrap"
-                    >
-                      Add to Waitlist
-                    </Link>
-                  )}
-                </div>
+              {/* Waitlist button for individual leagues */}
+              {userProfile?.is_admin && league?.team_registration === false && (
+                <Link
+                  to={`/leagues/${league.id}`}
+                  state={{ openWaitlistModal: true }}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium whitespace-nowrap h-fit"
+                >
+                  Add to Waitlist
+                </Link>
               )}
             </div>
             
-            {/* Search Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
-                <Input
-                  placeholder="Search teams by name, captain, or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full"
-                />
+            {/* Search Bar and Team Count */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#6F6F6F]" />
+                  <Input
+                    placeholder="Search teams by name, captain, or email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
+                
+                <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
+                  {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} {league?.team_registration === false ? 'players' : 'teams'}
+                </div>
               </div>
-              
-              <div className="text-sm text-[#6F6F6F] whitespace-nowrap">
-                {filteredActiveTeams.length + filteredWaitlistedTeams.length} of {activeTeams.length + waitlistedTeams.length} {league?.team_registration === false ? 'players' : 'teams'}
+            </div>
+            
+            {/* Navigation Links */}
+            {userProfile?.is_admin && league?.id && (
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <Link
+                  to={`/my-account/leagues/edit/${league.id}`}
+                  className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                >
+                  Edit league
+                </Link>
+                <span className="text-gray-400 text-sm">|</span>
+                <span className="text-gray-400 text-sm whitespace-nowrap cursor-default">
+                  Manage teams
+                </span>
+                {hasSchedule && league?.sport_name === 'Volleyball' && (
+                  <>
+                    <span className="text-gray-400 text-sm">|</span>
+                    <Link
+                      to={`/leagues/${league.id}/schedule`}
+                      className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                    >
+                      Manage schedule
+                    </Link>
+                  </>
+                )}
+                {hasSchedule && league?.sport_name === 'Volleyball' && (
+                  <>
+                    <span className="text-gray-400 text-sm">|</span>
+                    <Link
+                      to={`/leagues/${league.id}/standings`}
+                      className="text-[#B20000] hover:underline text-sm whitespace-nowrap"
+                    >
+                      Manage standings
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Schedule Generation Section - Volleyball only */}
+        {userProfile?.is_admin && activeTeams.length > 0 && league?.sport_name === 'Volleyball' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-[#6F6F6F] text-base">
+                  {hasSchedule 
+                    ? (() => {
+                        const start = league?.start_date ? new Date(league.start_date + 'T00:00:00') : null;
+                        const today = new Date();
+                        const deleteDisabled = !!start && today >= start;
+                        return deleteDisabled
+                          ? 'Season schedule has been generated. Cannot delete once season has started.'
+                          : 'Season schedule has been generated. You can delete it and start over.';
+                      })()
+                    : "Ready to start the season? Set the order of the teams below and then generate the schedule."
+                  }
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                {(() => {
+                  const start = league?.start_date ? new Date(league.start_date + 'T00:00:00') : null;
+                  const today = new Date();
+                  const deleteDisabled = hasSchedule && !!start && today >= start;
+                  return (
+                    <Button
+                      onClick={hasSchedule ? (deleteDisabled ? undefined : handleOpenDeleteScheduleModal) : handleOpenScheduleModal}
+                      disabled={hasSchedule ? deleteDisabled : false}
+                      className="bg-[#B20000] disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed hover:bg-[#8A0000] text-white rounded-lg px-6 py-2.5 text-sm font-medium whitespace-nowrap flex items-center gap-2"
+                    >
+                      {hasSchedule ? <Trash2 className="h-4 w-4" /> : <CalendarDays className="h-4 w-4" />}
+                      {hasSchedule ? 'Delete Schedule' : 'Generate Schedule'}
+                    </Button>
+                  );
+                })()}
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Teams Content */}
         {activeTeams.length === 0 && waitlistedTeams.length === 0 ? (
@@ -1372,7 +2064,7 @@ export function LeagueTeamsPage() {
                     </SortableContext>
                   </DndContext>
                 ) : (
-                  <TeamTable teams={filteredActiveTeams} isWaitlisted={false} />
+                  <TeamTable teams={filteredActiveTeams} isWaitlisted={false} onDragEnd={handleActiveTeamDragEnd} />
                 )}
               </div>
             )}
@@ -1430,7 +2122,7 @@ export function LeagueTeamsPage() {
                     </SortableContext>
                   </DndContext>
                 ) : (
-                  <TeamTable teams={filteredWaitlistedTeams} isWaitlisted={true} />
+                  <TeamTable teams={filteredWaitlistedTeams} isWaitlisted={true} onDragEnd={handleWaitlistTeamDragEnd} />
                 )}
               </div>
             )}
@@ -1484,6 +2176,144 @@ export function LeagueTeamsPage() {
         variant="danger"
         isLoading={deleting === deleteConfirmation.teamId}
       />
+      
+      {/* Schedule Generation Modal */}
+      <Dialog open={showScheduleModal} onOpenChange={handleCloseScheduleModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#6F6F6F]">
+              Generate League Schedule
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[#6F6F6F] mt-2">
+              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-blue-800 mb-1">Important: Team Order Matters</p>
+                  <p className="text-blue-700">
+                    The schedule will be generated based on the current order of your registered teams. 
+                    Teams are ranked by their position in the list - you can reorder them by dragging 
+                    teams up or down before generating the schedule.
+                  </p>
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Game Format Selection */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-[#6F6F6F]">
+                Select Game Format
+              </label>
+              <select
+                value={selectedGameFormat}
+                onChange={(e) => setSelectedGameFormat(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-[#B20000] text-sm"
+              >
+                <option value="" disabled>
+                  Choose a game format...
+                </option>
+                {gameFormats.map((format) => (
+                  <option key={format.value} value={format.value}>
+                    {format.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={handleCloseScheduleModal}
+              disabled={generatingSchedule}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerateSchedule}
+              disabled={!selectedGameFormat || generatingSchedule}
+              className="bg-[#B20000] hover:bg-[#8A0000] text-white"
+            >
+              {generatingSchedule ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                'Generate'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+  {/* Schedule Generation Confirmation Modal */}
+  <Dialog open={showScheduleConfirmation} onOpenChange={handleCloseScheduleConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#6F6F6F] flex items-center gap-2">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              Schedule Generated Successfully!
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="text-sm text-[#6F6F6F]">
+              Your volleyball league schedule has been generated successfully using the <span className="font-medium">3 teams (6 sets)</span> format. 
+              The schedule is now available for viewing on the league details page.
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="text-sm text-blue-800">
+                <div className="font-medium mb-1">What&apos;s next?</div>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>View and manage the schedule in the admin panel</li>
+                  <li>Schedule tab is now visible to logged-in users</li>
+                  <li>Edit game times, locations, and court assignments</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex justify-between gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={handleCloseScheduleConfirmation}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                navigate(`/leagues/${leagueId}/schedule`);
+                handleCloseScheduleConfirmation();
+              }}
+              className="bg-[#B20000] hover:bg-[#8A0000] text-white"
+            >
+              Manage Schedule
+            </Button>
+          </div>
+        </DialogContent>
+  </Dialog>
+
+  {/* Delete Schedule Confirmation */}
+  <ConfirmationModal
+    isOpen={deleteScheduleOpen}
+    onClose={() => setDeleteScheduleOpen(false)}
+    onConfirm={handleConfirmDeleteSchedule}
+    title="Delete Schedule"
+    message={"This will delete the current season schedule for this league, including all generated weekly schedule entries. You can generate a new schedule afterwards."}
+    confirmText="Delete Schedule"
+    cancelText="Cancel"
+    variant="danger"
+    isLoading={deletingSchedule}
+  />
     </div>
   );
 }

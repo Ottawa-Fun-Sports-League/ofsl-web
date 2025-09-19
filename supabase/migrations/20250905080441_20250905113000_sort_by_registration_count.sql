@@ -1,12 +1,12 @@
 -- Add server-side sorting by registration count (team + individual)
 
-DROP FUNCTION IF EXISTS get_users_paginated_admin(
+DROP FUNCTION IF EXISTS public.get_users_paginated_admin(
     INTEGER, INTEGER, TEXT, TEXT, TEXT, 
     BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN,
     BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN
 );
 
-CREATE OR REPLACE FUNCTION get_users_paginated_admin(
+CREATE OR REPLACE FUNCTION public.get_users_paginated_admin(
     p_limit INTEGER DEFAULT 50,
     p_offset INTEGER DEFAULT 0,
     p_search TEXT DEFAULT '',
@@ -237,10 +237,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION get_users_paginated_admin(
+GRANT EXECUTE ON FUNCTION public.get_users_paginated_admin(
     INTEGER, INTEGER, TEXT, TEXT, TEXT, 
     BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN,
     BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN
 ) TO authenticated;
 
-COMMENT ON FUNCTION get_users_paginated_admin IS 'Admin function to retrieve paginated users with sortable registration counts.';;
+COMMENT ON FUNCTION public.get_users_paginated_admin(
+    INTEGER, INTEGER, TEXT, TEXT, TEXT,
+    BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN,
+    BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN
+) IS 'Admin function to retrieve paginated users with sortable registration counts.';

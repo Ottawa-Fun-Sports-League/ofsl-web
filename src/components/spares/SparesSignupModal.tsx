@@ -202,7 +202,7 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
 
     try {
       // Use the helper function from the migration with availability days
-      const { data, error } = await supabase.rpc('register_spare', {
+      const { error } = await supabase.rpc('register_spare', {
         p_sport_id: sportId,
         p_skill_level: skillLevel,
         p_share_phone: sharePhone,
