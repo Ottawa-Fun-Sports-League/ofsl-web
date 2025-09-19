@@ -37,6 +37,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const [isScheduleVisible, setIsScheduleVisible] = useState<boolean>(true);
   // Restrict navigation to current week and the following week for all users on public schedule
   const restrictToTwoWeeks = true;
+  // Map of team_name -> 'W' | 'L' | 'T' for current week
+  const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
   const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
   const labelMap = buildWeekTierLabels(weeklyTiers);
   const templateLabelMap = buildWeekTierLabels(week1TierStructure);
@@ -320,6 +322,26 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
         const set = new Set<number>();
         (submitted || []).forEach((r: any) => set.add(r.tier_number));
         setSubmittedTierNumbers(set);
+      } catch {}
+
+      // Load win/loss results for current week
+      try {
+        const { data: results } = await supabase
+          .from('game_results')
+          .select('team_name, sets_won, sets_lost')
+          .eq('league_id', parseInt(leagueId))
+          .eq('week_number', weekNumber)
+          .limit(1000);
+        const map = new Map<string, 'W'|'L'|'T'>();
+        (results || []).forEach((row: any) => {
+          const name = row.team_name as string;
+          const w = Number(row.sets_won || 0);
+          const l = Number(row.sets_lost || 0);
+          if (!name) return;
+          const outcome: 'W'|'L'|'T' = w > l ? 'W' : (w < l ? 'L' : 'T');
+          map.set(name, outcome);
+        });
+        setResultsByTeam(map);
       } catch {}
     } catch (error) {
       console.error("Error loading weekly schedule:", error);
@@ -735,11 +757,26 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                               <div key={position} className="text-center">
                                 <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                                 <div className="text-sm text-gray-400 italic">
-                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
-                                  ) : (
-                                    <span className="text-gray-400 italic">TBD</span>
-                                  )}
+                          {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                (() => {
+                                  const name = (tier as any)[`team_${position.toLowerCase()}_name`] as string;
+                                  const outcome = resultsByTeam.get(name);
+                                  const completed = Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number));
+                                  return (
+                                    <span>
+                                      {name}
+                                      {completed && outcome === 'W' && (
+                                        <span className="ml-2 inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
+                                      )}
+                                      {completed && outcome === 'L' && (
+                                        <span className="ml-2 inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
+                                      )}
+                                    </span>
+                                  );
+                                })()
+                              ) : (
+                                  <span className="text-gray-400 italic">TBD</span>
+                                )}
                                 </div>
                               </div>
                             ))}
@@ -763,7 +800,22 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                                 <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                                 <div className="text-sm text-[#6F6F6F]">
                                   {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                    (() => {
+                                      const name = (tier as any)[`team_${position.toLowerCase()}_name`] as string;
+                                      const outcome = resultsByTeam.get(name);
+                                      const completed = Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number));
+                                      return (
+                                        <span>
+                                          {name}
+                                          {completed && outcome === 'W' && (
+                                            <span className="ml-2 inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
+                                          )}
+                                          {completed && outcome === 'L' && (
+                                            <span className="ml-2 inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
+                                          )}
+                                        </span>
+                                      );
+                                    })()
                                   ) : (
                                     <span className="text-gray-400 italic">TBD</span>
                                   )}
@@ -781,7 +833,22 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                             <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                             <div className="text-sm text-[#6F6F6F]">
                               {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                (() => {
+                                  const name = (tier as any)[`team_${position.toLowerCase()}_name`] as string;
+                                  const outcome = resultsByTeam.get(name);
+                                  const completed = Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number));
+                                  return (
+                                    <span>
+                                      {name}
+                                      {completed && outcome === 'W' && (
+                                        <span className="ml-2 inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
+                                      )}
+                                      {completed && outcome === 'L' && (
+                                        <span className="ml-2 inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
+                                      )}
+                                    </span>
+                                  );
+                                })()
                               ) : (
                                 <span className="text-gray-400 italic">TBD</span>
                               )}

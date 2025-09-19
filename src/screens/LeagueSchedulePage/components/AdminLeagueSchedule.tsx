@@ -119,6 +119,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     position: TeamPositionId;
   } | null>(null);
   const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
+  const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
 
   // Team deletion confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -351,6 +352,27 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         setSubmittedTierNumbers(set);
       } catch (err) {
         console.warn('Unable to load submitted score tiers for admin schedule', err);
+      }
+      // Load results for W/L tags
+      try {
+        const { data: results } = await supabase
+          .from('game_results')
+          .select('team_name, sets_won, sets_lost')
+          .eq('league_id', parseInt(leagueId))
+          .eq('week_number', weekNumber)
+          .limit(1000);
+        const map = new Map<string, 'W'|'L'|'T'>();
+        (results || []).forEach((row: any) => {
+          const name = row.team_name as string;
+          const w = Number(row.sets_won || 0);
+          const l = Number(row.sets_lost || 0);
+          if (!name) return;
+          const outcome: 'W'|'L'|'T' = w > l ? 'W' : (w < l ? 'L' : 'T');
+          map.set(name, outcome);
+        });
+        setResultsByTeam(map);
+      } catch (e) {
+        console.warn('Unable to load W/L results for admin schedule', e);
       }
       
     } catch (error) {
@@ -1236,12 +1258,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               }
             : undefined
         }
-      >
-        <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-        <div className="text-sm text-[#6F6F6F] relative">
-          {team?.name ? (
-            <div className="relative group">
-              <span
+              >
+                <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                <div className="text-sm text-[#6F6F6F] relative">
+                  {team?.name ? (
+                    <div className="relative group">
+                      <span
                 draggable={isEditScheduleMode}
                 onDragStart={() => {
                   if (!isEditScheduleMode) return;
@@ -1271,6 +1293,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 className={isEditScheduleMode ? "cursor-move" : "cursor-default"}
               >
                 {`${team.name} (${teamPositions.get(team.name) || team.ranking || "-"})`}
+                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(team.name) === 'W' && (
+                  <span className="ml-2 inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
+                )}
+                {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(team.name) === 'L' && (
+                  <span className="ml-2 inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>
+                )}
               </span>
               {isEditScheduleMode && (
                 <button
