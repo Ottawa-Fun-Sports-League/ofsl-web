@@ -94,8 +94,8 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     } else if ((COURT_PRESETS as readonly string[]).includes(v)) {
       setCourtSelection(v as any);
     } else {
-      // Existing custom values should not auto-select CUSTOM; start at placeholder
-      setCourtSelection('');
+      // Existing non-preset value: select CUSTOM and show text input with saved value
+      setCourtSelection('CUSTOM');
     }
   }, [isOpen, tier.court]);
 
