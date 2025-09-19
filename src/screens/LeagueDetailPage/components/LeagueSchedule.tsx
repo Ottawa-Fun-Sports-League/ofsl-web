@@ -324,22 +324,31 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
         setSubmittedTierNumbers(set);
       } catch {}
 
-      // Load win/loss results for current week
+      // Load W/L outcomes per team based on tier_position (winner = position 1, loser = max position within tier)
       try {
         const { data: results } = await supabase
           .from('game_results')
-          .select('team_name, sets_won, sets_lost')
+          .select('team_name, tier_number, tier_position')
           .eq('league_id', parseInt(leagueId))
           .eq('week_number', weekNumber)
           .limit(1000);
         const map = new Map<string, 'W'|'L'|'T'>();
+        const maxPosByTier = new Map<number, number>();
         (results || []).forEach((row: any) => {
-          const name = row.team_name as string;
-          const w = Number(row.sets_won || 0);
-          const l = Number(row.sets_lost || 0);
+          const tierNum = Number(row.tier_number);
+          const pos = Number(row.tier_position || 0);
+          if (!Number.isFinite(tierNum) || !Number.isFinite(pos)) return;
+          const cur = maxPosByTier.get(tierNum) || 0;
+          if (pos > cur) maxPosByTier.set(tierNum, pos);
+        });
+        (results || []).forEach((row: any) => {
+          const name = (row.team_name as string) || '';
           if (!name) return;
-          const outcome: 'W'|'L'|'T' = w > l ? 'W' : (w < l ? 'L' : 'T');
-          map.set(name, outcome);
+          const tierNum = Number(row.tier_number);
+          const pos = Number(row.tier_position || 0);
+          const maxPos = maxPosByTier.get(tierNum) || 0;
+          if (pos === 1) map.set(name, 'W');
+          else if (maxPos && pos === maxPos) map.set(name, 'L');
         });
         setResultsByTeam(map);
       } catch {}
