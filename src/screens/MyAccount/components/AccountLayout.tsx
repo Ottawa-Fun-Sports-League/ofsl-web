@@ -172,6 +172,19 @@ export function AccountLayout() {
                 </svg>
                 Scorecards
               </Link>
+              <Link
+                to="/my-account/site-settings"
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm cursor-pointer relative transition-all whitespace-nowrap ${
+                  isActive("/my-account/site-settings")
+                    ? "text-[#B20000] font-semibold border-b-2 border-[#B20000]"
+                    : "text-[#6F6F6F] hover:text-[#B20000] border-b-2 border-transparent hover:border-[#B20000]/30"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12,8A4,4 0 1,0 16,12A4,4 0 0,0 12,8M4.94,6.34L3.53,4.93L2.12,6.34L3.53,7.75A8.94,8.94 0 0,0 3,12A8.94,8.94 0 0,0 3.53,16.25L2.12,17.66L3.53,19.07L4.94,17.66A8.94,8.94 0 0,0 9,21.47V23H11V21.47A8.94,8.94 0 0,0 13,21.47V23H15V21.47A8.94,8.94 0 0,0 19.06,17.66L20.47,19.07L21.88,17.66L20.47,16.25A8.94,8.94 0 0,0 21,12A8.94,8.94 0 0,0 20.47,7.75L21.88,6.34L20.47,4.93L19.06,6.34A8.94,8.94 0 0,0 15,2.53V1H13V2.53A8.94,8.94 0 0,0 11,2.53V1H9V2.53A8.94,8.94 0 0,0 4.94,6.34M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6Z" />
+                </svg>
+                Site Settings
+              </Link>
             </div>
           </div>
         )}

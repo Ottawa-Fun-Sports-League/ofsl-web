@@ -19,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_indiv_transfer_date ON individual_transfer_histor
 -- Enable RLS and admin-only policies
 ALTER TABLE individual_transfer_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can view individual transfers" ON individual_transfer_history;
 CREATE POLICY "Admins can view individual transfers" ON individual_transfer_history
   FOR SELECT USING (
     EXISTS (
@@ -28,6 +29,7 @@ CREATE POLICY "Admins can view individual transfers" ON individual_transfer_hist
     )
   );
 
+DROP POLICY IF EXISTS "Admins can insert individual transfers" ON individual_transfer_history;
 CREATE POLICY "Admins can insert individual transfers" ON individual_transfer_history
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -38,4 +40,3 @@ CREATE POLICY "Admins can insert individual transfers" ON individual_transfer_hi
   );
 
 GRANT SELECT, INSERT ON individual_transfer_history TO authenticated;
-;

@@ -8,8 +8,18 @@ CREATE TABLE IF NOT EXISTS league_schedules (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create unique constraint on league_id to ensure one schedule per league
-ALTER TABLE league_schedules ADD CONSTRAINT unique_league_schedule UNIQUE (league_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'unique_league_schedule'
+          AND conrelid = 'public.league_schedules'::regclass
+    ) THEN
+        ALTER TABLE public.league_schedules
+            ADD CONSTRAINT unique_league_schedule UNIQUE (league_id);
+    END IF;
+END $$;
 
 -- Create index on league_id for faster lookups
 CREATE INDEX IF NOT EXISTS idx_league_schedules_league_id ON league_schedules(league_id);
