@@ -21,6 +21,9 @@ export function useTeamOperations(
     try {
       setSaving(true);
       
+      const oldName = team?.name || '';
+      const newName = editTeam.name;
+
       const { error } = await supabase
         .from('teams')
         .update({
@@ -31,6 +34,54 @@ export function useTeamOperations(
         .eq('id', teamId);
 
       if (error) throw error;
+
+      // Cascade rename in schedules for this league so existing scheduled slots reflect the new name
+      try {
+        if (team && oldName && newName && oldName !== newName) {
+          const leagueIdNum = team.league_id;
+          const cols = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'] as const;
+          for (const col of cols) {
+            await supabase
+              .from('weekly_schedules')
+              .update({ [col]: newName, updated_at: new Date().toISOString() } as any)
+              .eq('league_id', leagueIdNum)
+              .eq(col, oldName);
+          }
+
+          // Also update seed names in league_schedules.schedule_data so seeding/standings references stay in sync
+          const { data: schedRow } = await supabase
+            .from('league_schedules')
+            .select('id, schedule_data')
+            .eq('league_id', leagueIdNum)
+            .maybeSingle();
+          if (schedRow && (schedRow as any).schedule_data) {
+            const sd = (schedRow as any).schedule_data;
+            let changed = false;
+            if (sd?.tiers && Array.isArray(sd.tiers)) {
+              for (const tier of sd.tiers) {
+                if (tier?.teams) {
+                  for (const key of Object.keys(tier.teams)) {
+                    const entry = tier.teams[key];
+                    if (entry && typeof entry.name === 'string' && entry.name === oldName) {
+                      entry.name = newName;
+                      changed = true;
+                    }
+                  }
+                }
+              }
+            }
+            if (changed) {
+              await supabase
+                .from('league_schedules')
+                .update({ schedule_data: sd, updated_at: new Date().toISOString() })
+                .eq('id', (schedRow as any).id);
+            }
+          }
+        }
+      } catch (cascadeErr) {
+        // Log but don't block team update flow
+        console.warn('Schedule rename cascade encountered an issue:', cascadeErr);
+      }
 
       showToast('Team updated successfully!', 'success');
       
