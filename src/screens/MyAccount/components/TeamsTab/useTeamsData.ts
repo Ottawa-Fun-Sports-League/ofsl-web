@@ -4,7 +4,10 @@
 // while maintaining functionality and test coverage.
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
-import { LeaguePayment, Team } from './types';
+import { LeaguePayment, Team, TeamMatchup } from './types';
+import { getPositionsForFormat } from '../../../LeagueSchedulePage/utils/formatUtils';
+import { calculateCurrentWeekToDisplay } from '../../../LeagueSchedulePage/utils/weekCalculation';
+import type { WeeklyScheduleTier } from '../../../LeagueSchedulePage/types';
 
 interface IndividualLeague {
   id: number;
@@ -28,12 +31,145 @@ interface IndividualLeague {
   payment_id?: number;
 }
 
+const normalizeTeamName = (name?: string | null): string =>
+  (name || '').trim().toLowerCase();
+
+const teamNameKey = (position: string): string => `team_${position.toLowerCase()}_name`;
+
 export function useTeamsData(userId?: string) {
   const [leaguePayments, setLeaguePayments] = useState<LeaguePayment[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamPaymentsByTeamId, setTeamPaymentsByTeamId] = useState<Record<number, LeaguePayment>>({});
   const [individualLeagues, setIndividualLeagues] = useState<IndividualLeague[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const attachCurrentWeekMatchups = async (teamsList: Team[]): Promise<Team[]> => {
+    if (!teamsList || teamsList.length === 0) {
+      return teamsList;
+    }
+
+    const leagueGroups = new Map<number, Team[]>();
+    teamsList.forEach((team) => {
+      const leagueId = team.league?.id;
+      if (!leagueId) return;
+      if (!leagueGroups.has(leagueId)) {
+        leagueGroups.set(leagueId, []);
+      }
+      leagueGroups.get(leagueId)!.push(team);
+    });
+
+    const teamMatchups = new Map<number, TeamMatchup>();
+
+    await Promise.all(
+      Array.from(leagueGroups.entries()).map(async ([leagueId, leagueTeams]) => {
+        const sampleLeague = leagueTeams[0]?.league;
+        const currentWeek = calculateCurrentWeekToDisplay(
+          sampleLeague?.start_date ?? null,
+          sampleLeague?.end_date ?? null,
+          sampleLeague?.day_of_week ?? null,
+        );
+
+        try {
+          const { data, error } = await supabase
+            .from('weekly_schedules')
+            .select('*')
+            .eq('league_id', leagueId)
+            .eq('week_number', currentWeek)
+            .order('tier_number', { ascending: true });
+
+          if (error) {
+            console.error('Error loading weekly schedule for league', leagueId, error);
+            leagueTeams.forEach((team) => {
+              teamMatchups.set(team.id, {
+                status: 'no_schedule',
+                weekNumber: currentWeek,
+                opponents: [],
+              });
+            });
+            return;
+          }
+
+          const tiers: WeeklyScheduleTier[] = data || [];
+
+          leagueTeams.forEach((team) => {
+            const normalized = normalizeTeamName(team.name);
+
+            const matchedTier = tiers.find((tier) => {
+              const positions = getPositionsForFormat(tier.format || '');
+              return positions.some((position) => {
+                const name = (tier as any)[teamNameKey(position)] as string | null;
+                return name && normalizeTeamName(name) === normalized;
+              });
+            });
+
+            if (!matchedTier) {
+              teamMatchups.set(team.id, {
+                status: 'no_schedule',
+                weekNumber: currentWeek,
+                opponents: [],
+              });
+              return;
+            }
+
+            const positions = getPositionsForFormat(matchedTier.format || '');
+            const opponents = positions
+              .map((position) => {
+                const name = (matchedTier as any)[teamNameKey(position)] as string | null;
+                return name && normalizeTeamName(name) !== normalized ? name : null;
+              })
+              .filter(Boolean) as string[];
+
+            const status: TeamMatchup['status'] =
+              matchedTier.no_games || opponents.length === 0 ? 'bye' : 'scheduled';
+
+            teamMatchups.set(team.id, {
+              status,
+              weekNumber: currentWeek,
+              tierNumber: matchedTier.tier_number,
+              opponents,
+              location: matchedTier.location,
+              timeSlot: matchedTier.time_slot,
+              court: matchedTier.court,
+              isPlayoff: matchedTier.is_playoff,
+              format: matchedTier.format,
+            });
+          });
+        } catch (error) {
+          console.error('Error attaching matchups for league', leagueId, error);
+          leagueTeams.forEach((team) => {
+            teamMatchups.set(team.id, {
+              status: 'no_schedule',
+              weekNumber: currentWeek,
+              opponents: [],
+            });
+          });
+        }
+      }),
+    );
+
+    return teamsList.map((team) => {
+      if (!team.league?.id) {
+        return { ...team };
+      }
+      const matchup = teamMatchups.get(team.id);
+      if (matchup) {
+        return { ...team, currentMatchup: matchup };
+      }
+      const fallbackWeek = calculateCurrentWeekToDisplay(
+        team.league?.start_date ?? null,
+        team.league?.end_date ?? null,
+        team.league?.day_of_week ?? null,
+      );
+      return {
+        ...team,
+        currentMatchup: {
+          status: 'no_schedule',
+          weekNumber: fallbackWeek,
+          opponents: [],
+        },
+      };
+    });
+  };
 
   useEffect(() => {
     if (userId) {
@@ -55,7 +191,19 @@ export function useTeamsData(userId?: string) {
         .from('teams')
         .select(`
           *,
-          league:leagues(id, name, location, cost, start_date, payment_due_date, gym_ids),
+          league:leagues(
+            id,
+            name,
+            location,
+            cost,
+            start_date,
+            end_date,
+            day_of_week,
+            playoff_weeks,
+            schedule_visible,
+            payment_due_date,
+            gym_ids
+          ),
           skill:skills(id, name)
         `)
         .contains('roster', [userId])
@@ -101,9 +249,11 @@ export function useTeamsData(userId?: string) {
         };
       });
       
-      setTeams(teamsData);
+      const teamsWithMatchups = await attachCurrentWeekMatchups(teamsData);
+
+      setTeams(teamsWithMatchups);
       // Also load team-level payments for these teams (not limited to current user)
-      const teamIds = teamsData.map((t) => t.id);
+      const teamIds = teamsWithMatchups.map((t) => t.id);
       if (teamIds.length > 0) {
         try {
           const { data: teamPays } = await supabase
@@ -154,7 +304,7 @@ export function useTeamsData(userId?: string) {
       } else {
         setTeamPaymentsByTeamId({});
       }
-      return teamsData;
+      return teamsWithMatchups;
     } catch (error) {
       console.error('Error fetching teams:', error);
       return [];
