@@ -1302,7 +1302,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                 }}
                 className={isEditScheduleMode ? "cursor-move" : "cursor-default"}
               >
-                {`${team.name} (${teamPositions.get(team.name) || team.ranking || "-"})`}
+                {team.name}
                 {Boolean(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && resultsByTeam.get(norm(team.name)) === 'W' && (
                   <span className="ml-2 inline-flex items-center rounded border border-green-200 bg-green-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-green-700">W</span>
                 )}

@@ -21,6 +21,9 @@ export function useTeamOperations(
     try {
       setSaving(true);
       
+      const oldName = team?.name || '';
+      const newName = editTeam.name;
+
       const { error } = await supabase
         .from('teams')
         .update({
@@ -31,6 +34,82 @@ export function useTeamOperations(
         .eq('id', teamId);
 
       if (error) throw error;
+
+      // Cascade rename in schedules for this league so existing scheduled slots reflect the new name
+      try {
+        if (team && oldName && newName && oldName !== newName) {
+          const leagueIdNum = (team as any).league_id ?? (team.leagues?.id);
+          if (leagueIdNum) {
+            const cols = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'] as const;
+
+            // Prefer exact-match updates per column (fast path)
+            for (const col of cols) {
+              await supabase
+                .from('weekly_schedules')
+                .update({ [col]: newName, updated_at: new Date().toISOString() } as any)
+                .eq('league_id', leagueIdNum as number)
+                .eq(col, oldName);
+            }
+
+            // Safety net: handle case-insensitive/trim mismatches by patching rows client-side when needed
+            const { data: wsRows } = await supabase
+              .from('weekly_schedules')
+              .select('id, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
+              .eq('league_id', leagueIdNum as number);
+            const normalize = (s: string | null | undefined) => (s || '').trim().toLowerCase();
+            const normOld = normalize(oldName);
+            for (const row of (wsRows || []) as Array<Record<string, any>>) {
+              const update: Record<string, any> = { updated_at: new Date().toISOString() };
+              let needsUpdate = false;
+              for (const col of cols) {
+                if (normalize(row[col]) === normOld && row[col] !== newName) {
+                  update[col] = newName;
+                  needsUpdate = true;
+                }
+              }
+              if (needsUpdate) {
+                await supabase
+                  .from('weekly_schedules')
+                  .update(update)
+                  .eq('id', row.id);
+              }
+            }
+          }
+
+          // Also update seed names in league_schedules.schedule_data so seeding/standings references stay in sync
+          const { data: schedRow } = await supabase
+            .from('league_schedules')
+            .select('id, schedule_data')
+            .eq('league_id', (leagueIdNum as number | undefined) ?? 0)
+            .maybeSingle();
+          if (schedRow && (schedRow as any).schedule_data) {
+            const sd = (schedRow as any).schedule_data;
+            let changed = false;
+            if (sd?.tiers && Array.isArray(sd.tiers)) {
+              for (const tier of sd.tiers) {
+                if (tier?.teams) {
+                  for (const key of Object.keys(tier.teams)) {
+                    const entry = tier.teams[key];
+                    if (entry && typeof entry.name === 'string' && entry.name === oldName) {
+                      entry.name = newName;
+                      changed = true;
+                    }
+                  }
+                }
+              }
+            }
+            if (changed) {
+              await supabase
+                .from('league_schedules')
+                .update({ schedule_data: sd, updated_at: new Date().toISOString() })
+                .eq('id', (schedRow as any).id);
+            }
+          }
+        }
+      } catch (cascadeErr) {
+        // Log but don't block team update flow
+        console.warn('Schedule rename cascade encountered an issue:', cascadeErr);
+      }
 
       showToast('Team updated successfully!', 'success');
       
