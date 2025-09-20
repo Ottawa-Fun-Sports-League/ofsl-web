@@ -6,6 +6,7 @@ COMMENT ON COLUMN game_results.match_details IS 'Raw match details JSON (e.g., p
 
 -- Update RLS policies to include facilitators in manage permissions
 -- Weekly schedules
+DROP POLICY IF EXISTS "Admins and facilitators can manage weekly schedules" ON weekly_schedules;
 DROP POLICY IF EXISTS "Admins can manage weekly schedules" ON weekly_schedules;
 CREATE POLICY "Admins and facilitators can manage weekly schedules" ON weekly_schedules
   FOR ALL USING (
@@ -17,6 +18,7 @@ CREATE POLICY "Admins and facilitators can manage weekly schedules" ON weekly_sc
   );
 
 -- Game results
+DROP POLICY IF EXISTS "Admins and facilitators can manage game results" ON game_results;
 DROP POLICY IF EXISTS "Admins can manage game results" ON game_results;
 CREATE POLICY "Admins and facilitators can manage game results" ON game_results
   FOR ALL USING (
@@ -26,4 +28,3 @@ CREATE POLICY "Admins and facilitators can manage game results" ON game_results
       AND (users.is_admin = true OR users.is_facilitator = true)
     )
   );
-

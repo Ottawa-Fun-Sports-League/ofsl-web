@@ -28,6 +28,7 @@ CREATE INDEX IF NOT EXISTS idx_league_schedules_league_id ON league_schedules(le
 ALTER TABLE league_schedules ENABLE ROW LEVEL SECURITY;
 
 -- Policy for admins to manage all schedules
+DROP POLICY IF EXISTS "Admins can manage all schedules" ON league_schedules;
 CREATE POLICY "Admins can manage all schedules" ON league_schedules
     FOR ALL USING (
         EXISTS (
@@ -38,6 +39,7 @@ CREATE POLICY "Admins can manage all schedules" ON league_schedules
     );
 
 -- Policy for authenticated users to view schedules
+DROP POLICY IF EXISTS "Authenticated users can view schedules" ON league_schedules;
 CREATE POLICY "Authenticated users can view schedules" ON league_schedules
     FOR SELECT USING (auth.role() = 'authenticated');
 
@@ -50,6 +52,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS league_schedules_updated_at ON league_schedules;
 CREATE TRIGGER league_schedules_updated_at
     BEFORE UPDATE ON league_schedules
     FOR EACH ROW

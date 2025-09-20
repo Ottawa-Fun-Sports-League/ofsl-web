@@ -23,9 +23,11 @@ vi.mock('./hooks/useLeaguesData', () => ({
         sport_name: 'Volleyball',
         location: 'Central',
         teams_count: 5,
-        status: 'active'
+        status: 'active',
+        is_archived: false
       }
     ],
+    archivedLeagues: [],
     loading: false,
     loadData: vi.fn()
   })

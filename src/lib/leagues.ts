@@ -31,6 +31,7 @@ export interface League {
   team_registration: boolean | null;
   playoff_weeks?: number | null;
   created_at: string;
+  is_archived?: boolean;
 
   // Joined data
   sport_name: string | null;
@@ -48,7 +49,18 @@ export interface LeagueWithTeamCount extends League {
   team_count: number;
   spots_remaining: number;
   skill_names: string[] | null;
+  is_archived?: boolean;
 }
+
+export const isLeagueArchived = (league: { end_date: string | null }): boolean => {
+  if (!league.end_date) {
+    return false;
+  }
+
+  const now = new Date();
+  const endOfLeague = new Date(`${league.end_date}T23:59:59`);
+  return endOfLeague.getTime() < now.getTime();
+};
 
 // Convert day_of_week number to day name
 export const getDayName = (dayOfWeek: number | null): string => {
@@ -342,6 +354,7 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
 
     // Transform the data
     const leagues: LeagueWithTeamCount[] = leaguesData.map((league) => {
+      const isArchived = isLeagueArchived(league);
       // For individual leagues, count individuals; for team leagues, count teams
       const isIndividualLeague = league.team_registration === false;
       const registrationCount = isIndividualLeague 
@@ -372,10 +385,11 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
         gyms: leagueGyms,
         team_count: registrationCount,  // This now represents either teams or individuals
         spots_remaining: spotsRemaining,
+        is_archived: isArchived,
       };
     });
 
-    return leagues;
+    return leagues.filter((league) => !league.is_archived);
   } catch (error) {
     logger.error("Error in fetchLeagues", error);
     return [];
@@ -439,12 +453,15 @@ export const fetchLeagueById = async (id: number): Promise<League | null> => {
       }
     }
 
+    const is_archived = isLeagueArchived(data);
+
     return {
       ...data,
       sport_name: data.sports?.name || null,
       skill_name: data.skills?.name || null,
       skill_names: skillNames,
       gyms: gyms || [],
+      is_archived,
     };
   } catch (error) {
     logger.error("Error in fetchLeagueById", error);

@@ -102,8 +102,9 @@ export function LeagueDetailPage() {
       setLoading(true);
       const leagueData = await fetchLeagueById(parseInt(id));
 
-      if (!leagueData) {
+      if (!leagueData || (leagueData.is_archived && !userProfile?.is_admin)) {
         setError("League not found");
+        setLeague(null);
       } else {
         setLeague(leagueData);
         
@@ -297,4 +298,3 @@ export function LeagueDetailPage() {
     </div>
   );
 }
-

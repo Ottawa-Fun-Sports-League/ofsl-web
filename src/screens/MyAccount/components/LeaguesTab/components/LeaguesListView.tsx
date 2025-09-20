@@ -129,7 +129,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
 
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
+      <table className="min-w-[1200px] w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
             <SortableHeader field="name">League</SortableHeader>
@@ -144,7 +144,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Registrations
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[220px]">
               Actions
             </th>
           </tr>
@@ -267,7 +267,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
                   )}
                 </div>
               </td>
-              <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium w-[220px]">
                 <div className="flex items-center justify-end space-x-1">
                   <Link to={`/my-account/leagues/edit/${league.id}`}>
                     <Button

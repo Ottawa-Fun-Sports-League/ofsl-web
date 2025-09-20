@@ -16,7 +16,7 @@ export function AccountLayout() {
 
   return (
     <div className="bg-white w-full min-h-screen">
-      <div className="max-w-[1280px] mx-auto px-4 py-8">
+      <div className="max-w-[1440px] mx-auto px-6 py-8">
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-[#6F6F6F] mb-2">

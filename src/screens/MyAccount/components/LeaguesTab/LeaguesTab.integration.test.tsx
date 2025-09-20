@@ -65,6 +65,7 @@ vi.mock('../hooks/useLeaguesData', () => {
       spots_remaining: 5,
       team_count: 8,
       gyms: [{ id: 1, name: 'Sandy Hill CC', location: 'Central' }],
+      is_archived: false,
     },
     {
       id: 2,
@@ -78,12 +79,14 @@ vi.mock('../hooks/useLeaguesData', () => {
       spots_remaining: 0,
       team_count: 16,
       gyms: [],
+      is_archived: false,
     },
   ];
   
   return {
     useLeaguesData: () => ({
       leagues: mockLeagues,
+      archivedLeagues: [],
       sports: [
         { id: 1, name: 'Volleyball' },
         { id: 2, name: 'Badminton' },

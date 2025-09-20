@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { useNavigate } from 'react-router-dom';
@@ -36,6 +37,7 @@ export function LeaguesTab() {
 
   const {
     leagues,
+    archivedLeagues,
     loading,
     loadData
   } = useLeaguesData();
@@ -111,9 +113,12 @@ export function LeaguesTab() {
     navigate(`/leagues/${leagueId}/schedule`);
   };
 
+  const [showArchived, setShowArchived] = useState(false);
+  
   
   // Filter leagues using the shared filter function
   const filteredLeagues = filterLeagues(leagues, filters, skills) as LeagueWithTeamCount[];
+  const filteredArchivedLeagues = filterLeagues(archivedLeagues, filters, skills) as LeagueWithTeamCount[];
   
   // Customize filter options for admin page
   const filterOptions = {
@@ -186,6 +191,42 @@ export function LeaguesTab() {
           onCopy={handleCopyClick}
           onManageSchedule={handleManageSchedule}
         />
+      )}
+
+      {filteredArchivedLeagues.length > 0 && (
+        <div className="mt-10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[#6F6F6F]">Archived Leagues</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowArchived((prev) => !prev)}
+              className="text-[#B20000] hover:text-[#8A0000]"
+            >
+              {showArchived ? 'Hide archive' : `Show archive (${filteredArchivedLeagues.length})`}
+            </Button>
+          </div>
+
+          {showArchived && (
+            <div className="mt-4">
+              {viewMode === 'card' ? (
+                <LeaguesList
+                  leagues={filteredArchivedLeagues}
+                  onDelete={handleDeleteLeague}
+                  onCopy={handleCopyClick}
+                  onManageSchedule={handleManageSchedule}
+                />
+              ) : (
+                <LeaguesListView
+                  leagues={filteredArchivedLeagues}
+                  onDelete={handleDeleteLeague}
+                  onCopy={handleCopyClick}
+                  onManageSchedule={handleManageSchedule}
+                />
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <CopyLeagueDialog

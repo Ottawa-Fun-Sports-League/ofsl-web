@@ -21,7 +21,8 @@ vi.mock('../../../../../../lib/supabase', () => ({
 vi.mock('../../../../../../lib/leagues', () => ({
   fetchSports: vi.fn(() => Promise.resolve([])),
   fetchSkills: vi.fn(() => Promise.resolve([])),
-  sortLeaguesByDay: vi.fn(leagues => leagues)
+  sortLeaguesByDay: vi.fn((leagues) => leagues),
+  isLeagueArchived: vi.fn(() => false)
 }));
 
 describe('Individual League Registration Counting Fix', () => {

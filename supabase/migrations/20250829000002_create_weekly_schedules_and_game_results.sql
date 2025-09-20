@@ -38,8 +38,29 @@ CREATE TABLE IF NOT EXISTS game_results (
 );
 
 -- Create unique constraints
-ALTER TABLE weekly_schedules ADD CONSTRAINT unique_league_week_tier UNIQUE (league_id, week_number, tier_number);
-ALTER TABLE game_results ADD CONSTRAINT unique_league_week_tier_team UNIQUE (league_id, week_number, tier_number, team_name);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'unique_league_week_tier'
+          AND conrelid = 'public.weekly_schedules'::regclass
+    ) THEN
+        ALTER TABLE weekly_schedules ADD CONSTRAINT unique_league_week_tier UNIQUE (league_id, week_number, tier_number);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'unique_league_week_tier_team'
+          AND conrelid = 'public.game_results'::regclass
+    ) THEN
+        ALTER TABLE game_results ADD CONSTRAINT unique_league_week_tier_team UNIQUE (league_id, week_number, tier_number, team_name);
+    END IF;
+END $$;
 
 -- Create indexes for faster lookups
 CREATE INDEX IF NOT EXISTS idx_weekly_schedules_league_week ON weekly_schedules(league_id, week_number);
@@ -48,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_game_results_league_week ON game_results(league_i
 -- Add RLS policies for weekly_schedules
 ALTER TABLE weekly_schedules ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can manage weekly schedules" ON weekly_schedules;
 CREATE POLICY "Admins can manage weekly schedules" ON weekly_schedules
     FOR ALL USING (
         EXISTS (
@@ -57,12 +79,14 @@ CREATE POLICY "Admins can manage weekly schedules" ON weekly_schedules
         )
     );
 
+DROP POLICY IF EXISTS "Authenticated users can view weekly schedules" ON weekly_schedules;
 CREATE POLICY "Authenticated users can view weekly schedules" ON weekly_schedules
     FOR SELECT USING (auth.role() = 'authenticated');
 
 -- Add RLS policies for game_results
 ALTER TABLE game_results ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can manage game results" ON game_results;
 CREATE POLICY "Admins can manage game results" ON game_results
     FOR ALL USING (
         EXISTS (
@@ -72,6 +96,7 @@ CREATE POLICY "Admins can manage game results" ON game_results
         )
     );
 
+DROP POLICY IF EXISTS "Authenticated users can view game results" ON game_results;
 CREATE POLICY "Authenticated users can view game results" ON game_results
     FOR SELECT USING (auth.role() = 'authenticated');
 
@@ -93,11 +118,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create triggers
+DROP TRIGGER IF EXISTS weekly_schedules_updated_at ON weekly_schedules;
 CREATE TRIGGER weekly_schedules_updated_at
     BEFORE UPDATE ON weekly_schedules
     FOR EACH ROW
     EXECUTE FUNCTION update_weekly_schedules_updated_at();
 
+DROP TRIGGER IF EXISTS game_results_updated_at ON game_results;
 CREATE TRIGGER game_results_updated_at
     BEFORE UPDATE ON game_results
     FOR EACH ROW

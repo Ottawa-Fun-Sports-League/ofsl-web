@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../../../../lib/supabase';
-import { fetchSports, fetchSkills, sortLeaguesByDay } from '../../../../../lib/leagues';
+import { fetchSports, fetchSkills, sortLeaguesByDay, isLeagueArchived } from '../../../../../lib/leagues';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import { LeagueWithTeamCount, Sport, Skill, Gym } from '../types';
 
@@ -10,6 +10,7 @@ export function useLeaguesData() {
   const [sports, setSports] = useState<Sport[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [gyms, setGyms] = useState<Gym[]>([]);
+  const [archivedLeagues, setArchivedLeagues] = useState<LeagueWithTeamCount[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -128,6 +129,7 @@ export function useLeaguesData() {
         
         if (leaguesData) {
           const leaguesWithDetails = leaguesData.map(league => {
+            const isArchived = isLeagueArchived(league);
             // For individual leagues, count individuals; for team leagues, count teams
             const isIndividualLeague = league.team_registration === false;
             const registrationCount = isIndividualLeague 
@@ -166,13 +168,19 @@ export function useLeaguesData() {
               spots_remaining: spotsRemaining,
               is_individual: isIndividualLeague,
               has_schedule: hasSchedule,
-              has_standings: hasStandings
+              has_standings: hasStandings,
+              is_archived: isArchived
             };
           });
           
-          // Sort leagues by day of week (Monday to Sunday)
-          const sortedLeagues = sortLeaguesByDay(leaguesWithDetails);
-          setLeagues(sortedLeagues);
+          const activeLeagues = leaguesWithDetails.filter(league => !league.is_archived);
+          const archived = leaguesWithDetails.filter(league => league.is_archived);
+
+          const sortedActive = sortLeaguesByDay(activeLeagues);
+          const sortedArchived = sortLeaguesByDay(archived);
+
+          setLeagues(sortedActive);
+          setArchivedLeagues(sortedArchived);
         }
       }
     } catch (error) {
@@ -189,6 +197,7 @@ export function useLeaguesData() {
     skills,
     gyms,
     loading,
-    loadData
+    loadData,
+    archivedLeagues
   };
 }
