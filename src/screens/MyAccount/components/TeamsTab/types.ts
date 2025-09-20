@@ -14,6 +14,18 @@ export interface LeaguePayment {
   skill_name?: string | null;
 }
 
+export interface TeamMatchup {
+  status: 'scheduled' | 'bye' | 'no_schedule';
+  weekNumber: number;
+  tierNumber?: number;
+  opponents: string[];
+  location?: string | null;
+  timeSlot?: string | null;
+  court?: string | null;
+  isPlayoff?: boolean;
+  format?: string | null;
+}
+
 export interface Team {
   id: number;
   name: string;
@@ -23,6 +35,10 @@ export interface Team {
     location?: string;
     cost?: number;
     start_date?: string;
+    end_date?: string;
+    day_of_week?: number | null;
+    playoff_weeks?: number | null;
+    schedule_visible?: boolean | null;
     gym_ids?: number[];
     gyms?: Array<{
       id?: number;
@@ -44,4 +60,5 @@ export interface Team {
     amount_due: number;
     amount_paid: number;
   };
+  currentMatchup?: TeamMatchup;
 }

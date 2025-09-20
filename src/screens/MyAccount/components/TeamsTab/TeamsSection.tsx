@@ -3,7 +3,18 @@
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
 import { useState } from "react";
-import { User, MapPin, Trash2, UserPlus, Users, Crown, Edit2 } from "lucide-react";
+import {
+  User,
+  MapPin,
+  Trash2,
+  UserPlus,
+  Users,
+  Crown,
+  Edit2,
+  CalendarDays,
+  Layers,
+  ArrowUpRight,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
 import { PaymentStatusBadge } from "../../../../components/ui/payment-status-badge";
@@ -16,6 +27,40 @@ import {
   getPrimaryLocation,
   getGymNamesByLocation,
 } from "../../../../lib/leagues";
+
+const formatOpponentsList = (opponents: string[]): string => {
+  if (!opponents || opponents.length === 0) {
+    return "Bye week";
+  }
+
+  if (opponents.length === 1) {
+    return opponents[0];
+  }
+
+  if (opponents.length === 2) {
+    return `${opponents[0]} & ${opponents[1]}`;
+  }
+
+  const lastOpponent = opponents[opponents.length - 1];
+  const initialOpponents = opponents.slice(0, -1);
+  return `${initialOpponents.join(", ")} & ${lastOpponent}`;
+};
+
+const formatLocationSummary = (
+  location?: string | null,
+  court?: string | null,
+  timeSlot?: string | null,
+): string | null => {
+  const parts = [location, court, timeSlot]
+    .filter((value): value is string => !!value && value.trim().length > 0)
+    .map((value) => value.trim());
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return parts.join(" • ");
+};
 
 interface IndividualLeague {
   id: number;
@@ -104,6 +149,56 @@ export function TeamsSection({
               teamPayment?.amount_due ||
               0;
 
+            const matchup = team.currentMatchup;
+            const matchupStatus = matchup?.status || "no_schedule";
+            const weekLabel = matchup?.weekNumber ? `Week ${matchup.weekNumber}` : "Week TBD";
+            const tierLabel = matchup?.tierNumber ? `Tier ${matchup.tierNumber}` : "Tier TBD";
+            const opponentsLabel =
+              matchupStatus === "scheduled"
+                ? formatOpponentsList(matchup?.opponents || [])
+                : matchupStatus === "bye"
+                  ? "Bye week"
+                  : "Schedule not published yet";
+            const locationSummary = matchup
+              ? formatLocationSummary(matchup.location, matchup.court, matchup.timeSlot)
+              : null;
+            const fallbackLocations = getPrimaryLocation(team.league?.gyms || []);
+            const locationElements = locationSummary
+              ? [
+                  <span key="summary" className="text-sm text-[#6F6F6F]">
+                    {locationSummary}
+                  </span>,
+                ]
+              : fallbackLocations.length > 0
+                ? fallbackLocations.map((location, index) => (
+                    <LocationPopover
+                      key={index}
+                      locations={getGymNamesByLocation(team.league?.gyms || [], location)}
+                    >
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
+                        {location}
+                      </span>
+                    </LocationPopover>
+                  ))
+                : [
+                    <span key="tbd" className="text-sm text-gray-500">
+                      TBD
+                    </span>,
+                  ];
+            const isPlayoffWeek = matchup?.isPlayoff;
+            const opponentsTextClass =
+              matchupStatus === "scheduled"
+                ? "text-[#6F6F6F]"
+                : "text-gray-500 italic";
+            const weekTextClass =
+              weekLabel === "Week TBD"
+                ? "font-medium text-gray-500 italic"
+                : "font-medium text-[#6F6F6F]";
+            const tierTextClass =
+              matchup?.tierNumber
+                ? "text-[#6F6F6F]"
+                : "text-gray-500 italic";
+
             return (
               <div
                 key={team.id}
@@ -124,12 +219,13 @@ export function TeamsSection({
                             >
                               {team.league.name}
                             </Link>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Link
                                 to={`/leagues/${team.league.id}?tab=schedule`}
-                                className="text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors font-medium"
+                                className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors font-medium"
                               >
-                                Schedule
+                                View full schedule
+                                <ArrowUpRight className="h-3 w-3" />
                               </Link>
                               <span className="text-gray-300">•</span>
                               <Link
@@ -146,6 +242,42 @@ export function TeamsSection({
                           </p>
                         )}
                       </div>
+                      {team.league?.id && (
+                        <div className="bg-gray-50 border border-gray-100 rounded-md p-4">
+                          <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#6F6F6F]">
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4 text-[#B20000]" />
+                              <span className={weekTextClass}>
+                                {weekLabel}
+                              </span>
+                              {isPlayoffWeek && (
+                                <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-red-100 text-[#B20000] rounded-full border border-red-200">
+                                  Playoffs
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Layers className="h-4 w-4 text-[#6F6F6F]" />
+                              <span className="font-medium text-[#6F6F6F]">Tier:</span>
+                              <span className={tierTextClass}>{tierLabel}</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 w-full">
+                              <Users className="h-4 w-4 text-[#6F6F6F]" />
+                              <span className="font-medium text-[#6F6F6F]">Playing:</span>
+                              <span className={`${opponentsTextClass}`}>
+                                {opponentsLabel}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 w-full">
+                              <MapPin className="h-4 w-4 text-[#6F6F6F] flex-shrink-0" />
+                              <span className="font-medium text-[#6F6F6F]">Location:</span>
+                              <div className="flex flex-wrap items-center gap-1">
+                                {locationElements}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2 mt-3 sm:mt-0 sm:ml-4">
@@ -213,39 +345,7 @@ export function TeamsSection({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
-                      <span className="text-[#6F6F6F]">Location:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {(() => {
-                          const gymLocations = getPrimaryLocation(
-                            team.league?.gyms || [],
-                          );
-
-                          if (gymLocations.length === 0) {
-                            return (
-                              <span className="text-sm text-gray-500">TBD</span>
-                            );
-                          }
-
-                          return gymLocations.map((location, index) => (
-                            <LocationPopover
-                              key={index}
-                              locations={getGymNamesByLocation(
-                                team.league?.gyms || [],
-                                location,
-                              )}
-                            >
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                                {location}
-                              </span>
-                            </LocationPopover>
-                          ));
-                        })()}
-                      </div>
-                    </div>
-
+                  <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm mt-4">
                     <div className="flex items-center gap-2">
                       <User className="h-5 w-5 text-blue-500 flex-shrink-0" />
                       <span className="text-[#6F6F6F]">
