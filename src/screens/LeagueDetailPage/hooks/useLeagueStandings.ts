@@ -68,67 +68,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
       const { rankings: teamRankings, scheduleExists } = await getScheduleRankings();
       setHasSchedule(scheduleExists);
 
-      type StandingsJoinRow = {
-        id: number;
-        team_id: number;
-        wins: number | null;
-        losses: number | null;
-        points: number | null;
-        point_differential: number | null;
-        manual_wins_adjustment: number | null;
-        manual_losses_adjustment: number | null;
-        manual_points_adjustment: number | null;
-        manual_differential_adjustment: number | null;
-        current_position: number | null;
-        teams: {
-          id: number;
-          name: string;
-          roster: string[] | null;
-          created_at: string;
-          active: boolean;
-        };
-      };
-
-      const { data: standingsData, error: standingsError } = await supabase
-        .from<StandingsJoinRow>('standings')
-        .select(
-          `id,
-           team_id,
-           wins,
-           losses,
-           points,
-           point_differential,
-           manual_wins_adjustment,
-           manual_losses_adjustment,
-           manual_points_adjustment,
-           manual_differential_adjustment,
-           current_position,
-           teams!inner(id, name, roster, created_at, active)`
-        )
-        .eq('league_id', leagueIdNumber)
-        .eq('teams.active', true)
-        .order('current_position', { ascending: true, nullsFirst: false });
-
-      if (standingsError) throw standingsError;
-
-      if (standingsData && standingsData.length > 0) {
-        const formattedStandings: StandingsTeam[] = standingsData.map(standing => ({
-          id: standing.teams.id,
-          name: standing.teams.name,
-          roster_size: standing.teams.roster?.length ?? 0,
-          wins: (standing.wins ?? 0) + (standing.manual_wins_adjustment ?? 0),
-          losses: (standing.losses ?? 0) + (standing.manual_losses_adjustment ?? 0),
-          points: (standing.points ?? 0) + (standing.manual_points_adjustment ?? 0),
-          differential:
-            (standing.point_differential ?? 0) + (standing.manual_differential_adjustment ?? 0),
-          created_at: standing.teams.created_at,
-          schedule_ranking: teamRankings.get(standing.teams.name),
-        }));
-
-        setTeams(formattedStandings);
-        return;
-      }
-
+      // Always include all active teams; merge with standings rows if present
       type TeamRow = {
         id: number;
         name: string;
@@ -141,39 +81,79 @@ export function useLeagueStandings(leagueId: string | undefined) {
         .select('id, name, roster, created_at')
         .eq('league_id', leagueIdNumber)
         .eq('active', true);
-
       if (teamsError) throw teamsError;
 
-      const fallbackStandings: StandingsTeam[] = (teamsData ?? []).map(team => ({
-        id: team.id,
-        name: team.name,
-        roster_size: team.roster?.length ?? 0,
-        wins: 0,
-        losses: 0,
-        points: 0,
-        differential: 0,
-        created_at: team.created_at,
-        schedule_ranking: teamRankings.get(team.name),
-      }));
+      // Fetch standings rows for these teams (if table exists)
+      let standingsRows: Array<{
+        id: number;
+        team_id: number;
+        wins: number | null;
+        losses: number | null;
+        points: number | null;
+        point_differential: number | null;
+        manual_wins_adjustment: number | null;
+        manual_losses_adjustment: number | null;
+        manual_points_adjustment: number | null;
+        manual_differential_adjustment: number | null;
+        current_position: number | null;
+      }> = [];
+      try {
+        const teamIds = (teamsData || []).map(t => t.id);
+        if (teamIds.length > 0) {
+          const { data: sData, error: sErr } = await supabase
+            .from('standings')
+            .select('id, team_id, wins, losses, points, point_differential, manual_wins_adjustment, manual_losses_adjustment, manual_points_adjustment, manual_differential_adjustment, current_position')
+            .eq('league_id', leagueIdNumber)
+            .in('team_id', teamIds);
+          if (sErr && (sErr as any).code !== '42P01') throw sErr;
+          standingsRows = sData || [];
+        }
+      } catch (_) {
+        // Standings table may not exist; proceed with zeroed stats
+      }
 
-      const sortedFallback = [...fallbackStandings].sort((a, b) => {
+      const byTeamId = new Map(standingsRows.map(s => [s.team_id, s] as const));
+      const posByTeamId = new Map<number, number | null>(standingsRows.map(s => [s.team_id, s.current_position ?? null] as const));
+
+      const merged: StandingsTeam[] = (teamsData || []).map(team => {
+        const s = byTeamId.get(team.id);
+        const wins = (s?.wins ?? 0) + (s?.manual_wins_adjustment ?? 0);
+        const losses = (s?.losses ?? 0) + (s?.manual_losses_adjustment ?? 0);
+        const points = (s?.points ?? 0) + (s?.manual_points_adjustment ?? 0);
+        const diff = (s?.point_differential ?? 0) + (s?.manual_differential_adjustment ?? 0);
+        return {
+          id: team.id,
+          name: team.name,
+          roster_size: team.roster?.length ?? 0,
+          wins,
+          losses,
+          points,
+          differential: diff,
+          created_at: team.created_at,
+          schedule_ranking: teamRankings.get(team.name),
+        };
+      });
+
+      // Sort: teams with current_position first by that, then by schedule_ranking, then by created_at
+      const sorted = [...merged].sort((a, b) => {
+        const aPos = posByTeamId.get(a.id);
+        const bPos = posByTeamId.get(b.id);
+        const aHasPos = typeof aPos === 'number' && (aPos as number) > 0;
+        const bHasPos = typeof bPos === 'number' && (bPos as number) > 0;
+        if (aHasPos && bHasPos) return (aPos as number) - (bPos as number);
+        if (aHasPos && !bHasPos) return -1;
+        if (!aHasPos && bHasPos) return 1;
+
         const hasRankA = typeof a.schedule_ranking === 'number';
         const hasRankB = typeof b.schedule_ranking === 'number';
-
-        if (hasRankA && hasRankB) {
-          return (a.schedule_ranking as number) - (b.schedule_ranking as number);
-        }
-        if (hasRankA && !hasRankB) {
-          return -1;
-        }
-        if (!hasRankA && hasRankB) {
-          return 1;
-        }
+        if (hasRankA && hasRankB) return (a.schedule_ranking as number) - (b.schedule_ranking as number);
+        if (hasRankA && !hasRankB) return -1;
+        if (!hasRankA && hasRankB) return 1;
 
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
 
-      setTeams(sortedFallback);
+      setTeams(sorted);
     } catch (err) {
       console.error('Error loading teams for standings:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load teams';
