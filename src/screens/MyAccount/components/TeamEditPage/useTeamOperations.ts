@@ -38,21 +38,49 @@ export function useTeamOperations(
       // Cascade rename in schedules for this league so existing scheduled slots reflect the new name
       try {
         if (team && oldName && newName && oldName !== newName) {
-          const leagueIdNum = team.league_id;
-          const cols = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'] as const;
-          for (const col of cols) {
-            await supabase
+          const leagueIdNum = (team as any).league_id ?? (team.leagues?.id);
+          if (leagueIdNum) {
+            const cols = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'] as const;
+
+            // Prefer exact-match updates per column (fast path)
+            for (const col of cols) {
+              await supabase
+                .from('weekly_schedules')
+                .update({ [col]: newName, updated_at: new Date().toISOString() } as any)
+                .eq('league_id', leagueIdNum as number)
+                .eq(col, oldName);
+            }
+
+            // Safety net: handle case-insensitive/trim mismatches by patching rows client-side when needed
+            const { data: wsRows } = await supabase
               .from('weekly_schedules')
-              .update({ [col]: newName, updated_at: new Date().toISOString() } as any)
-              .eq('league_id', leagueIdNum)
-              .eq(col, oldName);
+              .select('id, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
+              .eq('league_id', leagueIdNum as number);
+            const normalize = (s: string | null | undefined) => (s || '').trim().toLowerCase();
+            const normOld = normalize(oldName);
+            for (const row of (wsRows || []) as Array<Record<string, any>>) {
+              const update: Record<string, any> = { updated_at: new Date().toISOString() };
+              let needsUpdate = false;
+              for (const col of cols) {
+                if (normalize(row[col]) === normOld && row[col] !== newName) {
+                  update[col] = newName;
+                  needsUpdate = true;
+                }
+              }
+              if (needsUpdate) {
+                await supabase
+                  .from('weekly_schedules')
+                  .update(update)
+                  .eq('id', row.id);
+              }
+            }
           }
 
           // Also update seed names in league_schedules.schedule_data so seeding/standings references stay in sync
           const { data: schedRow } = await supabase
             .from('league_schedules')
             .select('id, schedule_data')
-            .eq('league_id', leagueIdNum)
+            .eq('league_id', (leagueIdNum as number | undefined) ?? 0)
             .maybeSingle();
           if (schedRow && (schedRow as any).schedule_data) {
             const sd = (schedRow as any).schedule_data;
