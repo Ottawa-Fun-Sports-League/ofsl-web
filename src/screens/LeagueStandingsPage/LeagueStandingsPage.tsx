@@ -119,6 +119,8 @@ export function LeagueStandingsPage() {
           location,
           cost,
           team_registration,
+          start_date,
+          end_date,
           sports:sport_id(name)
         `)
         .eq('id', parseInt(leagueId))
@@ -181,8 +183,24 @@ export function LeagueStandingsPage() {
 
       setScheduleFormat(scheduleRecord?.format ?? null);
 
-      const weeks = calculateRegularSeasonWeeks(baseLeague?.start_date ?? null, baseLeague?.end_date ?? null);
-      setRegularSeasonWeeks(weeks);
+      // Prefer actual generated weeks from weekly_schedules; fallback to date-based calc
+      try {
+        const { data: weekRows, error: weeksErr } = await supabase
+          .from('weekly_schedules')
+          .select('week_number')
+          .eq('league_id', parseInt(leagueId));
+
+        if (!weeksErr && Array.isArray(weekRows) && weekRows.length > 0) {
+          const maxWeek = weekRows.reduce((max, r: any) => Math.max(max, r.week_number || 0), 0);
+          setRegularSeasonWeeks(maxWeek);
+        } else {
+          const weeks = calculateRegularSeasonWeeks(baseLeague?.start_date ?? null, baseLeague?.end_date ?? null);
+          setRegularSeasonWeeks(weeks);
+        }
+      } catch {
+        const weeks = calculateRegularSeasonWeeks(baseLeague?.start_date ?? null, baseLeague?.end_date ?? null);
+        setRegularSeasonWeeks(weeks);
+      }
 
       const teamRankings = extractTeamRankings(scheduleRecord);
 
@@ -619,23 +637,28 @@ export function LeagueStandingsPage() {
             <div className="overflow-hidden">
               {isEliteFormat ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full table-auto">
+                  <table className="w-full min-w-max table-auto">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg" rowSpan={2}>
                           Ranking
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]" rowSpan={2}>
                           Team
                         </th>
-                        {weeklyColumns.map(week => (
-                          <th key={`week-${week}`} className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
-                            Week {week}
-                          </th>
-                        ))}
-                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">
+                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]" colSpan={weeklyColumns.length}>
+                          Week
+                        </th>
+                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg" rowSpan={2}>
                           +/-
                         </th>
+                      </tr>
+                      <tr>
+                        {weeklyColumns.map(week => (
+                          <th key={`week-${week}`} className="px-2 py-2 text-center text-sm font-medium text-[#6F6F6F]">
+                            {week}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
