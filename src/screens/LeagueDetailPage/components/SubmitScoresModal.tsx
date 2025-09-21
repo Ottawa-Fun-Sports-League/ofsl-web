@@ -10,11 +10,13 @@ import { Scorecard4TeamsHeadToHead } from '../../MyAccount/components/Scorecards
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
 import { Scorecard6TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard6TeamsHeadToHead';
+import { Scorecard2TeamsEliteBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsEliteBestOf5';
+import { Scorecard3TeamsElite9Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3TeamsElite9Sets';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove, submitTwoTeamEliteBestOf5ScoresAndMove, submitThreeTeamEliteSixScoresAndMove, submitThreeTeamEliteNineScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
 import { applyThreeTeamTierMovementNextWeek } from '../../LeagueSchedulePage/database/scheduleDatabase';
 import { getTierDisplayLabel } from '../../LeagueSchedulePage/utils/formatUtils';
 
@@ -495,6 +497,49 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                 }
               }}
             />
+          ) : weeklyTier.format === '2-teams-elite' ? (
+            <Scorecard2TeamsEliteBestOf5
+              teamNames={{ A: teamNames.A, B: teamNames.B } as any}
+              tierNumber={weeklyTier.tier_number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  const canSubmit = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+                  if (!canSubmit) {
+                    showToast('Only admins or facilitators can submit scores.', 'error');
+                    return;
+                  }
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitTwoTeamEliteBestOf5ScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: {
+                      A: (submittedNames as any).A || (teamNames as any).A || '',
+                      B: (submittedNames as any).B || (teamNames as any).B || '',
+                    },
+                    sets: sets as any,
+                    spares: (spares ?? {}) as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (2-team elite Bo5)', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
           ) : weeklyTier.format === '4-teams-head-to-head' ? (
             <Scorecard4TeamsHeadToHead
               teamNames={{ A: teamNames.A, B: teamNames.B, C: teamNames.C, D: (weeklyTier as any).team_d_name || '' } as any}
@@ -596,6 +641,88 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   onClose();
                 } catch (err) {
                   console.error('Failed to submit 6-team scores', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : weeklyTier.format === '3-teams-elite-6-sets' ? (
+            <Scorecard3Teams6Sets
+              teamNames={teamNames as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  const canSubmit = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+                  if (!canSubmit) {
+                    showToast('Only admins or facilitators can submit scores.', 'error');
+                    return;
+                  }
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitThreeTeamEliteSixScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: submittedNames as any,
+                    sets: sets as any,
+                    spares: (spares ?? {}) as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (3-team elite 6 sets)', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : weeklyTier.format === '3-teams-elite-9-sets' ? (
+            <Scorecard3TeamsElite9Sets
+              teamNames={teamNames as any}
+              tierNumber={weeklyTier.tier_number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  const canSubmit = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+                  if (!canSubmit) {
+                    showToast('Only admins or facilitators can submit scores.', 'error');
+                    return;
+                  }
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitThreeTeamEliteNineScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: submittedNames as any,
+                    sets: sets as any,
+                    spares: (spares ?? {}) as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (3-team elite 9 sets)', err);
                   showToast('Failed to submit scores. Please try again.', 'error');
                 } finally {
                   setSaving(false);

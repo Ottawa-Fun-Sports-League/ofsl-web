@@ -598,35 +598,61 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                           </div>
                         );
                       }
-                      if (isSixTeam) {
-                        return (
-                          <div className="relative">
-                            <div className="grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
-                              <div className="col-span-2 text-center font-semibold">Court 1</div>
-                              <div className="col-span-2 text-center font-semibold">Court 2</div>
-                              <div className="col-span-2 text-center font-semibold">Court 3</div>
-                            </div>
-                            <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                            <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                            <div className="grid grid-cols-6 gap-4">
-                              {(['A','B','C','D','E','F'] as const).map((position) => {
-                                const team = getTeamForPosition(tier, position);
-                                return (
-                                  <div key={position} className="text-center">
-                                    <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
-                                    <div className="text-sm text-[#6F6F6F]">
-                                      {team?.name ?
-                                        team.name :
-                                        <span className="text-gray-400 italic">TBD</span>
-                                      }
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      }
+                       if (isSixTeam) {
+                         return (
+                           <div className="relative">
+                             {/* Desktop/tablet: 3 courts side-by-side */}
+                             <div className="hidden sm:grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
+                               <div className="col-span-2 text-center font-semibold">Court 1</div>
+                               <div className="col-span-2 text-center font-semibold">Court 2</div>
+                               <div className="col-span-2 text-center font-semibold">Court 3</div>
+                             </div>
+                             <div className="hidden sm:block absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                             <div className="hidden sm:block absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                             <div className="hidden sm:grid grid-cols-6 gap-4">
+                               {(['A','B','C','D','E','F'] as const).map((position) => {
+                                 const team = getTeamForPosition(tier, position);
+                                 return (
+                                   <div key={position} className="text-center">
+                                     <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                     <div className="text-sm text-[#6F6F6F]">
+                                       {team?.name ?
+                                         team.name :
+                                         <span className="text-gray-400 italic">TBD</span>
+                                       }
+                                     </div>
+                                   </div>
+                                 );
+                               })}
+                             </div>
+                             {/* Mobile: stack courts vertically */}
+                             <div className="sm:hidden">
+                               {[
+                                 { label: 'Court 1', positions: ['A','B'] as const },
+                                 { label: 'Court 2', positions: ['C','D'] as const },
+                                 { label: 'Court 3', positions: ['E','F'] as const },
+                               ].map((court, idx) => (
+                                 <div key={court.label} className={idx > 0 ? 'pt-3 mt-3 border-t border-gray-200' : ''}>
+                                   <div className="grid grid-cols-2 gap-4">
+                                     <div className="col-span-2 text-[12px] text-[#6B7280] font-semibold">{court.label}</div>
+                                     {court.positions.map((position) => {
+                                       const team = getTeamForPosition(tier, position);
+                                       return (
+                                         <div key={position} className="text-center">
+                                           <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                           <div className="text-sm text-[#6F6F6F]">
+                                             {team?.name ? team.name : <span className="text-gray-400 italic">TBD</span>}
+                                           </div>
+                                         </div>
+                                       );
+                                     })}
+                                   </div>
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         );
+                       }
                       // Four-team head-to-head layout (Courts 1-2)
                       return (
                         <div className="relative">
@@ -726,23 +752,50 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                     if (likelySixTeam) {
                       return (
                         <div className="relative">
-                          <div className="grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
+                          {/* Desktop/tablet */}
+                          <div className="hidden sm:grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
                             <div className="col-span-2 text-center font-semibold">Court 1</div>
                             <div className="col-span-2 text-center font-semibold">Court 2</div>
                             <div className="col-span-2 text-center font-semibold">Court 3</div>
                           </div>
-                          <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                          <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                          <div className="grid grid-cols-6 gap-4">
+                          <div className="hidden sm:block absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="hidden sm:block absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                          <div className="hidden sm:grid grid-cols-6 gap-4">
                             {(['A','B','C','D','E','F'] as const).map((position) => (
                               <div key={position} className="text-center">
                                 <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
                                 <div className="text-sm text-gray-400 italic">
-                          {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
-                                <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
-                              ) : (
-                                  <span className="text-gray-400 italic">TBD</span>
-                                )}
+                                  {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                    <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                  ) : (
+                                    <span className="text-gray-400 italic">TBD</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Mobile stacked */}
+                          <div className="sm:hidden">
+                            {[
+                              { label: 'Court 1', positions: ['A','B'] as const },
+                              { label: 'Court 2', positions: ['C','D'] as const },
+                              { label: 'Court 3', positions: ['E','F'] as const },
+                            ].map((court, idx) => (
+                              <div key={court.label} className={idx > 0 ? 'pt-3 mt-3 border-t border-gray-200' : ''}>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="col-span-2 text-[12px] text-[#6B7280] font-semibold">{court.label}</div>
+                                  {court.positions.map((position) => (
+                                    <div key={position} className="text-center">
+                                      <div className="font-medium text-[#6F6F6F] mb-1">{position}</div>
+                                      <div className="text-sm text-[#6F6F6F]">
+                                        {(tier as any)[`team_${position.toLowerCase()}_name`] ? (
+                                          <span>{(tier as any)[`team_${position.toLowerCase()}_name`]}</span>
+                                        ) : (
+                                          <span className="text-gray-400 italic">TBD</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             ))}
