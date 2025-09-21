@@ -35,6 +35,7 @@ const normalizeTeamName = (name?: string | null): string =>
   (name || '').trim().toLowerCase();
 
 const teamNameKey = (position: string): string => `team_${position.toLowerCase()}_name`;
+const teamRankingKey = (position: string): string => `team_${position.toLowerCase()}_ranking`;
 
 export function useTeamsData(userId?: string) {
   const [leaguePayments, setLeaguePayments] = useState<LeaguePayment[]>([]);
@@ -69,6 +70,28 @@ export function useTeamsData(userId?: string) {
           sampleLeague?.day_of_week ?? null,
         );
 
+        const standingsRankByTeamId = new Map<number, number>();
+        try {
+          const { data: standingsData, error: standingsError } = await supabase
+            .from('standings')
+            .select('team_id, current_position')
+            .eq('league_id', leagueId);
+          if (standingsError) {
+            console.error('Error loading standings for league', leagueId, standingsError);
+          } else {
+            (standingsData || []).forEach((row: any) => {
+              const teamIdValue = row.team_id as number | null;
+              if (!teamIdValue) return;
+              const rank = row.current_position;
+              if (typeof rank === 'number' && Number.isFinite(rank)) {
+                standingsRankByTeamId.set(teamIdValue, rank);
+              }
+            });
+          }
+        } catch (standingsErr) {
+          console.error('Error preparing standings mapping for league', leagueId, standingsErr);
+        }
+
         try {
           const { data, error } = await supabase
             .from('weekly_schedules')
@@ -92,13 +115,19 @@ export function useTeamsData(userId?: string) {
           const tiers: WeeklyScheduleTier[] = data || [];
 
           const entriesByName = new Map<string, TeamMatchup[]>();
+          const entriesByRanking = new Map<number, TeamMatchup[]>();
 
           tiers.forEach((tier) => {
             const positions = getPositionsForFormat(tier.format || '');
             const namesByPosition: Record<string, string | null> = {};
+            const rankingByPosition: Record<string, number | null> = {};
 
             positions.forEach((position) => {
               namesByPosition[position] = (tier as any)[teamNameKey(position)] as string | null;
+              const rawRanking = (tier as any)[teamRankingKey(position)] as number | null;
+              rankingByPosition[position] = typeof rawRanking === 'number' && Number.isFinite(rawRanking)
+                ? rawRanking
+                : null;
             });
 
             positions.forEach((position) => {
@@ -132,20 +161,45 @@ export function useTeamsData(userId?: string) {
                 entriesByName.set(normalized, []);
               }
               entriesByName.get(normalized)!.push(matchup);
+
+              const ranking = rankingByPosition[position];
+              if (ranking !== null && ranking !== undefined) {
+                if (!entriesByRanking.has(ranking)) {
+                  entriesByRanking.set(ranking, []);
+                }
+                entriesByRanking.get(ranking)!.push(matchup);
+              }
             });
           });
 
           const usageByName = new Map<string, number>();
+          const usageByRanking = new Map<number, number>();
 
           leagueTeams.forEach((team) => {
             const normalized = normalizeTeamName(team.name);
-            const entries = entriesByName.get(normalized) || [];
-            const usage = usageByName.get(normalized) || 0;
-            const matchup = entries[usage];
+            const teamRanking = standingsRankByTeamId.get(team.id ?? -1);
+            let matchup: TeamMatchup | undefined;
+
+            if (teamRanking !== undefined) {
+              const rankingEntries = entriesByRanking.get(teamRanking) || [];
+              const rankingUsage = usageByRanking.get(teamRanking) || 0;
+              matchup = rankingEntries[rankingUsage];
+              if (matchup) {
+                usageByRanking.set(teamRanking, rankingUsage + 1);
+              }
+            }
+
+            if (!matchup) {
+              const entries = entriesByName.get(normalized) || [];
+              const usage = usageByName.get(normalized) || 0;
+              matchup = entries[usage];
+              if (matchup) {
+                usageByName.set(normalized, usage + 1);
+              }
+            }
 
             if (matchup) {
               teamMatchups.set(team.id, matchup);
-              usageByName.set(normalized, usage + 1);
             } else {
               teamMatchups.set(team.id, {
                 status: 'no_schedule',
