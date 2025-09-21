@@ -133,30 +133,27 @@ export function LeagueInfo({
   const loadActualTeamCount = async () => {
     try {
       let registrationCount = 0;
-      
-      // Check if this is an individual league or team league
+
       if (league.team_registration === false) {
-        // For individual leagues, count users who have this league in their league_ids
-        const { data: users, error: usersError } = await supabase
-          .from("users")
-          .select("id, league_ids");
-        
-        if (usersError) throw usersError;
-        
-        // Count users who are registered for this league
-        registrationCount = (users || []).filter(user => 
-          user.league_ids && user.league_ids.includes(league.id)
-        ).length;
+        // Individual leagues: mirror /leagues listing logic by counting league payments without teams
+        const { count, error: paymentsError } = await supabase
+          .from("league_payments")
+          .select("id", { count: "exact", head: true })
+          .eq("league_id", league.id)
+          .is("team_id", null);
+
+        if (paymentsError) throw paymentsError;
+        registrationCount = count || 0;
       } else {
-        // For team leagues, count teams
-        const { data: teams, error } = await supabase
+        // Team leagues: count active teams registered in this league
+        const { count: teamCount, error: teamsError } = await supabase
           .from("teams")
-          .select("id")
+          .select("id", { count: "exact", head: true })
           .eq("league_id", league.id)
           .eq("active", true);
 
-        if (error) throw error;
-        registrationCount = teams?.length || 0;
+        if (teamsError) throw teamsError;
+        registrationCount = teamCount || 0;
       }
 
       const maxTeams = league.max_teams || 20;
@@ -164,7 +161,6 @@ export function LeagueInfo({
 
       setActualSpotsRemaining(spotsRemaining);
 
-      // Notify parent component of the update
       if (onSpotsUpdate) {
         onSpotsUpdate(spotsRemaining);
       }
