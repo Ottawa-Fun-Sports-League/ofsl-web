@@ -655,6 +655,271 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
 }
 
 // ======================================================
+// ELITE VARIANTS (no league points; W/L only)
+// ======================================================
+
+export async function submitTwoTeamEliteBestOf5ScoresAndMove(params: SubmitTwoTeamParams): Promise<void> {
+  const { leagueId, weekNumber, tierNumber, tierId, teamNames, sets, spares, isTopTier, pointsTierOffset } = params;
+
+  type AB = 'A'|'B';
+  const stats: Record<AB, { setWins: number; setLosses: number; pf: number; pa: number }> = { A:{setWins:0,setLosses:0,pf:0,pa:0}, B:{setWins:0,setLosses:0,pf:0,pa:0} };
+  let aWins = 0, bWins = 0;
+  for (let i = 0; i < sets.length; i++) {
+    if (aWins === 3 || bWins === 3) break;
+    const entry = sets[i];
+    const [left, right] = entry.teams as [AB,AB];
+    const sLeft = entry.scores[left] ?? '';
+    const sRight = entry.scores[right] ?? '';
+    if (sLeft === '' || sRight === '') break;
+    const nLeft = Number(sLeft); const nRight = Number(sRight);
+    if (Number.isNaN(nLeft) || Number.isNaN(nRight) || nLeft === nRight) break;
+    stats[left].pf += nLeft; stats[left].pa += nRight;
+    stats[right].pf += nRight; stats[right].pa += nLeft;
+    if (nLeft > nRight) { stats[left].setWins++; stats[right].setLosses++; if (left==='A') aWins++; else bWins++; }
+    else { stats[right].setWins++; stats[left].setLosses++; if (right==='A') aWins++; else bWins++; }
+  }
+  const diff: Record<AB, number> = { A: stats.A.pf - stats.A.pa, B: stats.B.pf - stats.B.pa };
+  const teamKeys: AB[] = ['A','B'];
+  const sorted = [...teamKeys].sort((x,y)=> stats[y].setWins-stats[x].setWins || diff[y]-diff[x] || teamKeys.indexOf(x)-teamKeys.indexOf(y));
+
+  const matchDetails = { spares, sets: sets.map(s=>({ label:s.label, teams:s.teams, scores:s.scores })) };
+
+  const { data: prevRows } = await supabase
+    .from('game_results')
+    .select('team_name')
+    .eq('league_id', leagueId)
+    .eq('week_number', weekNumber)
+    .eq('tier_number', tierNumber);
+
+  for (const k of teamKeys) {
+    const teamName = teamNames[k] || '';
+    if (!teamName) continue;
+    const payload: any = {
+      league_id: leagueId,
+      week_number: weekNumber,
+      tier_number: tierNumber,
+      team_name: teamName,
+      wins: stats[k].setWins,
+      losses: stats[k].setLosses,
+      sets_won: stats[k].setWins,
+      sets_lost: stats[k].setLosses,
+      points_for: stats[k].pf,
+      points_against: stats[k].pa,
+      tier_position: (sorted.indexOf(k) + 1),
+      league_points: 0,
+      match_details: matchDetails,
+    };
+    const { error: upsertErr } = await supabase
+      .from('game_results')
+      .upsert(payload, { onConflict: 'league_id,week_number,tier_number,team_name', ignoreDuplicates: false });
+    if (upsertErr) throw upsertErr;
+  }
+
+  await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId);
+
+  const { data: teamsRows, error: teamsErr } = await supabase
+    .from('teams')
+    .select('id, name')
+    .eq('league_id', leagueId)
+    .in('name', teamKeys.map(k => teamNames[k]).filter(Boolean));
+  if (teamsErr) throw teamsErr;
+  const nameToId = new Map<string, number>(); (teamsRows||[]).forEach((t:any)=>nameToId.set(t.name, t.id));
+
+  for (const k of teamKeys) {
+    const name = teamNames[k] || '';
+    if (!name) continue;
+    const teamId = nameToId.get(name);
+    if (!teamId) continue;
+    const { data: standingRow, error: standingErr } = await supabase
+      .from('standings')
+      .select('id, wins, losses, points, point_differential')
+      .eq('league_id', leagueId)
+      .eq('team_id', teamId)
+      .maybeSingle();
+    if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
+
+    const addWins = stats[k].setWins, addLosses = stats[k].setLosses, addDiff = diff[k];
+
+    if (!standingRow) {
+      const { error: insErr } = await supabase.from('standings').insert({
+        league_id: leagueId, team_id: teamId, wins: addWins, losses: addLosses, points: 0, point_differential: addDiff,
+      }); if (insErr) throw insErr;
+    } else {
+      const { error: updErr } = await supabase.from('standings').update({
+        wins: (standingRow as any).wins + addWins,
+        losses: (standingRow as any).losses + addLosses,
+        points: (standingRow as any).points,
+        point_differential: (standingRow as any).point_differential + addDiff,
+      }).eq('id', (standingRow as any).id); if (updErr) throw updErr;
+    }
+  }
+
+  await supabase.rpc('recalculate_standings_positions', { p_league_id: leagueId });
+  await applyTwoTeamMovementAfterStandings({
+    leagueId, weekNumber, tierNumber, isTopTier, pointsTierOffset, teamNames, sortedKeys: sorted,
+  });
+}
+
+export interface SubmitThreeTeamEliteParams extends SubmitThreeTeamParams {}
+
+export async function submitThreeTeamEliteSixScoresAndMove(params: SubmitThreeTeamEliteParams): Promise<void> {
+  const { leagueId, weekNumber, tierNumber, tierId, teamNames, sets, spares, isTopTier, pointsTierOffset } = params;
+  type ABC = 'A'|'B'|'C';
+  const stats: Record<ABC, { wins: number; losses: number; pf: number; pa: number }> = { A:{wins:0,losses:0,pf:0,pa:0}, B:{wins:0,losses:0,pf:0,pa:0}, C:{wins:0,losses:0,pf:0,pa:0} };
+  sets.forEach((entry) => {
+    const [L, R] = entry.teams as [ABC,ABC];
+    const sL = entry.scores[L] ?? '', sR = entry.scores[R] ?? '';
+    if (sL === '' || sR === '') return;
+    const nL = Number(sL), nR = Number(sR);
+    if (Number.isNaN(nL) || Number.isNaN(nR) || nL === nR) return;
+    stats[L].pf += nL; stats[L].pa += nR; stats[R].pf += nR; stats[R].pa += nL;
+    if (nL > nR) { stats[L].wins++; stats[R].losses++; } else { stats[R].wins++; stats[L].losses++; }
+  });
+  const diff: Record<ABC, number> = { A: stats.A.pf - stats.A.pa, B: stats.B.pf - stats.B.pa, C: stats.C.pf - stats.C.pa };
+  const order: ABC[] = ['A','B','C'];
+  const sorted = [...order].sort((x,y)=> stats[y].wins-stats[x].wins || diff[y]-diff[x] || order.indexOf(x)-order.indexOf(y));
+  const matchDetails = { spares, sets: sets.map(s=>({label:s.label, teams:s.teams, scores:s.scores})) };
+
+  for (const k of order) {
+    const teamName = teamNames[k] || '';
+    if (!teamName) continue;
+    const payload: any = {
+      league_id: leagueId, week_number: weekNumber, tier_number: tierNumber,
+      team_name: teamName, wins: stats[k].wins, losses: stats[k].losses,
+      sets_won: stats[k].wins, sets_lost: stats[k].losses, points_for: stats[k].pf, points_against: stats[k].pa,
+      tier_position: (sorted.indexOf(k)+1), league_points: 0, match_details: matchDetails,
+    };
+    const { error: upErr } = await supabase.from('game_results').upsert(payload, { onConflict: 'league_id,week_number,tier_number,team_name', ignoreDuplicates: false });
+    if (upErr) throw upErr;
+  }
+  await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId);
+
+  const { data: teamsRows } = await supabase.from('teams').select('id, name').eq('league_id', leagueId).in('name', order.map(k=>teamNames[k]).filter(Boolean));
+  const nameToId = new Map<string, number>(); (teamsRows||[]).forEach((t:any)=>nameToId.set(t.name,t.id));
+  for (const k of order) {
+    const name = teamNames[k] || ''; if (!name) continue; const teamId = nameToId.get(name); if (!teamId) continue;
+    const { data: standingRow, error: standingErr } = await supabase.from('standings').select('id, wins, losses, points, point_differential').eq('league_id', leagueId).eq('team_id', teamId).maybeSingle();
+    if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
+    if (!standingRow) {
+      const { error: insErr } = await supabase.from('standings').insert({ league_id: leagueId, team_id: teamId, wins: stats[k].wins, losses: stats[k].losses, points: 0, point_differential: diff[k] }); if (insErr) throw insErr;
+    } else {
+      const { error: updErr } = await supabase.from('standings').update({ wins: (standingRow as any).wins + stats[k].wins, losses: (standingRow as any).losses + stats[k].losses, points: (standingRow as any).points, point_differential: (standingRow as any).point_differential + diff[k] }).eq('id', (standingRow as any).id); if (updErr) throw updErr;
+    }
+  }
+  await supabase.rpc('recalculate_standings_positions', { p_league_id: leagueId });
+  await applyMovementAfterStandings({ leagueId, weekNumber, tierNumber, isTopTier, pointsTierOffset, teamNames, sortedKeys: sorted as any });
+}
+
+export async function submitThreeTeamEliteNineScoresAndMove(params: SubmitThreeTeamEliteParams): Promise<void> {
+  const { leagueId, weekNumber, tierNumber, tierId, teamNames, sets, spares, isTopTier, pointsTierOffset } = params;
+  type ABC = 'A'|'B'|'C';
+  // Group sets by pairing and apply best-of-3 per pairing
+  const PAIRS: Array<[ABC,ABC]> = [['A','C'], ['A','B'], ['B','C']];
+  const pairWins = new Map<string, { left: ABC; right: ABC; leftWins: number; rightWins: number; diff: number }>();
+  const keyFor = (L:ABC,R:ABC) => `${L}-${R}`;
+  for (const [L,R] of PAIRS) pairWins.set(keyFor(L,R), { left: L, right: R, leftWins: 0, rightWins: 0, diff: 0 });
+
+  const addSet = (L:ABC,R:ABC, sL?: string, sR?: string, isDecider=false) => {
+    const k = keyFor(L,R); const rec = pairWins.get(k)!;
+    const l = sL ?? '', r = sR ?? '';
+    if (l === '' || r === '') return false;
+    const nL = Number(l), nR = Number(r);
+    if (Number.isNaN(nL) || Number.isNaN(nR) || nL === nR) return false;
+    rec.diff += (nL - nR);
+    if (nL > nR) rec.leftWins++; else rec.rightWins++;
+    return true;
+  };
+
+  // Consume incoming sets in order, applying per-pair Bo3 (stop after 2 wins)
+  const stats: Record<ABC, { matchWins: number; matchLosses: number; pf: number; pa: number }> = { A:{matchWins:0,matchLosses:0,pf:0,pa:0}, B:{matchWins:0,matchLosses:0,pf:0,pa:0}, C:{matchWins:0,matchLosses:0,pf:0,pa:0} };
+  // Helper to accumulate pf/pa only from considered sets
+  const applyPFPA = (L:ABC,R:ABC, sL?: string, sR?: string) => {
+    const l = sL ?? '', r = sR ?? '';
+    if (l === '' || r === '') return;
+    const nL = Number(l), nR = Number(r);
+    if (Number.isNaN(nL) || Number.isNaN(nR) || nL === nR) return;
+    stats[L].pf += nL; stats[L].pa += nR; stats[R].pf += nR; stats[R].pa += nL;
+  };
+
+  // Iterate three pairings in expected order; for each, scan corresponding sets by label
+  const byLabel = new Map(sets.map(s => [s.label, s] as const));
+  const setLabels = (L:ABC,R:ABC) => [
+    `${L} vs ${R} (Set 1)`, `${L} vs ${R} (Set 2)`, `${L} vs ${R} (Set 3)`,
+  ];
+  for (const [L,R] of PAIRS) {
+    let lWins = 0, rWins = 0;
+    const labels = setLabels(L,R);
+    for (let i = 0; i < labels.length; i++) {
+      if (lWins === 2 || rWins === 2) break;
+      const row = byLabel.get(labels[i]);
+      if (!row) continue;
+      const sL = (row.scores as any)[L] ?? '';
+      const sR = (row.scores as any)[R] ?? '';
+      const added = addSet(L,R,sL,sR, i===2);
+      if (added) {
+        applyPFPA(L,R,sL,sR);
+        const rec = pairWins.get(keyFor(L,R))!;
+        lWins = rec.leftWins; rWins = rec.rightWins;
+      }
+    }
+    // award match win/loss
+    if (lWins !== rWins) {
+      if (lWins > rWins) { stats[L].matchWins++; stats[R].matchLosses++; }
+      else { stats[R].matchWins++; stats[L].matchLosses++; }
+    }
+  }
+
+  const diff: Record<ABC, number> = { A: stats.A.pf - stats.A.pa, B: stats.B.pf - stats.B.pa, C: stats.C.pf - stats.C.pa };
+  const order: ABC[] = ['A','B','C'];
+  const tieGroupSize = (w: number) => order.filter(t => stats[t].matchWins === w).length;
+  const getH2H = (X: ABC, Y: ABC) => {
+    const k1 = keyFor(X,Y), k2 = keyFor(Y,X);
+    if (pairWins.has(k1)) return (pairWins.get(k1)!.diff);
+    if (pairWins.has(k2)) return -(pairWins.get(k2)!.diff);
+    return 0;
+  };
+  const sorted = [...order].sort((x,y)=> {
+    if (stats[y].matchWins !== stats[x].matchWins) return stats[y].matchWins - stats[x].matchWins;
+    const size = tieGroupSize(stats[x].matchWins);
+    if (size === 2) {
+      const h2h = getH2H(x,y);
+      if (h2h !== 0) return h2h > 0 ? -1 : 1;
+    }
+    return order.indexOf(x) - order.indexOf(y);
+  });
+
+  const matchDetails = { spares, sets: sets.map(s=>({label:s.label, teams:s.teams, scores:s.scores})) };
+  for (const k of order) {
+    const teamName = teamNames[k] || '';
+    if (!teamName) continue;
+    const payload: any = {
+      league_id: leagueId, week_number: weekNumber, tier_number: tierNumber,
+      team_name: teamName, wins: stats[k].matchWins, losses: stats[k].matchLosses,
+      sets_won: 0, sets_lost: 0, points_for: stats[k].pf, points_against: stats[k].pa,
+      tier_position: (sorted.indexOf(k)+1), league_points: 0, match_details: matchDetails,
+    };
+    const { error: upErr } = await supabase.from('game_results').upsert(payload, { onConflict: 'league_id,week_number,tier_number,team_name', ignoreDuplicates: false });
+    if (upErr) throw upErr;
+  }
+  await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId);
+
+  const { data: teamsRows } = await supabase.from('teams').select('id, name').eq('league_id', leagueId).in('name', order.map(k=>teamNames[k]).filter(Boolean));
+  const nameToId = new Map<string, number>(); (teamsRows||[]).forEach((t:any)=>nameToId.set(t.name,t.id));
+  for (const k of order) {
+    const name = teamNames[k] || ''; if (!name) continue; const teamId = nameToId.get(name); if (!teamId) continue;
+    const { data: standingRow, error: standingErr } = await supabase.from('standings').select('id, wins, losses, points, point_differential').eq('league_id', leagueId).eq('team_id', teamId).maybeSingle();
+    if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
+    if (!standingRow) {
+      const { error: insErr } = await supabase.from('standings').insert({ league_id: leagueId, team_id: teamId, wins: stats[k].matchWins, losses: stats[k].matchLosses, points: 0, point_differential: diff[k] }); if (insErr) throw insErr;
+    } else {
+      const { error: updErr } = await supabase.from('standings').update({ wins: (standingRow as any).wins + stats[k].matchWins, losses: (standingRow as any).losses + stats[k].matchLosses, points: (standingRow as any).points, point_differential: (standingRow as any).point_differential + diff[k] }).eq('id', (standingRow as any).id); if (updErr) throw updErr;
+    }
+  }
+  await supabase.rpc('recalculate_standings_positions', { p_league_id: leagueId });
+  await applyMovementAfterStandings({ leagueId, weekNumber, tierNumber, isTopTier, pointsTierOffset, teamNames, sortedKeys: sorted as any });
+}
+
+// ======================================================
 // 4-TEAM HEAD-TO-HEAD SUBMISSION
 // ======================================================
 type ABCD = 'A'|'B'|'C'|'D';
@@ -705,7 +970,7 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     tierNumber,
     pointsTierOffset,
     isTopTier,
-    expectedBonus: pointsTierOffset * 8,
+    expectedBonus: pointsTierOffset * 5,
     isBottomTier: pointsTierOffset === 0,
   });
 
@@ -722,7 +987,25 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
   type PairStat = { left: SixTeamKey; right: SixTeamKey; leftWins: number; rightWins: number; diff: number };
   const makePair = (left: SixTeamKey, right: SixTeamKey): PairStat => ({ left, right, leftWins: 0, rightWins: 0, diff: 0 });
 
-  const applySet = (leftKey: SixTeamKey, rightKey: SixTeamKey, rawLeft: string | undefined, rawRight: string | undefined, pair: PairStat, context: string) => {
+  // Track Game 2-only points for differential display in standings
+  const g2: Record<SixTeamKey, { pf: number; pa: number }> = {
+    A: { pf: 0, pa: 0 },
+    B: { pf: 0, pa: 0 },
+    C: { pf: 0, pa: 0 },
+    D: { pf: 0, pa: 0 },
+    E: { pf: 0, pa: 0 },
+    F: { pf: 0, pa: 0 },
+  };
+
+  const applySet = (
+    leftKey: SixTeamKey,
+    rightKey: SixTeamKey,
+    rawLeft: string | undefined,
+    rawRight: string | undefined,
+    pair: PairStat,
+    context: string,
+    isGame2 = false,
+  ) => {
     const left = rawLeft ?? '';
     const right = rawRight ?? '';
     if (left === '' || right === '') {
@@ -741,6 +1024,10 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     totals[leftKey].pa += rightNum;
     totals[rightKey].pf += rightNum;
     totals[rightKey].pa += leftNum;
+    if (isGame2) {
+      g2[leftKey].pf += leftNum; g2[leftKey].pa += rightNum;
+      g2[rightKey].pf += rightNum; g2[rightKey].pa += leftNum;
+    }
 
     if (leftNum > rightNum) {
       totals[leftKey].setWins += 1;
@@ -786,11 +1073,19 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
   const pairG2C2 = makePair(g1c1.loser, g1c3.winner);
   const pairG2C3 = makePair(g1c2.loser, g1c3.loser);
 
-  game2.court1.forEach((row, idx) => applySet(g1c1.winner, g1c2.winner, row.scores?.G2C1_L, row.scores?.G2C1_R, pairG2C1, `Game 2 Court 1 Set ${idx + 1}`));
-  game2.court2.forEach((row, idx) => applySet(g1c1.loser, g1c3.winner, row.scores?.G2C2_L, row.scores?.G2C2_R, pairG2C2, `Game 2 Court 2 Set ${idx + 1}`));
-  game2.court3.forEach((row, idx) => applySet(g1c2.loser, g1c3.loser, row.scores?.G2C3_L, row.scores?.G2C3_R, pairG2C3, `Game 2 Court 3 Set ${idx + 1}`));
+  game2.court1.forEach((row, idx) => applySet(g1c1.winner, g1c2.winner, row.scores?.G2C1_L, row.scores?.G2C1_R, pairG2C1, `Game 2 Court 1 Set ${idx + 1}`, true));
+  game2.court2.forEach((row, idx) => applySet(g1c1.loser, g1c3.winner, row.scores?.G2C2_L, row.scores?.G2C2_R, pairG2C2, `Game 2 Court 2 Set ${idx + 1}`, true));
+  game2.court3.forEach((row, idx) => applySet(g1c2.loser, g1c3.loser, row.scores?.G2C3_L, row.scores?.G2C3_R, pairG2C3, `Game 2 Court 3 Set ${idx + 1}`, true));
 
-  const teamStats = (['A', 'B', 'C', 'D', 'E', 'F'] as SixTeamKey[]).map((team) => ({
+  // Decide Game 2 winners/losers by court
+  const g2c1 = decidePair(pairG2C1);
+  const g2c2 = decidePair(pairG2C2);
+  const g2c3 = decidePair(pairG2C3);
+
+  // Build final placement order by courts: C1 W, C1 L, C2 W, C2 L, C3 W, C3 L
+  const sortedKeys = [g2c1.winner, g2c1.loser, g2c2.winner, g2c2.loser, g2c3.winner, g2c3.loser] as SixTeamKey[];
+
+  const teamStats = sortedKeys.map((team) => ({
     team,
     setWins: totals[team].setWins,
     setLosses: totals[team].setLosses,
@@ -798,17 +1093,11 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     prevPosition: team,
   }));
 
-  teamStats.sort((a, b) => {
-    if (a.setWins !== b.setWins) return b.setWins - a.setWins;
-    if (a.diff !== b.diff) return b.diff - a.diff;
-    return a.prevPosition.localeCompare(b.prevPosition);
-  });
-
-  const tierBonus = 8 * Math.max(0, pointsTierOffset);
-  const basePoints = [3, 4, 5, 6, 7, 8];
+  const tierBonus = 5 * Math.max(0, pointsTierOffset);
+  const basePoints = [8, 7, 6, 5, 4, 3];
   const weeklyLeaguePoints: Record<SixTeamKey, number> = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
   teamStats.forEach((teamStat, rank) => {
-    weeklyLeaguePoints[teamStat.team] = basePoints[5 - rank] + tierBonus;
+    weeklyLeaguePoints[teamStat.team] = basePoints[rank] + tierBonus;
   });
 
   console.log('Points calculation (6-team H2H):', {
@@ -819,23 +1108,24 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
 
   const movementSummary = teamStats.reduce<Record<number, string>>((acc, teamStat, idx) => {
     const place = idx + 1;
+    // Mapping by court-based placements
     switch (place) {
-      case 1:
+      case 1: // Court 1 winner
         acc[place] = isTopTier ? 'Stay -> A' : 'Up tier -> F';
         break;
-      case 2:
-        acc[place] = 'Same tier -> B';
-        break;
-      case 3:
+      case 2: // Court 1 loser
         acc[place] = 'Same tier -> C';
         break;
-      case 4:
-        acc[place] = 'Same tier -> D';
+      case 3: // Court 2 winner
+        acc[place] = 'Same tier -> B';
         break;
-      case 5:
+      case 4: // Court 2 loser
         acc[place] = 'Same tier -> E';
         break;
-      default:
+      case 5: // Court 3 winner
+        acc[place] = 'Same tier -> D';
+        break;
+      default: // 6: Court 3 loser
         acc[place] = pointsTierOffset === 0 ? 'Stay -> F' : 'Down tier -> A';
         break;
     }
@@ -868,8 +1158,9 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
       team_name: teamName,
       wins: teamStat.setWins,
       losses: teamStat.setLosses,
-      points_for: totals[teamStat.team].pf,
-      points_against: totals[teamStat.team].pa,
+      // Store Game 2-only PF/PA so standings differential reflects Game 2 only when adjusted
+      points_for: g2[teamStat.team].pf,
+      points_against: g2[teamStat.team].pa,
       league_points: weeklyLeaguePoints[teamStat.team],
       match_details: matchDetails,
     };
@@ -910,7 +1201,8 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
 
     const addWins = teamStat.setWins;
     const addLosses = teamStat.setLosses;
-    const addDiff = totals[teamStat.team].pf - totals[teamStat.team].pa;
+    // Differential should count Game 2 only
+    const addDiff = g2[teamStat.team].pf - g2[teamStat.team].pa;
     const addPoints = weeklyLeaguePoints[teamStat.team];
 
     const prevRow = (prevRows || []).find((row: any) => row.team_name === teamName);

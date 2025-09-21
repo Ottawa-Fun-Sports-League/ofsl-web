@@ -6,6 +6,8 @@ import { Scorecard2Teams4Sets } from './components/Scorecard2Teams4Sets';
 import { Scorecard2TeamsBestOf5 } from './components/Scorecard2TeamsBestOf5';
 import { Scorecard4TeamsHeadToHead } from './components/Scorecard4TeamsHeadToHead';
 import { Scorecard6TeamsHeadToHead } from './components/Scorecard6TeamsHeadToHead';
+import { Scorecard2TeamsEliteBestOf5 } from './components/Scorecard2TeamsEliteBestOf5';
+import { Scorecard3TeamsElite9Sets } from './components/Scorecard3TeamsElite9Sets';
 
 export function ScorecardsFormatsTab() {
   const [selectedId, setSelectedId] = useState<string>(GAME_FORMATS[0]?.value ?? '');
@@ -92,6 +94,14 @@ export function ScorecardsFormatsTab() {
                       </ul>
                     </div>
                   </div>
+                </>
+              ) : selected.value === '3-teams-elite-6-sets' ? (
+                <>
+                  <Scorecard3Teams6Sets teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }} resultsLabel="Weekly Summary (Elite: W/L only)" />
+                </>
+              ) : selected.value === '3-teams-elite-9-sets' ? (
+                <>
+                  <Scorecard3TeamsElite9Sets teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }} />
                 </>
               ) : selected.value === '2-teams-4-sets' ? (
                 <>
@@ -234,6 +244,10 @@ export function ScorecardsFormatsTab() {
                       </ul>
                     </div>
                   </div>
+                </>
+              ) : selected.value === '2-teams-elite' ? (
+                <>
+                  <Scorecard2TeamsEliteBestOf5 teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves' }} />
                 </>
               ) : selected.value === '6-teams-head-to-head' ? (
                 <>

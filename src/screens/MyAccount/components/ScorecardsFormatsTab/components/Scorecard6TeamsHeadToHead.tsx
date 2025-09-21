@@ -525,30 +525,80 @@ export function Scorecard6TeamsHeadToHead({
             const order: TeamKey[] = ['A','B','C','D','E','F'];
             const allEntered = summary.game2Done && !anySetTie;
 
-            // Create array of teams with their total stats for ranking (used by both points and movement)
+            // Create array of teams with their Game 2 stats ONLY for ranking (winner calc per requirements)
             let teamStats: Array<{team: TeamKey, setWins: number, diff: number, prevPosition: TeamKey}> = [];
+            let g2Display: Record<TeamKey, number> = { A:0, B:0, C:0, D:0, E:0, F:0 };
             if (summary.game2Done && game2Ready) {
+              // Build Game 2 pairings (winners/losers from Game 1)
+              const wc1 = (g1Outcome.c1.winner === 'L') ? 'A' : 'B'; // Winner C1
+              const wc2 = (g1Outcome.c2.winner === 'L') ? 'C' : 'D'; // Winner C2
+              const lc1 = (g1Outcome.c1.loser === 'L') ? 'A' : 'B';  // Loser C1
+              const wc3 = (g1Outcome.c3.winner === 'L') ? 'E' : 'F'; // Winner C3
+              const lc2 = (g1Outcome.c2.loser === 'L') ? 'C' : 'D';  // Loser C2
+              const lc3 = (g1Outcome.c3.loser === 'L') ? 'E' : 'F';  // Loser C3
+
+              // Initialize Game 2 stats
+              const g2Stats: Record<TeamKey, { setWins: number; diff: number }> = {
+                A: { setWins: 0, diff: 0 },
+                B: { setWins: 0, diff: 0 },
+                C: { setWins: 0, diff: 0 },
+                D: { setWins: 0, diff: 0 },
+                E: { setWins: 0, diff: 0 },
+                F: { setWins: 0, diff: 0 },
+              };
+
+              const applyRows = (lKey: TeamKey, rKey: TeamKey, rows: Array<Record<string, string>>) => {
+                for (const row of rows) {
+                  const sl = row[lKey] ?? '';
+                  const sr = row[rKey] ?? '';
+                  if (sl === '' || sr === '') continue;
+                  const nl = Number(sl), nr = Number(sr);
+                  if (Number.isNaN(nl) || Number.isNaN(nr) || nl === nr) continue;
+                  g2Stats[lKey].diff += (nl - nr);
+                  g2Stats[rKey].diff += (nr - nl);
+                  if (nl > nr) { g2Stats[lKey].setWins++; } else { g2Stats[rKey].setWins++; }
+                }
+              };
+
+              // Map Game 2 rows to actual teams
+              const rows1 = g2c1.map(r => ({ [wc1]: r.G2C1_L ?? '', [wc2]: r.G2C1_R ?? '' })) as Array<Record<string, string>>;
+              const rows2 = g2c2.map(r => ({ [lc1]: r.G2C2_L ?? '', [wc3]: r.G2C2_R ?? '' })) as Array<Record<string, string>>;
+              const rows3 = g2c3.map(r => ({ [lc2]: r.G2C3_L ?? '', [lc3]: r.G2C3_R ?? '' })) as Array<Record<string, string>>;
+
+              applyRows(wc1 as TeamKey, wc2 as TeamKey, rows1);
+              applyRows(lc1 as TeamKey, wc3 as TeamKey, rows2);
+              applyRows(lc2 as TeamKey, lc3 as TeamKey, rows3);
+
               teamStats = order.map(team => ({
                 team,
-                setWins: summary.stats[team].setWins,
-                diff: summary.stats[team].diff,
+                setWins: g2Stats[team].setWins,
+                diff: g2Stats[team].diff,
                 prevPosition: team // A=1, B=2, C=3, D=4, E=5, F=6 (for tie-breaking)
               }));
+              g2Display = {
+                A: g2Stats.A.diff,
+                B: g2Stats.B.diff,
+                C: g2Stats.C.diff,
+                D: g2Stats.D.diff,
+                E: g2Stats.E.diff,
+                F: g2Stats.F.diff,
+              };
 
-              // Sort teams by: 1) Set wins (desc), 2) Differential (desc), 3) Previous position (asc - A beats B)
+              // Sort teams by: 1) Game 2 set wins (desc), 2) Game 2 differential (desc), 3) Previous position (asc)
               teamStats.sort((a, b) => {
                 if (a.setWins !== b.setWins) return b.setWins - a.setWins; // Higher wins first
                 if (a.diff !== b.diff) return b.diff - a.diff; // Higher diff first
                 return a.prevPosition.localeCompare(b.prevPosition); // A > B > C > D > E > F
               });
 
-              console.log('6-team scorecard - sorted teamStats:', teamStats);
+              console.log('6-team scorecard - sorted teamStats (Game 2 only):', teamStats);
             }
 
-            // Movement logic for 6-team format: Top 2 move up, middle 2 stay, bottom 2 move down
+            // Movement logic by court outcomes (Game 2 only)
             const move: Record<TeamKey, string> = { A:'Stay', B:'Stay', C:'Stay', D:'Stay', E:'Stay', F:'Stay' };
+            let orderedByCourt: TeamKey[] = [];
             if (summary.game2Done && game2Ready) {
-              // Determine final rankings based on Game 2 results
+              // Determine final rankings based on Game 2 results (by court)
               const wc1 = (g1Outcome.c1.winner === 'L') ? 'A' : 'B'; // Winner C1
               const wc2 = (g1Outcome.c2.winner === 'L') ? 'C' : 'D'; // Winner C2
               const lc1 = (g1Outcome.c1.loser === 'L') ? 'A' : 'B';  // Loser C1
@@ -607,49 +657,39 @@ export function Scorecard6TeamsHeadToHead({
                 g2c3Loser = winnerIsLeft ? (lc3 as TeamKey) : (lc2 as TeamKey);
               }
 
-              // Assign movement based on overall weekly performance rankings
-              if (summary.game2Done && game2Ready && teamStats.length === 6) {
+              // Assign movement based on court results
+              if (summary.game2Done && game2Ready) {
                 const isBottomTier = pointsTierOffset === 0;
+                orderedByCourt = [
+                  (g2c1Winner || wc1) as TeamKey,
+                  (g2c1Loser || wc2) as TeamKey,
+                  (g2c2Winner || lc1) as TeamKey,
+                  (g2c2Loser || wc3) as TeamKey,
+                  (g2c3Winner || lc2) as TeamKey,
+                  (g2c3Loser || lc3) as TeamKey,
+                ];
 
-                // Use the teamStats array that was created for points calculation
-                // (already sorted by overall performance: set wins, differential, previous position)
-
-                // 1st place: Up tier to lowest position of next tier (F), or if top tier stay -> A
-                move[teamStats[0].team] = isTopTier ? 'Stay -> A' : 'Up tier -> F';
-
-                // 2nd place: Stay -> Court 1 position B
-                move[teamStats[1].team] = 'Same tier -> B';
-
-                // 3rd place: Stay -> Court 2 position C
-                move[teamStats[2].team] = 'Same tier -> C';
-
-                // 4th place: Stay -> Court 2 position D
-                move[teamStats[3].team] = 'Same tier -> D';
-
-                // 5th place: Stay -> Court 3 position E
-                move[teamStats[4].team] = 'Same tier -> E';
-
-                // 6th place: Down tier to highest position of lower tier (A), or if bottom tier stay -> F
-                move[teamStats[5].team] = isBottomTier ? 'Stay -> F' : 'Down tier -> A';
+                const c1w = orderedByCourt[0], c1l = orderedByCourt[1], c2w = orderedByCourt[2], c2l = orderedByCourt[3], c3w = orderedByCourt[4], c3l = orderedByCourt[5];
+                move[c1w] = isTopTier ? 'Stay -> A' : 'Up tier -> F';
+                move[c1l] = 'Same tier -> C';
+                move[c2w] = 'Same tier -> B';
+                move[c2l] = 'Same tier -> E';
+                move[c3w] = 'Same tier -> D';
+                move[c3l] = isBottomTier ? 'Stay -> F' : 'Down tier -> A';
               }
             }
 
-            // Points recap: Base 3/4/5/6/7/8 (6th->1st) +8 per tier above lowest
+            // Points recap: Base 3/4/5/6/7/8 (6th->1st) +5 per tier above lowest
             const tierDisplay = typeof tierNumber === 'number' ? tierNumber : (Math.max(0, pointsTierOffset) + 1);
-            const tierBonus = 8 * Math.max(0, pointsTierOffset);
+            const tierBonus = 5 * Math.max(0, pointsTierOffset);
             const points: Record<TeamKey, number> = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
 
-            // Calculate points based on final rankings (using teamStats from above)
-            if (summary.game2Done && game2Ready && teamStats.length === 6) {
-              const base = [3,4,5,6,7,8]; // 6th to 1st place
-              // teamStats is already sorted by performance (best to worst)
-              // Assign points based on actual ranking, not original position
-              teamStats.forEach((teamStat, rank) => {
-                const pointsForThisTeam = base[5 - rank] + tierBonus; // rank 0 = 1st place = base[5]
-                points[teamStat.team] = pointsForThisTeam;
-                console.log(`Rank ${rank + 1}: Position ${teamStat.team} gets ${pointsForThisTeam} points (${base[5 - rank]} base + ${tierBonus} bonus)`);
+            // Calculate points based on Game 2 court outcomes
+            if (summary.game2Done && game2Ready && orderedByCourt.length === 6) {
+              const baseByCourtOrder = [8,7,6,5,4,3]; // C1W, C1L, C2W, C2L, C3W, C3L
+              orderedByCourt.forEach((team, idx) => {
+                points[team] = baseByCourtOrder[idx] + tierBonus;
               });
-              console.log('Final points assignment:', points);
             }
 
             return (
@@ -658,21 +698,19 @@ export function Scorecard6TeamsHeadToHead({
                 <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
                   <span className="font-semibold">Tier {tierDisplay}:</span> Base 3/4/5/6/7/8 Bonus +{tierBonus}
                 </span>
-                <div className="grid grid-cols-5 gap-x-4 items-center">
+                <div className="grid grid-cols-4 gap-x-4 items-center">
                   {headerCell('Team')}
-                  {headerCell('Record')}
                   {headerCell('Differential')}
                   {headerCell('Movement')}
                   {headerCell('Points')}
-                  {order.map(k => (
-                    <React.Fragment key={`sum-${k}`}>
-                      {rowCell(k, true)}
-                      {rowCell(`${summary.stats[k].setWins}-${summary.stats[k].setLosses}`)}
-                      {rowCell(fmtDiff(summary.stats[k].diff))}
-                      {rowCell(allEntered ? move[k] : '-')}
-                      {rowCell(allEntered ? `+${points[k] || 0}` : '-', true)}
-                    </React.Fragment>
-                  ))}
+                   {order.map(k => (
+                     <React.Fragment key={`sum-${k}`}>
+                       {rowCell(k, true)}
+                       {rowCell(fmtDiff(g2Display[k] || 0))}
+                       {rowCell(allEntered ? move[k] : '-')}
+                       {rowCell(allEntered ? `+${points[k] || 0}` : '-', true)}
+                     </React.Fragment>
+                   ))}
                 </div>
               </div>
             );
