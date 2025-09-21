@@ -91,48 +91,68 @@ export function useTeamsData(userId?: string) {
 
           const tiers: WeeklyScheduleTier[] = data || [];
 
-          leagueTeams.forEach((team) => {
-            const normalized = normalizeTeamName(team.name);
+          const entriesByName = new Map<string, TeamMatchup[]>();
 
-            const matchedTier = tiers.find((tier) => {
-              const positions = getPositionsForFormat(tier.format || '');
-              return positions.some((position) => {
-                const name = (tier as any)[teamNameKey(position)] as string | null;
-                return name && normalizeTeamName(name) === normalized;
-              });
+          tiers.forEach((tier) => {
+            const positions = getPositionsForFormat(tier.format || '');
+            const namesByPosition: Record<string, string | null> = {};
+
+            positions.forEach((position) => {
+              namesByPosition[position] = (tier as any)[teamNameKey(position)] as string | null;
             });
 
-            if (!matchedTier) {
+            positions.forEach((position) => {
+              const rawName = namesByPosition[position];
+              if (!rawName) return;
+
+              const normalized = normalizeTeamName(rawName);
+              const opponents = positions
+                .map((other) => namesByPosition[other])
+                .filter((name) => {
+                  if (!name) return false;
+                  return normalizeTeamName(name) !== normalized;
+                }) as string[];
+
+              const status: TeamMatchup['status'] =
+                tier.no_games || opponents.length === 0 ? 'bye' : 'scheduled';
+
+              const matchup: TeamMatchup = {
+                status,
+                weekNumber: currentWeek,
+                tierNumber: tier.tier_number,
+                opponents,
+                location: tier.location,
+                timeSlot: tier.time_slot,
+                court: tier.court,
+                isPlayoff: tier.is_playoff,
+                format: tier.format,
+              };
+
+              if (!entriesByName.has(normalized)) {
+                entriesByName.set(normalized, []);
+              }
+              entriesByName.get(normalized)!.push(matchup);
+            });
+          });
+
+          const usageByName = new Map<string, number>();
+
+          leagueTeams.forEach((team) => {
+            const normalized = normalizeTeamName(team.name);
+            const entries = entriesByName.get(normalized) || [];
+            const usage = usageByName.get(normalized) || 0;
+            const matchup = entries[usage];
+
+            if (matchup) {
+              teamMatchups.set(team.id, matchup);
+              usageByName.set(normalized, usage + 1);
+            } else {
               teamMatchups.set(team.id, {
                 status: 'no_schedule',
                 weekNumber: currentWeek,
                 opponents: [],
               });
-              return;
             }
-
-            const positions = getPositionsForFormat(matchedTier.format || '');
-            const opponents = positions
-              .map((position) => {
-                const name = (matchedTier as any)[teamNameKey(position)] as string | null;
-                return name && normalizeTeamName(name) !== normalized ? name : null;
-              })
-              .filter(Boolean) as string[];
-
-            const status: TeamMatchup['status'] =
-              matchedTier.no_games || opponents.length === 0 ? 'bye' : 'scheduled';
-
-            teamMatchups.set(team.id, {
-              status,
-              weekNumber: currentWeek,
-              tierNumber: matchedTier.tier_number,
-              opponents,
-              location: matchedTier.location,
-              timeSlot: matchedTier.time_slot,
-              court: matchedTier.court,
-              isPlayoff: matchedTier.is_playoff,
-              format: matchedTier.format,
-            });
           });
         } catch (error) {
           console.error('Error attaching matchups for league', leagueId, error);
