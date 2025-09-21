@@ -1,6 +1,8 @@
 import { useEffect, useState, Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '../../../../../components/ui/button';
+import { supabase } from '../../../../../lib/supabase';
+import { computeWeeklyNameRanksFromResults } from '../../../../LeagueSchedulePage/utils/rankingUtils';
 
 type TeamKey = 'A' | 'B' | 'C';
 
@@ -30,14 +32,20 @@ interface Scorecard3Teams6SetsProps {
   pointsTierOffset?: number; // 0 for bottom tier, 1 for second-from-bottom, etc.
   resultsLabel?: string;
   tierNumber?: number; // Actual league tier number for display (1 = top tier)
+  leagueId?: number;
+  weekNumber?: number;
   initialSets?: Array<{ label: string; teams: [TeamKey, TeamKey]; scores: Record<TeamKey, string> }>;
   initialSpares?: Record<TeamKey, string>;
   submitting?: boolean;
+  eliteSummary?: boolean; // when true, show Team/Record/Movement/Ranking only (no points/bonus/differential)
 }
 
-export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, pointsTierOffset = 0, resultsLabel, tierNumber, initialSets, initialSpares, submitting = false }: Scorecard3Teams6SetsProps) {
+export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, pointsTierOffset = 0, resultsLabel, tierNumber, leagueId, weekNumber, initialSets, initialSpares, submitting = false, eliteSummary = false }: Scorecard3Teams6SetsProps) {
   const [scores, setScores] = useState<Record<number, { A?: string; B?: string; C?: string }>>({});
   const [spares, setSpares] = useState<Record<TeamKey, string>>({ A: '', B: '', C: '' });
+  const [weekTiers, setWeekTiers] = useState<Array<{ week_number: number; tier_number: number; format?: string | null }>>([]);
+  const [baseResults, setBaseResults] = useState<Array<{ week_number: number; tier_number: number; team_name: string | null; tier_position: number | null }>>([]);
+  const [weekRanksByName, setWeekRanksByName] = useState<Record<string, number> | null>(null);
 
   // Prefill from initial values when provided
   useEffect(() => {
@@ -62,12 +70,13 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSets, initialSpares]);
 
-  // Clamp score inputs to 0..21 and integers; allow empty while typing
+  // Clamp score inputs; in eliteSummary mode allow deuce beyond 21 (up to 40)
   const clampScore = (value: string): string => {
     if (value === '') return '';
     const n = Math.floor(Number(value));
     if (Number.isNaN(n)) return '';
-    return String(Math.max(0, Math.min(21, n)));
+    const max = eliteSummary ? 40 : 21;
+    return String(Math.max(0, Math.min(max, n)));
   };
 
   const handleScoreChange = (rowIndex: number, team: TeamKey, value: string) => {
@@ -78,6 +87,80 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
   const handleSparesChange = (team: TeamKey, value: string) => {
     setSpares(prev => ({ ...prev, [team]: value }));
   };
+
+  // Load tiers/results context to compute week-wide ranking in elite summary
+  useEffect(() => {
+    const loadWeekContext = async () => {
+      try {
+        if (!eliteSummary || !leagueId || !weekNumber) return;
+        const [{ data: tiers }, { data: results }] = await Promise.all([
+          supabase
+            .from('weekly_schedules')
+            .select('week_number,tier_number,format')
+            .eq('league_id', leagueId)
+            .eq('week_number', weekNumber)
+            .order('tier_number', { ascending: true }),
+          supabase
+            .from('game_results')
+            .select('team_name, week_number, tier_number, tier_position')
+            .eq('league_id', leagueId)
+            .eq('week_number', weekNumber),
+        ]);
+        setWeekTiers((tiers || []) as any);
+        setBaseResults((results || []) as any);
+      } catch {/* ignore */}
+    };
+    void loadWeekContext();
+  }, [eliteSummary, leagueId, weekNumber]);
+
+  // Recompute week-wide ranks when scores change (elite summary only)
+  useEffect(() => {
+    const recomputeRanks = () => {
+      if (!eliteSummary || !leagueId || !weekNumber || !tierNumber) return;
+      // Aggregate from current scores (same logic as below)
+      const stats: Record<TeamKey, { wins: number; losses: number; diff: number }> = { A:{wins:0,losses:0,diff:0}, B:{wins:0,losses:0,diff:0}, C:{wins:0,losses:0,diff:0} } as any;
+      const teamKeys: TeamKey[] = ['A','B','C'];
+      const fmtDiff = (k: TeamKey) => stats[k].diff;
+      // Tally wins/loses/diff similar to onSubmit block
+      const SETS_LOCAL: Array<{ teams: [TeamKey,TeamKey]; idx:number }> = [
+        { teams: ['A','C'], idx:0 }, { teams: ['A','C'], idx:1 },
+        { teams: ['A','B'], idx:2 }, { teams: ['A','B'], idx:3 },
+        { teams: ['B','C'], idx:4 }, { teams: ['B','C'], idx:5 },
+      ];
+      SETS_LOCAL.forEach(({teams: [L,R], idx}) => {
+        const row = (scores[idx] || {}) as Record<TeamKey, string>;
+        const sL = row[L] ?? '';
+        const sR = row[R] ?? '';
+        if (sL === '' || sR === '') return;
+        const nL = Number(sL), nR = Number(sR);
+        if (Number.isNaN(nL) || Number.isNaN(nR) || nL === nR) return;
+        stats[L].diff += (nL - nR); stats[R].diff += (nR - nL);
+        if (nL > nR) { stats[L].wins++; stats[R].losses++; } else { stats[R].wins++; stats[L].losses++; }
+      });
+      const sorted = [...teamKeys].sort((x, y) => {
+        if (stats[y].wins !== stats[x].wins) return stats[y].wins - stats[x].wins;
+        if (fmtDiff(y) !== fmtDiff(x)) return fmtDiff(y) - fmtDiff(x);
+        return teamKeys.indexOf(x) - teamKeys.indexOf(y);
+      });
+
+      // Build merged results: other tiers + this tier's in-progress positions
+      const merged = (baseResults || []).filter(r => !(r.week_number === weekNumber && r.tier_number === tierNumber));
+      const names: Record<TeamKey, string> = { A: teamNames.A || '', B: teamNames.B || '', C: teamNames.C || '' };
+      sorted.forEach((k, i) => {
+        merged.push({ week_number: weekNumber!, tier_number: tierNumber!, team_name: names[k], tier_position: i + 1 });
+      });
+
+      const nameRanksByWeek = computeWeeklyNameRanksFromResults(
+        (weekTiers || []) as any,
+        merged as any,
+      );
+      const ranks = nameRanksByNameFromMap(nameRanksByWeek[weekNumber!]);
+      setWeekRanksByName(ranks);
+    };
+    const nameRanksByNameFromMap = (m: Record<string, number> | undefined) => (m ? m : null);
+    recomputeRanks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scores, teamNames, eliteSummary, leagueId, weekNumber, tierNumber, weekTiers, baseResults]);
 
   return (
     <form
@@ -133,7 +216,17 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             const hasRight = n2 !== null && !Number.isNaN(n2);
             const bothEntered = hasLeft && hasRight;
             const isTie = bothEntered && n1 === n2;
-            const winner: TeamKey | null = bothEntered && !isTie ? (n1! > n2! ? t1 : t2) : null;
+            let winner: TeamKey | null = null;
+            if (bothEntered && !isTie) {
+              const maxScore = Math.max(n1 as number, n2 as number);
+              const diff = Math.abs((n1 as number) - (n2 as number));
+              const threshold = 19; // 21-point sets: win-by-2 after 19
+              const isPreThreshold = maxScore <= threshold;
+              const meetsDeuce = diff >= 2;
+              if (isPreThreshold || meetsDeuce) {
+                winner = (n1! > n2!) ? t1 : t2;
+              }
+            }
             return (
               <>
                 <div key={`${entry.setLabel}-${idx}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
@@ -144,7 +237,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={21}
+                      max={eliteSummary ? 40 : 21}
                       step={1}
                       value={row[t1] ?? ''}
                       onChange={(e) => handleScoreChange(idx, t1, e.target.value)}
@@ -167,7 +260,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={21}
+                      max={eliteSummary ? 40 : 21}
                       step={1}
                       value={row[t2] ?? ''}
                       onChange={(e) => handleScoreChange(idx, t2, e.target.value)}
@@ -210,7 +303,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
           ))}
         </div>
 
-        {/* Weekly summary (wins/losses, differential, movement, points) */}
+        {/* Weekly summary */}
         <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-[10px] relative">
           {(() => {
             const stats: Record<TeamKey, { wins: number; losses: number; diff: number }> = {
@@ -250,7 +343,12 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               if (sLeft === '' || sRight === '') return false;
               const nLeft = Number(sLeft);
               const nRight = Number(sRight);
-              return !Number.isNaN(nLeft) && !Number.isNaN(nRight) && nLeft !== nRight;
+              if (Number.isNaN(nLeft) || Number.isNaN(nRight) || nLeft === nRight) return false;
+              if (!eliteSummary) return true;
+              const maxScore = Math.max(nLeft, nRight);
+              const diff = Math.abs(nLeft - nRight);
+              const threshold = 19;
+              return (maxScore <= threshold) || (diff >= 2);
             });
             const sorted = [...order].sort((x, y) => {
               const a = stats[x];
@@ -280,12 +378,6 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               }
             }
             const fmtDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
-            // Points calculation based on role with tier bonus (+2 per tier from bottom)
-            const basePoints: Record<'winner' | 'neutral' | 'loser', number> = { winner: 5, neutral: 4, loser: 3 };
-            const points: Record<TeamKey, number> = { A: 0, B: 0, C: 0 };
-            (['A','B','C'] as TeamKey[]).forEach(k => {
-              points[k] = basePoints[role[k]] + 2 * Math.max(0, pointsTierOffset);
-            });
 
             const headerCell = (text: string) => (
               <div className="text-[12px] font-semibold text-[#B20000]">{text}</div>
@@ -298,15 +390,17 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             return (
               <div>
                 <div className="text-[12px] font-medium mb-2 text-[#B20000]">{resultsLabel ?? 'Weekly Summary'}</div>
-                <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
-                  <span className="font-semibold">Tier {tierDisplay}:</span> Base 3/4/5 Bonus +{tierBonus}
-                </span>
-                <div className="grid grid-cols-5 gap-x-4 items-center">
+                {!eliteSummary && (
+                  <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
+                    <span className="font-semibold">Tier {tierDisplay}:</span> Base 3/4/5 Bonus +{tierBonus}
+                  </span>
+                )}
+                <div className={`grid ${eliteSummary ? 'grid-cols-4' : 'grid-cols-5'} gap-x-4 items-center`}>
                   {headerCell('Team')}
                   {headerCell('Record')}
-                  {headerCell('Differential')}
+                  {!eliteSummary && headerCell('Differential')}
                   {headerCell('Movement')}
-                  {headerCell('Points')}
+                  {eliteSummary ? headerCell('Weekly Ranking') : headerCell('Points')}
                   {(order as TeamKey[]).map(k => (
                     <Fragment key={`summary-${k}`}>
                       {rowCell(
@@ -322,9 +416,20 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                         true
                       )}
                       {rowCell(`${stats[k].wins}-${stats[k].losses}`)}
-                      {rowCell(fmtDiff(stats[k].diff))}
+                      {!eliteSummary && rowCell(fmtDiff(stats[k].diff))}
                       {rowCell(allEntered ? movement[k] : '-')}
-                      {rowCell(allEntered ? `+${points[k]}` : '-', true)}
+                      {eliteSummary
+                        ? rowCell(() => {
+                            if (!allEntered) return '-';
+                            const nm = k === 'A' ? teamNames.A : (k === 'B' ? teamNames.B : teamNames.C);
+                            const rk = nm && weekRanksByName ? weekRanksByName[nm] : undefined;
+                            return rk != null ? String(rk) : String((sorted.indexOf(k) + 1));
+                          }(), true)
+                        : rowCell(allEntered ? `+${(() => {
+                            const basePoints: Record<'winner' | 'neutral' | 'loser', number> = { winner: 5, neutral: 4, loser: 3 };
+                            return basePoints[role[k]] + 2 * Math.max(0, pointsTierOffset);
+                          })()}` : '-', true)
+                      }
                     </Fragment>
                   ))}
                 </div>
@@ -349,7 +454,12 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               const s2 = row[entry.teams[1]] ?? '';
               if (s1 === '' || s2 === '') return false;
               const n1 = Number(s1), n2 = Number(s2);
-              return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 !== n2;
+              if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) return false;
+              if (!eliteSummary) return true;
+              const maxScore = Math.max(n1, n2);
+              const diff = Math.abs(n1 - n2);
+              const threshold = 19;
+              return (maxScore <= threshold) || (diff >= 2);
             });
             return (
               <span className="text-[11px]">
@@ -376,7 +486,12 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                 const s2 = row[entry.teams[1]] ?? '';
                 if (s1 === '' || s2 === '') return false;
                 const n1 = Number(s1), n2 = Number(s2);
-                return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 !== n2;
+                if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) return false;
+                if (!eliteSummary) return true;
+                const maxScore = Math.max(n1, n2);
+                const diff = Math.abs(n1 - n2);
+                const threshold = 19;
+                return (maxScore <= threshold) || (diff >= 2);
               });
               return anyTie || !allComplete;
             })()}

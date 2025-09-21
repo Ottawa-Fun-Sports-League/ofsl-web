@@ -213,6 +213,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
               pointsTierOffset={pointsOffset}
               eliteSummary={isThreeTeamElite6}
               tierNumber={weeklyTier.tier_number}
+              leagueId={(weeklyTier as any).league_id as number}
+              weekNumber={(weeklyTier as any).week_number as number}
               initialSets={initialSets as any}
               initialSpares={initialSpares as any}
               submitting={saving}
