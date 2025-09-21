@@ -11,11 +11,13 @@ import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFor
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { Scorecard4TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard4TeamsHeadToHead';
 import { Scorecard6TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard6TeamsHeadToHead';
+import { Scorecard2TeamsEliteBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsEliteBestOf5';
+import { Scorecard3TeamsElite9Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3TeamsElite9Sets';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
-import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove } from '../services/scoreSubmission';
+import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove, submitTwoTeamEliteBestOf5ScoresAndMove, submitThreeTeamEliteSixScoresAndMove, submitThreeTeamEliteNineScoresAndMove } from '../services/scoreSubmission';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -55,11 +57,14 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
   const title = `Submit Scores - Tier ${weeklyTier.tier_number ?? ''}`;
 
   const isThreeTeam = weeklyTier.format === '3-teams-6-sets';
+  const isThreeTeamElite6 = weeklyTier.format === '3-teams-elite-6-sets';
+  const isThreeTeamElite9 = weeklyTier.format === '3-teams-elite-9-sets';
   const isTwoTeamFourSets = weeklyTier.format === '2-teams-4-sets';
   const isTwoTeamBo5 = weeklyTier.format === '2-teams-best-of-5';
+  const isTwoTeamElite = weeklyTier.format === '2-teams-elite';
   const isFourTeamHH = weeklyTier.format === '4-teams-head-to-head';
   const isSixTeamHH = weeklyTier.format === '6-teams-head-to-head';
-  const unsupported = !(isThreeTeam || isTwoTeamFourSets || isTwoTeamBo5 || isFourTeamHH || isSixTeamHH);
+  const unsupported = !(isThreeTeam || isThreeTeamElite6 || isThreeTeamElite9 || isTwoTeamFourSets || isTwoTeamBo5 || isTwoTeamElite || isFourTeamHH || isSixTeamHH);
   const [pointsOffset, setPointsOffset] = useState<number>(0);
   const [isTopTier, setIsTopTier] = useState<boolean>(false);
 
@@ -191,7 +196,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
             <div className="text-sm text-gray-700">
               Score submission for this format is not available yet. Please check back after the scorecard is built.
             </div>
-          ) : isThreeTeam ? (
+          ) : (isThreeTeam || isThreeTeamElite6) ? (
             <Scorecard3Teams6Sets
               teamNames={teamNames as any}
               isTopTier={isTopTier}
@@ -425,7 +430,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
 
                   // Consolidated submission + standings + movement
                   try {
-                    await submitThreeTeamScoresAndMove({
+                    const submitFn = isThreeTeam ? submitThreeTeamScoresAndMove : submitThreeTeamEliteSixScoresAndMove;
+                    await submitFn({
                       leagueId,
                       weekNumber,
                       tierNumber,
@@ -531,6 +537,79 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   onClose();
                 } catch (err) {
                   console.error('Failed to submit scores (4-team H2H)', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : isThreeTeamElite9 ? (
+            <Scorecard3TeamsElite9Sets
+              teamNames={teamNames as any}
+              tierNumber={weeklyTier.tier_number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitThreeTeamEliteNineScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: submittedNames as any,
+                    sets: sets as any,
+                    spares: (spares ?? {}) as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (3-team elite 9 sets)', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : isTwoTeamElite ? (
+            <Scorecard2TeamsEliteBestOf5
+              teamNames={{ A: teamNames.A, B: teamNames.B } as any}
+              tierNumber={weeklyTier.tier_number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitTwoTeamEliteBestOf5ScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: {
+                      A: (submittedNames as any).A || (teamNames as any).A || '',
+                      B: (submittedNames as any).B || (teamNames as any).B || '',
+                    },
+                    sets: sets as any,
+                    spares: (spares ?? {}) as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (2-team elite Bo5)', err);
                   showToast('Failed to submit scores. Please try again.', 'error');
                 } finally {
                   setSaving(false);

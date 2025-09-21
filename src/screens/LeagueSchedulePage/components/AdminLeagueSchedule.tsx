@@ -1787,15 +1787,31 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                         if (isSixTeam) {
                           return (
                             <div className="relative">
-                              <div className="grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
+                              {/* Desktop/tablet */}
+                              <div className="hidden sm:grid grid-cols-6 text-[12px] text-[#6B7280] mb-1">
                                 <div className="col-span-2 text-center font-semibold">Court 1</div>
                                 <div className="col-span-2 text-center font-semibold">Court 2</div>
                                 <div className="col-span-2 text-center font-semibold">Court 3</div>
                               </div>
-                              <div className="absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                              <div className="absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
-                              <div className="grid grid-cols-6 gap-4">
+                              <div className="hidden sm:block absolute left-1/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                              <div className="hidden sm:block absolute left-2/3 top-0 bottom-0 w-px bg-gray-200" aria-hidden />
+                              <div className="hidden sm:grid grid-cols-6 gap-4">
                                 {(['A','B','C','D','E','F'] as const).map((position) => renderTeamSlot(tier, position, tierIndex)).filter(Boolean)}
+                              </div>
+                              {/* Mobile: stack courts with separators */}
+                              <div className="sm:hidden">
+                                {[
+                                  { label: 'Court 1', positions: ['A','B'] as const },
+                                  { label: 'Court 2', positions: ['C','D'] as const },
+                                  { label: 'Court 3', positions: ['E','F'] as const },
+                                ].map((court, idx) => (
+                                  <div key={court.label} className={idx > 0 ? 'pt-3 mt-3 border-t border-gray-200' : ''}>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="col-span-2 text-[12px] text-[#6B7280] font-semibold">{court.label}</div>
+                                      {court.positions.map((position) => renderTeamSlot(tier, position, tierIndex)).filter(Boolean)}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           );
