@@ -4,7 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../components/ui/dialog';
-import { getTierDisplayLabel } from '../utils/formatUtils';
+import { getTierDisplayLabel, buildWeekTierLabels } from '../utils/formatUtils';
 import type { WeeklyScheduleTier } from '../types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
@@ -54,7 +54,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     C: (weeklyTier as any).team_c_name || '',
   } as const;
 
-  const title = `Submit Scores - Tier ${weeklyTier.tier_number ?? ''}`;
+  const [titleLabel, setTitleLabel] = useState<string>(() => getTierDisplayLabel(weeklyTier.format as string, weeklyTier.tier_number as number));
+  const title = `Submit Scores - Tier ${titleLabel}`;
 
   const isThreeTeam = weeklyTier.format === '3-teams-6-sets';
   const isThreeTeamElite6 = weeklyTier.format === '3-teams-elite-6-sets';
@@ -86,7 +87,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
         }
         const { data, error } = await supabase
           .from('weekly_schedules')
-          .select('tier_number')
+          .select('id, tier_number, format')
           .eq('league_id', leagueId)
           .eq('week_number', week)
           .order('tier_number', { ascending: true });
@@ -161,6 +162,15 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
         setPointsOffset(offset);
         setIsTopTier((weeklyTier.tier_number || 1) === 1);
 
+        // Compute and set a context-aware label (A/B) for this week
+        try {
+          const tierInputs = (data || []).map((row: any) => ({ id: row.id as number, tier_number: row.tier_number as number, format: String(row.format || '') }));
+          const map = buildWeekTierLabels(tierInputs);
+          const key = (weeklyTier as any).id ?? weeklyTier.tier_number;
+          const lbl = map.get(key as number) || getTierDisplayLabel(weeklyTier.format as string, weeklyTier.tier_number as number);
+          setTitleLabel(lbl);
+        } catch {/* ignore */}
+
         // Compute current week number from leagues.start_date
         try {
           const { data: leagueRow } = await supabase
@@ -201,6 +211,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
               teamNames={teamNames as any}
               isTopTier={isTopTier}
               pointsTierOffset={pointsOffset}
+              eliteSummary={isThreeTeamElite6}
               tierNumber={weeklyTier.tier_number}
               initialSets={initialSets as any}
               initialSpares={initialSpares as any}
@@ -581,6 +592,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
           ) : isTwoTeamElite ? (
             <Scorecard2TeamsEliteBestOf5
               teamNames={{ A: teamNames.A, B: teamNames.B } as any}
+              leagueId={(weeklyTier as any).league_id as number}
+              weekNumber={(weeklyTier as any).week_number as number}
               tierNumber={weeklyTier.tier_number}
               initialSets={initialSets as any}
               initialSpares={initialSpares as any}

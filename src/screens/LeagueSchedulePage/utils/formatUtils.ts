@@ -509,30 +509,61 @@ export function buildWeekTierLabels(
   if (!weeklyTiers || weeklyTiers.length === 0) return map;
 
   const sorted = [...weeklyTiers].sort((a, b) => (a.tier_number || 0) - (b.tier_number || 0));
+
+  // New logic: ensure 2-team elite A/B are paired for numbering even if
+  // a non-elite tier appears between them. Example desired labels:
+  // 1A, 1B, 2A, 2B, 3 ...
   let index = 1;
-  let pendingEliteA = false;
+  const pendingElite: Array<{ key: number }> = [];
+  const queuedNonElite: number[] = [];
+
+  const assignPair = () => {
+    if (pendingElite.length === 2) {
+      const a = pendingElite[0];
+      const b = pendingElite[1];
+      map.set(a.key, `${index}A`);
+      map.set(b.key, `${index}B`);
+      index += 1;
+      pendingElite.length = 0;
+    }
+  };
+
+  const flushQueuedSingles = () => {
+    while (queuedNonElite.length > 0) {
+      const k = queuedNonElite.shift()!;
+      map.set(k, `${index}`);
+      index += 1;
+    }
+  };
 
   for (const t of sorted) {
     const idKey = (t.id ?? t.tier_number) as number;
     if (t.format === '2-teams-elite') {
-      // Label A then B for each contiguous elite row
-      const label = `${index}${pendingEliteA ? 'B' : 'A'}`;
-      map.set(idKey, label);
-      if (pendingEliteA) {
-        // Completed the pair, advance index
-        index += 1;
-        pendingEliteA = false;
-      } else {
-        // Mark that next elite row in sequence should be B
-        pendingEliteA = true;
+      pendingElite.push({ key: idKey });
+      if (pendingElite.length === 2) {
+        assignPair();
+        flushQueuedSingles();
       }
     } else {
-      // Non-elite: single entry for index
-      map.set(idKey, `${index}`);
-      index += 1;
-      // If we had an unmatched 'A' before a non-elite, keep pending until we hit next elite
+      // If a pair is in progress, postpone singles until the pair closes
+      if (pendingElite.length === 1) {
+        queuedNonElite.push(idKey);
+      } else {
+        map.set(idKey, `${index}`);
+        index += 1;
+      }
     }
   }
+
+  // Finalize any leftovers
+  if (pendingElite.length === 1) {
+    const a = pendingElite[0];
+    map.set(a.key, `${index}A`);
+    index += 1;
+    pendingElite.length = 0;
+  }
+  flushQueuedSingles();
+
   return map;
 }
 

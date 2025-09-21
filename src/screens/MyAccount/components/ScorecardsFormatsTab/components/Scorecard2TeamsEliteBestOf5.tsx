@@ -1,6 +1,8 @@
 import { useEffect, useState, Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '../../../../../components/ui/button';
+import { supabase } from '../../../../../lib/supabase';
+import { computeWeeklyNameRanksFromResults } from '../../../../LeagueSchedulePage/utils/rankingUtils';
 
 type TeamKey = 'A' | 'B';
 
@@ -12,6 +14,8 @@ interface Scorecard2TeamsEliteBestOf5Props {
     spares: Record<TeamKey, string>;
   }) => void;
   tierNumber?: number;
+  leagueId?: number;
+  weekNumber?: number;
   initialSets?: Array<{ label: string; teams: [TeamKey, TeamKey]; scores: Record<TeamKey, string> }>;
   initialSpares?: Record<TeamKey, string>;
   submitting?: boolean;
@@ -26,9 +30,12 @@ const SETS: ReadonlyArray<ScoreEntry> = [
   { setLabel: 'A vs B (Set 5)', teams: ['A', 'B'] },
 ];
 
-export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, initialSets, initialSpares, submitting = false }: Scorecard2TeamsEliteBestOf5Props) {
+export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, leagueId, weekNumber, initialSets, initialSpares, submitting = false }: Scorecard2TeamsEliteBestOf5Props) {
   const [scores, setScores] = useState<Record<number, { A?: string; B?: string }>>({});
   const [spares, setSpares] = useState<Record<TeamKey, string>>({ A: '', B: '' });
+  const [weekRanksByName, setWeekRanksByName] = useState<Record<string, number> | null>(null);
+  const [weekTiers, setWeekTiers] = useState<Array<{ week_number: number; tier_number: number; format?: string | null }>>([]);
+  const [baseResults, setBaseResults] = useState<Array<{ week_number: number; tier_number: number; team_name: string | null; tier_position: number | null }>>([]);
 
   useEffect(() => {
     if (initialSpares) {
@@ -50,6 +57,33 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
     }
   }, [initialSets, initialSpares]);
 
+  // Load current week tier structures and existing results for rank context
+  useEffect(() => {
+    const loadWeekContext = async () => {
+      try {
+        if (!leagueId || !weekNumber) return;
+        const [{ data: tiers }, { data: results }] = await Promise.all([
+          supabase
+            .from('weekly_schedules')
+            .select('week_number,tier_number,format')
+            .eq('league_id', leagueId)
+            .eq('week_number', weekNumber)
+            .order('tier_number', { ascending: true }),
+          supabase
+            .from('game_results')
+            .select('team_name, week_number, tier_number, tier_position')
+            .eq('league_id', leagueId)
+            .eq('week_number', weekNumber),
+        ]);
+        setWeekTiers((tiers || []) as any);
+        setBaseResults((results || []) as any);
+      } catch (e) {
+        // Non-fatal
+      }
+    };
+    void loadWeekContext();
+  }, [leagueId, weekNumber]);
+
   const clampScore = (value: string): string => {
     if (value === '') return '';
     const n = Math.floor(Number(value));
@@ -66,12 +100,13 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
     setSpares(prev => ({ ...prev, [team]: value }));
   };
 
-  const setOutcome = (a?: string, b?: string) => {
+  const setOutcome = (a?: string, b?: string, isDecider: boolean = false) => {
     if (!a || !b) return { decided: false } as const;
     const n1 = Number(a), n2 = Number(b);
     if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) return { decided: false } as const;
     const hi = Math.max(n1, n2), lo = Math.min(n1, n2);
-    if (hi < 25) return { decided: false } as const;
+    const target = isDecider ? 15 : 25;
+    if (hi < target) return { decided: false } as const;
     if ((hi - lo) < 2) return { decided: false } as const;
     return { decided: true, winner: n1 > n2 ? 'A' : 'B', diff: Math.abs(n1 - n2) } as const;
   };
@@ -80,13 +115,40 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
     let aWins = 0, bWins = 0;
     for (let i = 0; i < SETS.length; i++) {
       const row = (scores[i] || {}) as Record<TeamKey, string>;
-      const res = setOutcome(row.A, row.B);
+      const res = setOutcome(row.A, row.B, i === 4);
       if (!res.decided) break;
       if ((res as any).winner === 'A') aWins++; else bWins++;
       if (aWins === 3 || bWins === 3) break;
     }
     return { aWins, bWins };
   };
+
+  // Recompute week-wide ranks based on current inputs + other tiers' results
+  useEffect(() => {
+    const computeRanks = () => {
+      if (!leagueId || !weekNumber) return;
+      const { aWins, bWins } = decidedPathWins();
+      if (aWins < 3 && bWins < 3) {
+        setWeekRanksByName(null);
+        return;
+      }
+      const curTier = typeof tierNumber === 'number' ? tierNumber : 0;
+      const winner = aWins > bWins ? 'A' : 'B';
+      const loser = winner === 'A' ? 'B' : 'A';
+      const curNames: Record<TeamKey, string> = { A: teamNames.A || '', B: teamNames.B || '' };
+      const merged = (baseResults || []).filter(r => !(r.week_number === weekNumber && r.tier_number === curTier));
+      merged.push({ week_number: weekNumber!, tier_number: curTier, team_name: curNames[winner], tier_position: 1 });
+      merged.push({ week_number: weekNumber!, tier_number: curTier, team_name: curNames[loser], tier_position: 2 });
+      const nameRanksByWeek = computeWeeklyNameRanksFromResults(
+        (weekTiers || []) as any,
+        merged as any,
+      );
+      const ranks = nameRanksByWeek[weekNumber!] || {};
+      setWeekRanksByName(ranks);
+    };
+    computeRanks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scores, teamNames, tierNumber, leagueId, weekNumber, baseResults, weekTiers]);
 
   return (
     <form
@@ -129,11 +191,22 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
               const nB = sB === '' ? null : Number(sB);
               const both = nA !== null && !Number.isNaN(nA) && nB !== null && !Number.isNaN(nB);
               const isTie = both && nA! === nB!;
-              const outcome = both ? setOutcome(sA, sB) : { decided: false } as const;
-              const winner = (outcome as any).winner as TeamKey | undefined;
+              // Display W/L tags only when valid under win-by-2 rule near set end
+              // Sets 1-4: target 25, win by 2 after 23; Set 5: target 15, win by 2 after 13
+              let displayWinner: TeamKey | undefined = undefined;
+              if (both && !isTie) {
+                const maxScore = Math.max(nA as number, nB as number);
+                const diff = Math.abs((nA as number) - (nB as number));
+                const threshold = idx === 4 ? 13 : 23;
+                const isPreThreshold = maxScore <= threshold;
+                const meetsDeuce = diff >= 2;
+                if (isPreThreshold || meetsDeuce) {
+                  displayWinner = ((nA as number) > (nB as number)) ? 'A' : 'B';
+                }
+              }
               return (
                 <div key={`set-${idx}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
-                  <div className="text-[13px] text-[#4B5563] font-medium">{entry.setLabel}</div>
+                  <div className="text-[13px] text-[#4B5563] font-medium">{entry.setLabel}{idx === 4 ? ' (to 15)' : ''}</div>
                   <div className="flex items-center gap-1">
                     <label className="text-[11px] text-gray-600 w-8 text-right">A</label>
                     <input
@@ -150,10 +223,10 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
                       }`}
                       placeholder="0"
                     />
-                    {winner === 'A' && (
+                    {displayWinner === 'A' && (
                       <span className="ml-2 text-[10px] font-semibold text-green-700">W +{both && !isTie ? Math.abs((nA as number) - (nB as number)) : 0}</span>
                     )}
-                    {both && !isTie && winner === 'B' && (
+                    {both && !isTie && displayWinner === 'B' && (
                       <span className="ml-2 text-[10px] font-semibold text-red-600">L -{Math.abs((nA as number) - (nB as number))}</span>
                     )}
                   </div>
@@ -173,16 +246,16 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
                       }`}
                       placeholder="0"
                     />
-                    {winner === 'B' && (
+                    {displayWinner === 'B' && (
                       <span className="ml-2 text-[10px] font-semibold text-green-700">W +{both && !isTie ? Math.abs((nA as number) - (nB as number)) : 0}</span>
                     )}
-                    {both && !isTie && winner === 'A' && (
+                    {both && !isTie && displayWinner === 'A' && (
                       <span className="ml-2 text-[10px] font-semibold text-red-600">L -{Math.abs((nA as number) - (nB as number))}</span>
                     )}
-                  </div>
-                </div>
-              );
-            })}
+              </div>
+            </div>
+          );
+        })}
           </div>
         </div>
 
@@ -216,9 +289,15 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
               <div className={`text-[12px] text-[#4B5563] ${emphasize ? 'font-semibold' : ''}`}>{content}</div>
             );
             const tierDisplay = typeof tierNumber === 'number' ? tierNumber : '';
+            const ranking = (team: TeamKey) => {
+              if (!(aWins === 3 || bWins === 3)) return '-';
+              const name = team === 'A' ? (teamNames.A || '') : (teamNames.B || '');
+              const rk = weekRanksByName && name ? weekRanksByName[name] : undefined;
+              return rk != null ? String(rk) : '-';
+            };
             return (
               <div>
-                <div className="text-[12px] font-medium mb-2 text-[#B20000]">Weekly Summary (Elite: W/L only)</div>
+                <div className="text-[12px] font-medium mb-2 text-[#B20000]">Weekly Summary</div>
                 {tierDisplay && (
                   <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
                     <span className="font-semibold">Tier {tierDisplay}</span>
@@ -227,8 +306,8 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
                 <div className="grid grid-cols-4 gap-x-4 items-center">
                   {headerCell('Team')}
                   {headerCell('Record')}
-                  {headerCell('Differential')}
-                  {headerCell('Result')}
+                  {headerCell('Movement')}
+                  {headerCell('Weekly Ranking')}
                   {order.map(k => (
                     <Fragment key={`summary-${k}`}>
                       {rowCell(
@@ -244,8 +323,8 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
                         true
                       )}
                       {rowCell(`${k==='A'?aWins:bWins}-${k==='A'?bWins:aWins}`)}
-                      {rowCell('-')}
                       {rowCell(role[k] === 'pending' ? '-' : (role[k] === 'winner' ? 'Up' : 'Down'))}
+                      {rowCell(ranking(k), true)}
                     </Fragment>
                   ))}
                 </div>
@@ -259,7 +338,9 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, i
             const { aWins, bWins } = decidedPathWins();
             return (
               <span className="text-[11px]">
-                {(aWins < 3 && bWins < 3) && <span className="text-gray-600">Enter valid set scores until a team reaches 3 wins (25, win by 2).</span>}
+                {(aWins < 3 && bWins < 3) && (
+                  <span className="text-gray-600">Enter valid set scores until a team reaches 3 wins (Sets 1–4 to 25; Set 5 to 15; all win by 2).</span>
+                )}
               </span>
             );
           })()}
