@@ -41,14 +41,15 @@ export function useLeagueStandings(leagueId: string | undefined) {
           .from('league_schedules')
           .select('schedule_data')
           .eq('league_id', leagueIdNumber)
-          .maybeSingle<ScheduleRow>();
+          .maybeSingle();
 
         if (scheduleError && scheduleError.code !== 'PGRST116') {
           console.warn('Error loading schedule data:', scheduleError);
         }
 
         const rankings = new Map<string, number>();
-        const tiers = data?.schedule_data?.tiers ?? [];
+        const scheduleRow = (data as ScheduleRow | null);
+        const tiers = scheduleRow?.schedule_data?.tiers ?? [];
 
         tiers.forEach(tier => {
           if (!tier?.teams) return;
@@ -68,6 +69,22 @@ export function useLeagueStandings(leagueId: string | undefined) {
       const { rankings: teamRankings, scheduleExists } = await getScheduleRankings();
       setHasSchedule(scheduleExists);
 
+      // Fallback initial seed rankings from Week 1 (elite pairing aware)
+      let seedRankingFallback: Map<string, number> = new Map();
+      try {
+        const { data: week1Rows } = await supabase
+          .from('weekly_schedules')
+          .select('tier_number,format,team_a_name,team_b_name,team_c_name')
+          .eq('league_id', leagueIdNumber)
+          .eq('week_number', 1)
+          .order('tier_number', { ascending: true });
+        // Import locally to avoid extra top-level import churn
+        const { computeInitialSeedRankingMap } = await import('../../LeagueSchedulePage/utils/rankingUtils');
+        seedRankingFallback = computeInitialSeedRankingMap((week1Rows || []) as any);
+      } catch {
+        seedRankingFallback = new Map();
+      }
+
       // Always include all active teams; merge with standings rows if present
       type TeamRow = {
         id: number;
@@ -76,11 +93,12 @@ export function useLeagueStandings(leagueId: string | undefined) {
         created_at: string;
       };
 
-      const { data: teamsData, error: teamsError } = await supabase
-        .from<TeamRow>('teams')
+      const { data: teamsDataRaw, error: teamsError } = await supabase
+        .from('teams')
         .select('id, name, roster, created_at')
         .eq('league_id', leagueIdNumber)
         .eq('active', true);
+      const teamsData = (teamsDataRaw ?? []) as TeamRow[];
       if (teamsError) throw teamsError;
 
       // Fetch standings rows for these teams (if table exists)
@@ -98,7 +116,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
         current_position: number | null;
       }> = [];
       try {
-        const teamIds = (teamsData || []).map(t => t.id);
+        const teamIds = teamsData.map(t => t.id);
         if (teamIds.length > 0) {
           const { data: sData, error: sErr } = await supabase
             .from('standings')
@@ -115,7 +133,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
       const byTeamId = new Map(standingsRows.map(s => [s.team_id, s] as const));
       const posByTeamId = new Map<number, number | null>(standingsRows.map(s => [s.team_id, s.current_position ?? null] as const));
 
-      const merged: StandingsTeam[] = (teamsData || []).map(team => {
+      const merged: StandingsTeam[] = teamsData.map(team => {
         const s = byTeamId.get(team.id);
         const wins = (s?.wins ?? 0) + (s?.manual_wins_adjustment ?? 0);
         const losses = (s?.losses ?? 0) + (s?.manual_losses_adjustment ?? 0);
@@ -130,7 +148,7 @@ export function useLeagueStandings(leagueId: string | undefined) {
           points,
           differential: diff,
           created_at: team.created_at,
-          schedule_ranking: teamRankings.get(team.name),
+          schedule_ranking: teamRankings.get(team.name) ?? seedRankingFallback.get(team.name),
         };
       });
 

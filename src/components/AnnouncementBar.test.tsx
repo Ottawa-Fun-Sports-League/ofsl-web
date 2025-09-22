@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AnnouncementBar } from "./AnnouncementBar";
@@ -52,7 +53,7 @@ describe("AnnouncementBar", () => {
       expect(screen.getByText(announcement.message)).toBeInTheDocument();
     });
 
-    const link = screen.getByRole("link", { name: announcement.link_text });
+    const link = screen.getByRole("link", { name: announcement.link_text ?? "" });
     expect(link).toHaveAttribute("href", announcement.link_url);
   });
 });

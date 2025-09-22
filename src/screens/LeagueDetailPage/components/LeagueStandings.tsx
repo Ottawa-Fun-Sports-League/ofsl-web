@@ -2,6 +2,7 @@ import { Card, CardContent } from "../../../components/ui/card";
 import { useLeagueStandings } from "../hooks/useLeagueStandings";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { computeInitialSeedRankingMap } from "../../LeagueSchedulePage/utils/rankingUtils";
 
 interface LeagueStandingsProps {
   leagueId: string | undefined;
@@ -9,9 +10,10 @@ interface LeagueStandingsProps {
 
 export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const { teams, loading, error, hasSchedule } = useLeagueStandings(leagueId);
-  const formatDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
   const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
+  const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({}); // teamId -> { week -> rank }
+  const [seedRanks, setSeedRanks] = useState<Record<number, number>>({}); // teamId -> initial rank from Week 1 schedule
 
   const isEliteFormat = useMemo(() => (scheduleFormat ?? "").includes("elite"), [scheduleFormat]);
   const isSixTeamsFormat = useMemo(() => {
@@ -42,6 +44,98 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
         if (!weeksErr && Array.isArray(weekRows) && weekRows.length > 0) {
           const maxWeek = weekRows.reduce((max, r: any) => Math.max(max, r.week_number || 0), 0);
           setRegularSeasonWeeks(maxWeek);
+          try {
+            const { data: nextWeekTiers } = await supabase
+              .from('weekly_schedules')
+              .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name')
+              .eq('league_id', lid)
+              .order('week_number', { ascending: true })
+              .order('tier_number', { ascending: true });
+            const nameToId = new Map<string, number>();
+            const { data: teamRows } = await supabase
+              .from('teams')
+              .select('id,name')
+              .eq('league_id', lid)
+              .eq('active', true);
+            (teamRows || []).forEach((t: any) => nameToId.set(((t as any).name || '').toLowerCase(), (t as any).id));
+
+            // Prefer ranks based on next week's placements (authoritative after movement)
+            const byWeek: Record<number, Record<number, number>> = {};
+            const allWeeks = Array.from(new Set((nextWeekTiers || []).map((r: any) => r.week_number))).sort((a: number,b: number)=>a-b);
+            for (const w of allWeeks) {
+              const prevWeek = (w || 0) - 1;
+              if (prevWeek < 1) continue;
+              const rows = (nextWeekTiers || []).filter((r: any) => r.week_number === w);
+              // Order rows using week-aware tier labels so 2-team elite A/B pairs are sequenced before 3-team tiers
+              const { buildWeekTierLabels } = await import('../../LeagueSchedulePage/utils/formatUtils');
+              const labelMap = buildWeekTierLabels(rows.map((r: any) => ({ id: r.id ?? r.tier_number, tier_number: r.tier_number, format: String(r.format || '') })));
+              const orderIndex = (label: string | undefined) => {
+                if (!label) return Number.MAX_SAFE_INTEGER;
+                const m = /^([0-9]+)([A|B])?$/.exec(label);
+                if (!m) return Number.MAX_SAFE_INTEGER;
+                const n = parseInt(m[1], 10);
+                const s = m[2] || '';
+                if (s === 'A') return n * 10 + 1;
+                if (s === 'B') return n * 10 + 2;
+                return n * 10;
+              };
+              rows.sort((a: any, b: any) => orderIndex(labelMap.get((a.id ?? a.tier_number) as number)) - orderIndex(labelMap.get((b.id ?? b.tier_number) as number)));
+              let rank = 1;
+              const idMap: Record<number, number> = {};
+              for (const row of rows) {
+                const order = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'];
+                for (const key of order) {
+                  const nm = (row as any)[key] as string | null | undefined;
+                  if (!nm) continue;
+                  const id = nameToId.get((nm || '').toLowerCase());
+                  if (id && !idMap[id]) { idMap[id] = rank; rank += 1; }
+                }
+              }
+              if (Object.keys(idMap).length > 0) byWeek[prevWeek] = idMap;
+            }
+            // Fill gaps using current-week results if no next-week placements yet
+            const { data: resultRows } = await supabase
+              .from('game_results')
+              .select('team_name, week_number, tier_number, tier_position')
+              .eq('league_id', lid);
+            const { computeWeeklyNameRanksFromResults } = await import('../../LeagueSchedulePage/utils/rankingUtils');
+            const nameRanksByWeek = computeWeeklyNameRanksFromResults(
+              (nextWeekTiers || []).map((r: any) => ({ id: r.id ?? null, week_number: r.week_number, tier_number: r.tier_number, format: r.format })),
+              (resultRows || []) as any,
+            );
+            for (const w of Object.keys(nameRanksByWeek).map(Number)) {
+              const nameMap = nameRanksByWeek[w] || {};
+              const idMap: Record<number, number> = {};
+              Object.entries(nameMap).forEach(([nm, rk]) => {
+                const id = nameToId.get((nm || '').toLowerCase());
+                if (id) idMap[id] = rk as number;
+              });
+              if (Object.keys(idMap).length > 0) {
+                if (!byWeek[w]) {
+                  byWeek[w] = idMap;
+                }
+              } else if (!byWeek[w]) {
+                byWeek[w] = {};
+              }
+            }
+            setWeeklyRanks(byWeek);
+            // Compute initial seed ranks from Week 1 schedule using AB-pair logic
+            try {
+              const { data: week1Rows } = await supabase
+                .from('weekly_schedules')
+                .select('tier_number,format,team_a_name,team_b_name,team_c_name')
+                .eq('league_id', lid)
+                .eq('week_number', 1)
+                .order('tier_number', { ascending: true });
+              const seedMap = computeInitialSeedRankingMap((week1Rows || []) as any);
+              const seed: Record<number, number> = {};
+              for (const [nm, rk] of seedMap.entries()) {
+                const id = nameToId.get((nm || '').toLowerCase());
+                if (id) seed[id] = rk;
+              }
+              setSeedRanks(seed);
+            } catch {}
+          } catch {}
         } else {
           // Fallback to a reasonable default if no schedule rows yet
           setRegularSeasonWeeks(12);
@@ -139,9 +233,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]" colSpan={weeklyColumns.length}>
                       Week
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg" rowSpan={2}>
-                      +/-
-                    </th>
+                    
                   </tr>
                   <tr>
                     {weeklyColumns.map(week => (
@@ -152,18 +244,27 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {teams.map((team, index) => (
-                    <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
-                      <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{index + 1}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
-                      {weeklyColumns.map(week => (
-                        <td key={`week-${team.id}-${week}`} className="px-4 py-3 text-center text-sm text-[#6F6F6F]">-</td>
-                      ))}
-                      <td className={`px-4 py-3 text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>
-                        <span className="text-sm font-medium text-[#6F6F6F]">{formatDiff(team.differential as number)}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {[...teams].sort((a, b) => {
+                    const aVals = weeklyColumns.map(week => weeklyRanks[a.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                    const bVals = weeklyColumns.map(week => weeklyRanks[b.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                    const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (seedRanks[a.id] ?? Number.POSITIVE_INFINITY);
+                    const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (seedRanks[b.id] ?? Number.POSITIVE_INFINITY);
+                    if (aAvg !== bAvg) return aAvg - bAvg;
+                    return (a.name || '').localeCompare(b.name || '');
+                  }).map((team, index) => {
+                    const played = weeklyColumns.map(week => weeklyRanks[team.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                    const avg = played.length ? (played.reduce((a,b)=>a+b,0) / played.length) : null;
+                    return (
+                      <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
+                        <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (seedRanks[team.id] ?? '-')}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
+                        {weeklyColumns.map(week => (
+                          <td key={`week-${team.id}-${week}`} className="px-4 py-3 text-center text-sm text-[#6F6F6F]">{weeklyRanks[team.id]?.[week] ?? '-'}</td>
+                        ))}
+                        
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (
@@ -186,8 +287,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     {!isSixTeamsFormat && (
                       <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Losses</th>
                     )}
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">Points</th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">+/-</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50 rounded-tr-lg">Points</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -201,8 +301,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                       {!isSixTeamsFormat && (
                         <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.losses}</td>
                       )}
-                      <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50">{team.points}</td>
-                      <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{formatDiff(team.differential as number)}</td>
+                      <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50 ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.points}</td>
                     </tr>
                   ))}
                 </tbody>

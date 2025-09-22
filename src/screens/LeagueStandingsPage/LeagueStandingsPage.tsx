@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ArrowLeft, DollarSign, Save, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { computeInitialSeedRankingMap } from "../LeagueSchedulePage/utils/rankingUtils";
 import { useAuth } from '../../contexts/AuthContext';
 
 interface League {
@@ -83,7 +84,10 @@ export function LeagueStandingsPage() {
   const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
 
-  const isEliteFormat = scheduleFormat === '2-teams-elite';
+  const isEliteFormat = (scheduleFormat ?? '').includes('elite');
+  const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({});
+  // Edits: team_id -> { weekNumber -> rank }
+  const [editedWeeklyRanks, setEditedWeeklyRanks] = useState<Record<number, Record<number, number | null>>>({});
   const isSixTeamsFormat = useMemo(() => {
     const fmt = (scheduleFormat ?? '').toLowerCase();
     return fmt.includes('6-teams') || fmt.includes('6 teams') || fmt === '6-teams-head-to-head';
@@ -208,6 +212,21 @@ export function LeagueStandingsPage() {
 
       const teamRankings = extractTeamRankings(scheduleRecord);
 
+      // Fallback seed rankings from Week 1 using AB-pair logic (for initial order)
+      let seedRankingFallback: Map<string, number> = new Map();
+      try {
+        const { data: week1Rows } = await supabase
+          .from('weekly_schedules')
+          .select('tier_number,format,team_a_name,team_b_name,team_c_name')
+          .eq('league_id', parseInt(leagueId))
+          .eq('week_number', 1)
+          .order('tier_number', { ascending: true });
+        const { computeInitialSeedRankingMap } = await import('../LeagueSchedulePage/utils/rankingUtils');
+        seedRankingFallback = computeInitialSeedRankingMap((week1Rows || []) as any);
+      } catch {
+        seedRankingFallback = new Map();
+      }
+
       let standingsData = null;
       try {
         const { data, error: standingsError } = await supabase
@@ -249,7 +268,7 @@ export function LeagueStandingsPage() {
           manual_points_adjustment: standing?.manual_points_adjustment || 0,
           manual_differential_adjustment: standing?.manual_differential_adjustment || 0,
           created_at: team.created_at,
-          schedule_ranking: teamRankings.get(team.name)
+          schedule_ranking: teamRankings.get(team.name) ?? seedRankingFallback.get(team.name)
         };
       });
 
@@ -272,7 +291,94 @@ export function LeagueStandingsPage() {
           });
 
       setStandings(sortedStandings);
+  
+  // Build weekly ranks using next-week placements first; fill gaps from current-week results
+  try {
+    const { data: weekRows } = await supabase
+      .from('weekly_schedules')
+      .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name,team_a_ranking,team_b_ranking,team_c_ranking,team_d_ranking,team_e_ranking,team_f_ranking')
+      .eq('league_id', parseInt(leagueId!))
+      .order('week_number', { ascending: true })
+      .order('tier_number', { ascending: true });
+    const { data: teamRows } = await supabase
+      .from('teams')
+      .select('id,name')
+      .eq('league_id', parseInt(leagueId!))
+      .eq('active', true);
+    const nameToId = new Map<string, number>();
+    (teamRows || []).forEach((t: any) => nameToId.set(((t as any).name || '').toLowerCase(), (t as any).id));
+
+    // Temporary shape: week -> (team_id -> rank)
+    const byWeek: Record<number, Record<number, number>> = {};
+    const allWeeks = Array.from(new Set((weekRows || []).map((r: any) => r.week_number))).sort((a: number,b: number)=>a-b);
+    const { computePrevWeekNameRanksFromNextWeekSchedule } = await import('../LeagueSchedulePage/utils/rankingUtils');
+    for (const w of allWeeks) {
+      const prevWeek = (w || 0) - 1;
+      if (prevWeek < 1) continue;
+      const rows = (weekRows || []).filter((r: any) => r.week_number === w);
+      const nameRankMap = computePrevWeekNameRanksFromNextWeekSchedule(rows as any);
+      const idMap: Record<number, number> = {};
+      Object.entries(nameRankMap).forEach(([nm, rk]) => {
+        const id = nameToId.get((nm || '').toLowerCase());
+        if (id) idMap[id] = rk as number;
+      });
+      if (Object.keys(idMap).length > 0) byWeek[prevWeek] = idMap;
+    }
+
+    // Fill gaps with results-based ranks
+    const { data: resultRows } = await supabase
+      .from('game_results')
+      .select('team_name, week_number, tier_number, tier_position')
+      .eq('league_id', parseInt(leagueId!));
+    const { computeWeeklyNameRanksFromResults } = await import('../LeagueSchedulePage/utils/rankingUtils');
+    const nameRanksByWeek = computeWeeklyNameRanksFromResults(
+      (weekRows || []).map((r: any) => ({ id: r.id ?? null, week_number: r.week_number, tier_number: r.tier_number, format: r.format })),
+      (resultRows || []) as any,
+    );
+    for (const w of Object.keys(nameRanksByWeek).map(Number)) {
+      const nameMap = nameRanksByWeek[w] || {};
+      const idMap: Record<number, number> = {};
+      Object.entries(nameMap).forEach(([nm, rk]) => {
+        const id = nameToId.get((nm || '').toLowerCase());
+        if (id) idMap[id] = rk as number;
+      });
+      if (Object.keys(idMap).length > 0) {
+        if (!byWeek[w]) {
+          byWeek[w] = idMap;
+        }
+      } else if (!byWeek[w]) {
+        byWeek[w] = {};
+      }
+    }
+    // Transpose: we need team_id -> (week -> rank) for rendering
+    const byTeam: Record<number, Record<number, number>> = {};
+    Object.entries(byWeek).forEach(([weekStr, teamMap]) => {
+      const weekNum = Number(weekStr);
+      Object.entries(teamMap).forEach(([teamIdStr, rank]) => {
+        const teamId = Number(teamIdStr);
+        if (!byTeam[teamId]) byTeam[teamId] = {};
+        byTeam[teamId][weekNum] = rank as number;
+      });
+    });
+    setWeeklyRanks(byTeam);
+        // Compute seed ranks from Week 1 schedule for elite formats (with AB-pair logic)
+        try {
+          const { data: week1Rows } = await supabase
+            .from('weekly_schedules')
+            .select('tier_number,format,team_a_name,team_b_name,team_c_name')
+            .eq('league_id', parseInt(leagueId!))
+            .eq('week_number', 1)
+            .order('tier_number', { ascending: true });
+          const seedMap = computeInitialSeedRankingMap((week1Rows || []) as any);
+          const seed: Record<number, number> = {};
+          for (const [nm, rk] of seedMap.entries()) {
+            const id = nameToId.get((nm || '').toLowerCase());
+            if (id) seed[id] = rk;
+          }
+        } catch {}
+      } catch {}
       setEditedStandings({});
+      setEditedWeeklyRanks({});
       setHasChanges(false);
     } catch (error) {
       console.error('Error loading standings:', error);
@@ -345,12 +451,14 @@ export function LeagueStandingsPage() {
   const handleExitEditMode = () => {
     setIsEditMode(false);
     setEditedStandings({});
+    setEditedWeeklyRanks({});
     setHasChanges(false);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // 1) Save non-elite numeric adjustments (wins/losses/points/etc.)
       for (const [editKey, standing] of Object.entries(editedStandings)) {
         try {
           if (editKey.startsWith('team_')) {
@@ -397,6 +505,55 @@ export function LeagueStandingsPage() {
         } catch (err) {
           console.error('Error saving individual standing:', err);
           throw err;
+        }
+      }
+
+      // 2) Save elite weekly rank overrides by writing to next week's schedule ranking fields
+      if (isEliteFormat) {
+        try {
+          const leagueIdNum = parseInt(leagueId!);
+          const teamIdToName = new Map<number, string>();
+          standings.forEach(s => teamIdToName.set(s.team_id, s.team_name));
+          for (const [teamIdStr, weeksMap] of Object.entries(editedWeeklyRanks)) {
+            const teamId = Number(teamIdStr);
+            const teamName = teamIdToName.get(teamId);
+            if (!teamName) continue;
+            for (const [weekStr, rankVal] of Object.entries(weeksMap)) {
+              const weekNum = Number(weekStr);
+              if (rankVal == null) continue;
+              const targetWeek = weekNum + 1; // overrides live on next week's schedule
+              // Fetch possible rows for the target week where this team appears
+              const { data: rows } = await supabase
+                .from('weekly_schedules')
+                .select('id, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
+                .eq('league_id', leagueIdNum)
+                .eq('week_number', targetWeek);
+              const match = (rows || []).find((r: any) => {
+                return ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'].some((col) => {
+                  const nm = (r as any)[col] as string | null;
+                  return nm && nm.toLowerCase() === teamName.toLowerCase();
+                });
+              });
+                if (!match) continue;
+                let rkCol: string | null = null;
+              if ((match as any).team_a_name && String((match as any).team_a_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_a_ranking';
+              else if ((match as any).team_b_name && String((match as any).team_b_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_b_ranking';
+              else if ((match as any).team_c_name && String((match as any).team_c_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_c_ranking';
+              else if ((match as any).team_d_name && String((match as any).team_d_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_d_ranking';
+              else if ((match as any).team_e_name && String((match as any).team_e_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_e_ranking';
+              else if ((match as any).team_f_name && String((match as any).team_f_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_f_ranking';
+              if (!rkCol) continue;
+                const updates: Record<string, any> = {};
+                // 0 means clear override (null), positive values persist as override
+                updates[rkCol] = (rankVal === 0) ? null : rankVal;
+                await supabase
+                  .from('weekly_schedules')
+                  .update({ ...updates })
+                  .eq('id', (match as any).id);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to save weekly rank overrides', e);
         }
       }
 
@@ -653,9 +810,7 @@ export function LeagueStandingsPage() {
                         <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]" colSpan={weeklyColumns.length}>
                           Week
                         </th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg" rowSpan={2}>
-                          +/-
-                        </th>
+                        
                       </tr>
                       <tr>
                         {weeklyColumns.map(week => (
@@ -665,48 +820,60 @@ export function LeagueStandingsPage() {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {standings.map((standing, index) => {
-                        const totalDifferential = getTotalValue(standing, 'point_differential', 'manual_differential_adjustment');
-                        const editKey = standing.id === 0 ? `team_${standing.team_id}` : standing.id.toString();
-                        const isEdited = !!editedStandings[editKey];
-
-                        return (
-                          <tr
-                            key={standing.id === 0 ? `team_${standing.team_id}` : standing.id}
-                            className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
-                              index === standings.length - 1 ? "last-row" : ""
-                            } ${isEdited ? "ring-2 ring-yellow-400 ring-opacity-50" : ""}`}
-                          >
-                            <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>-</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">
-                              {standing.team_name}
-                            </td>
-                            {weeklyColumns.map(week => (
-                              <td key={`week-${standing.team_id}-${week}`} className="px-4 py-3 text-center text-sm text-[#6F6F6F]">
-                                -
-                              </td>
-                            ))}
-                            <td className={`px-4 py-3 text-center ${index === standings.length - 1 ? "rounded-br-lg" : ""}`}>
-                              {isEditMode ? (
-                                <Input
-                                  type="number"
-                                  value={totalDifferential}
-                                  onChange={(e) => {
-                                    const newTotal = parseInt(e.target.value) || 0;
-                                    const base = getDisplayValue(standing, 'point_differential') as number;
-                                    const adjustment = newTotal - base;
-                                    handleFieldChange(standing, 'manual_differential_adjustment', adjustment.toString());
-                                  }}
-                                  className="w-16 h-8 text-center text-sm mx-auto"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium text-[#6F6F6F]">{formatDiff(totalDifferential)}</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                  <tbody className="divide-y divide-gray-200">
+                      {[...standings]
+                        .sort((a, b) => {
+                          const aVals = weeklyColumns.map(w => weeklyRanks[a.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
+                          const bVals = weeklyColumns.map(w => weeklyRanks[b.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
+                          const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : Number.POSITIVE_INFINITY;
+                          const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : Number.POSITIVE_INFINITY;
+                          if (aAvg !== bAvg) return aAvg - bAvg;
+                          return (a.team_name || '').localeCompare(b.team_name || '');
+                        })
+                        .map((standing, index) => {
+                          const editKey = standing.id === 0 ? `team_${standing.team_id}` : standing.id.toString();
+                          const isEdited = !!editedStandings[editKey];
+                          const played = weeklyColumns.map(w => weeklyRanks[standing.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
+                          const avg = played.length ? (played.reduce((a,b)=>a+b,0) / played.length) : null;
+                          return (
+                            <tr
+                              key={standing.id === 0 ? `team_${standing.team_id}` : standing.id}
+                              className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
+                                index === standings.length - 1 ? "last-row" : ""
+                              } ${isEdited ? "ring-2 ring-yellow-400 ring-opacity-50" : ""}`}
+                            >
+                              <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : '-'}</td>
+                              <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{standing.team_name}</td>
+                              {weeklyColumns.map(week => {
+                                const current = editedWeeklyRanks[standing.team_id]?.[week] ?? weeklyRanks[standing.team_id]?.[week];
+                                return (
+                                  <td key={`week-${standing.team_id}-${week}`} className="px-2 py-2 text-center text-sm text-[#6F6F6F]">
+                                  {isEditMode ? (
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={current ?? ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0);
+                                          setEditedWeeklyRanks(prev => {
+                                            const teamMap = { ...(prev[standing.team_id] || {}) };
+                                            teamMap[week] = val;
+                                            return { ...prev, [standing.team_id]: teamMap };
+                                          });
+                                          setHasChanges(true);
+                                        }}
+                                        className="w-14 h-8 text-center text-sm mx-auto"
+                                      />
+                                    ) : (
+                                      <span>{weeklyRanks[standing.team_id]?.[week] ?? '-'}</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                              
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>

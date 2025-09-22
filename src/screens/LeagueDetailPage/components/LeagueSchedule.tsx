@@ -506,7 +506,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                         </span>
                       )}
                       {canSubmitScores && !tier.no_games &&
-                        (tier.format === '3-teams-6-sets' || tier.format === '2-teams-4-sets' || tier.format === '2-teams-best-of-5' || tier.format === '4-teams-head-to-head' || tier.format === '6-teams-head-to-head') &&
+                        (tier.format === '3-teams-6-sets' || tier.format === '2-teams-4-sets' || tier.format === '2-teams-best-of-5' || tier.format === '4-teams-head-to-head' || tier.format === '6-teams-head-to-head' || tier.format === '2-teams-elite' || tier.format === '3-teams-elite-6-sets' || tier.format === '3-teams-elite-9-sets') &&
                         getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                          <button
                            onClick={() => {

@@ -185,7 +185,7 @@ export function LeagueEditPage() {
           const { data: scheduleRow, error: scheduleErr } = await supabase
             .from('league_schedules')
             .select('id')
-            .eq('league_id', parseInt(id))
+            .eq('league_id', parseInt(id!))
             .maybeSingle();
           if (scheduleErr && scheduleErr.code !== 'PGRST116') {
             console.warn('Failed to load schedule status for league', scheduleErr);
@@ -292,14 +292,14 @@ export function LeagueEditPage() {
       // Update the Stripe product mapping if changed
       try {
         // If we have a previous product linked to this league, unlink it
-        const currentProduct = await getStripeProductByLeagueId(parseInt(id));
+        const currentProduct = await getStripeProductByLeagueId(parseInt(id!));
         if (currentProduct && currentProduct.id !== selectedProductId) {
           await updateStripeProductLeagueId(currentProduct.id, null);
         }
 
         // Link the new product to this league
         if (selectedProductId) {
-          await updateStripeProductLeagueId(selectedProductId, parseInt(id));
+          await updateStripeProductLeagueId(selectedProductId, parseInt(id!));
         }
       } catch (productError) {
         console.error("Error updating product association:", productError);

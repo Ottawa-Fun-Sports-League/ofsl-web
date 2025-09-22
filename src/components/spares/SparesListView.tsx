@@ -132,7 +132,7 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
               });
             }
           } catch (e) {
-            logger.warn('Volleyball captain check failed', e);
+            logger.error('Volleyball captain check failed', e);
           }
         }
 
