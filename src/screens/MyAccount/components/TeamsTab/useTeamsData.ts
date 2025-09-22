@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import { LeaguePayment, Team, TeamMatchup } from './types';
-import { getPositionsForFormat } from '../../../LeagueSchedulePage/utils/formatUtils';
+import { getPositionsForFormat, buildWeekTierLabels } from '../../../LeagueSchedulePage/utils/formatUtils';
 import { calculateCurrentWeekToDisplay } from '../../../LeagueSchedulePage/utils/weekCalculation';
 import type { WeeklyScheduleTier } from '../../../LeagueSchedulePage/types';
 
@@ -116,6 +116,7 @@ export function useTeamsData(userId?: string) {
           }
 
           const tiers: WeeklyScheduleTier[] = data || [];
+          const tierLabelMap = buildWeekTierLabels(tiers);
 
           const entriesByName = new Map<string, TeamMatchup[]>();
           const entriesByRanking = new Map<number, TeamMatchup[]>();
@@ -152,6 +153,10 @@ export function useTeamsData(userId?: string) {
                 status,
                 weekNumber: currentWeek,
                 tierNumber: tier.tier_number,
+                tierLabel:
+                  tierLabelMap.get(tier.id) ||
+                  tierLabelMap.get(tier.tier_number) ||
+                  (typeof tier.tier_number === 'number' ? `Tier ${tier.tier_number}` : null),
                 opponents,
                 location: tier.location,
                 timeSlot: tier.time_slot,
@@ -198,6 +203,7 @@ export function useTeamsData(userId?: string) {
                 status: 'no_schedule',
                 weekNumber: currentWeek,
                 opponents: [],
+                tierLabel: null,
               });
             }
           });
@@ -208,6 +214,7 @@ export function useTeamsData(userId?: string) {
               status: 'no_schedule',
               weekNumber: currentWeek,
               opponents: [],
+              tierLabel: null,
             });
           });
         }
@@ -233,6 +240,7 @@ export function useTeamsData(userId?: string) {
           status: 'no_schedule',
           weekNumber: fallbackWeek,
           opponents: [],
+          tierLabel: null,
         },
       };
     });

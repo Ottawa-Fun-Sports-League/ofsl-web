@@ -8,6 +8,8 @@ export const INITIAL_FILTERS = {
   sportsWithSkill: [] as number[]
 };
 
+export const USER_SEARCH_DEBOUNCE_MS = 600;
+
 // Sports are loaded dynamically from DB for filters
 
 export const POSITION_OPTIONS = [
