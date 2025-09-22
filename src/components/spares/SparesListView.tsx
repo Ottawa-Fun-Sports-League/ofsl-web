@@ -8,9 +8,10 @@ import {
   Users,
   Search,
   Filter,
-  Copy,
   AlertCircle,
-  Clock
+  Clock,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -440,15 +441,41 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
                 return (
                   <Card key={spare.id} className="border border-gray-200">
                     <CardContent className="p-4">
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
                         {/* Player Info */}
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h3 className="font-semibold text-lg">{spare.users.name}</h3>
-                            <Badge className={getSkillLevelColor(spare.skill_level)}>
-                              {spare.skill_level.charAt(0).toUpperCase() + spare.skill_level.slice(1)}
-                            </Badge>
-                            <span className={`inline-flex items-center rounded-full border ${branding.border} ${branding.background} ${branding.accent} px-3 py-1 text-xs font-semibold uppercase tracking-wide`}>
+                        <div className="space-y-3 pb-10 lg:pb-4">
+                          <div className="flex w-full items-start justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-semibold text-lg">{spare.users.name}</h3>
+                              <Badge className={getSkillLevelColor(spare.skill_level)}>
+                                {spare.skill_level.charAt(0).toUpperCase() + spare.skill_level.slice(1)}
+                              </Badge>
+                              <span className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => copyToClipboard(spare.users.email, 'Email')}
+                                  className="h-8 w-8 text-[#6F6F6F]"
+                                  title="Copy email"
+                                >
+                                  <Mail className="h-4 w-4" />
+                                </Button>
+                                {spare.users.phone && spare.share_phone && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => copyToClipboard(spare.users.phone!, 'Phone')}
+                                    className="h-8 w-8 text-[#6F6F6F]"
+                                    title="Copy phone"
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </span>
+                            </div>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${branding.border} ${branding.background} ${branding.accent}`}
+                            >
                               {spare.sports.name}
                             </span>
                           </div>
@@ -470,44 +497,23 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
                             </p>
                           </div>
 
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded border border-gray-200 bg-white p-3">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Gender identity</p>
-                              <p className="text-sm text-[#6F6F6F]">{genderLabel}</p>
-                            </div>
-                            {isVolleyball && (
-                              <div className="rounded border border-orange-200 bg-orange-50 p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-orange-500 mb-1">Volleyball positions</p>
-                                <p className="text-sm text-orange-700">{positionLabel}</p>
-                              </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-[#6F6F6F]">
+                            {genderLabel && genderLabel !== 'Not shared' && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-gray-600">
+                                <span className="font-medium text-gray-500">Gender:</span>
+                                <span>{genderLabel}</span>
+                              </span>
+                            )}
+                            {isVolleyball && positionLabel && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-orange-700">
+                                <span className="font-medium text-orange-600">Positions:</span>
+                                <span>{positionLabel}</span>
+                              </span>
                             )}
                           </div>
                         </div>
 
-                        {/* Contact Actions */}
-                        <div className={`flex gap-1 lg:min-w-[150px] ${!(spare.users.phone && spare.share_phone) ? 'justify-end' : ''}`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyToClipboard(spare.users.email, 'Email')}
-                            className="flex items-center gap-1 text-xs"
-                          >
-                            <Copy className="h-3 w-3" />
-                            Email
-                          </Button>
-                          
-                          {spare.users.phone && spare.share_phone && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => copyToClipboard(spare.users.phone!, 'Phone')}
-                              className="flex items-center gap-1 text-xs"
-                            >
-                              <Copy className="h-3 w-3" />
-                              Phone
-                            </Button>
-                          )}
-                        </div>
+                        <div className="flex items-center justify-end gap-2 self-end" />
                       </div>
                     </CardContent>
                   </Card>

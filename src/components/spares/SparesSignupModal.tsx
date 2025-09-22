@@ -5,7 +5,6 @@ import { AlertCircle, Users, Phone, Mail, X, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
-import { Checkbox } from '../ui/checkbox';
 import {
   GENDER_OPTIONS,
   VOLLEYBALL_POSITIONS,
@@ -311,6 +310,14 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
   const isVolleyballSelected = selectedSportRecord?.name?.toLowerCase() === 'volleyball';
   const sportBranding = selectedSportRecord ? getSportBranding(selectedSportRecord.name) : null;
 
+  const toggleVolleyballPosition = (position: string) => {
+    setVolleyballPositions((prev) =>
+      prev.includes(position)
+        ? prev.filter((value) => value !== position)
+        : [...prev, position]
+    );
+  };
+
   if (!user) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
@@ -486,31 +493,31 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
             </div>
 
             {isVolleyballSelected && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-[#6F6F6F]">Which positions do you play? *</label>
-                  <span className="text-xs text-[#6F6F6F]">Select all that apply</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="block text-sm font-medium text-[#6F6F6F]">
+                    Volleyball positions *
+                  </label>
+                  <span className="text-xs text-[#6F6F6F]">Tap all that apply</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {VOLLEYBALL_POSITIONS.map((option) => {
-                    const isChecked = volleyballPositions.includes(option.value);
+                    const isSelected = volleyballPositions.includes(option.value);
                     return (
-                      <label key={option.value} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#6F6F6F] hover:border-[#B20000] transition">
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            setVolleyballPositions((prev) => {
-                              if (checked === true) {
-                                if (prev.includes(option.value)) return prev;
-                                return [...prev, option.value];
-                              }
-                              return prev.filter((value) => value !== option.value);
-                            });
-                          }}
-                          disabled={loading}
-                        />
-                        <span>{option.label}</span>
-                      </label>
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => toggleVolleyballPosition(option.value)}
+                        disabled={loading}
+                        className={`rounded-full border px-3 py-1 text-sm transition focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400 ${
+                          isSelected
+                            ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
+                            : 'border-gray-200 bg-white text-[#6F6F6F] hover:border-orange-300 hover:text-orange-600'
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        {option.label}
+                      </button>
                     );
                   })}
                 </div>
