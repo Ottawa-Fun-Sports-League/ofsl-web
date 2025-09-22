@@ -70,7 +70,7 @@ export function useTeamsData(userId?: string) {
           sampleLeague?.day_of_week ?? null,
         );
 
-        const standingsRankByTeamId = new Map<number, number>();
+        const teamIdByRanking = new Map<number, number>();
         try {
           const { data: standingsData, error: standingsError } = await supabase
             .from('standings')
@@ -84,7 +84,10 @@ export function useTeamsData(userId?: string) {
               if (!teamIdValue) return;
               const rank = row.current_position;
               if (typeof rank === 'number' && Number.isFinite(rank)) {
-                standingsRankByTeamId.set(teamIdValue, rank);
+                // Only keep first mapping per ranking to avoid duplicates
+                if (!teamIdByRanking.has(rank)) {
+                  teamIdByRanking.set(rank, teamIdValue);
+                }
               }
             });
           }
@@ -163,31 +166,21 @@ export function useTeamsData(userId?: string) {
               entriesByName.get(normalized)!.push(matchup);
 
               const ranking = rankingByPosition[position];
-              if (ranking !== null && ranking !== undefined) {
-                if (!entriesByRanking.has(ranking)) {
-                  entriesByRanking.set(ranking, []);
+              if (ranking !== null && ranking !== undefined && teamIdByRanking.has(ranking)) {
+                const matchedTeamId = teamIdByRanking.get(ranking)!;
+                if (!teamMatchups.has(matchedTeamId)) {
+                  teamMatchups.set(matchedTeamId, matchup);
                 }
-                entriesByRanking.get(ranking)!.push(matchup);
               }
             });
           });
 
           const usageByName = new Map<string, number>();
-          const usageByRanking = new Map<number, number>();
 
           leagueTeams.forEach((team) => {
             const normalized = normalizeTeamName(team.name);
-            const teamRanking = standingsRankByTeamId.get(team.id ?? -1);
-            let matchup: TeamMatchup | undefined;
-
-            if (teamRanking !== undefined) {
-              const rankingEntries = entriesByRanking.get(teamRanking) || [];
-              const rankingUsage = usageByRanking.get(teamRanking) || 0;
-              matchup = rankingEntries[rankingUsage];
-              if (matchup) {
-                usageByRanking.set(teamRanking, rankingUsage + 1);
-              }
-            }
+            const preMatched = teamMatchups.get(team.id);
+            let matchup: TeamMatchup | undefined = preMatched;
 
             if (!matchup) {
               const entries = entriesByName.get(normalized) || [];
