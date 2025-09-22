@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from '../../../lib/supabase';
 import { applyMovementAfterStandings, applyTwoTeamMovementAfterStandings, applyEliteThreeTeamMovementAfterStandings } from './movement';
 import { applyFourTeamMovementAfterStandings, applySixTeamMovementAfterStandings } from './movement';

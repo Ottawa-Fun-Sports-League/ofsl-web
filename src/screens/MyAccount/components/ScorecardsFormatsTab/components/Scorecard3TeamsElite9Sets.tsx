@@ -34,6 +34,7 @@ interface Scorecard3TeamsElite9SetsProps {
 export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, initialSets, initialSpares, submitting = false }: Scorecard3TeamsElite9SetsProps) {
   const [scores, setScores] = useState<Record<number, { A?: string; B?: string; C?: string }>>({});
   const [spares, setSpares] = useState<Record<TeamKey, string>>({ A: '', B: '', C: '' });
+  void tierNumber; // silence unused when removing top-right Tier display
 
   useEffect(() => {
     if (initialSpares) setSpares({ A: initialSpares.A || '', B: initialSpares.B || '', C: initialSpares.C || '' });
@@ -198,7 +199,7 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
 
         <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-[10px] relative">
           {(() => {
-            const { matchWins, matchLosses, diff, getHeadToHeadDiff } = computeSummary();
+            const { matchWins, matchLosses, getHeadToHeadDiff } = computeSummary();
             const order: TeamKey[] = ['A','B','C'];
             const sorted = [...order].sort((x,y)=> {
               if (matchWins[y] !== matchWins[x]) return matchWins[y]-matchWins[x];
@@ -209,23 +210,17 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
               }
               return order.indexOf(x) - order.indexOf(y);
             });
+            const allDecided = canSubmit();
             const role: Record<TeamKey, 'winner' | 'neutral' | 'loser'> = { A:'neutral', B:'neutral', C:'neutral' };
-            role[sorted[0]]='winner'; role[sorted[2]]='loser';
+            if (allDecided) { role[sorted[0]]='winner'; role[sorted[2]]='loser'; }
             const headerCell = (text: string) => (<div className="text-[12px] font-semibold text-[#B20000]">{text}</div>);
             const rowCell = (content: ReactNode, emphasize = false) => (<div className={`text-[12px] text-[#4B5563] ${emphasize ? 'font-semibold' : ''}`}>{content}</div>);
-            const tierDisplay = typeof tierNumber === 'number' ? tierNumber : '';
             return (
               <div>
                 <div className="text-[12px] font-medium mb-2 text-[#B20000]">Weekly Summary (Elite 9 sets)</div>
-                {tierDisplay && (
-                  <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]"><span className="font-semibold">Tier {tierDisplay}</span></span>
-                )}
-                <div className="grid grid-cols-5 gap-x-4 items-center">
+                <div className="grid grid-cols-2 gap-x-4 items-center">
                   {headerCell('Team')}
                   {headerCell('Record')}
-                  {headerCell('Differential')}
-                  {headerCell('Movement')}
-                  {headerCell('Points')}
                   {order.map(k => (
                     <Fragment key={`summary-${k}`}>
                       {rowCell(
@@ -235,9 +230,7 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
                           {role[k] === 'loser' && (<span className="inline-flex items-center rounded border border-red-200 bg-red-100 px-1.5 py-0 text-[10px] font-semibold leading-4 text-red-700">L</span>)}
                         </div>, true)}
                       {rowCell(`${matchWins[k]}-${matchLosses[k]}`)}
-                      {rowCell(diff[k] > 0 ? `+${diff[k]}` : `${diff[k]}`)}
-                      {rowCell('-')}
-                      {rowCell('-')}
+                      
                     </Fragment>
                   ))}
                 </div>

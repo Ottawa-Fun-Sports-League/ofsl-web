@@ -32,7 +32,6 @@ export function AuthRedirectPage() {
         const code = queryParams.get('code') || hashParams['code'];
         const errorDescription = queryParams.get('error_description') || hashParams['error_description'];
         const tokenHash = queryParams.get('token_hash') || hashParams['token_hash'];
-        const email = queryParams.get('email') || hashParams['email'] || '';
 
         console.info('🔍 Auth redirect params:', {
           targetPage: page,
@@ -43,7 +42,7 @@ export function AuthRedirectPage() {
 
         // 1) Newer flow: code param → exchange for session
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession({ code });
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
           navigate(page === 'admin-masquerade' ? '/my-account/teams' : '/', { replace: true });
           return;

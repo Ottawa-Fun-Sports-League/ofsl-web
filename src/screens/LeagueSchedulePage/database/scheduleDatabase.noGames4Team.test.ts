@@ -80,11 +80,6 @@ describe('moveWeekPlacements with 4-team format', () => {
       error: null,
     });
 
-    // Mock target week data fetch
-    const mockTargetSelect = vi.fn().mockResolvedValue({
-      data: mockTargetRows,
-      error: null,
-    });
 
     // Mock clearing teams from all rows
     const mockAllRowsSelect = vi.fn().mockResolvedValue({
@@ -164,7 +159,7 @@ describe('moveWeekPlacements with 4-team format', () => {
     });
 
     expect(tier2Updates).toBeDefined();
-    expect(tier2Updates[0]).toMatchObject({
+    expect(tier2Updates?.[0]).toMatchObject({
       team_a_name: 'Team Alpha',
       team_b_name: 'Team Beta',
       team_c_name: 'Team Charlie',
@@ -218,11 +213,6 @@ describe('moveWeekPlacements with 4-team format', () => {
     });
 
     // Mock empty target week (will create new rows)
-    const mockTargetSelect = vi.fn().mockResolvedValue({
-      data: [],
-      error: null,
-    });
-
     // Mock insert for creating target rows
     const mockInsert = vi.fn().mockReturnValue({
       select: vi.fn().mockResolvedValue({
@@ -304,6 +294,6 @@ describe('moveWeekPlacements with 4-team format', () => {
     });
 
     expect(tier2Update).toBeDefined();
-    expect(tier2Update[0].format).toBe('4-teams-head-to-head');
+    expect(tier2Update?.[0]?.format).toBe('4-teams-head-to-head');
   });
 });

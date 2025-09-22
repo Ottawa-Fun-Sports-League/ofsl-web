@@ -1,8 +1,7 @@
 import { useEffect, useState, Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '../../../../../components/ui/button';
-import { supabase } from '../../../../../lib/supabase';
-import { computeWeeklyNameRanksFromResults } from '../../../../LeagueSchedulePage/utils/rankingUtils';
+// Weekly ranking is hidden for elite summary; remove ranking imports
 
 type TeamKey = 'A' | 'B' | 'C';
 
@@ -43,9 +42,8 @@ interface Scorecard3Teams6SetsProps {
 export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, pointsTierOffset = 0, resultsLabel, tierNumber, leagueId, weekNumber, initialSets, initialSpares, submitting = false, eliteSummary = false }: Scorecard3Teams6SetsProps) {
   const [scores, setScores] = useState<Record<number, { A?: string; B?: string; C?: string }>>({});
   const [spares, setSpares] = useState<Record<TeamKey, string>>({ A: '', B: '', C: '' });
-  const [weekTiers, setWeekTiers] = useState<Array<{ week_number: number; tier_number: number; format?: string | null }>>([]);
-  const [baseResults, setBaseResults] = useState<Array<{ week_number: number; tier_number: number; team_name: string | null; tier_position: number | null }>>([]);
-  const [weekRanksByName, setWeekRanksByName] = useState<Record<string, number> | null>(null);
+  // Ranking-related state removed
+  void leagueId; void weekNumber; // silence unused props when eliteSummary is on
 
   // Prefill from initial values when provided
   useEffect(() => {
@@ -88,79 +86,9 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
     setSpares(prev => ({ ...prev, [team]: value }));
   };
 
-  // Load tiers/results context to compute week-wide ranking in elite summary
-  useEffect(() => {
-    const loadWeekContext = async () => {
-      try {
-        if (!eliteSummary || !leagueId || !weekNumber) return;
-        const [{ data: tiers }, { data: results }] = await Promise.all([
-          supabase
-            .from('weekly_schedules')
-            .select('id,week_number,tier_number,format')
-            .eq('league_id', leagueId)
-            .eq('week_number', weekNumber)
-            .order('tier_number', { ascending: true }),
-          supabase
-            .from('game_results')
-            .select('team_name, week_number, tier_number, tier_position')
-            .eq('league_id', leagueId)
-            .eq('week_number', weekNumber),
-        ]);
-        setWeekTiers((tiers || []) as any);
-        setBaseResults((results || []) as any);
-      } catch {/* ignore */}
-    };
-    void loadWeekContext();
-  }, [eliteSummary, leagueId, weekNumber]);
+  // Ranking context removed
 
-  // Recompute week-wide ranks when scores change (elite summary only)
-  useEffect(() => {
-    const recomputeRanks = () => {
-      if (!eliteSummary || !leagueId || !weekNumber || !tierNumber) return;
-      // Aggregate from current scores (same logic as below)
-      const stats: Record<TeamKey, { wins: number; losses: number; diff: number }> = { A:{wins:0,losses:0,diff:0}, B:{wins:0,losses:0,diff:0}, C:{wins:0,losses:0,diff:0} } as any;
-      const teamKeys: TeamKey[] = ['A','B','C'];
-      const fmtDiff = (k: TeamKey) => stats[k].diff;
-      // Tally wins/loses/diff similar to onSubmit block
-      const SETS_LOCAL: Array<{ teams: [TeamKey,TeamKey]; idx:number }> = [
-        { teams: ['A','C'], idx:0 }, { teams: ['A','C'], idx:1 },
-        { teams: ['A','B'], idx:2 }, { teams: ['A','B'], idx:3 },
-        { teams: ['B','C'], idx:4 }, { teams: ['B','C'], idx:5 },
-      ];
-      SETS_LOCAL.forEach(({teams: [L,R], idx}) => {
-        const row = (scores[idx] || {}) as Record<TeamKey, string>;
-        const sL = row[L] ?? '';
-        const sR = row[R] ?? '';
-        if (sL === '' || sR === '') return;
-        const nL = Number(sL), nR = Number(sR);
-        if (Number.isNaN(nL) || Number.isNaN(nR) || nL === nR) return;
-        stats[L].diff += (nL - nR); stats[R].diff += (nR - nL);
-        if (nL > nR) { stats[L].wins++; stats[R].losses++; } else { stats[R].wins++; stats[L].losses++; }
-      });
-      const sorted = [...teamKeys].sort((x, y) => {
-        if (stats[y].wins !== stats[x].wins) return stats[y].wins - stats[x].wins;
-        if (fmtDiff(y) !== fmtDiff(x)) return fmtDiff(y) - fmtDiff(x);
-        return teamKeys.indexOf(x) - teamKeys.indexOf(y);
-      });
-
-      // Build merged results: other tiers + this tier's in-progress positions
-      const merged = (baseResults || []).filter(r => !(r.week_number === weekNumber && r.tier_number === tierNumber));
-      const names: Record<TeamKey, string> = { A: teamNames.A || '', B: teamNames.B || '', C: teamNames.C || '' };
-      sorted.forEach((k, i) => {
-        merged.push({ week_number: weekNumber!, tier_number: tierNumber!, team_name: names[k], tier_position: i + 1 });
-      });
-
-      const nameRanksByWeek = computeWeeklyNameRanksFromResults(
-        (weekTiers || []) as any,
-        merged as any,
-      );
-      const ranks = nameRanksByNameFromMap(nameRanksByWeek[weekNumber!]);
-      setWeekRanksByName(ranks);
-    };
-    const nameRanksByNameFromMap = (m: Record<string, number> | undefined) => (m ? m : null);
-    recomputeRanks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scores, teamNames, eliteSummary, leagueId, weekNumber, tierNumber, weekTiers, baseResults]);
+  // Ranking computation removed
 
   return (
     <form
@@ -395,12 +323,12 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                     <span className="font-semibold">Tier {tierDisplay}:</span> Base 3/4/5 Bonus +{tierBonus}
                   </span>
                 )}
-                <div className={`grid ${eliteSummary ? 'grid-cols-4' : 'grid-cols-5'} gap-x-4 items-center`}>
+                <div className={`grid ${eliteSummary ? 'grid-cols-2' : 'grid-cols-5'} gap-x-4 items-center`}>
                   {headerCell('Team')}
                   {headerCell('Record')}
                   {!eliteSummary && headerCell('Differential')}
-                  {headerCell('Movement')}
-                  {eliteSummary ? headerCell('Weekly Ranking') : headerCell('Points')}
+                  {!eliteSummary && headerCell('Movement')}
+                  {!eliteSummary && headerCell('Points')}
                   {(order as TeamKey[]).map(k => (
                     <Fragment key={`summary-${k}`}>
                       {rowCell(
@@ -417,19 +345,9 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       )}
                       {rowCell(`${stats[k].wins}-${stats[k].losses}`)}
                       {!eliteSummary && rowCell(fmtDiff(stats[k].diff))}
-                      {rowCell(allEntered ? movement[k] : '-')}
-                      {eliteSummary
+                      {!eliteSummary && rowCell(allEntered ? movement[k] : '-')}
+                      {!eliteSummary
                         ? rowCell(
-                            allEntered
-                              ? (() => {
-                                  const nm = k === 'A' ? teamNames.A : (k === 'B' ? teamNames.B : teamNames.C);
-                                  const rk = nm && weekRanksByName ? weekRanksByName[nm] : undefined;
-                                  return rk != null ? String(rk) : String((sorted.indexOf(k) + 1));
-                                })()
-                              : '-',
-                            true
-                          )
-                        : rowCell(
                             allEntered
                               ? `+${(() => {
                                   const basePoints = { winner: 5, neutral: 4, loser: 3 } as const;
@@ -437,7 +355,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                                 })()}`
                               : '-',
                             true
-                          )
+                          ) : null
                       }
                     </Fragment>
                   ))}

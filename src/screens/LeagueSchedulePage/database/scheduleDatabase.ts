@@ -579,37 +579,88 @@ export async function applyFourTeamTierMovementNextWeek(params: {
 
   const destWeek = await getNextPlayableWeek(leagueId, nextWeek);
 
-  const evalCourt = (rows: Array<Record<string,string>>, L: 'A'|'B'|'C'|'D', R: 'A'|'B'|'C'|'D') => {
-    let lw=0, rw=0, diff=0; for(const row of rows){ const sl=row[L]??''; const sr=row[R]??''; const nl=Number(sl), nr=Number(sr); if(sl===''||sr===''||Number.isNaN(nl)||Number.isNaN(nr)||nl===nr) return {winner:null as any, loser:null as any}; diff+=(nl-nr); if(nl>nr) lw++; else rw++; }
-    if (lw!==rw) return { winner: (lw>rw? L:R), loser: (lw>rw? R:L) };
-    if (diff!==0) return { winner: (diff>0? L:R), loser: (diff>0? R:L) };
-    return { winner:null as any, loser:null as any };
+
+  type FTPos = 'A'|'B'|'C'|'D';
+  const evalCourt = (rows: Array<Record<string, string>>, left: FTPos, right: FTPos): { winner: FTPos | null; loser: FTPos | null } => {
+    let leftWins = 0;
+    let rightWins = 0;
+    let diff = 0;
+    for (const row of rows) {
+      const sl = row[left] ?? '';
+      const sr = row[right] ?? '';
+      const nl = Number(sl);
+      const nr = Number(sr);
+      if (sl === '' || sr === '' || Number.isNaN(nl) || Number.isNaN(nr) || nl === nr) {
+        return { winner: null, loser: null };
+      }
+      diff += nl - nr;
+      if (nl > nr) leftWins += 1;
+      else rightWins += 1;
+    }
+    if (leftWins !== rightWins) {
+      return {
+        winner: leftWins > rightWins ? left : right,
+        loser: leftWins > rightWins ? right : left,
+      };
+    }
+    if (diff !== 0) {
+      return {
+        winner: diff > 0 ? left : right,
+        loser: diff > 0 ? right : left,
+      };
+    }
+    return { winner: null, loser: null };
   };
-  const g1c1Rows = (game1.court1||[]).map(s => ({ A: (s.scores as any).A ?? '', B: (s.scores as any).B ?? '' }));
-  const g1c2Rows = (game1.court2||[]).map(s => ({ C: (s.scores as any).C ?? '', D: (s.scores as any).D ?? '' }));
-  const g1c1 = evalCourt(g1c1Rows as any, 'A','B');
-  const g1c2 = evalCourt(g1c2Rows as any, 'C','D');
+  const g1c1Rows = (game1.court1 || []).map((s) => ({
+    A: (s.scores as Record<string, string>).A ?? '',
+    B: (s.scores as Record<string, string>).B ?? '',
+  }));
+  const g1c2Rows = (game1.court2 || []).map((s) => ({
+    C: (s.scores as Record<string, string>).C ?? '',
+    D: (s.scores as Record<string, string>).D ?? '',
+  }));
+  const g1c1 = evalCourt(g1c1Rows, 'A', 'B');
+  const g1c2 = evalCourt(g1c2Rows, 'C', 'D');
   if (!g1c1.winner || !g1c1.loser || !g1c2.winner || !g1c2.loser) return;
 
-  const w1 = g1c1.winner as 'A'|'B';
-  const l1 = g1c1.loser as 'A'|'B';
-  const w2 = g1c2.winner as 'C'|'D';
-  const l2 = g1c2.loser as 'C'|'D';
+  const w1 = g1c1.winner;
+  const l1 = g1c1.loser;
+  const w2 = g1c2.winner;
+  const l2 = g1c2.loser;
 
-  const scoreRows = (rows: Array<Record<string,string>>, L: string, R: string) => {
-    let lw=0, rw=0, diff=0; for(const row of rows){ const sl=row[L]??''; const sr=row[R]??''; const nl=Number(sl), nr=Number(sr); diff += (nl-nr); if(nl>nr) lw++; else rw++; }
-    if (lw!==rw) return lw>rw? L:R; return diff>0? L:R;
+  const scoreRows = (rows: Array<Record<string, string>>, left: FTPos, right: FTPos): FTPos => {
+    let leftWins = 0;
+    let rightWins = 0;
+    let diff = 0;
+    for (const row of rows) {
+      const sl = row[left] ?? '';
+      const sr = row[right] ?? '';
+      const nl = Number(sl);
+      const nr = Number(sr);
+      diff += nl - nr;
+      if (nl > nr) leftWins += 1;
+      else rightWins += 1;
+    }
+    if (leftWins !== rightWins) {
+      return leftWins > rightWins ? left : right;
+    }
+    return diff > 0 ? left : right;
   };
-  const g2c1Rows = (game2.court1||[]).map(s => ({ [w1]: (s.scores as any).WC1 ?? '', [w2]: (s.scores as any).WC2 ?? '' })) as any;
-  const g2c2Rows = (game2.court2||[]).map(s => ({ [l1]: (s.scores as any).LC1 ?? '', [l2]: (s.scores as any).LC2 ?? '' })) as any;
-  const c1Winner = scoreRows(g2c1Rows, w1, w2) as 'A'|'B'|'C'|'D';
-  const c1Loser = (c1Winner === (w1 as any)) ? (w2 as any) : (w1 as any);
-  const c2Winner = scoreRows(g2c2Rows, l1, l2) as 'A'|'B'|'C'|'D';
-  const c2Loser = (c2Winner === (l1 as any)) ? (l2 as any) : (l1 as any);
 
+  const g2c1Rows = (game2.court1 || []).map((s) => ({
+    [w1]: (s.scores as Record<string, string>).WC1 ?? '',
+    [w2]: (s.scores as Record<string, string>).WC2 ?? '',
+  }));
+  const g2c2Rows = (game2.court2 || []).map((s) => ({
+    [l1]: (s.scores as Record<string, string>).LC1 ?? '',
+    [l2]: (s.scores as Record<string, string>).LC2 ?? '',
+  }));
+  const c1Winner = scoreRows(g2c1Rows, w1, w2);
+  const c1Loser: FTPos = c1Winner === w1 ? w2 : w1;
+  const c2Winner = scoreRows(g2c2Rows, l1, l2);
+  const c2Loser: FTPos = c2Winner === l1 ? l2 : l1;
   // Assignments for next week based on movement rules
-  type Pos = 'A'|'B'|'C'|'D';
-  const assignments: Array<{ name:string; targetTier:number; targetPos: Pos }> = [];
+  const assignments: Array<{ name:string; targetTier:number; targetPos: FTPos }> = [];
   // Court 1 winner
   if (teamNames[c1Winner]) {
     if (isTopTier) assignments.push({ name: teamNames[c1Winner], targetTier: tierNumber, targetPos: 'A' });
@@ -792,8 +843,8 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
           }
         } else {
           // Fallback to immediate neighbor detection
-          const prevIsEliteTwo = elite(aboveFormat);
-          const nextIsEliteTwo = elite(belowFormat);
+          const prevIsEliteTwo = elite(aboveFormat ?? undefined);
+          const nextIsEliteTwo = elite(belowFormat ?? undefined);
           if (nextIsEliteTwo) { partnerTier = tierNumber + 1; isA = true; }
           else if (prevIsEliteTwo) { partnerTier = tierNumber - 1; isB = true; }
         }
@@ -839,15 +890,27 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
         // Winner 2A -> up to previous tier (which is partner of above pair) position B
         if (teamNames[winnerKey]) {
           const targetTier = isTopTier ? tierNumber : (tierNumber - 1);
-          const upPos: TeamPositionId = isTopTier ? 'A' : 'B';
+          // If the tier above is not 2-team (e.g., 3-team), place at its highest slot (C),
+          // otherwise keep existing A/B behavior.
+          let upPos: TeamPositionId = 'B';
+          if (isTopTier) {
+            upPos = 'A';
+          } else if (aboveFormat) {
+            try {
+              const posUp = getPositionsForFormat(aboveFormat);
+              upPos = posUp[posUp.length - 1] as TeamPositionId; // e.g., 'C' for 3-team
+            } catch {
+              upPos = 'B';
+            }
+          }
           assignments.push({ name: teamNames[winnerKey], targetTier, targetPos: upPos });
         }
         // Loser 2A -> partner 2B position A
         if (teamNames[loserKey] && partnerTier) assignments.push({ name: teamNames[loserKey], targetTier: partnerTier, targetPos: 'A' });
       } else if (isB) {
-        // Winner 2B -> partner 2A position A
-        if (teamNames[winnerKey] && partnerTier) assignments.push({ name: teamNames[winnerKey], targetTier: partnerTier, targetPos: 'A' });
-        // Loser 2B -> down to next tier position A
+        // Winner 2B -> partner 2A position B (not A) on even weeks
+        if (teamNames[winnerKey] && partnerTier) assignments.push({ name: teamNames[winnerKey], targetTier: partnerTier, targetPos: 'B' });
+        // Loser 2B -> down to next tier position A (or stay at B if bottom)
         if (teamNames[loserKey]) assignments.push({ name: teamNames[loserKey], targetTier: isBottomTier ? tierNumber : tierNumber + 1, targetPos: isBottomTier ? 'B' : 'A' });
       } else {
         const posUp = aboveFormat ? getPositionsForFormat(aboveFormat) : ['A','B'];
@@ -1166,7 +1229,6 @@ export async function carryForwardNoGamesTierNextWeek(params: {
   if (curErr) handleDatabaseError(curErr);
   if (!curRow) return;
 
-  const names = [curRow.team_a_name, curRow.team_b_name, curRow.team_c_name].filter(Boolean) as string[];
 
   // Ensure next week tier exists matching current week template
   let { data: nextRowFull } = await supabase
@@ -1326,11 +1388,12 @@ export async function moveWeekPlacements(params: {
   if (!fromRows || fromRows.length === 0) return;
 
   // Gather names to clear in target (include all possible positions A-F)
-  const names: string[] = [];
-  fromRows.forEach((r: any) => {
-    ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name']
-      .forEach((k) => { if ((r as any)[k]) names.push((r as any)[k]); });
-  });
+  const names = fromRows
+    .flatMap((row: any) =>
+      ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name']
+        .map((key) => (row as any)[key])
+    )
+    .filter((value): value is string => Boolean(value));
 
   // Ensure target rows exist for each tier
   const tierNumbers = Array.from(new Set(fromRows.map((r: any) => r.tier_number)));

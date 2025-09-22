@@ -86,7 +86,8 @@ export function LeagueStandingsPage() {
 
   const isEliteFormat = (scheduleFormat ?? '').includes('elite');
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({});
-  const [seedRanks, setSeedRanks] = useState<Record<number, number>>({});
+  // Edits: team_id -> { weekNumber -> rank }
+  const [editedWeeklyRanks, setEditedWeeklyRanks] = useState<Record<number, Record<number, number | null>>>({});
   const isSixTeamsFormat = useMemo(() => {
     const fmt = (scheduleFormat ?? '').toLowerCase();
     return fmt.includes('6-teams') || fmt.includes('6 teams') || fmt === '6-teams-head-to-head';
@@ -295,7 +296,7 @@ export function LeagueStandingsPage() {
   try {
     const { data: weekRows } = await supabase
       .from('weekly_schedules')
-      .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name')
+      .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name,team_a_ranking,team_b_ranking,team_c_ranking,team_d_ranking,team_e_ranking,team_f_ranking')
       .eq('league_id', parseInt(leagueId!))
       .order('week_number', { ascending: true })
       .order('tier_number', { ascending: true });
@@ -307,36 +308,20 @@ export function LeagueStandingsPage() {
     const nameToId = new Map<string, number>();
     (teamRows || []).forEach((t: any) => nameToId.set(((t as any).name || '').toLowerCase(), (t as any).id));
 
+    // Temporary shape: week -> (team_id -> rank)
     const byWeek: Record<number, Record<number, number>> = {};
     const allWeeks = Array.from(new Set((weekRows || []).map((r: any) => r.week_number))).sort((a: number,b: number)=>a-b);
+    const { computePrevWeekNameRanksFromNextWeekSchedule } = await import('../LeagueSchedulePage/utils/rankingUtils');
     for (const w of allWeeks) {
       const prevWeek = (w || 0) - 1;
       if (prevWeek < 1) continue;
       const rows = (weekRows || []).filter((r: any) => r.week_number === w);
-      const { buildWeekTierLabels } = await import('../LeagueSchedulePage/utils/formatUtils');
-      const labelMap = buildWeekTierLabels(rows.map((r: any) => ({ id: r.id ?? r.tier_number, tier_number: r.tier_number, format: String(r.format || '') })));
-      const orderIndex = (label: string | undefined) => {
-        if (!label) return Number.MAX_SAFE_INTEGER;
-        const m = /^([0-9]+)([A|B])?$/.exec(label);
-        if (!m) return Number.MAX_SAFE_INTEGER;
-        const n = parseInt(m[1], 10);
-        const s = m[2] || '';
-        if (s === 'A') return n * 10 + 1;
-        if (s === 'B') return n * 10 + 2;
-        return n * 10;
-      };
-      rows.sort((a: any, b: any) => orderIndex(labelMap.get((a.id ?? a.tier_number) as number)) - orderIndex(labelMap.get((b.id ?? b.tier_number) as number)));
-      let rank = 1;
+      const nameRankMap = computePrevWeekNameRanksFromNextWeekSchedule(rows as any);
       const idMap: Record<number, number> = {};
-      for (const row of rows) {
-        const order = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'];
-        for (const key of order) {
-          const nm = (row as any)[key] as string | null | undefined;
-          if (!nm) continue;
-          const id = nameToId.get((nm || '').toLowerCase());
-          if (id && !idMap[id]) { idMap[id] = rank; rank += 1; }
-        }
-      }
+      Object.entries(nameRankMap).forEach(([nm, rk]) => {
+        const id = nameToId.get((nm || '').toLowerCase());
+        if (id) idMap[id] = rk as number;
+      });
       if (Object.keys(idMap).length > 0) byWeek[prevWeek] = idMap;
     }
 
@@ -358,12 +343,24 @@ export function LeagueStandingsPage() {
         if (id) idMap[id] = rk as number;
       });
       if (Object.keys(idMap).length > 0) {
-        byWeek[w] = idMap;
+        if (!byWeek[w]) {
+          byWeek[w] = idMap;
+        }
       } else if (!byWeek[w]) {
         byWeek[w] = {};
       }
     }
-    setWeeklyRanks(byWeek);
+    // Transpose: we need team_id -> (week -> rank) for rendering
+    const byTeam: Record<number, Record<number, number>> = {};
+    Object.entries(byWeek).forEach(([weekStr, teamMap]) => {
+      const weekNum = Number(weekStr);
+      Object.entries(teamMap).forEach(([teamIdStr, rank]) => {
+        const teamId = Number(teamIdStr);
+        if (!byTeam[teamId]) byTeam[teamId] = {};
+        byTeam[teamId][weekNum] = rank as number;
+      });
+    });
+    setWeeklyRanks(byTeam);
         // Compute seed ranks from Week 1 schedule for elite formats (with AB-pair logic)
         try {
           const { data: week1Rows } = await supabase
@@ -378,10 +375,10 @@ export function LeagueStandingsPage() {
             const id = nameToId.get((nm || '').toLowerCase());
             if (id) seed[id] = rk;
           }
-          setSeedRanks(seed);
         } catch {}
       } catch {}
       setEditedStandings({});
+      setEditedWeeklyRanks({});
       setHasChanges(false);
     } catch (error) {
       console.error('Error loading standings:', error);
@@ -454,12 +451,14 @@ export function LeagueStandingsPage() {
   const handleExitEditMode = () => {
     setIsEditMode(false);
     setEditedStandings({});
+    setEditedWeeklyRanks({});
     setHasChanges(false);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // 1) Save non-elite numeric adjustments (wins/losses/points/etc.)
       for (const [editKey, standing] of Object.entries(editedStandings)) {
         try {
           if (editKey.startsWith('team_')) {
@@ -506,6 +505,55 @@ export function LeagueStandingsPage() {
         } catch (err) {
           console.error('Error saving individual standing:', err);
           throw err;
+        }
+      }
+
+      // 2) Save elite weekly rank overrides by writing to next week's schedule ranking fields
+      if (isEliteFormat) {
+        try {
+          const leagueIdNum = parseInt(leagueId!);
+          const teamIdToName = new Map<number, string>();
+          standings.forEach(s => teamIdToName.set(s.team_id, s.team_name));
+          for (const [teamIdStr, weeksMap] of Object.entries(editedWeeklyRanks)) {
+            const teamId = Number(teamIdStr);
+            const teamName = teamIdToName.get(teamId);
+            if (!teamName) continue;
+            for (const [weekStr, rankVal] of Object.entries(weeksMap)) {
+              const weekNum = Number(weekStr);
+              if (rankVal == null) continue;
+              const targetWeek = weekNum + 1; // overrides live on next week's schedule
+              // Fetch possible rows for the target week where this team appears
+              const { data: rows } = await supabase
+                .from('weekly_schedules')
+                .select('id, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
+                .eq('league_id', leagueIdNum)
+                .eq('week_number', targetWeek);
+              const match = (rows || []).find((r: any) => {
+                return ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'].some((col) => {
+                  const nm = (r as any)[col] as string | null;
+                  return nm && nm.toLowerCase() === teamName.toLowerCase();
+                });
+              });
+                if (!match) continue;
+                let rkCol: string | null = null;
+              if ((match as any).team_a_name && String((match as any).team_a_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_a_ranking';
+              else if ((match as any).team_b_name && String((match as any).team_b_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_b_ranking';
+              else if ((match as any).team_c_name && String((match as any).team_c_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_c_ranking';
+              else if ((match as any).team_d_name && String((match as any).team_d_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_d_ranking';
+              else if ((match as any).team_e_name && String((match as any).team_e_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_e_ranking';
+              else if ((match as any).team_f_name && String((match as any).team_f_name).toLowerCase() === teamName.toLowerCase()) rkCol = 'team_f_ranking';
+              if (!rkCol) continue;
+                const updates: Record<string, any> = {};
+                // 0 means clear override (null), positive values persist as override
+                updates[rkCol] = (rankVal === 0) ? null : rankVal;
+                await supabase
+                  .from('weekly_schedules')
+                  .update({ ...updates })
+                  .eq('id', (match as any).id);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to save weekly rank overrides', e);
         }
       }
 
@@ -772,7 +820,7 @@ export function LeagueStandingsPage() {
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200">
                       {[...standings]
                         .sort((a, b) => {
                           const aVals = weeklyColumns.map(w => weeklyRanks[a.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
@@ -796,11 +844,32 @@ export function LeagueStandingsPage() {
                             >
                               <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : '-'}</td>
                               <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{standing.team_name}</td>
-                              {weeklyColumns.map(week => (
-                                <td key={`week-${standing.team_id}-${week}`} className="px-4 py-3 text-center text-sm text-[#6F6F6F]">
-                                  {weeklyRanks[standing.team_id]?.[week] ?? '-'}
-                                </td>
-                              ))}
+                              {weeklyColumns.map(week => {
+                                const current = editedWeeklyRanks[standing.team_id]?.[week] ?? weeklyRanks[standing.team_id]?.[week];
+                                return (
+                                  <td key={`week-${standing.team_id}-${week}`} className="px-2 py-2 text-center text-sm text-[#6F6F6F]">
+                                  {isEditMode ? (
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={current ?? ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0);
+                                          setEditedWeeklyRanks(prev => {
+                                            const teamMap = { ...(prev[standing.team_id] || {}) };
+                                            teamMap[week] = val;
+                                            return { ...prev, [standing.team_id]: teamMap };
+                                          });
+                                          setHasChanges(true);
+                                        }}
+                                        className="w-14 h-8 text-center text-sm mx-auto"
+                                      />
+                                    ) : (
+                                      <span>{weeklyRanks[standing.team_id]?.[week] ?? '-'}</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
                               
                             </tr>
                           );

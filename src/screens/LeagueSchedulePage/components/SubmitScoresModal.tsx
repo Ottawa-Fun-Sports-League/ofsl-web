@@ -281,7 +281,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                     B: stats.B.pf - stats.B.pa,
                     C: stats.C.pf - stats.C.pa,
                   };
-                  const sorted = [...teamKeys].sort((x, y) => {
+                  const sorted = [...teamKeys].sort((x: TeamKey, y: TeamKey) => {
                     if (stats[y].setWins !== stats[x].setWins) return stats[y].setWins - stats[x].setWins;
                     if (diff[y] !== diff[x]) return diff[y] - diff[x];
                     return teamKeys.indexOf(x) - teamKeys.indexOf(y);
@@ -324,7 +324,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                       prevStats[k].diff = pf - pa;
                     });
                   }
-                  const prevSorted = (['A','B','C'] as const).sort((x, y) => {
+                  const prevSorted = [...teamKeys].sort((x: TeamKey, y: TeamKey) => {
                     if (prevStats[y].wins !== prevStats[x].wins) return prevStats[y].wins - prevStats[x].wins;
                     if (prevStats[y].diff !== prevStats[x].diff) return prevStats[y].diff - prevStats[x].diff;
                     return ['A','B','C'].indexOf(x) - ['A','B','C'].indexOf(y);
@@ -523,7 +523,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
               tierNumber={weeklyTier.tier_number}
               initial={initialH2H as any}
               submitting={saving}
-              onSubmit={async ({ teamNames: submittedNames, game1, game2, spares }) => {
+              onSubmit={async ({ teamNames: submittedNames, game1, game2 }) => {
                 try {
                   setSaving(true);
                   const leagueId = (weeklyTier as any).league_id as number;
@@ -743,6 +743,4 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     </Dialog>
   );
 }
-
-
 

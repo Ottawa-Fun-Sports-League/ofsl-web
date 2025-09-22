@@ -97,7 +97,7 @@ export function ScorecardsFormatsTab() {
                 </>
               ) : selected.value === '3-teams-elite-6-sets' ? (
                 <>
-                  <Scorecard3Teams6Sets teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }} resultsLabel="Weekly Summary (Elite: W/L only)" />
+                  <Scorecard3Teams6Sets teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }} resultsLabel="Weekly Summary" eliteSummary={true} />
                 </>
               ) : selected.value === '3-teams-elite-9-sets' ? (
                 <>

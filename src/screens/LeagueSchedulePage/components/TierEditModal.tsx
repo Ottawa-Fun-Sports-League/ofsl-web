@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/input';
 import { supabase } from '../../../lib/supabase';
 import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
 import type { FormatValidationResult } from '../types';
-import { GAME_FORMATS, getPositionsForFormat } from '../utils/formatUtils';
+import { GAME_FORMATS, getPositionsForFormat, getTierDisplayLabel } from '../utils/formatUtils';
 import { validateFormatChangeCompat, repackTeamsForFormatCompat } from '../utils/scheduleLogic';
 
 interface TierEditModalProps {
@@ -349,6 +349,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     return `${h1}:${m1}${sMer}-${h2}:${m2}${eMer}`;
   }
 
+  const tierLabel = getTierDisplayLabel(tier.format ?? '', tier.tierNumber ?? null) || String(tier.tierNumber ?? '');
   if (!isOpen) return null;
 
   return (
@@ -358,7 +359,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-[#6F6F6F]">
-              Tier {tier.displayLabel ?? tier.tierNumber}: {leagueName}
+              Tier {tierLabel}: {leagueName}
             </h2>
             <button 
               onClick={onClose}
@@ -762,4 +763,3 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     </div>
   );
 }
-

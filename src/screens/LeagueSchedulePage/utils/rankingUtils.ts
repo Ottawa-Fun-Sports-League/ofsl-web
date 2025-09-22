@@ -172,7 +172,7 @@ export function computeWeeklyNameRanksFromResults(
   const isTwoElite = (fmt?: string | null) => String(fmt || '').toLowerCase() === '2-teams-elite';
 
   for (const [week, rows] of tiersByWeek.entries()) {
-    const enriched = rows.map((row, idx) => ({ ...row, __id: (row.id ?? idx + 1) as number }));
+    const enriched = rows.map((row, idx) => ({ ...row, __id: (((row as { id?: number }).id) ?? (idx + 1)) as number }));
     const labelMap = buildWeekTierLabels(enriched.map(row => ({ id: row.__id, tier_number: row.tier_number, format: String(row.format || '') })));
     const orderIndex = (row: typeof enriched[number]) => {
       const label = labelMap.get(row.__id);
@@ -219,6 +219,12 @@ export function computeWeeklyNameRanksFromResults(
       }
     }
 
+    try {
+      // Debug: log ordering used for weekly ranks
+      // eslint-disable-next-line no-console
+      console.info('[Weekly order]', { week, orderedNames: [...orderedNames] });
+    } catch {/* ignore logging issues */}
+
     // Assign sequential ranks
     const nameRanks: Record<string, number> = {};
     let rank = 1;
@@ -232,4 +238,115 @@ export function computeWeeklyNameRanksFromResults(
   }
 
   return byWeek;
+}
+
+// ============================================================================
+// Name->rank mapping from next week's placements (for previous week's rank)
+// ============================================================================
+
+export type NextWeekRow = {
+  id?: number | null;
+  tier_number: number;
+  format?: string | null;
+  team_a_name?: string | null;
+  team_b_name?: string | null;
+  team_c_name?: string | null;
+  team_d_name?: string | null;
+  team_e_name?: string | null;
+  team_f_name?: string | null;
+};
+
+/**
+ * Given rows from weekly_schedules for week W+1, compute the global name->rank
+ * for week W by enumerating the next week's placements in tier label order.
+ */
+export function computePrevWeekNameRanksFromNextWeekSchedule(
+  nextWeekRows: NextWeekRow[],
+): Record<string, number> {
+  if (!Array.isArray(nextWeekRows) || nextWeekRows.length === 0) return {};
+
+  const enriched = nextWeekRows.map((row, idx) => ({ ...row, __id: ((row.id ?? (idx + 1)) as number) } as (NextWeekRow & { __id: number } )));
+  const labelMap = buildWeekTierLabels(
+    enriched.map((r) => ({ id: r.__id, tier_number: r.tier_number, format: String(r.format || '') })),
+  );
+
+  // Build lookup: label -> row
+  const byLabel = new Map<string, typeof enriched[number]>();
+  let maxBase = 0;
+  for (const r of enriched) {
+    const label = labelMap.get(r.__id);
+    if (!label) continue;
+    byLabel.set(label, r);
+    const m = /^([0-9]+)([A|B])?$/.exec(label);
+    if (m) maxBase = Math.max(maxBase, Number(m[1]));
+  }
+
+  const positions = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'] as const;
+  const seen = new Set<string>();
+  const map: Record<string, number> = {};
+  let rank = 1;
+  const overrides: Record<string, number> = {};
+  // Collect explicit ranking overrides if present (do not return yet; we'll merge with base order)
+  for (const row of enriched) {
+    for (const p of positions) {
+      const nm = (row as unknown as any)[p] as string | null | undefined;
+      const rkField = (p.replace('_name', '_ranking')) as keyof any;
+      const rkVal = (row as unknown as any)[rkField] as number | null | undefined;
+      if (!nm) continue;
+      const name = (nm || '').trim();
+      if (!name) continue;
+      if (typeof rkVal === 'number' && rkVal > 0) {
+        overrides[name] = rkVal;
+      }
+    }
+  }
+
+  const addRow = (row?: typeof enriched[number]) => {
+    if (!row) return;
+    for (const pos of positions) {
+      const raw = (row as any)[pos] as string | null | undefined;
+      if (!raw) continue;
+      const name = raw.trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      map[name] = rank++;
+    }
+  };
+
+  // Iterate bases in order; for elite 2-team tiers ensure A then B sequence,
+  // inserting phantom slots for a missing pair to keep global ranks consistent.
+  const baseMap: Record<string, number> = {};
+  for (let base = 1; base <= maxBase; base++) {
+    const lblA = `${base}A`;
+    const lblB = `${base}B`;
+    const lblSingle = `${base}`;
+    const hasA = byLabel.has(lblA);
+    const hasB = byLabel.has(lblB);
+    const hasSingle = byLabel.has(lblSingle);
+
+    if (hasA || hasB) {
+      // 2-team elite base
+      addRow(byLabel.get(lblA));
+      if (hasB) {
+        addRow(byLabel.get(lblB));
+      } else {
+        // Missing partner row: reserve two ranks to preserve global numbering (A,B)
+        rank += 2; // A and B positions for the missing twin row
+      }
+    }
+    if (hasSingle) {
+      // Non-elite format occupying this base
+      addRow(byLabel.get(lblSingle));
+    }
+  }
+  // Capture the base enumeration map before overrides
+  for (const [name, r] of Object.entries({ ...map })) {
+    baseMap[name] = r;
+  }
+  // Merge overrides, preferring explicit ranks where provided
+  const finalMap: Record<string, number> = { ...baseMap };
+  Object.entries(overrides).forEach(([name, r]) => { finalMap[name] = r; });
+  return finalMap;
 }

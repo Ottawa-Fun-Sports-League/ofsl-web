@@ -10,7 +10,6 @@ interface LeagueStandingsProps {
 
 export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const { teams, loading, error, hasSchedule } = useLeagueStandings(leagueId);
-  const formatDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
   const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({}); // teamId -> { week -> rank }
@@ -112,7 +111,9 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                 if (id) idMap[id] = rk as number;
               });
               if (Object.keys(idMap).length > 0) {
-                byWeek[w] = idMap;
+                if (!byWeek[w]) {
+                  byWeek[w] = idMap;
+                }
               } else if (!byWeek[w]) {
                 byWeek[w] = {};
               }
