@@ -4,10 +4,10 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { useToast } from '../ui/toast';
-import { 
-  Users, 
-  Search, 
-  Filter, 
+import {
+  Users,
+  Search,
+  Filter,
   Copy,
   AlertCircle,
   Clock
@@ -15,6 +15,11 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
+import {
+  formatGenderIdentityLabel,
+  formatVolleyballPositionLabel,
+  getSportBranding
+} from './sparesOptions';
 
 interface Spare {
   id: string;
@@ -29,6 +34,9 @@ interface Spare {
   available_saturday: boolean;
   available_sunday: boolean;
   share_phone: boolean;
+  gender_identity: string | null;
+  gender_identity_other: string | null;
+  volleyball_positions: string[] | null;
   created_at: string;
   users: {
     name: string;
@@ -177,6 +185,9 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
             available_saturday,
             available_sunday,
             share_phone,
+            gender_identity,
+            gender_identity_other,
+            volleyball_positions,
             created_at,
             users!user_id (
               name,
@@ -420,65 +431,88 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredSpares.map((spare) => (
-                <Card key={spare.id} className="border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                      {/* Player Info */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-semibold text-lg">{spare.users.name}</h3>
-                          <Badge className={getSkillLevelColor(spare.skill_level)}>
-                            {spare.skill_level.charAt(0).toUpperCase() + spare.skill_level.slice(1)}
-                          </Badge>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">
-                            <Users className="h-4 w-4" />
-                            <span>{spare.sports.name}</span>
+              {filteredSpares.map((spare) => {
+                const branding = getSportBranding(spare.sports.name);
+                const genderLabel = formatGenderIdentityLabel(spare.gender_identity, spare.gender_identity_other);
+                const isVolleyball = spare.sports.name.toLowerCase() === 'volleyball';
+                const positionLabel = isVolleyball ? formatVolleyballPositionLabel(spare.volleyball_positions) : null;
+
+                return (
+                  <Card key={spare.id} className="border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        {/* Player Info */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="font-semibold text-lg">{spare.users.name}</h3>
+                            <Badge className={getSkillLevelColor(spare.skill_level)}>
+                              {spare.skill_level.charAt(0).toUpperCase() + spare.skill_level.slice(1)}
+                            </Badge>
+                            <span className={`inline-flex items-center rounded-full border ${branding.border} ${branding.background} ${branding.accent} px-3 py-1 text-xs font-semibold uppercase tracking-wide`}>
+                              {spare.sports.name}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">
-                            <Clock className="h-4 w-4" />
-                            <span>Joined {formatDate(spare.created_at)}</span>
+                          
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-[#6F6F6F]">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4" />
+                              <span>{spare.users.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              <span>Joined {formatDate(spare.created_at)}</span>
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-50 rounded p-3 mt-2">
+                            <p className="text-sm text-[#6F6F6F]">
+                              <strong>Available:</strong> {getAvailableDays(spare)}
+                            </p>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded border border-gray-200 bg-white p-3">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Gender identity</p>
+                              <p className="text-sm text-[#6F6F6F]">{genderLabel}</p>
+                            </div>
+                            {isVolleyball && (
+                              <div className="rounded border border-orange-200 bg-orange-50 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-orange-500 mb-1">Volleyball positions</p>
+                                <p className="text-sm text-orange-700">{positionLabel}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        <div className="bg-gray-50 rounded p-3 mt-2">
-                          <p className="text-sm text-[#6F6F6F]">
-                            <strong>Available:</strong> {getAvailableDays(spare)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Contact Actions */}
-                      <div className={`flex gap-1 lg:min-w-[150px] ${!(spare.users.phone && spare.share_phone) ? 'justify-end' : ''}`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyToClipboard(spare.users.email, 'Email')}
-                          className="flex items-center gap-1 text-xs"
-                        >
-                          <Copy className="h-3 w-3" />
-                          Email
-                        </Button>
-                        
-                        {spare.users.phone && spare.share_phone && (
+                        {/* Contact Actions */}
+                        <div className={`flex gap-1 lg:min-w-[150px] ${!(spare.users.phone && spare.share_phone) ? 'justify-end' : ''}`}>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => copyToClipboard(spare.users.phone!, 'Phone')}
+                            onClick={() => copyToClipboard(spare.users.email, 'Email')}
                             className="flex items-center gap-1 text-xs"
                           >
                             <Copy className="h-3 w-3" />
-                            Phone
+                            Email
                           </Button>
-                        )}
+                          
+                          {spare.users.phone && spare.share_phone && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(spare.users.phone!, 'Phone')}
+                              className="flex items-center gap-1 text-xs"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Phone
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
