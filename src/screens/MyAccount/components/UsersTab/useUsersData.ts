@@ -9,7 +9,7 @@ import {
   SortDirection,
   PaginationState,
 } from "./types";
-import { INITIAL_FILTERS } from "./constants";
+import { INITIAL_FILTERS, USER_SEARCH_DEBOUNCE_MS } from "./constants";
 // import { useSearchParams } from "react-router-dom"; // Temporarily disabled
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -43,7 +43,7 @@ export function useUsersData() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 300);
+    }, USER_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 

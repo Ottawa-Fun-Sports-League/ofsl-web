@@ -18,6 +18,7 @@ export interface TeamMatchup {
   status: 'scheduled' | 'bye' | 'no_schedule';
   weekNumber: number;
   tierNumber?: number;
+  tierLabel?: string | null;
   opponents: string[];
   location?: string | null;
   timeSlot?: string | null;

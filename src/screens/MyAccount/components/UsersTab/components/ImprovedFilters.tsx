@@ -4,6 +4,7 @@ import { Input } from '../../../../../components/ui/input';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { UserFilters } from '../types';
 import { useDebounce } from '../../../../../hooks/useDebounce';
+import { USER_SEARCH_DEBOUNCE_MS } from '../constants';
 import { supabase } from '../../../../../lib/supabase';
 
 interface ImprovedFiltersProps {
@@ -56,7 +57,7 @@ export function ImprovedFilters({
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory | null>(null);
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
-  const debouncedSearchTerm = useDebounce(localSearchTerm, 300); // 300ms delay
+  const debouncedSearchTerm = useDebounce(localSearchTerm, USER_SEARCH_DEBOUNCE_MS);
   const lastSentSearchTerm = useRef(searchTerm); // Track what we last sent to parent
   const [sports, setSports] = useState<{ id: number; name: string }[]>([]);
 

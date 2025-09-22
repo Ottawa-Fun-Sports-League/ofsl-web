@@ -152,7 +152,11 @@ export function TeamsSection({
             const matchup = team.currentMatchup;
             const matchupStatus = matchup?.status || "no_schedule";
             const weekLabel = matchup?.weekNumber ? `Week ${matchup.weekNumber}` : "Week TBD";
-            const tierLabel = matchup?.tierNumber ? `Tier ${matchup.tierNumber}` : "Tier TBD";
+            const tierLabelValue = matchup?.tierLabel
+              ? matchup.tierLabel
+              : matchup?.tierNumber
+                ? `${matchup.tierNumber}`
+                : "TBD";
             const opponentsLabel =
               matchupStatus === "scheduled"
                 ? formatOpponentsList(matchup?.opponents || [])
@@ -195,7 +199,7 @@ export function TeamsSection({
                 ? "font-medium text-gray-500 italic"
                 : "font-medium text-[#6F6F6F]";
             const tierTextClass =
-              matchup?.tierNumber
+              matchup?.tierLabel || matchup?.tierNumber
                 ? "text-[#6F6F6F]"
                 : "text-gray-500 italic";
 
@@ -259,7 +263,7 @@ export function TeamsSection({
                             <div className="flex items-center gap-2">
                               <Layers className="h-4 w-4 text-[#6F6F6F]" />
                               <span className="font-medium text-[#6F6F6F]">Tier:</span>
-                              <span className={tierTextClass}>{tierLabel}</span>
+                              <span className={tierTextClass}>{tierLabelValue}</span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 w-full">
                               <Users className="h-4 w-4 text-[#6F6F6F]" />
