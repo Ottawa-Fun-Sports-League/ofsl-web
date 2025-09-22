@@ -295,7 +295,7 @@ export function LeagueStandingsPage() {
   try {
     const { data: weekRows } = await supabase
       .from('weekly_schedules')
-      .select('week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name')
+      .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name')
       .eq('league_id', parseInt(leagueId!))
       .order('week_number', { ascending: true })
       .order('tier_number', { ascending: true });
@@ -312,7 +312,20 @@ export function LeagueStandingsPage() {
     for (const w of allWeeks) {
       const prevWeek = (w || 0) - 1;
       if (prevWeek < 1) continue;
-      const rows = (weekRows || []).filter((r: any) => r.week_number === w).sort((a: any, b: any) => (a.tier_number||0)-(b.tier_number||0));
+      const rows = (weekRows || []).filter((r: any) => r.week_number === w);
+      const { buildWeekTierLabels } = await import('../LeagueSchedulePage/utils/formatUtils');
+      const labelMap = buildWeekTierLabels(rows.map((r: any) => ({ id: r.id ?? r.tier_number, tier_number: r.tier_number, format: String(r.format || '') })));
+      const orderIndex = (label: string | undefined) => {
+        if (!label) return Number.MAX_SAFE_INTEGER;
+        const m = /^([0-9]+)([A|B])?$/.exec(label);
+        if (!m) return Number.MAX_SAFE_INTEGER;
+        const n = parseInt(m[1], 10);
+        const s = m[2] || '';
+        if (s === 'A') return n * 10 + 1;
+        if (s === 'B') return n * 10 + 2;
+        return n * 10;
+      };
+      rows.sort((a: any, b: any) => orderIndex(labelMap.get((a.id ?? a.tier_number) as number)) - orderIndex(labelMap.get((b.id ?? b.tier_number) as number)));
       let rank = 1;
       const idMap: Record<number, number> = {};
       for (const row of rows) {
@@ -334,18 +347,21 @@ export function LeagueStandingsPage() {
       .eq('league_id', parseInt(leagueId!));
     const { computeWeeklyNameRanksFromResults } = await import('../LeagueSchedulePage/utils/rankingUtils');
     const nameRanksByWeek = computeWeeklyNameRanksFromResults(
-      (weekRows || []).map((r: any) => ({ week_number: r.week_number, tier_number: r.tier_number, format: r.format })),
+      (weekRows || []).map((r: any) => ({ id: r.id ?? null, week_number: r.week_number, tier_number: r.tier_number, format: r.format })),
       (resultRows || []) as any,
     );
     for (const w of Object.keys(nameRanksByWeek).map(Number)) {
-      if (byWeek[w]) continue;
       const nameMap = nameRanksByWeek[w] || {};
       const idMap: Record<number, number> = {};
       Object.entries(nameMap).forEach(([nm, rk]) => {
         const id = nameToId.get((nm || '').toLowerCase());
         if (id) idMap[id] = rk as number;
       });
-      if (Object.keys(idMap).length > 0) byWeek[w] = idMap;
+      if (Object.keys(idMap).length > 0) {
+        byWeek[w] = idMap;
+      } else if (!byWeek[w]) {
+        byWeek[w] = {};
+      }
     }
     setWeeklyRanks(byWeek);
         // Compute seed ranks from Week 1 schedule for elite formats (with AB-pair logic)

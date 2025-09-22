@@ -96,7 +96,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
         const [{ data: tiers }, { data: results }] = await Promise.all([
           supabase
             .from('weekly_schedules')
-            .select('week_number,tier_number,format')
+            .select('id,week_number,tier_number,format')
             .eq('league_id', leagueId)
             .eq('week_number', weekNumber)
             .order('tier_number', { ascending: true }),
@@ -419,16 +419,25 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       {!eliteSummary && rowCell(fmtDiff(stats[k].diff))}
                       {rowCell(allEntered ? movement[k] : '-')}
                       {eliteSummary
-                        ? rowCell(() => {
-                            if (!allEntered) return '-';
-                            const nm = k === 'A' ? teamNames.A : (k === 'B' ? teamNames.B : teamNames.C);
-                            const rk = nm && weekRanksByName ? weekRanksByName[nm] : undefined;
-                            return rk != null ? String(rk) : String((sorted.indexOf(k) + 1));
-                          }(), true)
-                        : rowCell(allEntered ? `+${(() => {
-                            const basePoints: Record<'winner' | 'neutral' | 'loser', number> = { winner: 5, neutral: 4, loser: 3 };
-                            return basePoints[role[k]] + 2 * Math.max(0, pointsTierOffset);
-                          })()}` : '-', true)
+                        ? rowCell(
+                            allEntered
+                              ? (() => {
+                                  const nm = k === 'A' ? teamNames.A : (k === 'B' ? teamNames.B : teamNames.C);
+                                  const rk = nm && weekRanksByName ? weekRanksByName[nm] : undefined;
+                                  return rk != null ? String(rk) : String((sorted.indexOf(k) + 1));
+                                })()
+                              : '-',
+                            true
+                          )
+                        : rowCell(
+                            allEntered
+                              ? `+${(() => {
+                                  const basePoints = { winner: 5, neutral: 4, loser: 3 } as const;
+                                  return basePoints[role[k]] + 2 * Math.max(0, pointsTierOffset);
+                                })()}`
+                              : '-',
+                            true
+                          )
                       }
                     </Fragment>
                   ))}

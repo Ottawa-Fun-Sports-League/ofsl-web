@@ -1,3 +1,5 @@
+import { buildWeekTierLabels } from './formatUtils';
+
 /**
  * Ranking utilities for elite formats
  *
@@ -170,12 +172,29 @@ export function computeWeeklyNameRanksFromResults(
   const isTwoElite = (fmt?: string | null) => String(fmt || '').toLowerCase() === '2-teams-elite';
 
   for (const [week, rows] of tiersByWeek.entries()) {
-    const sorted = [...rows].sort((a, b) => (a.tier_number || 0) - (b.tier_number || 0));
+    const enriched = rows.map((row, idx) => ({ ...row, __id: (row.id ?? idx + 1) as number }));
+    const labelMap = buildWeekTierLabels(enriched.map(row => ({ id: row.__id, tier_number: row.tier_number, format: String(row.format || '') })));
+    const orderIndex = (row: typeof enriched[number]) => {
+      const label = labelMap.get(row.__id);
+      if (!label) return Number.MAX_SAFE_INTEGER;
+      const match = /^([0-9]+)([A|B])?$/.exec(label);
+      if (!match) return Number.MAX_SAFE_INTEGER;
+      const tierNum = Number(match[1]);
+      const suffix = match[2] || '';
+      if (suffix === 'A') return tierNum * 10 + 1;
+      if (suffix === 'B') return tierNum * 10 + 2;
+      return tierNum * 10;
+    };
+
+    const sorted = [...enriched].sort((a, b) => orderIndex(a) - orderIndex(b));
     const orderedNames: string[] = [];
     for (let i = 0; i < sorted.length; i++) {
       const cur = sorted[i];
       const next = sorted[i + 1];
-      if (isTwoElite(cur.format) && next && isTwoElite(next.format)) {
+      const curLabel = labelMap.get(cur.__id) || '';
+      const nextLabel = next ? (labelMap.get(next.__id) || '') : '';
+      const sameBlock = curLabel && nextLabel && curLabel.replace(/[AB]/, '') === nextLabel.replace(/[AB]/, '');
+      if (isTwoElite(cur.format) && next && isTwoElite(next.format) && sameBlock) {
         // Pair of 2-team elite tiers
         const keyTop = `${week}#${cur.tier_number}`;
         const keyBot = `${week}#${next.tier_number}`;
@@ -214,4 +233,3 @@ export function computeWeeklyNameRanksFromResults(
 
   return byWeek;
 }
-
