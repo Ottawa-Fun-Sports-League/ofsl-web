@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
 import { SparesSignupModal } from './SparesSignupModal';
 import { SparesEditModal } from './SparesEditModal';
+import { formatGenderIdentityLabel, formatVolleyballPositionLabel } from './sparesOptions';
 
 interface SparesRegistration {
   id: string;
@@ -31,6 +32,9 @@ interface SparesRegistration {
   available_saturday: boolean;
   available_sunday: boolean;
   share_phone: boolean;
+  gender_identity: string | null;
+  gender_identity_other: string | null;
+  volleyball_positions: string[] | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -90,6 +94,9 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
           available_saturday,
           available_sunday,
           share_phone,
+          gender_identity,
+          gender_identity_other,
+          volleyball_positions,
           is_active,
           created_at,
           updated_at,
@@ -342,6 +349,23 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
                             <strong>Available:</strong> {getAvailableDays(registration)}
                           </p>
                         </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2 mt-2">
+                        <div className="rounded border border-gray-200 bg-white p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Gender identity</p>
+                          <p className="text-sm text-[#6F6F6F]">
+                            {formatGenderIdentityLabel(registration.gender_identity, registration.gender_identity_other)}
+                          </p>
+                        </div>
+                        {registration.sports.name.toLowerCase() === 'volleyball' && (
+                          <div className="rounded border border-orange-200 bg-orange-50 p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-orange-500 mb-1">Volleyball positions</p>
+                            <p className="text-sm text-orange-700">
+                              {formatVolleyballPositionLabel(registration.volleyball_positions)}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Status indicator */}

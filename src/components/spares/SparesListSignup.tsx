@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useToast } from '../ui/toast';
-import { AlertCircle, Users, Phone, Mail } from 'lucide-react';
+import { AlertCircle, Users, Phone, Mail, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
+import { Checkbox } from '../ui/checkbox';
+import { 
+  GENDER_OPTIONS,
+  VOLLEYBALL_POSITIONS,
+  getSportBranding
+} from './sparesOptions';
 
 interface Sport {
   id: number;
@@ -31,7 +37,9 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
   const [sports, setSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<string>('');
   const [skillLevel, setSkillLevel] = useState<string>('');
-  const [availabilityNotes, setAvailabilityNotes] = useState<string>('');
+  const [genderIdentity, setGenderIdentity] = useState<string>('');
+  const [genderIdentityOther, setGenderIdentityOther] = useState<string>('');
+  const [volleyballPositions, setVolleyballPositions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingSports, setLoadingSports] = useState(true);
   const [existingRegistrations, setExistingRegistrations] = useState<number[]>([]);
@@ -78,6 +86,19 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
     fetchSports();
   }, [showToast, sportFilter]);
 
+  // Reset volleyball specific selections when sport changes
+  useEffect(() => {
+    if (!selectedSport) {
+      setVolleyballPositions([]);
+      return;
+    }
+
+    const sport = sports.find((item) => item.id.toString() === selectedSport);
+    if (!sport || sport.name.toLowerCase() !== 'volleyball') {
+      setVolleyballPositions([]);
+    }
+  }, [selectedSport, sports]);
+
   // Fetch existing spare registrations for this user
   useEffect(() => {
     const fetchExistingRegistrations = async () => {
@@ -122,7 +143,19 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
       return;
     }
 
+    if (genderIdentity === 'self-described' && !genderIdentityOther.trim()) {
+      showToast('Please share a short description for your gender identity selection.', 'error');
+      return;
+    }
+
     const sportId = parseInt(selectedSport);
+    const sportRecord = sports.find((sport) => sport.id === sportId);
+    const isVolleyball = sportRecord?.name?.toLowerCase() === 'volleyball';
+
+    if (isVolleyball && volleyballPositions.length === 0) {
+      showToast('Select at least one position you are comfortable playing.', 'error');
+      return;
+    }
 
     // Check if user already registered for this sport
     if (existingRegistrations.includes(sportId)) {
@@ -134,12 +167,23 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
 
     try {
       // Use the helper function from the migration
-      const { error } = await supabase.rpc('register_spare', {
-        p_user_id: user.id,
+      const payload: Record<string, unknown> = {
         p_sport_id: sportId,
-        p_skill_level: skillLevel,
-        p_availability_notes: availabilityNotes.trim() || null
-      });
+        p_skill_level: skillLevel
+      };
+
+      if (genderIdentity) {
+        payload.p_gender_identity = genderIdentity;
+        if (genderIdentity === 'self-described') {
+          payload.p_gender_identity_other = genderIdentityOther.trim();
+        }
+      }
+
+      if (isVolleyball && volleyballPositions.length > 0) {
+        payload.p_volleyball_positions = volleyballPositions;
+      }
+
+      const { error } = await supabase.rpc('register_spare', payload);
 
       if (error) {
         logger.error('Error registering as spare', error);
@@ -155,7 +199,9 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
         setSelectedSport('');
       }
       setSkillLevel('');
-      setAvailabilityNotes('');
+      setGenderIdentity('');
+      setGenderIdentityOther('');
+      setVolleyballPositions([]);
 
       const selectedSportName = sports.find(s => s.id === sportId)?.name || 'this sport';
       showToast(`Successfully joined the ${selectedSportName} spares list! Team captains can now contact you.`, 'success');
@@ -295,6 +341,26 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
             </div>
           )}
 
+          {/* Sport Details with visual emphasis */}
+          {selectedSport && (() => {
+            const sport = sports.find((item) => item.id.toString() === selectedSport);
+            if (!sport) return null;
+            const branding = getSportBranding(sport.name);
+            return (
+              <div className={`rounded-lg border ${branding.border} ${branding.background} p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3`}>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className={`h-4 w-4 ${branding.accent}`} />
+                    <span className={`inline-flex items-center gap-2 rounded-full border ${branding.border} ${branding.background} ${branding.accent} px-3 py-1 text-xs font-semibold uppercase tracking-wide`}>{sport.name}</span>
+                  </div>
+                  <p className={`text-sm ${branding.text}`}>
+                    {sport.description || 'Stay ready to jump in when a team needs a spare.'}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Skill Level */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[#6F6F6F] mb-2" htmlFor="skill-level">Your Skill Level *</label>
@@ -312,29 +378,83 @@ export const SparesListSignup: React.FC<SparesListSignupProps> = ({
             </select>
           </div>
 
-          {/* Availability Notes */}
+          {/* Volleyball Positions */}
+          {selectedSport && (() => {
+            const sport = sports.find((item) => item.id.toString() === selectedSport);
+            if (!sport || sport.name.toLowerCase() !== 'volleyball') return null;
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-[#6F6F6F]">Which positions do you play? *</label>
+                  <span className="text-xs text-[#6F6F6F]">Select all that apply</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {VOLLEYBALL_POSITIONS.map((option) => {
+                    const isChecked = volleyballPositions.includes(option.value);
+                    return (
+                      <label key={option.value} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#6F6F6F] hover:border-[#B20000] transition">
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            setVolleyballPositions((prev) => {
+                              if (checked === true) {
+                                if (prev.includes(option.value)) return prev;
+                                return [...prev, option.value];
+                              }
+                              return prev.filter((value) => value !== option.value);
+                            });
+                          }}
+                          disabled={loading}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Gender identity */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-[#6F6F6F] mb-2" htmlFor="availability-notes">
-              Availability Notes (Optional)
+            <label className="block text-sm font-medium text-[#6F6F6F] mb-2" htmlFor="gender-identity">
+              Gender Identity (Optional)
             </label>
-            <textarea
-              id="availability-notes"
-              placeholder="e.g., Available Tuesday evenings and weekends, prefer competitive level games..."
-              value={availabilityNotes}
-              onChange={(e) => setAvailabilityNotes(e.target.value)}
+            <select
+              id="gender-identity"
+              value={genderIdentity}
+              onChange={(e) => {
+                const value = e.target.value;
+                setGenderIdentity(value);
+                if (value !== 'self-described') {
+                  setGenderIdentityOther('');
+                }
+              }}
               disabled={loading}
-              rows={3}
-              maxLength={500}
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent resize-y"
-            />
-            <p className="text-xs text-[#6F6F6F]">
-              {availabilityNotes.length}/500 characters
-            </p>
+              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
+            >
+              {GENDER_OPTIONS.map((option) => (
+                <option key={option.value || 'unspecified'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {genderIdentity === 'self-described' && (
+              <input
+                id="gender-identity-other"
+                value={genderIdentityOther}
+                onChange={(e) => setGenderIdentityOther(e.target.value)}
+                disabled={loading}
+                placeholder="How do you describe your gender?"
+                maxLength={160}
+                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
+              />
+            )}
           </div>
 
           <Button
             type="submit"
-            disabled={loading || !selectedSport || !skillLevel}
+            disabled={loading || !selectedSport || !skillLevel || (sports.find((item) => item.id.toString() === selectedSport)?.name.toLowerCase() === 'volleyball' && volleyballPositions.length === 0) || (genderIdentity === 'self-described' && !genderIdentityOther.trim())}
             className="w-full bg-[#B20000] hover:bg-[#8A0000] text-white"
           >
             {loading ? 'Joining Spares List...' : 'Join Spares List'}

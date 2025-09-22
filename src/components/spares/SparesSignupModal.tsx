@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/toast';
-import { AlertCircle, Users, Phone, Mail, X } from 'lucide-react';
+import { AlertCircle, Users, Phone, Mail, X, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
+import { Checkbox } from '../ui/checkbox';
+import {
+  GENDER_OPTIONS,
+  VOLLEYBALL_POSITIONS,
+  getSportBranding
+} from './sparesOptions';
 
 interface Sport {
   id: number;
@@ -49,6 +55,9 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
     sunday: false
   });
   const [sharePhone, setSharePhone] = useState<boolean>(false);
+  const [genderIdentity, setGenderIdentity] = useState<string>('');
+  const [genderIdentityOther, setGenderIdentityOther] = useState<string>('');
+  const [volleyballPositions, setVolleyballPositions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingSports, setLoadingSports] = useState(true);
   const [loadingSkills, setLoadingSkills] = useState(true);
@@ -70,6 +79,9 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
       });
       setSharePhone(false);
       setLoading(false);
+      setGenderIdentity('');
+      setGenderIdentityOther('');
+      setVolleyballPositions([]);
     }
   }, [isOpen]);
 
@@ -172,6 +184,18 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
     fetchExistingRegistrations();
   }, [isOpen, user]);
 
+  useEffect(() => {
+    if (!selectedSport) {
+      setVolleyballPositions([]);
+      return;
+    }
+
+    const sport = sports.find((item) => item.id.toString() === selectedSport);
+    if (!sport || sport.name.toLowerCase() !== 'volleyball') {
+      setVolleyballPositions([]);
+    }
+  }, [selectedSport, sports]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -191,6 +215,8 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
     }
 
     const sportId = parseInt(selectedSport);
+    const sportRecord = sports.find((sport) => sport.id === sportId);
+    const isVolleyball = sportRecord?.name?.toLowerCase() === 'volleyball';
 
     // Check if user already registered for this sport
     if (existingRegistrations.includes(sportId)) {
@@ -198,11 +224,21 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
       return;
     }
 
+    if (isVolleyball && volleyballPositions.length === 0) {
+      showToast('Select at least one volleyball position you play.', 'error');
+      return;
+    }
+
+    if (genderIdentity === 'self-described' && !genderIdentityOther.trim()) {
+      showToast('Please add a quick note about how you describe your gender.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Use the helper function from the migration with availability days
-      const { error } = await supabase.rpc('register_spare', {
+      // Use the helper function from the migration with availability days and optional demographics
+      const payload: Record<string, unknown> = {
         p_sport_id: sportId,
         p_skill_level: skillLevel,
         p_share_phone: sharePhone,
@@ -213,7 +249,20 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
         p_available_friday: availability.friday,
         p_available_saturday: availability.saturday,
         p_available_sunday: availability.sunday
-      });
+      };
+
+      if (genderIdentity) {
+        payload.p_gender_identity = genderIdentity;
+        if (genderIdentity === 'self-described') {
+          payload.p_gender_identity_other = genderIdentityOther.trim();
+        }
+      }
+
+      if (isVolleyball && volleyballPositions.length > 0) {
+        payload.p_volleyball_positions = volleyballPositions;
+      }
+
+      const { error } = await supabase.rpc('register_spare', payload);
 
       if (error) {
         logger.error('Error registering as spare', error);
@@ -224,8 +273,12 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
       // Update existing registrations
       setExistingRegistrations(prev => [...prev, sportId]);
       
-      const selectedSportName = sports.find(s => s.id === sportId)?.name || 'this sport';
+      const selectedSportName = sportRecord?.name || 'this sport';
       showToast(`Successfully joined the ${selectedSportName} spares list! Team captains can now contact you.`, 'success');
+
+      setGenderIdentity('');
+      setGenderIdentityOther('');
+      setVolleyballPositions([]);
       
       // Call success callback and wait for parent to refresh data
       if (onSuccess) {
@@ -251,6 +304,12 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  const selectedSportRecord = selectedSport
+    ? sports.find((sport) => sport.id.toString() === selectedSport)
+    : undefined;
+  const isVolleyballSelected = selectedSportRecord?.name?.toLowerCase() === 'volleyball';
+  const sportBranding = selectedSportRecord ? getSportBranding(selectedSportRecord.name) : null;
 
   if (!user) {
     return (
@@ -389,6 +448,20 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
               </div>
             )}
 
+            {selectedSportRecord && sportBranding && (
+              <div className={`rounded-lg border ${sportBranding.border} ${sportBranding.background} p-4 flex flex-col gap-3`}>
+                <div className="flex items-center gap-2">
+                  <Sparkles className={`h-4 w-4 ${sportBranding.accent}`} />
+                  <span className={`inline-flex items-center rounded-full border ${sportBranding.border} ${sportBranding.background} ${sportBranding.accent} px-3 py-1 text-xs font-semibold uppercase tracking-wide`}>
+                    {selectedSportRecord.name}
+                  </span>
+                </div>
+                <p className={`text-sm ${sportBranding.text}`}>
+                  {selectedSportRecord.description || 'Stay ready to jump in when a team needs a spare.'}
+                </p>
+              </div>
+            )}
+
             {/* Skill Level */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-[#6F6F6F] mb-2" htmlFor="skill-level">Your Skill Level *</label>
@@ -409,6 +482,74 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
                     </option>
                   ))}
                 </select>
+              )}
+            </div>
+
+            {isVolleyballSelected && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-[#6F6F6F]">Which positions do you play? *</label>
+                  <span className="text-xs text-[#6F6F6F]">Select all that apply</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {VOLLEYBALL_POSITIONS.map((option) => {
+                    const isChecked = volleyballPositions.includes(option.value);
+                    return (
+                      <label key={option.value} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#6F6F6F] hover:border-[#B20000] transition">
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            setVolleyballPositions((prev) => {
+                              if (checked === true) {
+                                if (prev.includes(option.value)) return prev;
+                                return [...prev, option.value];
+                              }
+                              return prev.filter((value) => value !== option.value);
+                            });
+                          }}
+                          disabled={loading}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[#6F6F6F] mb-2" htmlFor="gender-identity-modal">
+                Gender Identity (Optional)
+              </label>
+              <select
+                id="gender-identity-modal"
+                value={genderIdentity}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setGenderIdentity(value);
+                  if (value !== 'self-described') {
+                    setGenderIdentityOther('');
+                  }
+                }}
+                disabled={loading}
+                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
+              >
+                {GENDER_OPTIONS.map((option) => (
+                  <option key={option.value || 'unspecified'} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {genderIdentity === 'self-described' && (
+                <input
+                  id="gender-identity-modal-other"
+                  value={genderIdentityOther}
+                  onChange={(e) => setGenderIdentityOther(e.target.value)}
+                  disabled={loading}
+                  placeholder="How do you describe your gender?"
+                  maxLength={160}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
+                />
               )}
             </div>
 
@@ -499,7 +640,14 @@ export const SparesSignupModal: React.FC<SparesSignupModalProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={loading || !selectedSport || !skillLevel || Object.values(availability).every(v => !v)}
+                disabled={
+                  loading ||
+                  !selectedSport ||
+                  !skillLevel ||
+                  Object.values(availability).every(v => !v) ||
+                  (isVolleyballSelected && volleyballPositions.length === 0) ||
+                  (genderIdentity === 'self-described' && !genderIdentityOther.trim())
+                }
                 className="flex-1 bg-[#B20000] hover:bg-[#8A0000] text-white"
               >
                 {loading ? 'Joining...' : 'Join Spares List'}

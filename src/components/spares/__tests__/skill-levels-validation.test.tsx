@@ -30,12 +30,26 @@ describe('Spares Skill Levels Validation', () => {
   });
 
   it('should validate register_spare function accepts all skill levels', () => {
+    const basePayload = {
+      p_sport_id: 1,
+      p_share_phone: false,
+      p_available_monday: true,
+      p_available_tuesday: false,
+      p_available_wednesday: false,
+      p_available_thursday: false,
+      p_available_friday: false,
+      p_available_saturday: false,
+      p_available_sunday: false,
+      p_gender_identity: 'non-binary',
+      p_volleyball_positions: ['utility']
+    };
+
     const validFunctionCalls = [
-      { p_sport_id: 1, p_skill_level: 'beginner', p_availability_notes: 'Available weekends' },
-      { p_sport_id: 1, p_skill_level: 'intermediate', p_availability_notes: 'Available evenings' },
-      { p_sport_id: 1, p_skill_level: 'advanced', p_availability_notes: 'Available anytime' },
-      { p_sport_id: 1, p_skill_level: 'competitive', p_availability_notes: 'Tournament player' },
-      { p_sport_id: 1, p_skill_level: 'elite', p_availability_notes: 'Elite level experience' }
+      { ...basePayload, p_skill_level: 'beginner' },
+      { ...basePayload, p_skill_level: 'intermediate' },
+      { ...basePayload, p_skill_level: 'advanced' },
+      { ...basePayload, p_skill_level: 'competitive' },
+      { ...basePayload, p_skill_level: 'elite' }
     ];
 
     // Each call should have valid skill level

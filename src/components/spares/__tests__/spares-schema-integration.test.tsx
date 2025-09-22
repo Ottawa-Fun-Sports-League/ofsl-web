@@ -14,7 +14,17 @@ describe('Spares Database Schema Validation', () => {
       user_id: 'TEXT', // Should reference public.users(id), not auth.users(id)
       sport_id: 'BIGINT', // Should reference public.sports(id)
       skill_level: 'TEXT', // CHECK constraint for 'beginner', 'intermediate', 'advanced', 'competitive', 'elite'
-      availability_notes: 'TEXT',
+      share_phone: 'BOOLEAN',
+      available_monday: 'BOOLEAN',
+      available_tuesday: 'BOOLEAN',
+      available_wednesday: 'BOOLEAN',
+      available_thursday: 'BOOLEAN',
+      available_friday: 'BOOLEAN',
+      available_saturday: 'BOOLEAN',
+      available_sunday: 'BOOLEAN',
+      gender_identity: 'TEXT',
+      gender_identity_other: 'TEXT',
+      volleyball_positions: 'TEXT[]',
       is_active: 'BOOLEAN',
       created_at: 'TIMESTAMPTZ',
       updated_at: 'TIMESTAMPTZ'
@@ -42,7 +52,21 @@ describe('Spares Database Schema Validation', () => {
     // Function signatures that should exist
     const expectedFunctions = {
       register_spare: {
-        parameters: ['p_sport_id BIGINT', 'p_skill_level TEXT', 'p_availability_notes TEXT'],
+        parameters: [
+          'p_sport_id BIGINT',
+          'p_skill_level TEXT',
+          'p_share_phone BOOLEAN',
+          'p_available_monday BOOLEAN',
+          'p_available_tuesday BOOLEAN',
+          'p_available_wednesday BOOLEAN',
+          'p_available_thursday BOOLEAN',
+          'p_available_friday BOOLEAN',
+          'p_available_saturday BOOLEAN',
+          'p_available_sunday BOOLEAN',
+          'p_gender_identity TEXT',
+          'p_gender_identity_other TEXT',
+          'p_volleyball_positions TEXT[]'
+        ],
         returns: 'UUID',
         note: 'Uses auth.uid() internally to get user_id from public.users.auth_id'
       },
@@ -81,8 +105,12 @@ describe('Spares Database Schema Validation', () => {
       function: 'register_spare',
       parameters: {
         p_sport_id: 1,
-        p_skill_level: 'intermediate', 
-        p_availability_notes: 'Available weekday evenings'
+        p_skill_level: 'intermediate',
+        p_share_phone: false,
+        p_available_monday: true,
+        p_available_tuesday: true,
+        p_gender_identity: 'non-binary',
+        p_volleyball_positions: ['setter', 'libero']
       },
       note: 'No p_user_id parameter - derived from auth.uid()'
     };
@@ -99,6 +127,8 @@ describe('Spares Database Schema Validation', () => {
     expect(registerSpareCall.parameters).not.toHaveProperty('p_user_id');
     expect(deactivateSpareCall.parameters).not.toHaveProperty('p_user_id');
     expect(registerSpareCall.parameters.p_sport_id).toBe(1);
+    expect(registerSpareCall.parameters).toHaveProperty('p_available_monday');
+    expect(registerSpareCall.parameters).toHaveProperty('p_gender_identity');
     expect(deactivateSpareCall.parameters.p_registration_id).toContain('123e4567');
   });
 
