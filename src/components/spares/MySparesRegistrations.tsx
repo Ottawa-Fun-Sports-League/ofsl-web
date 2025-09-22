@@ -17,7 +17,11 @@ import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
 import { SparesSignupModal } from './SparesSignupModal';
 import { SparesEditModal } from './SparesEditModal';
-import { formatGenderIdentityLabel, formatVolleyballPositionLabel } from './sparesOptions';
+import {
+  formatGenderIdentityLabel,
+  formatVolleyballPositionLabel,
+  getSportBranding,
+} from './sparesOptions';
 
 interface SparesRegistration {
   id: string;
@@ -314,112 +318,134 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {registrations.map((registration) => (
-              <Card key={registration.id} className="border border-gray-200">
-                <CardContent className="p-4">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    {/* Registration Info */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-lg">{registration.sports.name}</h3>
-                          {!registration.sports.active && (
-                            <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs">
-                              Inactive
+            {registrations.map((registration) => {
+              const genderLabel = formatGenderIdentityLabel(
+                registration.gender_identity,
+                registration.gender_identity_other,
+              );
+              const isVolleyball = registration.sports.name.toLowerCase() === 'volleyball';
+              const positionLabel = isVolleyball
+                ? formatVolleyballPositionLabel(registration.volleyball_positions)
+                : null;
+              const branding = getSportBranding(registration.sports.name);
+
+              return (
+                <Card key={registration.id} className="border border-gray-200">
+                  <CardContent className="p-4">
+                    <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
+                      {/* Registration Info */}
+                      <div className="space-y-3 pb-10 lg:pb-4">
+                        <div className="flex w-full items-start justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-semibold text-lg">
+                              {registration.sports.name}
+                            </h3>
+                            {!registration.sports.active && (
+                              <Badge
+                                variant="secondary"
+                                className="bg-gray-100 text-gray-600 text-xs"
+                              >
+                                Inactive
+                              </Badge>
+                            )}
+                            <Badge
+                              className={`${getSkillLevelColor(registration.skill_level)} font-medium`}
+                            >
+                              {registration.skill_level.charAt(0).toUpperCase() +
+                                registration.skill_level.slice(1)}{' '}
+                              Level
                             </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${branding.border} ${branding.background} ${branding.accent}`}
+                            >
+                              {registration.sports.name}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditRegistration(registration)}
+                              className="h-8 w-8 text-[#6F6F6F]"
+                              title="Edit registration"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveClick(registration)}
+                              disabled={deletingId === registration.id}
+                              className="h-8 w-8 text-red-500"
+                              title="Remove registration"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                          <Calendar className="h-4 w-4" />
+                          <span>Joined {formatDate(registration.created_at)}</span>
+                          {registration.updated_at !== registration.created_at && (
+                            <span>• Updated {formatDate(registration.updated_at)}</span>
                           )}
                         </div>
-                        <Badge className={`${getSkillLevelColor(registration.skill_level)} font-medium`}>
-                          {registration.skill_level.charAt(0).toUpperCase() + registration.skill_level.slice(1)} Level
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">
-                        <Calendar className="h-4 w-4" />
-                        <span>Joined {formatDate(registration.created_at)}</span>
-                        {registration.updated_at !== registration.created_at && (
-                          <span>• Updated {formatDate(registration.updated_at)}</span>
-                        )}
-                      </div>
 
-                      <div className="bg-gray-50 rounded p-3 mt-2">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-[#6F6F6F]" />
-                          <p className="text-sm text-[#6F6F6F]">
-                            <strong>Available:</strong> {getAvailableDays(registration)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-3 sm:grid-cols-2 mt-2">
-                        <div className="rounded border border-gray-200 bg-white p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Gender identity</p>
-                          <p className="text-sm text-[#6F6F6F]">
-                            {formatGenderIdentityLabel(registration.gender_identity, registration.gender_identity_other)}
-                          </p>
-                        </div>
-                        {registration.sports.name.toLowerCase() === 'volleyball' && (
-                          <div className="rounded border border-orange-200 bg-orange-50 p-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-orange-500 mb-1">Volleyball positions</p>
-                            <p className="text-sm text-orange-700">
-                              {formatVolleyballPositionLabel(registration.volleyball_positions)}
+                        <div className="bg-gray-50 rounded p-3 mt-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-[#6F6F6F]" />
+                            <p className="text-sm text-[#6F6F6F]">
+                              <strong>Available:</strong> {getAvailableDays(registration)}
                             </p>
                           </div>
-                        )}
-                      </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-[#6F6F6F]">
+                          {genderLabel && genderLabel !== 'Not shared' && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-gray-600">
+                              <span className="font-medium text-gray-500">Gender:</span>
+                              <span>{genderLabel}</span>
+                            </span>
+                          )}
+                          {isVolleyball && positionLabel && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-orange-700">
+                              <span className="font-medium text-orange-600">Positions:</span>
+                              <span>{positionLabel}</span>
+                            </span>
+                          )}
+                        </div>
 
                       {/* Status indicator */}
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <span className="text-green-700 font-medium">
-                            Active - Team captains can contact you
-                          </span>
-                        </div>
-                        
-                        {/* Phone sharing status */}
-                        <div className="flex items-center gap-2 text-sm">
-                          {registration.share_phone ? (
-                            <>
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
-                              <span className="text-blue-700">Phone number shared</span>
-                            </>
-                          ) : (
-                            <>
-                              <AlertTriangle className="h-4 w-4 text-orange-600" />
-                              <span className="text-orange-700">Phone number not shared</span>
-                            </>
-                          )}
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="text-green-700 font-medium">
+                              Active - Team captains can contact you
+                            </span>
+                          </div>
+
+                          {/* Phone sharing status */}
+                          <div className="flex items-center gap-2 text-sm">
+                            {registration.share_phone ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 text-blue-600" />
+                                <span className="text-blue-700">Phone number shared</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                <span className="text-orange-700">Phone number not shared</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2 lg:min-w-[180px]">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditRegistration(registration)}
-                        className="flex items-center gap-1"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveClick(registration)}
-                        disabled={deletingId === registration.id}
-                        className="flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {deletingId === registration.id ? 'Removing...' : 'Remove'}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             {/* Privacy reminder */}
             <Card className="bg-blue-50 border border-blue-200">

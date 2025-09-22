@@ -16,12 +16,7 @@ export const GENDER_OPTIONS = [
   { value: 'woman', label: 'Woman' },
   { value: 'man', label: 'Man' },
   { value: 'non-binary', label: 'Non-binary' },
-  { value: 'genderqueer', label: 'Genderqueer' },
-  { value: 'genderfluid', label: 'Genderfluid' },
-  { value: 'agender', label: 'Agender' },
-  { value: 'two-spirit', label: 'Two-Spirit' },
-  { value: 'transgender', label: 'Transgender' },
-  { value: 'self-described', label: 'Another identity (self-described)' }
+  { value: 'self-described', label: 'Self-described' }
 ] as const;
 
 export type GenderOptionValue = (typeof GENDER_OPTIONS)[number]['value'];
