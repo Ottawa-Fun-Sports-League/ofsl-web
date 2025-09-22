@@ -29,13 +29,12 @@ vi.mock('../../../contexts/AuthContext', () => ({
 // Mock fetchLeagueById to control schedule visibility
 const fetchLeagueByIdMock = vi.fn();
 vi.mock('../../../lib/leagues', async (importOriginal) => {
-  const mod = await importOriginal();
+  const mod = await importOriginal<typeof import('../../../lib/leagues')>();
   return {
     ...mod,
-    fetchLeagueById: (...args: unknown[]) => fetchLeagueByIdMock(...args),
-  } as typeof mod;
+    fetchLeagueById: (...args: Parameters<typeof mod.fetchLeagueById>) => fetchLeagueByIdMock(...args),
+  };
 });
-
 // Import after mocks
 import { LeagueSchedule } from './LeagueSchedule';
 

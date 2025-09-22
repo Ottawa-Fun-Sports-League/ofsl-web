@@ -17,7 +17,6 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove, submitTwoTeamEliteBestOf5ScoresAndMove, submitThreeTeamEliteSixScoresAndMove, submitThreeTeamEliteNineScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
-import { applyThreeTeamTierMovementNextWeek } from '../../LeagueSchedulePage/database/scheduleDatabase';
 import { getTierDisplayLabel } from '../../LeagueSchedulePage/utils/formatUtils';
 
 interface SubmitScoresModalProps {
@@ -253,7 +252,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                       prevStats[k].diff = pf - pa;
                     });
                   }
-                  const prevSorted = (['A','B','C'] as const).sort((x, y) => {
+                  const prevSorted = [...teamKeys].sort((x, y) => {
                     if (prevStats[y].wins !== prevStats[x].wins) return prevStats[y].wins - prevStats[x].wins;
                     if (prevStats[y].diff !== prevStats[x].diff) return prevStats[y].diff - prevStats[x].diff;
                     return ['A','B','C'].indexOf(x) - ['A','B','C'].indexOf(y);
@@ -500,6 +499,8 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
           ) : weeklyTier.format === '2-teams-elite' ? (
             <Scorecard2TeamsEliteBestOf5
               teamNames={{ A: teamNames.A, B: teamNames.B } as any}
+              leagueId={(weeklyTier as any).league_id as number}
+              weekNumber={(weeklyTier as any).week_number as number}
               tierNumber={weeklyTier.tier_number}
               initialSets={initialSets as any}
               initialSpares={initialSpares as any}
@@ -652,6 +653,7 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
               teamNames={teamNames as any}
               isTopTier={isTopTier}
               pointsTierOffset={pointsOffset}
+              eliteSummary={true}
               tierNumber={weeklyTier.tier_number}
               initialSets={initialSets as any}
               initialSpares={initialSpares as any}
@@ -741,4 +743,3 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     </Dialog>
   );
 }
-

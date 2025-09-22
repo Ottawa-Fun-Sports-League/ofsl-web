@@ -118,7 +118,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     tierIndex: number;
     position: TeamPositionId;
   } | null>(null);
-  const [teamPositions, setTeamPositions] = useState<Map<string, number>>(new Map());
   const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
   const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
 
@@ -233,7 +232,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     loadWeeklySchedule(currentWeek);
     loadWeek1Structure();
     loadLeagueInfo();
-    loadTeamPositions();
   }, [leagueId]);
 
   useEffect(() => {
@@ -482,45 +480,6 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
 
     return weekNumber > regularSeasonWeeks;
-  };
-
-  const loadTeamPositions = async () => {
-    try {
-      const { data: standingsData, error } = await supabase
-        .from('standings')
-        .select(
-          `
-          teams!inner(name),
-          current_position
-        `,
-        )
-        .eq('league_id', parseInt(leagueId))
-        .order('current_position', { ascending: true, nullsFirst: false });
-
-      if (error && error.code !== 'PGRST116') {
-        console.warn('Error loading team standings for admin positions:', error);
-        return;
-      }
-
-      if (standingsData && standingsData.length > 0) {
-        const positionsMap = new Map<string, number>();
-        const rows = standingsData as Array<{
-          teams: { name: string | null } | Array<{ name: string | null }> | null;
-          current_position: number | null;
-        }>;
-
-        rows.forEach(({ teams, current_position }) => {
-          const candidate = Array.isArray(teams) ? teams[0]?.name : teams?.name;
-          if (candidate) {
-            positionsMap.set(candidate, current_position ?? 1);
-          }
-        });
-
-        setTeamPositions(positionsMap);
-      }
-    } catch (error) {
-      console.warn("Error loading team positions for admin schedule:", error);
-    }
   };
 
   // Admin handlers
@@ -884,92 +843,35 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     setAddTeamModalOpen(true);
   };
 
-  // Function to get a team's current ranking from standings (same logic as useLeagueStandings)
-  const getTeamCurrentRanking = async (
+  // Compute a team's current ranking from Week 1 seed order (A/B pairing aware)
+  const getTeamCurrentRankingSeeded = async (
     teamName: string,
-    leagueId: number,
-    _currentWeek: number,
+    leagueIdNum: number,
   ): Promise<number> => {
     try {
-      // Use the same logic as useLeagueStandings to determine team rankings
-      // This ensures consistency between the standings display and schedule rankings
-
-      // Get all teams for this league
-      const { data: teamsData, error: teamsError } = await supabase
-        .from("teams")
-        .select("id, name, created_at")
-        .eq("league_id", leagueId)
-        .eq("active", true);
-
-      if (teamsError) throw teamsError;
-
-      // Get current schedule data for rankings (from league_schedules table)
-      const { data: scheduleData, error: scheduleError } = await supabase
-        .from("league_schedules")
-        .select("schedule_data")
-        .eq("league_id", leagueId)
-        .maybeSingle();
-
-      if (scheduleError && scheduleError.code !== "PGRST116") {
-        console.warn("Error loading schedule data:", scheduleError);
+      const { data: week1Rows } = await supabase
+        .from('weekly_schedules')
+        .select('tier_number,format,team_a_name,team_b_name,team_c_name')
+        .eq('league_id', leagueIdNum)
+        .eq('week_number', 1)
+        .order('tier_number', { ascending: true });
+      if (!week1Rows || week1Rows.length === 0) {
+        const { data: teamsData, error: teamsError } = await supabase
+          .from('teams')
+          .select('id,name,created_at')
+          .eq('league_id', leagueIdNum)
+          .eq('active', true);
+        if (teamsError) throw teamsError;
+        const sorted = (teamsData || []).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        const idx = sorted.findIndex((t: any) => (t.name || '') === teamName);
+        return idx >= 0 ? idx + 1 : 999;
       }
-
-      // Extract team rankings from schedule if available
-      const teamRankings = new Map<string, number>();
-      const scheduleExists = !!scheduleData?.schedule_data?.tiers;
-
-      if (scheduleExists) {
-        scheduleData.schedule_data.tiers.forEach(
-          (tier: { teams?: Record<string, { name: string; ranking: number } | null> }) => {
-            if (tier.teams) {
-              Object.values(tier.teams).forEach(
-                (team: { name: string; ranking: number } | null) => {
-                  if (team && team.name && team.ranking) {
-                    teamRankings.set(team.name, team.ranking);
-                  }
-                },
-              );
-            }
-          },
-        );
-      }
-
-      // Create standings data (same as useLeagueStandings)
-      const standingsData = (teamsData || []).map((team) => ({
-        id: team.id,
-        name: team.name,
-        created_at: team.created_at,
-        schedule_ranking: teamRankings.get(team.name),
-      }));
-
-      // Sort by schedule ranking if available, otherwise by registration order (same as useLeagueStandings)
-      const sortedStandings = standingsData.sort((a, b) => {
-        // If both teams have schedule rankings, sort by ranking
-        if (a.schedule_ranking && b.schedule_ranking) {
-          return a.schedule_ranking - b.schedule_ranking;
-        }
-        // If only one has ranking, prioritize it
-        if (a.schedule_ranking && !b.schedule_ranking) {
-          return -1;
-        }
-        if (!a.schedule_ranking && b.schedule_ranking) {
-          return 1;
-        }
-        // If neither has ranking, sort by registration order
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      });
-
-      // Find the team's position in the sorted standings (1-based ranking)
-      const teamIndex = sortedStandings.findIndex((team) => team.name === teamName);
-      if (teamIndex >= 0) {
-        return teamIndex + 1; // Convert to 1-based ranking
-      }
-
-      // Team not found - this shouldn't happen, but return a safe default
-      console.warn(`Team "${teamName}" not found in standings`);
-      return 999;
-    } catch (error) {
-      console.error("Error getting team ranking:", error);
+      const { computeInitialSeedRankingMap } = await import('../utils/rankingUtils');
+      const seedMap = computeInitialSeedRankingMap((week1Rows || []) as any);
+      const rank = seedMap.get(teamName);
+      return typeof rank === 'number' ? rank : 999;
+    } catch (e) {
+      console.error('Error computing seeded ranking:', e);
       return 999;
     }
   };
@@ -987,7 +889,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       }
 
       // Look up the team's current ranking from the weekly schedules
-      const teamRanking = await getTeamCurrentRanking(teamName, parseInt(leagueId), currentWeek);
+      const teamRanking = await getTeamCurrentRankingSeeded(teamName, parseInt(leagueId));
 
       // Update the tier with the new team
       const updatePayload = {
@@ -1647,7 +1549,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                           
                           {/* Submit Scores link (when not in edit mode) */}
                           {!isEditScheduleMode && !tier.no_games &&
-                            (tier.format === '3-teams-6-sets' || tier.format === '2-teams-4-sets' || tier.format === '2-teams-best-of-5' || tier.format === '4-teams-head-to-head' || tier.format === '6-teams-head-to-head') &&
+                            (tier.format === '3-teams-6-sets' || tier.format === '2-teams-4-sets' || tier.format === '2-teams-best-of-5' || tier.format === '4-teams-head-to-head' || tier.format === '6-teams-head-to-head' || tier.format === '2-teams-elite' || tier.format === '3-teams-elite-6-sets' || tier.format === '3-teams-elite-9-sets') &&
                             getPositionsForFormat(tier.format || '3-teams-6-sets').every(pos => getTeamForPosition(tier, pos)?.name) && (
                             <button
                               onClick={() => openSubmitScores(tier)}

@@ -39,7 +39,7 @@ vi.mock('../../../lib/supabase', () => {
         eq: (column: string, value: any) => chain(weekly.filter((r: any) => r[column] === value)),
         in: (column: string, values: any[]) => ({ data: weekly.filter((r: any) => values.includes(r[column])), error: null }),
         update: (updates: Record<string, any>) => ({
-          eq: (col: string, val: any) => {
+          eq: (_col: string, val: any) => {
             captured.push({ id: val, updates });
             return { data: null, error: null };
           }

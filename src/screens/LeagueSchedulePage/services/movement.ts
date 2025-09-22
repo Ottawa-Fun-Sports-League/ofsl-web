@@ -2,6 +2,7 @@ import { supabase } from '../../../lib/supabase';
 import { applyThreeTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 import { applyFourTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 import { applyTwoTeamTierMovementNextWeek } from '../database/scheduleDatabase';
+import { applyEliteThreeTeamMovementNextWeek } from '../database/scheduleDatabase';
 
 type ABC = 'A' | 'B' | 'C';
 
@@ -86,6 +87,28 @@ export async function applyTwoTeamMovementAfterStandings({
 }: ApplyTwoTeamMovementParams): Promise<void> {
   const isBottomTier = pointsTierOffset === 0;
   await applyTwoTeamTierMovementNextWeek({
+    leagueId,
+    currentWeek: weekNumber,
+    tierNumber,
+    isTopTier,
+    isBottomTier,
+    teamNames,
+    sortedKeys,
+  });
+}
+
+// Elite 3-team movement wrapper (odd weeks = within-tier shuffle; even weeks = cross-tier)
+export async function applyEliteThreeTeamMovementAfterStandings(params: {
+  leagueId: number;
+  weekNumber: number;
+  tierNumber: number;
+  isTopTier: boolean;
+  isBottomTier: boolean;
+  teamNames: { A: string; B: string; C: string };
+  sortedKeys: Array<'A'|'B'|'C'>;
+}): Promise<void> {
+  const { leagueId, weekNumber, tierNumber, isTopTier, isBottomTier, teamNames, sortedKeys } = params;
+  await applyEliteThreeTeamMovementNextWeek({
     leagueId,
     currentWeek: weekNumber,
     tierNumber,

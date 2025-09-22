@@ -224,11 +224,6 @@ export const MySparesRegistrations: React.FC<MySparesRegistrationsProps> = ({
                         <Badge className={getSkillLevelColor(registration.skill_level)}>
                           {registration.skill_level.charAt(0).toUpperCase() + registration.skill_level.slice(1)}
                         </Badge>
-                        {!registration.leagues.is_active && (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-600">
-                            League Inactive
-                          </Badge>
-                        )}
                       </div>
                       
                       <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">

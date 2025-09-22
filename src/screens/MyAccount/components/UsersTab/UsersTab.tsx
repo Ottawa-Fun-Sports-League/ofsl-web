@@ -72,8 +72,8 @@ export function UsersTab() {
   };
 
   // Registration counts loaded via Edge Function for accuracy
+  const [, setLoadingCounts] = useState(false);
   const [regCounts, setRegCounts] = useState<Record<string, number>>({});
-  const [loadingCounts, setLoadingCounts] = useState(false);
   const [registrationLoadingIds, setRegistrationLoadingIds] = useState<Record<string, boolean>>({});
 
   const visibleUserIds = useMemo(
