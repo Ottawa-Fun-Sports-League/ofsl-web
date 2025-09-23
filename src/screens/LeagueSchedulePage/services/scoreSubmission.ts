@@ -264,7 +264,8 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
             points: absPoints,
             point_differential: absDiff,
           })
-          .eq('id', (standingRow as any).id);
+          .eq('league_id', leagueId)
+          .eq('team_id', teamId);
         if (updErr) throw updErr;
       }
     } else {
@@ -525,7 +526,8 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
         const { error: updErr } = await supabase
           .from('standings')
           .update({ wins: absWins, losses: absLosses, points: absPoints, point_differential: absDiff })
-          .eq('id', (standingRow as any).id);
+          .eq('league_id', leagueId)
+          .eq('team_id', teamId);
         if (updErr) throw updErr;
       }
     } else {
