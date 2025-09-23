@@ -395,15 +395,15 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
-    .eq('league_id', leagueId)
-    .eq('active', true);
+    .eq('league_id', leagueId);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
   (teamsRows || []).forEach((t: any) => nameToId.set(normalizeName(t.name), t.id));
   try {
     if (leagueId === 4) {
-      console.info('[Standings][L4][2-team] name map:', Object.fromEntries(Array.from(nameToId.entries()).slice(0, 10)));
-      console.info('[Standings][L4][2-team] from weekly names:', teamKeys.map(k => teamNames[k]));
+      const wanted = teamKeys.map(k => teamNames[k]);
+      console.info('[Standings][L4][2-team] from weekly names:', wanted);
+      console.info('[Standings][L4][2-team] resolved IDs:', wanted.map(n => ({ name: n, id: nameToId.get(normalizeName(n)) ?? null })));
     }
   } catch {}
 
@@ -605,15 +605,15 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
-    .eq('league_id', leagueId)
-    .eq('active', true);
+    .eq('league_id', leagueId);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
   (teamsRows || []).forEach((t: any) => nameToId.set(normalizeName(t.name), t.id));
   try {
     if (leagueId === 4) {
-      console.info('[Standings][L4][2-team Bo5] name map:', Object.fromEntries(Array.from(nameToId.entries()).slice(0, 10)));
-      console.info('[Standings][L4][2-team Bo5] from weekly names:', teamKeys.map(k => teamNames[k]));
+      const wanted = teamKeys.map(k => teamNames[k]);
+      console.info('[Standings][L4][2-team Bo5] from weekly names:', wanted);
+      console.info('[Standings][L4][2-team Bo5] resolved IDs:', wanted.map(n => ({ name: n, id: nameToId.get(normalizeName(n)) ?? null })));
     }
   } catch {}
 
