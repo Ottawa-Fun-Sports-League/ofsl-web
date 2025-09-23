@@ -19,6 +19,56 @@ const normalizeName = (s: string | null | undefined): string => {
     .replace(/\s+/g, ' ');
 };
 
+// Write absolute totals into standings for a given team (id) by summing game_results
+async function writeAbsoluteStandings(
+  leagueId: number,
+  teamId: number,
+  teamName: string,
+): Promise<void> {
+  const { data: allRows } = await supabase
+    .from('game_results')
+    .select('team_name,wins,losses,sets_won,sets_lost,points_for,points_against,league_points')
+    .eq('league_id', leagueId);
+  const nTarget = normalizeName(teamName);
+  const allRes = (allRows || []).filter((r: any) => normalizeName((r as any).team_name) === nTarget);
+
+  const coerce = (v: any) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
+  const sum = (arr: any[] | null | undefined, getter: (row: any) => number) => (arr || []).reduce((a, r) => a + getter(r), 0);
+  const absWins = sum(allRes, (r) => coerce((r as any).wins ?? (r as any).sets_won));
+  const absLosses = sum(allRes, (r) => coerce((r as any).losses ?? (r as any).sets_lost));
+  const absPoints = sum(allRes, (r) => coerce((r as any).league_points));
+  const absPF = sum(allRes, (r) => coerce((r as any).points_for));
+  const absPA = sum(allRes, (r) => coerce((r as any).points_against));
+  const absDiff = absPF - absPA;
+
+  // (debug logs removed)
+
+  // Update any standings rows for this (league, team)
+  const { data: existing, error: findErr } = await supabase
+    .from('standings')
+    .select('id')
+    .eq('league_id', leagueId)
+    .eq('team_id', teamId);
+  if (findErr && (findErr as any).code !== 'PGRST116') throw findErr;
+
+  if (!existing || existing.length === 0) {
+    const { error: insErr } = await supabase
+      .from('standings')
+      .insert({ league_id: leagueId, team_id: teamId, wins: absWins, losses: absLosses, points: absPoints, point_differential: absDiff });
+    if (insErr) throw insErr;
+  } else {
+    const { error: updErr } = await supabase
+      .from('standings')
+      .update({ wins: absWins, losses: absLosses, points: absPoints, point_differential: absDiff })
+      .eq('league_id', leagueId)
+      .eq('team_id', teamId);
+    if (updErr) throw updErr;
+  }
+
+  // Debug read-back for league 6 (3-team investigation)
+  // (debug read-back removed)
+}
+
 export interface ScoreSet {
   label: string;
   teams: [TeamKey, TeamKey];
@@ -43,6 +93,7 @@ export interface SubmitThreeTeamParams {
  */
 export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams): Promise<void> {
   const { leagueId, weekNumber, tierNumber, tierId, teamNames, sets, spares, pointsTierOffset, isTopTier } = params;
+  
 
   // Aggregate set-by-set into per-team stats
   const stats: Record<TeamKey, { setWins: number; setLosses: number; pf: number; pa: number }> = {
@@ -170,130 +221,29 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     if (error) throw error;
   }
 
-  // Update standings with delta vs previous (robust name matching)
+  // Update standings with absolute totals (idempotent across weeks)
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
-    .eq('league_id', leagueId)
-    .eq('active', true);
+    .eq('league_id', leagueId);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
   (teamsRows || []).forEach((t: any) => nameToId.set(normalizeName(t.name), t.id));
+  try {
+    if (leagueId === 6) {
+      const wanted = teamKeys.map(k => teamNames[k]);
+      
+      
+    }
+  } catch {}
 
   for (const k of teamKeys) {
     const name = teamNames[k] || '';
     if (!name) continue;
     const teamId = nameToId.get(normalizeName(name));
     if (!teamId) continue;
-
-    const { data: standingRow, error: standingErr } = await supabase
-      .from('standings')
-      .select('id, wins, losses, points, point_differential')
-      .eq('league_id', leagueId)
-      .eq('team_id', teamId)
-      .maybeSingle();
-    if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
-
-    const addWins = stats[k].setWins;
-    const addLosses = stats[k].setLosses;
-    const addDiff = diff[k];
-    const addPoints = weeklyLeaguePoints[k];
-
-    const rows = Array.isArray(prevRows) ? prevRows : [];
-    const prevRowForTeam = rows.find((r) => r && r.team_name === name);
-    const subPointsExact = prevRowForTeam && typeof (prevRowForTeam as any).league_points === 'number'
-      ? (prevRowForTeam as any).league_points as number
-      : (prevRows && prevRows.length ? prevPoints[k] : 0);
-
-    try {
-      if (leagueId === 4) {
-        const prevW = prevStats[k]?.wins ?? 0;
-        const prevL = prevStats[k]?.losses ?? 0;
-        const prevD = prevStats[k]?.diff ?? 0;
-        console.info('[Standings][L4][2-team] applying delta for', {
-          teamKey: k,
-          teamName: name,
-          teamId,
-          prev: { wins: prevW, losses: prevL, diff: prevD, points: subPointsExact },
-          add: { wins: addWins, losses: addLosses, diff: addDiff, points: addPoints },
-          hasStandingRow: !!standingRow,
-        });
-      }
-    } catch {}
-
-    // League 4: compute absolute totals from all game_results to avoid stale delta issues
-    if (leagueId === 4) {
-      const { data: allRes } = await supabase
-        .from('game_results')
-        .select('wins,losses,sets_won,sets_lost,points_for,points_against,league_points')
-        .eq('league_id', leagueId)
-        .eq('team_name', name);
-      const sum = (arr: any[] | null | undefined, getter: (row: any) => number) => (arr || []).reduce((a, r) => a + getter(r), 0);
-      const coerce = (v: any) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
-      const absWins = sum(allRes, (r) => coerce((r as any).wins ?? (r as any).sets_won));
-      const absLosses = sum(allRes, (r) => coerce((r as any).losses ?? (r as any).sets_lost));
-      const absPoints = sum(allRes, (r) => coerce((r as any).league_points));
-      const absPF = sum(allRes, (r) => coerce((r as any).points_for));
-      const absPA = sum(allRes, (r) => coerce((r as any).points_against));
-      const absDiff = absPF - absPA;
-
-      try {
-        if (leagueId === 4) {
-          console.info('[Standings][L4][2-team Bo5] absolute totals to write', { teamName: name, teamId, absWins, absLosses, absPoints, absDiff });
-        }
-      } catch {}
-
-      if (!standingRow) {
-        const { error: insErr } = await supabase
-          .from('standings')
-          .insert({
-            league_id: leagueId,
-            team_id: teamId,
-            wins: absWins,
-            losses: absLosses,
-            points: absPoints,
-            point_differential: absDiff,
-          });
-        if (insErr) throw insErr;
-      } else {
-        const { error: updErr } = await supabase
-          .from('standings')
-          .update({
-            wins: absWins,
-            losses: absLosses,
-            points: absPoints,
-            point_differential: absDiff,
-          })
-          .eq('league_id', leagueId)
-          .eq('team_id', teamId);
-        if (updErr) throw updErr;
-      }
-    } else {
-      if (!standingRow) {
-        const { error: insErr } = await supabase
-          .from('standings')
-          .insert({
-            league_id: leagueId,
-            team_id: teamId,
-            wins: addWins - (prevStats[k].wins || 0),
-            losses: addLosses - (prevStats[k].losses || 0),
-            points: addPoints - subPointsExact,
-            point_differential: addDiff - (prevStats[k].diff || 0),
-          });
-        if (insErr) throw insErr;
-      } else {
-        const { error: updErr } = await supabase
-          .from('standings')
-          .update({
-            wins: (standingRow as any).wins - (prevStats[k].wins || 0) + addWins,
-            losses: (standingRow as any).losses - (prevStats[k].losses || 0) + addLosses,
-            points: (standingRow as any).points - subPointsExact + addPoints,
-            point_differential: (standingRow as any).point_differential - (prevStats[k].diff || 0) + addDiff,
-          })
-          .eq('id', (standingRow as any).id);
-        if (updErr) throw updErr;
-      }
-    }
+    
+    await writeAbsoluteStandings(leagueId, teamId, name);
   }
 
   // Recalculate standings positions
@@ -456,7 +406,7 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
     if (error) throw error;
   }
 
-  // Update standings with deltas (robust matching, logs for league 4)
+  // Update standings with absolute totals (idempotent across weeks)
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
@@ -465,10 +415,10 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
   const nameToId = new Map<string, number>();
   (teamsRows || []).forEach((t: any) => nameToId.set(normalizeName(t.name), t.id));
   try {
-    if (leagueId === 4) {
+    if (leagueId === 6) {
       const wanted = teamKeys.map(k => teamNames[k]);
-      console.info('[Standings][L4][2-team] from weekly names:', wanted);
-      console.info('[Standings][L4][2-team] resolved IDs:', wanted.map(n => ({ name: n, id: nameToId.get(normalizeName(n)) ?? null })));
+      
+      
     }
   } catch {}
 
@@ -477,85 +427,8 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
     if (!name) continue;
     const teamId = nameToId.get(normalizeName(name));
     if (!teamId) continue;
-
-    const { data: standingRow, error: standingErr } = await supabase
-      .from('standings')
-      .select('id, wins, losses, points, point_differential')
-      .eq('league_id', leagueId)
-      .eq('team_id', teamId)
-      .maybeSingle();
-    if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
-
-    const addWins = stats[k].setWins;
-    const addLosses = stats[k].setLosses;
-    const addDiff = diff[k];
-    const addPoints = weeklyLeaguePoints[k];
-
-    const rows = Array.isArray(prevRows) ? prevRows : [];
-    const prevRowForTeam = rows.find((r) => r && r.team_name === name);
-    const subPointsExact = prevRowForTeam && typeof (prevRowForTeam as any).league_points === 'number'
-      ? (prevRowForTeam as any).league_points as number
-      : (prevRows && prevRows.length ? prevPoints[k] : 0);
-
-    if (leagueId === 4) {
-      // Absolute recompute for league 4
-      const { data: allRes } = await supabase
-        .from('game_results')
-        .select('wins,losses,sets_won,sets_lost,points_for,points_against,league_points')
-        .eq('league_id', leagueId)
-        .eq('team_name', name);
-      const coerce = (v: any) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
-      const sum = (arr: any[] | null | undefined, getter: (row: any) => number) => (arr || []).reduce((a, r) => a + getter(r), 0);
-      const absWins = sum(allRes, (r) => coerce((r as any).wins ?? (r as any).sets_won));
-      const absLosses = sum(allRes, (r) => coerce((r as any).losses ?? (r as any).sets_lost));
-      const absPoints = sum(allRes, (r) => coerce((r as any).league_points));
-      const absPF = sum(allRes, (r) => coerce((r as any).points_for));
-      const absPA = sum(allRes, (r) => coerce((r as any).points_against));
-      const absDiff = absPF - absPA;
-
-      try {
-        console.info('[Standings][L4][2-team 4-sets] absolute totals to write', { teamName: name, teamId, absWins, absLosses, absPoints, absDiff });
-      } catch {}
-
-      if (!standingRow) {
-        const { error: insErr } = await supabase
-          .from('standings')
-          .insert({ league_id: leagueId, team_id: teamId, wins: absWins, losses: absLosses, points: absPoints, point_differential: absDiff });
-        if (insErr) throw insErr;
-      } else {
-        const { error: updErr } = await supabase
-          .from('standings')
-          .update({ wins: absWins, losses: absLosses, points: absPoints, point_differential: absDiff })
-          .eq('league_id', leagueId)
-          .eq('team_id', teamId);
-        if (updErr) throw updErr;
-      }
-    } else {
-      if (!standingRow) {
-        const { error: insErr } = await supabase
-          .from('standings')
-          .insert({
-            league_id: leagueId,
-            team_id: teamId,
-            wins: addWins - (prevStats[k].wins || 0),
-            losses: addLosses - (prevStats[k].losses || 0),
-            points: addPoints - subPointsExact,
-            point_differential: addDiff - (prevStats[k].diff || 0),
-          });
-        if (insErr) throw insErr;
-      } else {
-        const { error: updErr } = await supabase
-          .from('standings')
-          .update({
-            wins: (standingRow as any).wins - (prevStats[k].wins || 0) + addWins,
-            losses: (standingRow as any).losses - (prevStats[k].losses || 0) + addLosses,
-            points: (standingRow as any).points - subPointsExact + addPoints,
-            point_differential: (standingRow as any).point_differential - (prevStats[k].diff || 0) + addDiff,
-          })
-          .eq('id', (standingRow as any).id);
-        if (updErr) throw updErr;
-      }
-    }
+    
+    await writeAbsoluteStandings(leagueId, teamId, name);
   }
 
   // Recalculate standings positions
@@ -579,7 +452,7 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
 // Best of 5: stop counting once a team reaches 3 set wins
 export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamParams): Promise<void> {
   const { leagueId, weekNumber, tierNumber, tierId, teamNames, sets, spares, pointsTierOffset, isTopTier } = params;
-  try { console.error('[Standings][Bo5] ENTERED handler', { leagueId, weekNumber, tierNumber }); } catch {}
+  
 
   const stats: Record<AB, { setWins: number; setLosses: number; pf: number; pa: number }> = {
     A: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
@@ -713,8 +586,8 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
   try {
     if (leagueId === 4) {
       const wanted = teamKeys.map(k => teamNames[k]);
-      console.info('[Standings][L4][2-team Bo5] from weekly names:', wanted);
-      console.info('[Standings][L4][2-team Bo5] resolved IDs:', wanted.map(n => ({ name: n, id: nameToId.get(normalizeName(n)) ?? null })));
+      
+      
     }
   } catch {}
 
@@ -746,7 +619,7 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
         const prevW = prevStats[k]?.wins ?? 0;
         const prevL = prevStats[k]?.losses ?? 0;
         const prevD = prevStats[k]?.diff ?? 0;
-        console.info('[Standings][L4][2-team Bo5] applying delta for', {
+        
           teamKey: k,
           teamName: name,
           teamId,
@@ -757,9 +630,8 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
       }
     } catch {}
 
-    if (leagueId === 4) {
-      // League 4: absolute totals from all game_results rows
-      try { console.error('[Standings][L4][2-team Bo5] ENTER ABSOLUTE PATH'); } catch {}
+    {
+      // Absolute totals from all game_results rows (all leagues)
       const { data: allRes } = await supabase
         .from('game_results')
         .select('wins,losses,sets_won,sets_lost,points_for,points_against,league_points')
@@ -773,7 +645,6 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
       const absPF = sum(allRes, (r) => coerce((r as any).points_for));
       const absPA = sum(allRes, (r) => coerce((r as any).points_against));
       const absDiff = absPF - absPA;
-      try { console.error('[Standings][L4][2-team Bo5] absolute totals to write', { teamName: name, teamId, absWins, absLosses, absPoints, absDiff }); } catch {}
 
       if (!standingRow) {
         const { error: insErr } = await supabase
@@ -796,32 +667,8 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
             points: absPoints,
             point_differential: absDiff,
           })
-          .eq('id', (standingRow as any).id);
-        if (updErr) throw updErr;
-      }
-    } else {
-      if (!standingRow) {
-        const { error: insErr } = await supabase
-          .from('standings')
-          .insert({
-            league_id: leagueId,
-            team_id: teamId,
-            wins: addWins - (prevStats[k].wins || 0),
-            losses: addLosses - (prevStats[k].losses || 0),
-            points: addPoints - subPointsExact,
-            point_differential: addDiff - (prevStats[k].diff || 0),
-          });
-        if (insErr) throw insErr;
-      } else {
-        const { error: updErr } = await supabase
-          .from('standings')
-          .update({
-            wins: (standingRow as any).wins - (prevStats[k].wins || 0) + addWins,
-            losses: (standingRow as any).losses - (prevStats[k].losses || 0) + addLosses,
-            points: (standingRow as any).points - subPointsExact + addPoints,
-            point_differential: (standingRow as any).point_differential - (prevStats[k].diff || 0) + addDiff,
-          })
-          .eq('id', (standingRow as any).id);
+          .eq('league_id', leagueId)
+          .eq('team_id', teamId);
         if (updErr) throw updErr;
       }
     }
@@ -1292,13 +1139,14 @@ export interface SubmitSixTeamParams {
 export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeamParams): Promise<void> {
   const { leagueId, weekNumber, tierNumber, tierId, teamNames, game1, game2, spares, pointsTierOffset, isTopTier } = params;
 
-  console.log('6-team submission params:', {
+  /* debug removed: 6-team submission params */
+  /* console.log('6-team submission params:', {
     tierNumber,
     pointsTierOffset,
     isTopTier,
     expectedBonus: pointsTierOffset * 5,
     isBottomTier: pointsTierOffset === 0,
-  });
+  }); */
 
   type Totals = { setWins: number; setLosses: number; pf: number; pa: number };
   const totals: Record<SixTeamKey, Totals> = {
@@ -1426,11 +1274,12 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     weeklyLeaguePoints[teamStat.team] = basePoints[rank] + tierBonus;
   });
 
+  /* debug removed: Points calculation (6-team H2H)
   console.log('Points calculation (6-team H2H):', {
     tierBonus,
     weeklyLeaguePoints,
     rankings: teamStats.map((ts, idx) => ({ rank: idx + 1, team: ts.team, name: teamNames[ts.team], points: weeklyLeaguePoints[ts.team] })),
-  });
+  }); */
 
   const movementSummary = teamStats.reduce<Record<number, string>>((acc, teamStat, idx) => {
     const place = idx + 1;
@@ -1506,8 +1355,7 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
-    .eq('league_id', leagueId)
-    .eq('active', true);
+    .eq('league_id', leagueId);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
   (teamsRows || []).forEach((row: any) => nameToId.set(normalizeName(row.name), row.id));
@@ -1516,51 +1364,8 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     const teamName = teamNames[teamStat.team];
     const teamId = nameToId.get(normalizeName(teamName));
     if (!teamId) continue;
-
-    const { data: standingRow, error: standingErr } = await supabase
-      .from('standings')
-      .select('id,wins,losses,points,point_differential')
-      .eq('league_id', leagueId)
-      .eq('team_id', teamId)
-      .maybeSingle();
-    if (standingErr && (standingErr as any).code !== 'PGRST116') throw standingErr;
-
-    const addWins = teamStat.setWins;
-    const addLosses = teamStat.setLosses;
-    // Differential should count Game 2 only
-    const addDiff = g2[teamStat.team].pf - g2[teamStat.team].pa;
-    const addPoints = weeklyLeaguePoints[teamStat.team];
-
-    const prevRow = (prevRows || []).find((row: any) => row.team_name === teamName);
-    const subWins = prevRow?.wins || 0;
-    const subLosses = prevRow?.losses || 0;
-    const subDiff = (prevRow?.points_for || 0) - (prevRow?.points_against || 0);
-    const subPoints = prevRow?.league_points || 0;
-
-    if (!standingRow) {
-      const { error: insertErr } = await supabase
-        .from('standings')
-        .insert({
-          league_id: leagueId,
-          team_id: teamId,
-          wins: addWins - subWins,
-          losses: addLosses - subLosses,
-          points: addPoints - subPoints,
-          point_differential: addDiff - subDiff,
-        });
-      if (insertErr) throw insertErr;
-    } else {
-      const { error: updateErr } = await supabase
-        .from('standings')
-        .update({
-          wins: (standingRow as any).wins - subWins + addWins,
-          losses: (standingRow as any).losses - subLosses + addLosses,
-          points: (standingRow as any).points - subPoints + addPoints,
-          point_differential: (standingRow as any).point_differential - subDiff + addDiff,
-        })
-        .eq('id', (standingRow as any).id);
-      if (updateErr) throw updateErr;
-    }
+    // Absolute season totals (idempotent)
+    await writeAbsoluteStandings(leagueId, teamId, teamName);
   }
 
   const { error: recalcErr } = await supabase.rpc('recalculate_standings_positions', { p_league_id: leagueId });
@@ -1698,13 +1503,15 @@ export async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTe
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
-    .eq('league_id', leagueId)
-    .in('name', (['A','B','C','D'] as ABCD[]).map(k => teamNames[k]).filter(Boolean));
+    .eq('league_id', leagueId);
   if (teamsErr) throw teamsErr;
-  const nmToId = new Map<string, number>(); (teamsRows||[]).forEach((t:any)=>nmToId.set(t.name,t.id));
+  const nmToId = new Map<string, number>(); (teamsRows||[]).forEach((t:any)=>nmToId.set(normalizeName(t.name),t.id));
 
   for (const k of (['A','B','C','D'] as ABCD[])) {
-    const name = teamNames[k]; if (!name) continue; const teamId = nmToId.get(name); if (!teamId) continue;
+    const name = teamNames[k]; if (!name) continue; const teamId = nmToId.get(normalizeName(name)); if (!teamId) continue;
+    // Write absolute season totals to standings (idempotent)
+    await writeAbsoluteStandings(leagueId, teamId, name);
+    continue;
     const { data: standingRow, error: standingErr } = await supabase
       .from('standings')
       .select('id, wins, losses, points, point_differential')
