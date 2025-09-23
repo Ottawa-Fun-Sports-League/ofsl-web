@@ -205,6 +205,22 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
       ? (prevRowForTeam as any).league_points as number
       : (prevRows && prevRows.length ? prevPoints[k] : 0);
 
+    try {
+      if (leagueId === 4) {
+        const prevW = prevStats[k]?.wins ?? 0;
+        const prevL = prevStats[k]?.losses ?? 0;
+        const prevD = prevStats[k]?.diff ?? 0;
+        console.info('[Standings][L4][2-team] applying delta for', {
+          teamKey: k,
+          teamName: name,
+          teamId,
+          prev: { wins: prevW, losses: prevL, diff: prevD, points: subPointsExact },
+          add: { wins: addWins, losses: addLosses, diff: addDiff, points: addPoints },
+          hasStandingRow: !!standingRow,
+        });
+      }
+    } catch {}
+
     if (!standingRow) {
       const { error: insErr } = await supabase
         .from('standings')
@@ -639,6 +655,22 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
     const subPointsExact = prevRowForTeam && typeof (prevRowForTeam as any).league_points === 'number'
       ? (prevRowForTeam as any).league_points as number
       : (prevRows && prevRows.length ? prevPoints[k] : 0);
+
+    try {
+      if (leagueId === 4) {
+        const prevW = prevStats[k]?.wins ?? 0;
+        const prevL = prevStats[k]?.losses ?? 0;
+        const prevD = prevStats[k]?.diff ?? 0;
+        console.info('[Standings][L4][2-team Bo5] applying delta for', {
+          teamKey: k,
+          teamName: name,
+          teamId,
+          prev: { wins: prevW, losses: prevL, diff: prevD, points: subPointsExact },
+          add: { wins: addWins, losses: addLosses, diff: addDiff, points: addPoints },
+          hasStandingRow: !!standingRow,
+        });
+      }
+    } catch {}
 
     if (!standingRow) {
       const { error: insErr } = await supabase
