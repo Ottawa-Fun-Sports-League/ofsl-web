@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -90,10 +90,6 @@ export function LeagueStandingsPage() {
   // Edits: team_id -> { weekNumber -> rank }
   const [editedWeeklyRanks, setEditedWeeklyRanks] = useState<Record<number, Record<number, number | null>>>({});
   const [seedRanks, setSeedRanks] = useState<Record<number, number>>({});
-  const isSixTeamsFormat = useMemo(() => {
-    const fmt = (scheduleFormat ?? '').toLowerCase();
-    return fmt.includes('6-teams') || fmt.includes('6 teams') || fmt === '6-teams-head-to-head';
-  }, [scheduleFormat]);
   const weeklyColumns = Array.from({ length: Math.max(regularSeasonWeeks, 0) }, (_, i) => i + 1);
 
   // Check if user is admin
@@ -1070,11 +1066,11 @@ export function LeagueStandingsPage() {
                 <table className="w-full table-fixed">
                   <colgroup>
                     <col style={{ width: "10%" }} />
-                    <col style={{ width: isSixTeamsFormat ? "50%" : "40%" }} />
-                    {!isSixTeamsFormat && <col style={{ width: "12%" }} />}
-                    {!isSixTeamsFormat && <col style={{ width: "12%" }} />}
-                    <col style={{ width: isSixTeamsFormat ? "20%" : "13%" }} />
-                    <col style={{ width: isSixTeamsFormat ? "20%" : "13%" }} />
+                    <col style={{ width: "40%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "13%" }} />
+                    <col style={{ width: "13%" }} />
                   </colgroup>
                   <thead className="bg-gray-50 border-b">
                     <tr>
@@ -1084,16 +1080,12 @@ export function LeagueStandingsPage() {
                       <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">
                         Team
                       </th>
-                      {!isSixTeamsFormat && (
-                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
-                          Wins
-                        </th>
-                      )}
-                      {!isSixTeamsFormat && (
-                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
-                          Losses
-                        </th>
-                      )}
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
+                        Wins
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">
+                        Losses
+                      </th>
                       <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">
                         Points
                       </th>
@@ -1128,46 +1120,42 @@ export function LeagueStandingsPage() {
                           <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">
                             {standing.team_name}
                           </td>
-                          {!isSixTeamsFormat && (
-                            <td className="px-4 py-3 text-center">
-                              {isEditMode ? (
-                                <Input
-                                  type="number"
-                                  value={totalWins}
-                                  onChange={(e) => {
-                                    const newTotal = parseInt(e.target.value) || 0;
-                                    const base = getDisplayValue(standing, 'wins') as number;
-                                    const adjustment = newTotal - base;
-                                    handleFieldChange(standing, 'manual_wins_adjustment', adjustment.toString());
-                                  }}
-                                  className="w-16 h-8 text-center text-sm mx-auto"
-                                  min="0"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium text-[#6F6F6F]">{totalWins}</span>
-                              )}
-                            </td>
-                          )}
-                          {!isSixTeamsFormat && (
-                            <td className="px-4 py-3 text-center">
-                              {isEditMode ? (
-                                <Input
-                                  type="number"
-                                  value={totalLosses}
-                                  onChange={(e) => {
-                                    const newTotal = parseInt(e.target.value) || 0;
-                                    const base = getDisplayValue(standing, 'losses') as number;
-                                    const adjustment = newTotal - base;
-                                    handleFieldChange(standing, 'manual_losses_adjustment', adjustment.toString());
-                                  }}
-                                  className="w-16 h-8 text-center text-sm mx-auto"
-                                  min="0"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium text-[#6F6F6F]">{totalLosses}</span>
-                              )}
-                            </td>
-                          )}
+                          <td className="px-4 py-3 text-center">
+                            {isEditMode ? (
+                              <Input
+                                type="number"
+                                value={totalWins}
+                                onChange={(e) => {
+                                  const newTotal = parseInt(e.target.value) || 0;
+                                  const base = getDisplayValue(standing, 'wins') as number;
+                                  const adjustment = newTotal - base;
+                                  handleFieldChange(standing, 'manual_wins_adjustment', adjustment.toString());
+                                }}
+                                className="w-16 h-8 text-center text-sm mx-auto"
+                                min="0"
+                              />
+                            ) : (
+                              <span className="text-sm font-medium text-[#6F6F6F]">{totalWins}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {isEditMode ? (
+                              <Input
+                                type="number"
+                                value={totalLosses}
+                                onChange={(e) => {
+                                  const newTotal = parseInt(e.target.value) || 0;
+                                  const base = getDisplayValue(standing, 'losses') as number;
+                                  const adjustment = newTotal - base;
+                                  handleFieldChange(standing, 'manual_losses_adjustment', adjustment.toString());
+                                }}
+                                className="w-16 h-8 text-center text-sm mx-auto"
+                                min="0"
+                              />
+                            ) : (
+                              <span className="text-sm font-medium text-[#6F6F6F]">{totalLosses}</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-center">
                             {isEditMode ? (
                               <Input

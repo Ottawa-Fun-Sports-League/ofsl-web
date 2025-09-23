@@ -444,23 +444,20 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
               <table className="w-full min-w-max table-fixed">
                 <colgroup>
                   <col style={{ width: "10%" }} />
-                  <col style={{ width: isSixTeamsFormat ? "50%" : "40%" }} />
-                  {!isSixTeamsFormat && <col style={{ width: "12%" }} />}
-                  {!isSixTeamsFormat && <col style={{ width: "12%" }} />}
-                  <col style={{ width: isSixTeamsFormat ? "20%" : "13%" }} />
-                  <col style={{ width: isSixTeamsFormat ? "20%" : "13%" }} />
+                  <col style={{ width: "40%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "13%" }} />
                 </colgroup>
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">#</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">Team</th>
-                    {!isSixTeamsFormat && (
-                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Wins</th>
-                    )}
-                    {!isSixTeamsFormat && (
-                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Losses</th>
-                    )}
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50 rounded-tr-lg">Points</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Wins</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Losses</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">Points</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">+/-</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -468,13 +465,10 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
                       <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{index + 1}</td>
                       <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
-                      {!isSixTeamsFormat && (
-                        <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.wins}</td>
-                      )}
-                      {!isSixTeamsFormat && (
-                        <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.losses}</td>
-                      )}
-                      <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50 ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.points}</td>
+                      <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.wins}</td>
+                      <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.losses}</td>
+                      <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50">{team.points}</td>
+                      <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.differential > 0 ? `+${team.differential}` : `${team.differential}`}</td>
                     </tr>
                   ))}
                 </tbody>
