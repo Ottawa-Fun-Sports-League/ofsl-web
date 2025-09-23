@@ -803,11 +803,10 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
     });
   } catch {/* ignore */}
 
-  // Elite 2-team A/B movement rules (supports mixed formats between tiers)
-  // Be tolerant: if current format is missing but one adjacent tier is elite, treat this as part of an elite pair.
-  const isEliteTwoTeam = ((currentFormat || '').toLowerCase() === '2-teams-elite')
-    || ((aboveFormat || '').toLowerCase() === '2-teams-elite')
-    || ((belowFormat || '').toLowerCase() === '2-teams-elite');
+  // Elite 2-team A/B movement rules apply ONLY when the current tier is elite.
+  // Non-elite formats (2-teams-4-sets, 2-teams-best-of-5) should always use the standard rules,
+  // even if adjacent tiers are elite.
+  const isEliteTwoTeam = ((currentFormat || '').toLowerCase() === '2-teams-elite');
   if (isEliteTwoTeam) {
     // Determine A/B pairing using week-aware label map to avoid parity assumptions
     let partnerTier: number | null = null;

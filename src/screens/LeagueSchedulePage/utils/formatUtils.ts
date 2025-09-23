@@ -88,14 +88,27 @@ export const GAME_FORMATS: readonly GameFormat[] = [
 // FORMAT LOOKUP UTILITIES
 // =============================================================================
 
+// Formats temporarily disabled from selection across the app
+export const DISABLED_FORMATS: readonly GameFormatId[] = [
+  '2-teams-best-of-3',
+  '3-teams-elite-9-sets',
+] as const;
+
+export function isFormatDisabled(formatId: string): boolean {
+  return (DISABLED_FORMATS as readonly string[]).includes(formatId);
+}
+
 /**
  * Get format options in the same format used by dropdowns/selects
  * This ensures consistent ordering across all UI components
  */
 export const getFormatOptions = () => {
-  return GAME_FORMATS.map(format => ({
-    value: format.value,
-    label: format.label
+  return GAME_FORMATS
+    // Hide globally disabled formats from generic option lists
+    .filter(format => !isFormatDisabled(format.value))
+    .map(format => ({
+      value: format.value,
+      label: format.label
   }));
 };
 
