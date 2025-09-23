@@ -1,4 +1,4 @@
-import { buildWeekTierLabels } from './formatUtils';
+import { buildWeekTierLabels, getTeamCountForFormat } from './formatUtils';
 
 /**
  * Ranking utilities for elite formats
@@ -187,7 +187,7 @@ export function computeWeeklyNameRanksFromResults(
     };
 
     const sorted = [...enriched].sort((a, b) => orderIndex(a) - orderIndex(b));
-    const orderedNames: string[] = [];
+    const orderedSlots: Array<string | null> = [];
     for (let i = 0; i < sorted.length; i++) {
       const cur = sorted[i];
       const next = sorted[i + 1];
@@ -200,21 +200,29 @@ export function computeWeeklyNameRanksFromResults(
         const keyBot = `${week}#${next.tier_number}`;
         const top = (resByWeekTier.get(keyTop) || []).sort((a, b) => (a.tier_position || 0) - (b.tier_position || 0));
         const bot = (resByWeekTier.get(keyBot) || []).sort((a, b) => (a.tier_position || 0) - (b.tier_position || 0));
-        const topWinner = top.find(r => (r.tier_position || 0) === 1)?.team_name || top[0]?.team_name || null;
-        const topLoser = top.find(r => (r.tier_position || 0) > 1)?.team_name || null;
-        const botWinner = bot.find(r => (r.tier_position || 0) === 1)?.team_name || bot[0]?.team_name || null;
-        const botLoser = bot.find(r => (r.tier_position || 0) > 1)?.team_name || null;
-        if (topWinner) orderedNames.push(topWinner);
-        if (botWinner) orderedNames.push(botWinner);
-        if (topLoser) orderedNames.push(topLoser);
-        if (botLoser) orderedNames.push(botLoser);
+
+        // Build four slots: [topWinner, botWinner, topLoser, botLoser]
+        const winnerOf = (list: WeeklyResultRow[]) => (list.find(r => (r.tier_position || 0) === 1)?.team_name || list[0]?.team_name || null);
+        const loserOf = (list: WeeklyResultRow[]) => (list.find(r => (r.tier_position || 0) > 1)?.team_name || null);
+
+        const topWinner = winnerOf(top) || null;
+        const topLoser = loserOf(top) || null;
+        const botWinner = winnerOf(bot) || null;
+        const botLoser = loserOf(bot) || null;
+
+        orderedSlots.push(topWinner);
+        orderedSlots.push(botWinner);
+        orderedSlots.push(topLoser);
+        orderedSlots.push(botLoser);
         i += 1; // skip the paired next
       } else {
         // Single tier: order by tier_position ascending
         const key = `${week}#${cur.tier_number}`;
         const list = (resByWeekTier.get(key) || []).sort((a, b) => (a.tier_position || 0) - (b.tier_position || 0));
-        for (const r of list) {
-          if (r.team_name) orderedNames.push(r.team_name);
+        const expected = getTeamCountForFormat(String(cur.format || '3-teams-6-sets'));
+        for (let slot = 0; slot < expected; slot++) {
+          const r = list[slot];
+          orderedSlots.push(r?.team_name ?? null);
         }
       }
     }
@@ -225,14 +233,15 @@ export function computeWeeklyNameRanksFromResults(
       console.info('[Weekly order]', { week, orderedNames: [...orderedNames] });
     } catch {/* ignore logging issues */}
 
-    // Assign sequential ranks
+    // Assign sequential ranks; reserve slots for nulls
     const nameRanks: Record<string, number> = {};
     let rank = 1;
-    for (const nm of orderedNames) {
+    for (const nm of orderedSlots) {
       const key = (nm || '').trim();
-      if (!key) continue;
-      if (nameRanks[key] != null) continue;
-      nameRanks[key] = rank++;
+      if (key && nameRanks[key] == null) {
+        nameRanks[key] = rank;
+      }
+      rank += 1;
     }
     byWeek[week] = nameRanks;
   }
@@ -281,14 +290,14 @@ export function computePrevWeekNameRanksFromNextWeekSchedule(
     if (m) maxBase = Math.max(maxBase, Number(m[1]));
   }
 
-  const positions = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'] as const;
+  const positionsAll = ['team_a_name','team_b_name','team_c_name','team_d_name','team_e_name','team_f_name'] as const;
   const seen = new Set<string>();
   const map: Record<string, number> = {};
   let rank = 1;
   const overrides: Record<string, number> = {};
   // Collect explicit ranking overrides if present (do not return yet; we'll merge with base order)
   for (const row of enriched) {
-    for (const p of positions) {
+    for (const p of positionsAll) {
       const nm = (row as unknown as any)[p] as string | null | undefined;
       const rkField = (p.replace('_name', '_ranking')) as keyof any;
       const rkVal = (row as unknown as any)[rkField] as number | null | undefined;
@@ -301,17 +310,29 @@ export function computePrevWeekNameRanksFromNextWeekSchedule(
     }
   }
 
-  const addRow = (row?: typeof enriched[number]) => {
-    if (!row) return;
-    for (const pos of positions) {
+  const addRow = (row: (typeof enriched[number]) | undefined, expectedCount: number): void => {
+    if (!row) {
+      // Entire row missing, reserve all expected slots
+      rank += expectedCount;
+      return;
+    }
+    // Determine ordered subset of positions based on expectedCount
+    const rowPositions = positionsAll.slice(0, Math.max(0, Math.min(expectedCount, positionsAll.length)));
+    for (const pos of rowPositions) {
       const raw = (row as any)[pos] as string | null | undefined;
-      if (!raw) continue;
-      const name = raw.trim();
-      if (!name) continue;
-      const key = name.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      map[name] = rank++;
+      const nm = raw ? String(raw).trim() : '';
+      if (!nm) {
+        // Reserve slot even if no name yet, to keep global numbering stable
+        rank += 1;
+        continue;
+      }
+      const key = nm.toLowerCase();
+      if (!seen.has(key)) {
+        map[nm] = rank;
+        seen.add(key);
+      }
+      // Whether duplicate or not, advance rank to next slot
+      rank += 1;
     }
   };
 
@@ -327,18 +348,28 @@ export function computePrevWeekNameRanksFromNextWeekSchedule(
     const hasSingle = byLabel.has(lblSingle);
 
     if (hasA || hasB) {
-      // 2-team elite base
-      addRow(byLabel.get(lblA));
+      // 2-team elite base — always reserve slots in position order
+      const rowA = byLabel.get(lblA);
+      const fmtA = rowA?.format ? String(rowA.format) : '2-teams-elite';
+      const expectedA = Math.max(2, getTeamCountForFormat(fmtA));
+      addRow(rowA, expectedA);
+
       if (hasB) {
-        addRow(byLabel.get(lblB));
+        const rowB = byLabel.get(lblB);
+        const fmtB = rowB?.format ? String(rowB.format) : fmtA;
+        const expectedB = Math.max(2, getTeamCountForFormat(fmtB));
+        addRow(rowB, expectedB);
       } else {
-        // Missing partner row: reserve two ranks to preserve global numbering (A,B)
-        rank += 2; // A and B positions for the missing twin row
+        // Missing partner row entirely: reserve full expected team slots (A,B)
+        rank += Math.max(2, getTeamCountForFormat('2-teams-elite'));
       }
     }
     if (hasSingle) {
-      // Non-elite format occupying this base
-      addRow(byLabel.get(lblSingle));
+      // Non-elite format occupying this base — reserve slots in position order
+      const row = byLabel.get(lblSingle);
+      const fmt = row?.format ? String(row.format) : '';
+      const expected = getTeamCountForFormat(fmt || '3-teams-6-sets');
+      addRow(row, expected);
     }
   }
   // Capture the base enumeration map before overrides
