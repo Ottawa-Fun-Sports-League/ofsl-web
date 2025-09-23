@@ -226,13 +226,13 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     if (recalcErr) throw recalcErr;
   }
 
-  // Apply movement to next week
-  await applyEliteThreeTeamMovementAfterStandings({
+  // Apply movement to next week using standard 3-team rules (non-elite)
+  await applyMovementAfterStandings({
     leagueId,
     weekNumber,
     tierNumber,
     isTopTier,
-    isBottomTier: pointsTierOffset === 0,
+    pointsTierOffset,
     teamNames,
     sortedKeys: sorted,
   });
