@@ -5,8 +5,9 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ArrowLeft, DollarSign, Save, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { computeInitialSeedRankingMap } from "../LeagueSchedulePage/utils/rankingUtils";
 import { useAuth } from '../../contexts/AuthContext';
+import { useEliteStandings } from '../../standings/useEliteStandings';
+import { computeEliteWeeklyRanks } from '../../standings/eliteStandings';
 
 interface League {
   id: number;
@@ -88,6 +89,7 @@ export function LeagueStandingsPage() {
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({});
   // Edits: team_id -> { weekNumber -> rank }
   const [editedWeeklyRanks, setEditedWeeklyRanks] = useState<Record<number, Record<number, number | null>>>({});
+  const [seedRanks, setSeedRanks] = useState<Record<number, number>>({});
   const isSixTeamsFormat = useMemo(() => {
     const fmt = (scheduleFormat ?? '').toLowerCase();
     return fmt.includes('6-teams') || fmt.includes('6 teams') || fmt === '6-teams-head-to-head';
@@ -96,6 +98,156 @@ export function LeagueStandingsPage() {
 
   // Check if user is admin
   const isAdmin = userProfile?.is_admin === true;
+
+  // Shared elite standings
+  const elite = useEliteStandings(leagueId ? parseInt(leagueId) : undefined);
+  useEffect(() => {
+    if (elite.isElite) {
+      setScheduleFormat('elite');
+      setWeeklyRanks(elite.weeklyRanksByTeamId);
+      setSeedRanks(elite.seedRanksByTeamId);
+      setRegularSeasonWeeks(prev => Math.max(prev, elite.maxWeek));
+    }
+  }, [elite.isElite, elite.weeklyRanksByTeamId, elite.seedRanksByTeamId, elite.maxWeek]);
+
+  // Page-level weekly backfill using results (safety net so weekly columns fill immediately)
+  useEffect(() => {
+    const run = async () => {
+      if (!leagueId) return;
+      if (!elite.isElite) return;
+      const lid = parseInt(leagueId);
+      try {
+        const { data: weekRows } = await supabase
+          .from('weekly_schedules')
+          .select('id, week_number, tier_number, format')
+          .eq('league_id', lid);
+        const { data: results } = await supabase
+          .from('game_results')
+          .select('team_name, week_number, tier_number, tier_position')
+          .eq('league_id', lid);
+        const { data: teams } = await supabase
+          .from('teams')
+          .select('id,name')
+          .eq('league_id', lid)
+          .eq('active', true);
+
+        if (!Array.isArray(results) || results.length === 0) return;
+        const { computeWeeklyNameRanksFromResults, computePrevWeekNameRanksFromNextWeekSchedule } = await import('../LeagueSchedulePage/utils/rankingUtils');
+        // First, try placement-based ranks from next week's schedule (authoritative when present)
+        const weeks = Array.from(new Set((weekRows || []).map((r: any) => r.week_number))).sort((a:number,b:number)=>a-b);
+        const nameToId = new Map<string, number>();
+        (teams || []).forEach((t: any) => nameToId.set(String((t as any).name || '').toLowerCase(), (t as any).id));
+        setWeeklyRanks((prev) => {
+          const merged: Record<number, Record<number, number>> = { ...(prev || {}) };
+          for (const w of weeks) {
+            const prevWeek = (w || 0) - 1; if (prevWeek < 1) continue;
+            const rows = (weekRows || []).filter((r: any) => r.week_number === w);
+            const nameRankMap = computePrevWeekNameRanksFromNextWeekSchedule(rows as any);
+            Object.entries(nameRankMap).forEach(([nm, rk]) => {
+              const id = nameToId.get(String(nm || '').toLowerCase());
+              if (!id) return;
+              if (!merged[id]) merged[id] = {} as Record<number, number>;
+              // Overwrite per-team with placement-based number (authoritative)
+              merged[id][prevWeek] = rk as number;
+            });
+          }
+          return merged;
+        });
+        // Then, backfill any remaining teams from results
+        const nameRanksByWeek = computeWeeklyNameRanksFromResults(
+          (weekRows || []).map((r: any) => ({ id: r.id ?? null, week_number: r.week_number, tier_number: r.tier_number, format: r.format })) as any,
+          (results as any),
+        );
+        
+        setWeeklyRanks((prev) => {
+          const merged: Record<number, Record<number, number>> = { ...(prev || {}) };
+          Object.keys(nameRanksByWeek || {}).map(Number).forEach((w) => {
+            const nmMap = (nameRanksByWeek as any)[w] || {};
+            Object.entries(nmMap).forEach(([nm, rk]) => {
+              const id = nameToId.get(String(nm || '').toLowerCase());
+              if (!id) return;
+              if (!merged[id]) merged[id] = {} as Record<number, number>;
+              // Only set if this team has no rank for week w yet (preserve placement-based values)
+              if (typeof merged[id][w] !== 'number') {
+                merged[id][w] = rk as number;
+              }
+            });
+          });
+          return merged;
+        });
+      } catch {
+        // swallow — this is a non-blocking backfill
+      }
+    };
+    run();
+  // Re-run when league or elite mode toggles; avoid weeklyRanks to prevent loops
+  }, [leagueId, elite.isElite]);
+
+  // TEMP: visibility that the page mounted
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.info('[Admin Standings] mounted with leagueId=', leagueId);
+  }, [leagueId]);
+
+  // Fallback seed ranks for admin (ensures initial ranking shows even if hook hasn't populated yet)
+  useEffect(() => {
+    if (!leagueId) return;
+    // if seed already set by hook, skip
+    if (seedRanks && Object.keys(seedRanks).length > 0) return;
+    (async () => {
+      try {
+        const lid = parseInt(leagueId);
+        // eslint-disable-next-line no-console
+        console.info('[Admin Standings] fallback seeding start for league', lid);
+        const { data: week1Rows } = await supabase
+          .from('weekly_schedules')
+          .select('tier_number,format,team_a_name,team_b_name,team_c_name')
+          .eq('league_id', lid)
+          .eq('week_number', 1)
+          .order('tier_number', { ascending: true });
+
+        const { data: allWeeks } = await supabase
+          .from('weekly_schedules')
+          .select('week_number')
+          .eq('league_id', lid);
+
+        const { data: teamRows } = await supabase
+          .from('teams')
+          .select('id,name')
+          .eq('league_id', lid)
+          .eq('active', true);
+
+        const { computeInitialSeedRankingMap } = await import('../LeagueSchedulePage/utils/rankingUtils');
+        const seedMap = computeInitialSeedRankingMap((week1Rows || []) as any);
+        const nameToId = new Map<string, number>();
+        (teamRows || []).forEach((t: any) => nameToId.set(String((t as any).name || '').toLowerCase(), (t as any).id));
+        const seed: Record<number, number> = {};
+        for (const [nm, rk] of seedMap.entries()) {
+          const id = nameToId.get(String(nm || '').toLowerCase());
+          if (id) seed[id] = rk as number;
+        }
+        setSeedRanks(seed);
+
+        const elitePresent = Array.isArray(week1Rows) && week1Rows.some((r: any) => String((r as any).format || '').toLowerCase().includes('elite'));
+        if (elitePresent && !String(scheduleFormat || '').toLowerCase().includes('elite')) {
+          setScheduleFormat('elite');
+        }
+
+        const maxWeek = Array.isArray(allWeeks) && allWeeks.length > 0
+          ? (allWeeks as any[]).reduce((m, r: any) => Math.max(m, Number((r as any).week_number || 0)), 0)
+          : regularSeasonWeeks;
+        setRegularSeasonWeeks(prev => Math.max(prev, maxWeek));
+
+        // eslint-disable-next-line no-console
+        console.info('[Admin Standings] fallback seed set:', Object.keys(seed).length, 'maxWeek:', maxWeek);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[Admin Standings] fallback seeding failed', e);
+      }
+    })();
+  // Intentionally ignore seedRanks in deps to avoid loops
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId]);
 
   useEffect(() => {
 
@@ -300,6 +452,12 @@ export function LeagueStandingsPage() {
       .eq('league_id', parseInt(leagueId!))
       .order('week_number', { ascending: true })
       .order('tier_number', { ascending: true });
+    try {
+      const elitePresent = Array.isArray(weekRows) && weekRows.some((r: any) => String((r as any).format || '').toLowerCase().includes('elite'));
+      if (elitePresent && !(String(scheduleFormat || '').toLowerCase().includes('elite'))) {
+        setScheduleFormat('elite');
+      }
+    } catch {}
     const { data: teamRows } = await supabase
       .from('teams')
       .select('id,name')
@@ -342,12 +500,8 @@ export function LeagueStandingsPage() {
         const id = nameToId.get((nm || '').toLowerCase());
         if (id) idMap[id] = rk as number;
       });
-      if (Object.keys(idMap).length > 0) {
-        if (!byWeek[w]) {
-          byWeek[w] = idMap;
-        }
-      } else if (!byWeek[w]) {
-        byWeek[w] = {};
+      if (!byWeek[w]) {
+        byWeek[w] = idMap;
       }
     }
     // Transpose: we need team_id -> (week -> rank) for rendering
@@ -360,7 +514,40 @@ export function LeagueStandingsPage() {
         byTeam[teamId][weekNum] = rank as number;
       });
     });
+    try {
+      const weeksWithData = Object.entries(byWeek)
+        .filter(([_, m]) => m && Object.keys(m as any).length > 0)
+        .map(([w]) => Number(w))
+        .sort((a,b)=>a-b);
+      // eslint-disable-next-line no-console
+      console.info('[Standings] weekly rank weeks:', weeksWithData);
+    } catch {}
     setWeeklyRanks(byTeam);
+    // Override with shared elite standings engine to ensure slot-reserved, deterministic ranks
+    try {
+      const { data: weekRowsAll } = await supabase
+        .from('weekly_schedules')
+        .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name,team_a_ranking,team_b_ranking,team_c_ranking,team_d_ranking,team_e_ranking,team_f_ranking')
+        .eq('league_id', parseInt(leagueId!))
+        .order('week_number', { ascending: true })
+        .order('tier_number', { ascending: true });
+      const { data: teamsAll } = await supabase
+        .from('teams')
+        .select('id,name')
+        .eq('league_id', parseInt(leagueId!))
+        .eq('active', true);
+      const { seedRanksByTeamId, weeklyRanksByTeamId, maxWeek } = computeEliteWeeklyRanks((weekRowsAll || []) as any, (teamsAll || []) as any);
+      setWeeklyRanks(weeklyRanksByTeamId);
+      setSeedRanks(seedRanksByTeamId);
+      setRegularSeasonWeeks((prev) => Math.max(prev, maxWeek));
+      // Force elite table view if elite data is present
+      try {
+        const elitePresent = Array.isArray(weekRowsAll) && weekRowsAll.some((r: any) => String((r as any).format || '').toLowerCase().includes('elite'));
+        if (elitePresent && !String(scheduleFormat || '').toLowerCase().includes('elite')) {
+          setScheduleFormat('elite');
+        }
+      } catch { /* ignore */ }
+    } catch {}
         // Compute seed ranks from Week 1 schedule for elite formats (with AB-pair logic)
         try {
           const { data: week1Rows } = await supabase
@@ -369,12 +556,14 @@ export function LeagueStandingsPage() {
             .eq('league_id', parseInt(leagueId!))
             .eq('week_number', 1)
             .order('tier_number', { ascending: true });
+          const { computeInitialSeedRankingMap } = await import('../LeagueSchedulePage/utils/rankingUtils');
           const seedMap = computeInitialSeedRankingMap((week1Rows || []) as any);
           const seed: Record<number, number> = {};
           for (const [nm, rk] of seedMap.entries()) {
             const id = nameToId.get((nm || '').toLowerCase());
             if (id) seed[id] = rk;
           }
+          setSeedRanks(seed);
         } catch {}
       } catch {}
       setEditedStandings({});
@@ -825,8 +1014,8 @@ export function LeagueStandingsPage() {
                         .sort((a, b) => {
                           const aVals = weeklyColumns.map(w => weeklyRanks[a.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
                           const bVals = weeklyColumns.map(w => weeklyRanks[b.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
-                          const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : Number.POSITIVE_INFINITY;
-                          const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : Number.POSITIVE_INFINITY;
+                          const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (seedRanks[a.team_id] ?? Number.POSITIVE_INFINITY);
+                          const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (seedRanks[b.team_id] ?? Number.POSITIVE_INFINITY);
                           if (aAvg !== bAvg) return aAvg - bAvg;
                           return (a.team_name || '').localeCompare(b.team_name || '');
                         })
@@ -842,7 +1031,7 @@ export function LeagueStandingsPage() {
                                 index === standings.length - 1 ? "last-row" : ""
                               } ${isEdited ? "ring-2 ring-yellow-400 ring-opacity-50" : ""}`}
                             >
-                              <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : '-'}</td>
+                               <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (seedRanks[standing.team_id] ?? '-')}</td>
                               <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{standing.team_name}</td>
                               {weeklyColumns.map(week => {
                                 const current = editedWeeklyRanks[standing.team_id]?.[week] ?? weeklyRanks[standing.team_id]?.[week];

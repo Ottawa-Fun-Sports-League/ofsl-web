@@ -3,6 +3,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '../../../components/ui/dialog';
 import { getTierDisplayLabel, buildWeekTierLabels } from '../utils/formatUtils';
 import type { WeeklyScheduleTier } from '../types';
@@ -200,6 +201,9 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+        <DialogDescription id="submit-scores-description" className="sr-only">
+          Submit scores for the selected tier and week.
+        </DialogDescription>
 
         <div className="py-2">
           {unsupported ? (
