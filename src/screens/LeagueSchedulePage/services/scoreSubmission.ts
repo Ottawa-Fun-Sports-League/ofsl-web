@@ -6,6 +6,19 @@ import { applyFourTeamMovementAfterStandings, applySixTeamMovementAfterStandings
 type TeamKey = 'A' | 'B' | 'C';
 type SixTeamKey = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
+// Normalize team names for reliable matching against DB rows
+const normalizeName = (s: string | null | undefined): string => {
+  return String(s || '')
+    .toLowerCase()
+    // remove diacritics
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    // keep alphanumerics, collapse everything else to space
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+};
+
 export interface ScoreSet {
   label: string;
   teams: [TeamKey, TeamKey];
@@ -157,20 +170,20 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     if (error) throw error;
   }
 
-  // Update standings with delta vs previous
+  // Update standings with delta vs previous (robust name matching)
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
     .eq('league_id', leagueId)
-    .in('name', teamKeys.map(k => teamNames[k]).filter(Boolean));
+    .eq('active', true);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
-  (teamsRows || []).forEach((t: any) => nameToId.set(t.name, t.id));
+  (teamsRows || []).forEach((t: any) => nameToId.set(normalizeName(t.name), t.id));
 
   for (const k of teamKeys) {
     const name = teamNames[k] || '';
     if (!name) continue;
-    const teamId = nameToId.get(name);
+    const teamId = nameToId.get(normalizeName(name));
     if (!teamId) continue;
 
     const { data: standingRow, error: standingErr } = await supabase
@@ -1321,14 +1334,14 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     .from('teams')
     .select('id, name')
     .eq('league_id', leagueId)
-    .in('name', Object.values(teamNames).filter(Boolean));
+    .eq('active', true);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
-  (teamsRows || []).forEach((row: any) => nameToId.set(row.name, row.id));
+  (teamsRows || []).forEach((row: any) => nameToId.set(normalizeName(row.name), row.id));
 
   for (const teamStat of teamStats) {
     const teamName = teamNames[teamStat.team];
-    const teamId = nameToId.get(teamName);
+    const teamId = nameToId.get(normalizeName(teamName));
     if (!teamId) continue;
 
     const { data: standingRow, error: standingErr } = await supabase
