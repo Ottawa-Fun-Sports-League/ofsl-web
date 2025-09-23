@@ -470,7 +470,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Losses</th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">Points</th>
                     {showDifferentialColumn && (
-                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">Differential</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">+/-</th>
                     )}
                   </tr>
                 </thead>
@@ -483,7 +483,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                       <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.losses}</td>
                       <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50">{team.points}</td>
                       {showDifferentialColumn && (
-                        <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.differential}</td>
+                        <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.differential > 0 ? `+${team.differential}` : `${team.differential}`}</td>
                       )}
                     </tr>
                   ))}
