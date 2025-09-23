@@ -225,14 +225,23 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     if (leagueId === 4) {
       const { data: allRes } = await supabase
         .from('game_results')
-        .select('wins,losses,points_for,points_against,league_points')
+        .select('wins,losses,sets_won,sets_lost,points_for,points_against,league_points')
         .eq('league_id', leagueId)
         .eq('team_name', name);
-      const sum = (arr: any[] | null | undefined, key: string) => (arr || []).reduce((a, r) => a + (Number((r as any)[key]) || 0), 0);
-      const absWins = sum(allRes, 'wins');
-      const absLosses = sum(allRes, 'losses');
-      const absPoints = sum(allRes, 'league_points');
-      const absDiff = sum(allRes, 'points_for') - sum(allRes, 'points_against');
+      const sum = (arr: any[] | null | undefined, getter: (row: any) => number) => (arr || []).reduce((a, r) => a + getter(r), 0);
+      const coerce = (v: any) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
+      const absWins = sum(allRes, (r) => coerce((r as any).wins ?? (r as any).sets_won));
+      const absLosses = sum(allRes, (r) => coerce((r as any).losses ?? (r as any).sets_lost));
+      const absPoints = sum(allRes, (r) => coerce((r as any).league_points));
+      const absPF = sum(allRes, (r) => coerce((r as any).points_for));
+      const absPA = sum(allRes, (r) => coerce((r as any).points_against));
+      const absDiff = absPF - absPA;
+
+      try {
+        if (leagueId === 4) {
+          console.info('[Standings][L4][2-team Bo5] absolute totals to write', { teamName: name, teamId, absWins, absLosses, absPoints, absDiff });
+        }
+      } catch {}
 
       if (!standingRow) {
         const { error: insErr } = await supabase
@@ -491,14 +500,21 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
       // Absolute recompute for league 4
       const { data: allRes } = await supabase
         .from('game_results')
-        .select('wins,losses,points_for,points_against,league_points')
+        .select('wins,losses,sets_won,sets_lost,points_for,points_against,league_points')
         .eq('league_id', leagueId)
         .eq('team_name', name);
-      const sum = (arr: any[] | null | undefined, key: string) => (arr || []).reduce((a, r) => a + (Number((r as any)[key]) || 0), 0);
-      const absWins = sum(allRes, 'wins');
-      const absLosses = sum(allRes, 'losses');
-      const absPoints = sum(allRes, 'league_points');
-      const absDiff = sum(allRes, 'points_for') - sum(allRes, 'points_against');
+      const coerce = (v: any) => (typeof v === 'number' && !Number.isNaN(v) ? v : Number(v) || 0);
+      const sum = (arr: any[] | null | undefined, getter: (row: any) => number) => (arr || []).reduce((a, r) => a + getter(r), 0);
+      const absWins = sum(allRes, (r) => coerce((r as any).wins ?? (r as any).sets_won));
+      const absLosses = sum(allRes, (r) => coerce((r as any).losses ?? (r as any).sets_lost));
+      const absPoints = sum(allRes, (r) => coerce((r as any).league_points));
+      const absPF = sum(allRes, (r) => coerce((r as any).points_for));
+      const absPA = sum(allRes, (r) => coerce((r as any).points_against));
+      const absDiff = absPF - absPA;
+
+      try {
+        console.info('[Standings][L4][2-team 4-sets] absolute totals to write', { teamName: name, teamId, absWins, absLosses, absPoints, absDiff });
+      } catch {}
 
       if (!standingRow) {
         const { error: insErr } = await supabase
