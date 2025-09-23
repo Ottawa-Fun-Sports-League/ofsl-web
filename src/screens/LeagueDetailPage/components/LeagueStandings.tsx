@@ -179,6 +179,16 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     const fmt = (scheduleFormat ?? "").toLowerCase();
     return fmt.includes('6-teams') || fmt.includes('6 teams') || fmt === '6-teams-head-to-head';
   }, [scheduleFormat]);
+  const showDifferentialColumn = useMemo(() => {
+    const fmt = (scheduleFormat ?? '').toLowerCase();
+    return (
+      fmt === '3-teams-6-sets' ||
+      fmt === '2-teams-4-sets' ||
+      fmt === '2-teams-best-of-5' ||
+      fmt === '4-teams-head-to-head' ||
+      fmt === '6-teams-head-to-head'
+    );
+  }, [scheduleFormat]);
   const weeklyColumns = useMemo(() => Array.from({ length: Math.max(regularSeasonWeeks, 0) }, (_, i) => i + 1), [regularSeasonWeeks]);
   // Only display weeks that actually have any data to avoid stray numbers
   const weeksWithData = useMemo(() => {
@@ -448,7 +458,9 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   <col style={{ width: "12%" }} />
                   <col style={{ width: "12%" }} />
                   <col style={{ width: "13%" }} />
-                  <col style={{ width: "13%" }} />
+                  {showDifferentialColumn && (
+                    <col style={{ width: "13%" }} />
+                  )}
                 </colgroup>
                 <thead className="bg-gray-50 border-b">
                   <tr>
@@ -457,7 +469,9 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Wins</th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Losses</th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] bg-red-50">Points</th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">+/-</th>
+                    {showDifferentialColumn && (
+                      <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F] rounded-tr-lg">+/-</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -468,7 +482,9 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                       <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.wins}</td>
                       <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.losses}</td>
                       <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50">{team.points}</td>
-                      <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.differential > 0 ? `+${team.differential}` : `${team.differential}`}</td>
+                      {showDifferentialColumn && (
+                        <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.differential > 0 ? `+${team.differential}` : `${team.differential}`}</td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
