@@ -391,20 +391,26 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
     if (error) throw error;
   }
 
-  // Update standings with deltas
+  // Update standings with deltas (robust matching, logs for league 4)
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
     .eq('league_id', leagueId)
-    .in('name', teamKeys.map(k => teamNames[k]).filter(Boolean));
+    .eq('active', true);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
-  (teamsRows || []).forEach((t: any) => nameToId.set(t.name, t.id));
+  (teamsRows || []).forEach((t: any) => nameToId.set(normalizeName(t.name), t.id));
+  try {
+    if (leagueId === 4) {
+      console.info('[Standings][L4][2-team] name map:', Object.fromEntries(Array.from(nameToId.entries()).slice(0, 10)));
+      console.info('[Standings][L4][2-team] from weekly names:', teamKeys.map(k => teamNames[k]));
+    }
+  } catch {}
 
   for (const k of teamKeys) {
     const name = teamNames[k] || '';
     if (!name) continue;
-    const teamId = nameToId.get(name);
+    const teamId = nameToId.get(normalizeName(name));
     if (!teamId) continue;
 
     const { data: standingRow, error: standingErr } = await supabase
@@ -595,20 +601,26 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
     if (error) throw error;
   }
 
-  // Update standings deltas
+  // Update standings deltas (robust mapping)
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
     .select('id, name')
     .eq('league_id', leagueId)
-    .in('name', teamKeys.map(k => teamNames[k]).filter(Boolean));
+    .eq('active', true);
   if (teamsErr) throw teamsErr;
   const nameToId = new Map<string, number>();
-  (teamsRows || []).forEach((t: any) => nameToId.set(t.name, t.id));
+  (teamsRows || []).forEach((t: any) => nameToId.set(normalizeName(t.name), t.id));
+  try {
+    if (leagueId === 4) {
+      console.info('[Standings][L4][2-team Bo5] name map:', Object.fromEntries(Array.from(nameToId.entries()).slice(0, 10)));
+      console.info('[Standings][L4][2-team Bo5] from weekly names:', teamKeys.map(k => teamNames[k]));
+    }
+  } catch {}
 
   for (const k of teamKeys) {
     const name = teamNames[k] || '';
     if (!name) continue;
-    const teamId = nameToId.get(name);
+    const teamId = nameToId.get(normalizeName(name));
     if (!teamId) continue;
     const { data: standingRow, error: standingErr } = await supabase
       .from('standings')
