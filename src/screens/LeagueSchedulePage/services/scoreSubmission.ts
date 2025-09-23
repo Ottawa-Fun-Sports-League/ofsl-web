@@ -614,22 +614,6 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
       ? (prevRowForTeam as any).league_points as number
       : (prevRows && prevRows.length ? prevPoints[k] : 0);
 
-    try {
-      if (leagueId === 4) {
-        const prevW = prevStats[k]?.wins ?? 0;
-        const prevL = prevStats[k]?.losses ?? 0;
-        const prevD = prevStats[k]?.diff ?? 0;
-        
-          teamKey: k,
-          teamName: name,
-          teamId,
-          prev: { wins: prevW, losses: prevL, diff: prevD, points: subPointsExact },
-          add: { wins: addWins, losses: addLosses, diff: addDiff, points: addPoints },
-          hasStandingRow: !!standingRow,
-        });
-      }
-    } catch {}
-
     {
       // Absolute totals from all game_results rows (all leagues)
       const { data: allRes } = await supabase
