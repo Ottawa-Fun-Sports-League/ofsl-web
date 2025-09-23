@@ -5,7 +5,7 @@ import { Input } from '../../../components/ui/input';
 import { supabase } from '../../../lib/supabase';
 import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
 import type { FormatValidationResult } from '../types';
-import { GAME_FORMATS, getPositionsForFormat, getTierDisplayLabel } from '../utils/formatUtils';
+import { GAME_FORMATS, getPositionsForFormat, getTierDisplayLabel, isFormatDisabled } from '../utils/formatUtils';
 import { validateFormatChangeCompat, repackTeamsForFormatCompat } from '../utils/scheduleLogic';
 
 interface TierEditModalProps {
@@ -672,7 +672,8 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                 <option value="">Select format...</option>
                 {GAME_FORMATS.map((format) => {
                   const validation = validateFormatChangeCompat(tier, format.value);
-                  const isDisabled = !validation.isValid;
+                  const disabledGlobally = isFormatDisabled(format.value);
+                  const isDisabled = disabledGlobally || !validation.isValid;
                   
                   return (
                     <option 
@@ -681,7 +682,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
                       disabled={isDisabled}
                       style={isDisabled ? { color: '#999', backgroundColor: '#f5f5f5' } : {}}
                     >
-                      {format.label} {isDisabled ? '(incompatible)' : ''}
+                      {format.label} {disabledGlobally ? '(unavailable)' : (!validation.isValid ? '(incompatible)' : '')}
                     </option>
                   );
                 })}
