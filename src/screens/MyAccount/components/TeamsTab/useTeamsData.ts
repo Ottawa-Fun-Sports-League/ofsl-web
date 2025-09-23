@@ -117,7 +117,6 @@ export function useTeamsData(userId?: string) {
 
           const tiers: WeeklyScheduleTier[] = data || [];
           const tierLabelMap = buildWeekTierLabels(tiers);
-
           const entriesByName = new Map<string, TeamMatchup[]>();
           const entriesByRanking = new Map<number, TeamMatchup[]>();
 
@@ -146,6 +145,8 @@ export function useTeamsData(userId?: string) {
                   return normalizeTeamName(name) !== normalized;
                 }) as string[];
 
+              const positionLabel = position.toUpperCase();
+
               const status: TeamMatchup['status'] =
                 tier.no_games || opponents.length === 0 ? 'bye' : 'scheduled';
 
@@ -157,6 +158,7 @@ export function useTeamsData(userId?: string) {
                   tierLabelMap.get(tier.id) ||
                   tierLabelMap.get(tier.tier_number) ||
                   (typeof tier.tier_number === 'number' ? `Tier ${tier.tier_number}` : null),
+                tierPosition: positionLabel,
                 opponents,
                 location: tier.location,
                 timeSlot: tier.time_slot,
@@ -204,6 +206,7 @@ export function useTeamsData(userId?: string) {
                 weekNumber: currentWeek,
                 opponents: [],
                 tierLabel: null,
+                tierPosition: null,
               });
             }
           });
@@ -215,6 +218,7 @@ export function useTeamsData(userId?: string) {
               weekNumber: currentWeek,
               opponents: [],
               tierLabel: null,
+              tierPosition: null,
             });
           });
         }
@@ -241,6 +245,7 @@ export function useTeamsData(userId?: string) {
           weekNumber: fallbackWeek,
           opponents: [],
           tierLabel: null,
+          tierPosition: null,
         },
       };
     });

@@ -28,24 +28,6 @@ import {
   getGymNamesByLocation,
 } from "../../../../lib/leagues";
 
-const formatOpponentsList = (opponents: string[]): string => {
-  if (!opponents || opponents.length === 0) {
-    return "Bye week";
-  }
-
-  if (opponents.length === 1) {
-    return opponents[0];
-  }
-
-  if (opponents.length === 2) {
-    return `${opponents[0]} & ${opponents[1]}`;
-  }
-
-  const lastOpponent = opponents[opponents.length - 1];
-  const initialOpponents = opponents.slice(0, -1);
-  return `${initialOpponents.join(", ")} & ${lastOpponent}`;
-};
-
 const formatLocationSummary = (
   location?: string | null,
   court?: string | null,
@@ -157,12 +139,12 @@ export function TeamsSection({
               : matchup?.tierNumber
                 ? `${matchup.tierNumber}`
                 : "TBD";
-            const opponentsLabel =
-              matchupStatus === "scheduled"
-                ? formatOpponentsList(matchup?.opponents || [])
-                : matchupStatus === "bye"
-                  ? "Bye week"
-                  : "Schedule not published yet";
+            const tierPositionLabel =
+              matchup?.tierPosition && matchupStatus !== "no_schedule"
+                ? `Position ${matchup.tierPosition}`
+                : null;
+            const opponents = matchup?.opponents || [];
+            const hasOpponents = opponents.length > 0;
             const locationSummary = matchup
               ? formatLocationSummary(matchup.location, matchup.court, matchup.timeSlot)
               : null;
@@ -190,10 +172,6 @@ export function TeamsSection({
                     </span>,
                   ];
             const isPlayoffWeek = matchup?.isPlayoff;
-            const opponentsTextClass =
-              matchupStatus === "scheduled"
-                ? "text-[#6F6F6F]"
-                : "text-gray-500 italic";
             const weekTextClass =
               weekLabel === "Week TBD"
                 ? "font-medium text-gray-500 italic"
@@ -260,17 +238,35 @@ export function TeamsSection({
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Layers className="h-4 w-4 text-[#6F6F6F]" />
-                              <span className="font-medium text-[#6F6F6F]">Tier:</span>
-                              <span className={tierTextClass}>{tierLabelValue}</span>
+                           <div className="flex items-center gap-2">
+                             <Layers className="h-4 w-4 text-[#6F6F6F]" />
+                             <span className="font-medium text-[#6F6F6F]">Tier:</span>
+                             <span className={tierTextClass}>{tierLabelValue}</span>
+                              {tierPositionLabel && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                  {tierPositionLabel}
+                                </span>
+                              )}
                             </div>
                             <div className="flex flex-wrap items-center gap-2 w-full">
                               <Users className="h-4 w-4 text-[#6F6F6F]" />
                               <span className="font-medium text-[#6F6F6F]">Playing:</span>
-                              <span className={`${opponentsTextClass}`}>
-                                {opponentsLabel}
-                              </span>
+                              {matchupStatus === 'bye' ? (
+                                <span className="text-gray-500 italic">Bye week</span>
+                              ) : matchupStatus === 'no_schedule' ? (
+                                <span className="text-gray-500 italic">Schedule not published yet</span>
+                              ) : hasOpponents ? (
+                                opponents.map((opponent, idx) => (
+                                  <span
+                                    key={`${opponent}-${idx}`}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                  >
+                                    {opponent}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-gray-500 italic">TBD</span>
+                              )}
                             </div>
                             <div className="flex flex-wrap items-center gap-2 w-full">
                               <MapPin className="h-4 w-4 text-[#6F6F6F] flex-shrink-0" />

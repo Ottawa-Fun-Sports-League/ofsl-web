@@ -19,6 +19,7 @@ export interface TeamMatchup {
   weekNumber: number;
   tierNumber?: number;
   tierLabel?: string | null;
+  tierPosition?: string | null;
   opponents: string[];
   location?: string | null;
   timeSlot?: string | null;
