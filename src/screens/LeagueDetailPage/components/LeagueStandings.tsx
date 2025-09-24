@@ -10,7 +10,7 @@ interface LeagueStandingsProps {
 }
 
 export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
-  const { teams, loading, error, hasSchedule } = useLeagueStandings(leagueId);
+  const { teams, loading, error, hasSchedule, refetch } = useLeagueStandings(leagueId);
   const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({}); // teamId -> { week -> rank }
@@ -173,6 +173,29 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     };
     rebuild();
   }, [leagueId, elite.isElite]);
+
+  // Listen for global standings update events (emitted after score submission)
+  useEffect(() => {
+    if (!leagueId) return;
+    const handler = (e: Event) => {
+      try {
+        const detail = (e as CustomEvent)?.detail as { leagueId?: number | string } | undefined;
+        if (!detail || !detail.leagueId) {
+          refetch();
+          return;
+        }
+        const incoming = String(detail.leagueId);
+        if (incoming === String(leagueId)) {
+          refetch();
+        }
+      } catch {
+        refetch();
+      }
+    };
+    window.addEventListener('ofsl:standings-updated', handler as EventListener);
+    return () => window.removeEventListener('ofsl:standings-updated', handler as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId]);
 
   const isEliteFormat = useMemo(() => (scheduleFormat ?? "").includes("elite"), [scheduleFormat]);
   const isSixTeamsFormat = useMemo(() => {

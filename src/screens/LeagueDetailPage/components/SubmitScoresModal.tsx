@@ -396,6 +396,12 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   }
 
                   showToast('Scores submitted and standings updated.', 'success');
+                  // Broadcast standings update so other views can refresh immediately
+                  try {
+                    if (leagueId) {
+                      window.dispatchEvent(new CustomEvent('ofsl:standings-updated', { detail: { leagueId } }));
+                    }
+                  } catch {}
                   try { onSuccess && (await onSuccess()); } catch {}
                   onClose();
                 } catch (err: any) {
