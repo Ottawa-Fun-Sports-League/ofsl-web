@@ -93,6 +93,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [submittedTierNumbers, setSubmittedTierNumbers] = useState<Set<number>>(new Set());
   const [todayWeekNumber, setTodayWeekNumber] = useState<number | null>(null);
   const [loadingWeekData, setLoadingWeekData] = useState(false);
+  const lastRequestedWeekRef = useRef<number | null>(null);
   const [leagueInfo, setLeagueInfo] = useState<{
     start_date: string | null;
     end_date: string | null;
@@ -228,13 +229,20 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   }, []);
 
   useEffect(() => {
+    // Load base league info first so we know the correct current week
+    // Avoid loading a stale week (default 1) before currentWeek is calculated
     loadWeekStartDate();
-    loadWeeklySchedule(currentWeek);
     loadWeek1Structure();
     loadLeagueInfo();
   }, [leagueId]);
 
   useEffect(() => {
+    // Proactively clear per-week state then load the selected week.
+    setWeeklyTiers([]);
+    setNoGamesWeek(false);
+    setSubmittedTierNumbers(new Set());
+    setResultsByTeam(new Map());
+    lastRequestedWeekRef.current = currentWeek;
     loadWeeklySchedule(currentWeek);
   }, [currentWeek]);
 
@@ -316,6 +324,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const loadWeeklySchedule = async (weekNumber: number) => {
     try {
       setLoadingWeekData(true);
+      // Mark the in-flight request week to guard against stale responses
+      lastRequestedWeekRef.current = weekNumber;
 
       const { data, error } = await supabase
         .from('weekly_schedules')
@@ -331,10 +341,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       }
 
       const tiers = (data ?? []) as WeeklyScheduleTier[];
+      if (lastRequestedWeekRef.current !== weekNumber) return; // ignore stale
       setWeeklyTiers(tiers);
 
       // Week is considered no-games only if ALL tiers are marked no_games
       const allNoGames = tiers.length > 0 && tiers.every((tier) => Boolean(tier.no_games));
+      if (lastRequestedWeekRef.current !== weekNumber) return; // ignore stale
       setNoGamesWeek(allNoGames);
 
       // Load which tiers already have a submitted scorecard this week
@@ -348,6 +360,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         const set = new Set<number>();
         const submittedRows = (submitted ?? []) as { tier_number: number }[];
         submittedRows.forEach((row) => set.add(row.tier_number));
+        if (lastRequestedWeekRef.current !== weekNumber) return; // ignore stale
         setSubmittedTierNumbers(set);
       } catch (err) {
         console.warn('Unable to load submitted score tiers for admin schedule', err);
@@ -378,6 +391,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           if (pos === 1) map.set(norm(name), 'W');
           else if (maxPos && pos === maxPos) map.set(norm(name), 'L');
         });
+        if (lastRequestedWeekRef.current !== weekNumber) return; // ignore stale
         setResultsByTeam(map);
       } catch (e) {
         console.warn('Unable to load W/L results for admin schedule', e);
