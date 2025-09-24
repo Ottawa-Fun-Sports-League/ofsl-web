@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import { LeaguePayment, Team, TeamMatchup } from './types';
-import { getPositionsForFormat, buildWeekTierLabels } from '../../../LeagueSchedulePage/utils/formatUtils';
+import { getPositionsForFormat, getTierDisplayLabel } from '../../../LeagueSchedulePage/utils/formatUtils';
 import { calculateCurrentWeekToDisplay } from '../../../LeagueSchedulePage/utils/weekCalculation';
 import type { WeeklyScheduleTier } from '../../../LeagueSchedulePage/types';
 
@@ -100,7 +100,8 @@ export function useTeamsData(userId?: string) {
             .from('weekly_schedules')
             .select('*')
             .eq('league_id', leagueId)
-            .eq('week_number', currentWeek)
+            .gte('week_number', currentWeek)
+            .order('week_number', { ascending: true })
             .order('tier_number', { ascending: true });
 
           if (error) {
@@ -116,9 +117,7 @@ export function useTeamsData(userId?: string) {
           }
 
           const tiers: WeeklyScheduleTier[] = data || [];
-          const tierLabelMap = buildWeekTierLabels(tiers);
           const entriesByName = new Map<string, TeamMatchup[]>();
-          const entriesByRanking = new Map<number, TeamMatchup[]>();
 
           tiers.forEach((tier) => {
             const positions = getPositionsForFormat(tier.format || '');
@@ -152,11 +151,10 @@ export function useTeamsData(userId?: string) {
 
               const matchup: TeamMatchup = {
                 status,
-                weekNumber: currentWeek,
+                weekNumber: tier.week_number ?? currentWeek,
                 tierNumber: tier.tier_number,
                 tierLabel:
-                  tierLabelMap.get(tier.id) ||
-                  tierLabelMap.get(tier.tier_number) ||
+                  getTierDisplayLabel(tier.format, tier.tier_number) ||
                   (typeof tier.tier_number === 'number' ? `Tier ${tier.tier_number}` : null),
                 tierPosition: positionLabel,
                 opponents,
@@ -175,14 +173,26 @@ export function useTeamsData(userId?: string) {
               const ranking = rankingByPosition[position];
               if (ranking !== null && ranking !== undefined && teamIdByRanking.has(ranking)) {
                 const matchedTeamId = teamIdByRanking.get(ranking)!;
-                if (!teamMatchups.has(matchedTeamId)) {
+                const existing = teamMatchups.get(matchedTeamId);
+                if (!existing || (existing.weekNumber > matchup.weekNumber)) {
                   teamMatchups.set(matchedTeamId, matchup);
                 }
               }
             });
           });
 
-          const usageByName = new Map<string, number>();
+          // Ensure deterministic ordering when selecting matchups by team name
+          entriesByName.forEach((list, key) => {
+            const sortedList = [...list].sort((a, b) => {
+              if (a.weekNumber !== b.weekNumber) {
+                return a.weekNumber - b.weekNumber;
+              }
+              const aTier = a.tierNumber ?? 0;
+              const bTier = b.tierNumber ?? 0;
+              return aTier - bTier;
+            });
+            entriesByName.set(key, sortedList);
+          });
 
           leagueTeams.forEach((team) => {
             const normalized = normalizeTeamName(team.name);
@@ -191,10 +201,12 @@ export function useTeamsData(userId?: string) {
 
             if (!matchup) {
               const entries = entriesByName.get(normalized) || [];
-              const usage = usageByName.get(normalized) || 0;
-              matchup = entries[usage];
+              const upcoming = entries.find((entry) => entry.weekNumber >= currentWeek);
+              matchup = upcoming || entries[0];
+
               if (matchup) {
-                usageByName.set(normalized, usage + 1);
+                const remaining = entries.filter((entry) => entry !== matchup);
+                entriesByName.set(normalized, remaining);
               }
             }
 

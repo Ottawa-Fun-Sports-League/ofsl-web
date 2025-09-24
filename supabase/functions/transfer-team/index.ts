@@ -215,6 +215,20 @@ serve(async (req: Request) => {
       throw updateError
     }
 
+    // Clean up any lingering schedule data in the source league to keep public views in sync
+    try {
+      const { error: cleanupError } = await supabase.rpc('cleanup_schedule_after_team_transfer', {
+        p_league_id: currentLeagueId,
+        p_team_name: team.name,
+      })
+
+      if (cleanupError) {
+        console.error('Failed to clean up schedule data after transfer:', cleanupError)
+      }
+    } catch (cleanupException) {
+      console.error('Unexpected error during schedule cleanup:', cleanupException)
+    }
+
     // 3. Update any existing payment records to the new league
     // This ensures payment records stay connected to the team in its new league
     const { error: paymentUpdateError } = await supabase
