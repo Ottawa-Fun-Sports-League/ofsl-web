@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { X, AlertCircle } from "lucide-react";
@@ -58,6 +58,42 @@ export function TeamRegistrationModal({
   const hstAmount = baseAmount * 0.13;
   const totalAmount = baseAmount + hstAmount;
 
+  const allowedSkillIds = useMemo(() => {
+    const multiSkillIds = league?.skill_ids ?? [];
+    if (multiSkillIds.length > 0) {
+      return multiSkillIds;
+    }
+
+    const singleSkillId = league?.skill_id;
+    if (typeof singleSkillId === "number") {
+      return [singleSkillId];
+    }
+
+    return [] as number[];
+  }, [league?.skill_ids, league?.skill_id]);
+
+  const skillOptions = useMemo(() => {
+    if (allowedSkillIds.length === 0) {
+      return skills;
+    }
+
+    const filteredSkills = skills.filter((skill) =>
+      allowedSkillIds.includes(skill.id),
+    );
+
+    // Fallback to full list if the allowed IDs don't match loaded skills yet
+    return filteredSkills.length > 0 ? filteredSkills : skills;
+  }, [allowedSkillIds, skills]);
+
+  useEffect(() => {
+    if (
+      skillLevelId !== null &&
+      !skillOptions.some((skill) => skill.id === skillLevelId)
+    ) {
+      setSkillLevelId(null);
+    }
+  }, [skillOptions, skillLevelId]);
+
   useEffect(() => {
     if (showModal) {
       loadSkills();
@@ -115,15 +151,26 @@ export function TeamRegistrationModal({
       return;
     }
 
-    // Check if the selected skill level is "Beginner"
     const selectedSkill = skills.find((skill) => skill.id === skillLevelId);
-    if (selectedSkill && selectedSkill.name === "Beginner") {
+
+    if (
+      selectedSkill &&
+      allowedSkillIds.length > 0 &&
+      !allowedSkillIds.includes(selectedSkill.id)
+    ) {
+      const allowedNames = skillOptions.length > 0
+        ? skillOptions.map((skill) => skill.name)
+        : league?.skill_names && league.skill_names.length > 0
+          ? league.skill_names
+          : league?.skill_name
+            ? [league.skill_name]
+            : [];
+
       setError(
-        "Thank you for your interest!\n" +
-          "We appreciate your enthusiasm for joining our volleyball league. At this time, " +
-          "our programs are designed for intermediate to elite level players with advanced " +
-          "skills and a strong understanding of the game. Unfortunately, we're not able " +
-          "to accept beginner level registrations.",
+        allowedNames.length > 0
+          ? `Registration is limited to the following skill levels:\n${allowedNames.join(", ")}.
+Please select a skill level that meets these requirements.`
+          : "The selected skill level is not available for this league. Please choose another option.",
       );
       return;
     }
@@ -561,7 +608,7 @@ export function TeamRegistrationModal({
                             required
                           >
                             <option value="">Select skill level...</option>
-                            {skills.map((skill) => (
+                            {skillOptions.map((skill) => (
                               <option key={skill.id} value={skill.id}>
                                 {skill.name}
                                 {skill.description && ` - ${skill.description}`}
@@ -628,7 +675,7 @@ export function TeamRegistrationModal({
                             required
                           >
                             <option value="">Select skill level...</option>
-                            {skills.map((skill) => (
+                            {skillOptions.map((skill) => (
                               <option key={skill.id} value={skill.id}>
                                 {skill.name}
                                 {skill.description && ` - ${skill.description}`}
@@ -715,4 +762,3 @@ export function TeamRegistrationModal({
     </>
   );
 }
-

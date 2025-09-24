@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TeamRegistrationModal } from "./TeamRegistrationModal";
 import { BrowserRouter } from "react-router-dom";
@@ -524,5 +524,197 @@ describe("TeamRegistrationModal", () => {
       );
     });
   });
-});
 
+  it("hides disallowed skill levels for restricted leagues", async () => {
+    const restrictedLeague = {
+      ...mockLeague,
+      skill_ids: [2],
+      skill_names: ["Intermediate"],
+    };
+
+    vi.mocked(supabase.from).mockImplementation(
+      (table: string): ReturnType<typeof supabase.from> => {
+        if (table === "skills") {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn(() =>
+                Promise.resolve({
+                  data: [
+                    { id: 1, name: "Beginner", description: "New to the sport", order_index: 1 },
+                    { id: 2, name: "Intermediate", description: "Some experience", order_index: 2 },
+                  ],
+                  error: null,
+                }),
+              ),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+
+        return {
+          select: vi.fn(() => ({
+            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+            eq: vi.fn(() => ({
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: { cost: 100 },
+                  error: null,
+                }),
+              ),
+              order: vi.fn(() => ({
+                limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+              })),
+            })),
+          })),
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: { id: 1, name: "Test Team" },
+                  error: null,
+                }),
+              ),
+            })),
+          })),
+          update: vi.fn(() => ({
+            eq: vi.fn(() => Promise.resolve({ error: null })),
+          })),
+        } as unknown as ReturnType<typeof supabase.from>;
+      },
+    );
+
+    renderComponent({ league: restrictedLeague });
+
+    await waitFor(() => {
+      expect(screen.getByText("Team Name *")).toBeInTheDocument();
+    });
+
+    const skillSelect = screen.getByRole("combobox");
+    expect(within(skillSelect).queryByRole("option", { name: /^Beginner/ })).not.toBeInTheDocument();
+    expect(within(skillSelect).getByRole("option", { name: /Intermediate/ })).toBeInTheDocument();
+  });
+
+  it("allows beginner registrations when the league includes beginner", async () => {
+    const beginnerFriendlyLeague = {
+      ...mockLeague,
+      skill_ids: [1, 2],
+      skill_names: ["Beginner", "Intermediate"],
+    };
+
+    vi.mocked(supabase.from).mockImplementation(
+      (table: string): ReturnType<typeof supabase.from> => {
+        if (table === "skills") {
+          return {
+            select: vi.fn(() => ({
+              order: vi.fn(() =>
+                Promise.resolve({
+                  data: [
+                    { id: 1, name: "Beginner", description: "New to the sport", order_index: 1 },
+                    { id: 2, name: "Intermediate", description: "Some experience", order_index: 2 },
+                  ],
+                  error: null,
+                }),
+              ),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "leagues") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: { cost: 100, team_registration: true },
+                    error: null,
+                  }),
+                ),
+              })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "teams") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn(() => ({
+                  order: vi.fn(() => ({
+                    limit: vi.fn(() =>
+                      Promise.resolve({
+                        data: [],
+                        error: null,
+                      }),
+                    ),
+                  })),
+                })),
+              })),
+            })),
+            insert: vi.fn(() => ({
+              select: vi.fn(() => ({
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: {
+                      id: 1,
+                      name: "Beginner Buddies",
+                      active: true,
+                      skill_level_id: 1,
+                    },
+                    error: null,
+                  }),
+                ),
+              })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "league_payments") {
+          return {
+            insert: vi.fn(() => ({
+              select: vi.fn(() => ({
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: { id: 1 },
+                    error: null,
+                  }),
+                ),
+              })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        if (table === "users") {
+          return {
+            update: vi.fn(() => ({
+              eq: vi.fn(() => Promise.resolve({ error: null })),
+            })),
+          } as unknown as ReturnType<typeof supabase.from>;
+        }
+        return {} as unknown as ReturnType<typeof supabase.from>;
+      },
+    );
+
+    renderComponent({ league: beginnerFriendlyLeague });
+
+    await waitFor(() => {
+      expect(screen.getByText("Team Name *")).toBeInTheDocument();
+    });
+
+    const teamNameInput = screen.getByPlaceholderText("Enter your team name");
+    fireEvent.change(teamNameInput, { target: { value: "Beginner Buddies" } });
+
+    const skillSelect = screen.getByRole("combobox");
+    fireEvent.change(skillSelect, { target: { value: "1" } });
+
+    const submitButton = screen.getByRole("button", { name: "Register" });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(vi.mocked(supabase.functions.invoke)).toHaveBeenCalledWith(
+        "send-registration-confirmation",
+        expect.objectContaining({
+          body: expect.objectContaining({
+            teamName: "Beginner Buddies",
+            leagueName: "Test League",
+            isWaitlist: false,
+          }),
+        }),
+      );
+    });
+  });
+});
