@@ -155,6 +155,13 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 In spirit of OFSL standards, we asked that all players be respectful of other players in the facility by keeping the noise level and music to an moderate volume. Ex. Yelling, screeching, loud music, etc.
               </p>
             </section>
+
+            <section>
+              <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Injuries</h3>
+              <p className="text-lg text-[#6F6F6F]">
+                Captains are responsible for bringing their own first aid kits.
+              </p>
+            </section>
           </div>
         </div>
 
@@ -220,6 +227,57 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 
                 <li>All other rules will be following Volleyball Canada 2022/23 rules.</li>
               </ul>
+            </section>
+
+            {/* Elite Women’s League – Tuesday Evening’s */}
+            <section className="mt-12">
+              <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Elite Women’s League – Tuesday Evening’s</h3>
+
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Waivers</h4>
+                  <p className="text-lg text-[#6F6F6F]">
+                    All captains and players must be registered in the OFSL database before playing their first game of the season. Captains will be linked to their team enabling invitations for their players.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Cancellations</h4>
+                  <p className="text-lg text-[#6F6F6F]">
+                    Only when facilities are closed or unavailable will you receive a message indicating when and where the scheduled games will be rescheduled. OFSL does not cancel any indoor activities due to inclement weather unless deemed too unsafe for all participants.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">General Match Rules</h4>
+                  <p className="text-lg text-[#6F6F6F] mb-3">
+                    THE ELITE WOMENS LEAGUE WILL FOLLOW ALL CURRENT VOLLEYBALL CANADA INDOOR VOLLEYBALL RULES WHICH CAN BE FOUND <a href="https://volleyball.ca/uploads/Development/Referee/Rules/Rulebook_Files/Current_Year/2023-24_VC_Rulebook_-_EN_final.pdf" target="_blank" rel="noopener noreferrer" className="text-[#B20000] hover:underline">HERE</a>.
+                  </p>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-3">
+                    <li>The league will operate on a ladder system, cycling every 2 weeks.</li>
+                    <li>Each tier will have 4 teams, who all play a best of 5 format. Each match requires at least 5 players to begin the match.</li>
+                    <li>Each set will be played to a total of 25 points, hard cap at 25. If a match goes to 5 sets, the 5th set will be played to 15 points with a hard cap or a time cap, whichever comes first.</li>
+                    <li>Each team has a maximum of 15 minutes of warm up followed by a total of 90 minutes of play. All sets must be completed within this timeframe. Hard stop at the end of the 90 minutes. Warm up will consist of 10 minutes (starting at the start time) followed by a Volleyball Canada’s format for warm up (4 minutes hitting and 1 minute serving). A total of 105 minutes is allotted to each time slot.</li>
+                    <li>Time Out: 1 per set to a maximum of 30 seconds.</li>
+                    <li>If a team cannot field more than 5 players at the beginning of the start time, the first set is automatically defaulted. Each subsequent set is required to be defaulted every 10 minutes the defaulted team cannot field a team with 5 or more players.</li>
+                    <li>If the team only has 5 players and is choosing to begin the match with only 5, they must identify the starting position of the players, including a ghost player position for the vacant 6th spot. When the ghost player is up to serve, it will be a loss of point as no player is physically present.</li>
+                    <li>A libero cannot be used if you are playing with a ghost player (i.e. you cannot have 4 players + 1 libero + 2 ghost players to total 5 players).</li>
+                    <li>The preferred game ball is the Mikasa yellow and blue ball. Balls should be provided by the team players.</li>
+                    <li>Officials will be provided for each match.</li>
+                    <li>Set up and take down will be the responsibility of the league supervisors assigned and players where applicable. The referees are responsible for ensuring the correct set up and height.</li>
+                    <li>Playoffs will be held at the end of the season. Seeding of teams will be determined by overall season results in standings, using the average of the last 18 weeks of regular season play.</li>
+                    <li>Players from other teams can sub for another team during the regular season however players from other teams are not allowed to sub for another team during the playoffs.</li>
+                    <li>Substitute players will be allowed to play in playoffs only after playing a minimum of 5 matches during the regular season, as long as they are not a part of another teams roster.</li>
+                    <li>All players listed on the roster must play a minimum of 5 games to be able to play in the playoffs.</li>
+                    <li>Substitute players will be tracked via scoresheet to ensure minimum requirement is met in need of a spare during playoffs.</li>
+                    <li>Teams can have multiple subs play in playoff games only if they have met the minimum 5 game requirement throughout the season.</li>
+                    <li>Teams are allowed to include a sub as their 7th player in playoffs ONLY IF the team is playing with a libero for the entire duration of the match (i.e. you cannot call a 7th and only have a lib play in 1 set).</li>
+                    <li>If an injury occurs and the team does not have additional substitutes on the bench, the libero can substitute for the injured player for the remainder of the set however they must take over the position of the injured player.</li>
+                    <li>All teams will be required to have numbered jerseys, including a different colored jersey for the libero. If subs are required, please do your best to have them wear a similar color to the team.</li>
+                    <li>OFSL will provide team jerseys for the inaugural season. OFSL cannot guarantee team jerseys will be supplied by the league for future seasons.</li>
+                  </ul>
+                </div>
+              </div>
             </section>
 
             <p className="text-lg text-[#6F6F6F] mt-8">
