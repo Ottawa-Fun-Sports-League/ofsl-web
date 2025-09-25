@@ -58,15 +58,17 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, l
   // Load current week tier structures and existing results for rank context
   // Ranking context removed
 
-  const clampScore = (value: string): string => {
+  const clampScore = (value: string, rowIndex?: number): string => {
     if (value === '') return '';
     const n = Math.floor(Number(value));
     if (Number.isNaN(n)) return '';
-    return String(Math.max(0, Math.min(40, n)));
+    // Elite: cap sets 1-4 at 25, set 5 at 15
+    const max = rowIndex === 4 ? 15 : 25;
+    return String(Math.max(0, Math.min(max, n)));
   };
 
   const handleScoreChange = (rowIndex: number, team: TeamKey, value: string) => {
-    const clamped = clampScore(value);
+    const clamped = clampScore(value, rowIndex);
     setScores(prev => ({ ...prev, [rowIndex]: { ...prev[rowIndex], [team]: clamped } }));
   };
 
@@ -78,11 +80,15 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, l
     if (!a || !b) return { decided: false } as const;
     const n1 = Number(a), n2 = Number(b);
     if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) return { decided: false } as const;
-    const hi = Math.max(n1, n2), lo = Math.min(n1, n2);
-    const target = isDecider ? 15 : 25;
-    if (hi < target) return { decided: false } as const;
-    if ((hi - lo) < 2) return { decided: false } as const;
-    return { decided: true, winner: n1 > n2 ? 'A' : 'B', diff: Math.abs(n1 - n2) } as const;
+    const winner = n1 > n2 ? 'A' : 'B';
+    const winningScore = Math.max(n1, n2);
+    // Elite rule: sets 1-4 valid when winner is exactly 21 or 25; set 5 valid when winner is exactly 15
+    if (isDecider) {
+      if (winningScore !== 15) return { decided: false } as const;
+    } else {
+      if (winningScore !== 21 && winningScore !== 25) return { decided: false } as const;
+    }
+    return { decided: true, winner, diff: Math.abs(n1 - n2) } as const;
   };
 
   const decidedPathWins = () => {
@@ -140,29 +146,22 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, l
               const nB = sB === '' ? null : Number(sB);
               const both = nA !== null && !Number.isNaN(nA) && nB !== null && !Number.isNaN(nB);
               const isTie = both && nA! === nB!;
-              // Display W/L tags only when valid under win-by-2 rule near set end
-              // Sets 1-4: target 25, win by 2 after 23; Set 5: target 15, win by 2 after 13
+              // Show W/L only when the set is decided under elite rules (winner score 21 or 25, no ties)
               let displayWinner: TeamKey | undefined = undefined;
               if (both && !isTie) {
-                const maxScore = Math.max(nA as number, nB as number);
-                const diff = Math.abs((nA as number) - (nB as number));
-                const threshold = idx === 4 ? 13 : 23;
-                const isPreThreshold = maxScore <= threshold;
-                const meetsDeuce = diff >= 2;
-                if (isPreThreshold || meetsDeuce) {
-                  displayWinner = ((nA as number) > (nB as number)) ? 'A' : 'B';
-                }
+                const res = setOutcome(sA, sB, idx === 4);
+                if (res.decided) displayWinner = (res as any).winner as TeamKey;
               }
               return (
                 <div key={`set-${idx}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
-                  <div className="text-[13px] text-[#4B5563] font-medium">{entry.setLabel}{idx === 4 ? ' (to 15)' : ''}</div>
+                  <div className="text-[13px] text-[#4B5563] font-medium">{entry.setLabel}</div>
                   <div className="flex items-center gap-1">
                     <label className="text-[11px] text-gray-600 w-8 text-right">A</label>
                     <input
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={40}
+                      max={idx === 4 ? 15 : 25}
                       step={1}
                       value={row.A ?? ''}
                       onChange={(e) => handleScoreChange(idx, 'A', e.target.value)}
@@ -185,7 +184,7 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, l
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={40}
+                      max={idx === 4 ? 15 : 25}
                       step={1}
                       value={row.B ?? ''}
                       onChange={(e) => handleScoreChange(idx, 'B', e.target.value)}
@@ -267,20 +266,22 @@ export function Scorecard2TeamsEliteBestOf5({ teamNames, onSubmit, tierNumber, l
         </div>
 
         <div className="flex items-center justify-between pt-0.5">
-          {(() => {
-            const { aWins, bWins } = decidedPathWins();
-            return (
-              <span className="text-[11px]">
-                {(aWins < 3 && bWins < 3) && (
-                  <span className="text-gray-600">Enter valid set scores until a team reaches 3 wins (Sets 1–4 to 25; Set 5 to 15; all win by 2).</span>
-                )}
-              </span>
-            );
-          })()}
+          <span className="text-[11px] text-gray-600">First to 3 sets wins.</span>
           <Button
             type="submit"
             size="sm"
-            disabled={submitting || (() => { const { aWins, bWins } = decidedPathWins(); return (aWins < 3 && bWins < 3); })()}
+            disabled={submitting || (() => {
+              const { aWins, bWins } = decidedPathWins();
+              const anyTie = SETS.some((_, i) => {
+                const row = (scores[i] || {}) as Record<TeamKey, string>;
+                const a = row.A ?? '';
+                const b = row.B ?? '';
+                if (a === '' || b === '') return false;
+                const n1 = Number(a), n2 = Number(b);
+                return !Number.isNaN(n1) && !Number.isNaN(n2) && n1 === n2;
+              });
+              return anyTie || (aWins < 3 && bWins < 3);
+            })()}
             className="rounded-[10px] px-4 py-2 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
           >
             {submitting ? 'Saving…' : 'Submit'}
