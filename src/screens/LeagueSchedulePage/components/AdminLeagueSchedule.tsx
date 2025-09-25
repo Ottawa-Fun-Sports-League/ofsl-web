@@ -264,14 +264,68 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           schedule_visible: data.schedule_visible ?? true
         });
 
-        // Calculate and set the current week based on actual date
+        // Calculate base week from dates (day-of-week + 11pm rule)
         const calculatedWeek = calculateCurrentWeekToDisplay(
           data.start_date,
           data.end_date,
           data.day_of_week,
         );
-        setCurrentWeek(calculatedWeek);
-        setTodayWeekNumber(calculatedWeek);
+        setTodayWeekNumber(calculatedWeek); // keep an un-gated reference to "today's" week
+
+        // Determine if date logic already advanced beyond the simple week bucket
+        let baseNoAdvance = 1;
+        if (data.start_date) {
+          const start = new Date(data.start_date + 'T00:00:00');
+          const today = new Date();
+          const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          baseNoAdvance = Math.max(1, Math.floor(diffDays / 7) + 1);
+        }
+        const dateAdvanced = calculatedWeek > baseNoAdvance;
+
+        // Figure out which week to check for completeness and where to land if complete
+        const weekToCheck = dateAdvanced ? Math.max(1, calculatedWeek - 1) : calculatedWeek;
+        let targetWeek = dateAdvanced ? calculatedWeek : calculatedWeek + 1;
+
+        // Cap target by total weeks if end_date exists
+        if (data.end_date && data.start_date) {
+          const start = new Date(data.start_date + 'T00:00:00');
+          const end = new Date(data.end_date + 'T00:00:00');
+          const totalWeeks = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 7)));
+          if (targetWeek > totalWeeks) targetWeek = totalWeeks;
+        }
+
+        // Load prior week completeness and choose week accordingly
+        const leagueIdNum = parseInt(leagueId);
+        let weekToShow = weekToCheck;
+        try {
+          const { data: tiers } = await supabase
+            .from('weekly_schedules')
+            .select('tier_number, no_games')
+            .eq('league_id', leagueIdNum)
+            .eq('week_number', weekToCheck)
+            .limit(1000);
+          const playableTiers = (tiers || []).filter((t: any) => !t.no_games);
+
+          if (playableTiers.length > 0) {
+            const { data: submitted } = await supabase
+              .from('game_results')
+              .select('tier_number')
+              .eq('league_id', leagueIdNum)
+              .eq('week_number', weekToCheck)
+              .limit(1000);
+            const submittedSet = new Set<number>((submitted || []).map((r: any) => Number(r.tier_number)));
+            const allTiersHaveScores = playableTiers.every((t: any) => submittedSet.has(Number(t.tier_number)));
+            weekToShow = allTiersHaveScores ? targetWeek : weekToCheck;
+          } else {
+            // No playable tiers (all no-games) — consider complete
+            weekToShow = targetWeek;
+          }
+        } catch {
+          // On error, fall back to showing the week without advancing
+          weekToShow = weekToCheck;
+        }
+
+        setCurrentWeek(weekToShow);
       }
     } catch (error) {
       console.error("Error loading league info:", error);
