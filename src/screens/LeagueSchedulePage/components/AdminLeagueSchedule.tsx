@@ -1933,6 +1933,12 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           } catch (err) {
             console.warn('Failed to refresh weekly schedule after submitting scores', err);
           }
+          // Also refresh next week so tier movement is visible immediately
+          try {
+            await loadWeeklySchedule(currentWeek + 1);
+          } catch (err) {
+            // Ignore if next week does not exist yet
+          }
         }}
       />
 

@@ -468,6 +468,13 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   }
 
                   showToast('Scores submitted; standings and next week updated.', 'success');
+                  // Broadcast standings update so other views (e.g., Standings tab) can refresh immediately
+                  try {
+                    const leagueId = (weeklyTier as any).league_id as number | undefined;
+                    if (leagueId) {
+                      window.dispatchEvent(new CustomEvent('ofsl:standings-updated', { detail: { leagueId } }));
+                    }
+                  } catch {}
                   // Notify parent to refresh tier list / badges / actions
                   try { onSuccess && (await onSuccess()); } catch {}
                   onClose();

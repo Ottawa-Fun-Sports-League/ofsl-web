@@ -876,6 +876,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
           weeklyTier={selectedTierForScores}
           onSuccess={async () => {
             try { await loadWeeklySchedule(currentWeek); } catch {}
+            // Also refresh next week to surface tier movement immediately
+            try { await loadWeeklySchedule(currentWeek + 1); } catch {}
           }}
         />
       )}
