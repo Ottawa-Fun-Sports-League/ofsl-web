@@ -62,13 +62,67 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
           });
           setIsScheduleVisible(((leagueData as any).schedule_visible ?? true) as boolean);
           
-          // Calculate and set the current week based on actual date
+          // Calculate base week from dates (day-of-week + 11pm rule)
           const calculatedWeek = calculateCurrentWeekToDisplay(
             leagueData.start_date,
             leagueData.end_date,
             leagueData.day_of_week,
           );
-          setCurrentWeek(calculatedWeek);
+
+          // Determine if date logic already advanced beyond the simple week bucket
+          let baseNoAdvance = 1;
+          if (leagueData.start_date) {
+            const start = new Date(leagueData.start_date + 'T00:00:00');
+            const today = new Date();
+            const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            baseNoAdvance = Math.max(1, Math.floor(diffDays / 7) + 1);
+          }
+          const dateAdvanced = calculatedWeek > baseNoAdvance;
+
+          // Figure out which week to check for completeness and where to land if complete
+          const weekToCheck = dateAdvanced ? Math.max(1, calculatedWeek - 1) : calculatedWeek;
+          let targetWeek = dateAdvanced ? calculatedWeek : calculatedWeek + 1;
+
+          // Cap target by total weeks if end_date exists
+          if (leagueData.end_date && leagueData.start_date) {
+            const start = new Date(leagueData.start_date + 'T00:00:00');
+            const end = new Date(leagueData.end_date + 'T00:00:00');
+            const totalWeeks = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 7)));
+            if (targetWeek > totalWeeks) targetWeek = totalWeeks;
+          }
+
+          // Load prior week completeness and choose week accordingly
+          const leagueIdNum = parseInt(leagueId);
+          let weekToShow = weekToCheck;
+          try {
+            const { data: tiers } = await supabase
+              .from('weekly_schedules')
+              .select('tier_number, no_games')
+              .eq('league_id', leagueIdNum)
+              .eq('week_number', weekToCheck)
+              .limit(1000);
+            const playableTiers = (tiers || []).filter((t: any) => !t.no_games);
+
+            if (playableTiers.length > 0) {
+              const { data: submitted } = await supabase
+                .from('game_results')
+                .select('tier_number')
+                .eq('league_id', leagueIdNum)
+                .eq('week_number', weekToCheck)
+                .limit(1000);
+              const submittedSet = new Set<number>((submitted || []).map((r: any) => Number(r.tier_number)));
+              const allTiersHaveScores = playableTiers.every((t: any) => submittedSet.has(Number(t.tier_number)));
+              weekToShow = allTiersHaveScores ? targetWeek : weekToCheck;
+            } else {
+              // No playable tiers (all no-games) — consider complete
+              weekToShow = targetWeek;
+            }
+          } catch {
+            // On error, fall back to showing the week without advancing
+            weekToShow = weekToCheck;
+          }
+
+          setCurrentWeek(weekToShow);
         }
       } catch (error) {
         console.error("Error fetching league info:", error);
@@ -101,11 +155,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [leagueId, currentWeek]);
-  useEffect(() => {
-    if (startDate) {
-      setCurrentWeek(getCurrentWeek());
-    }
-  }, [startDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Remove fallback that overwrote the computed initial week; keep currentWeek as chosen above
 
   const loadWeekStartDate = async () => {
     try {
@@ -434,6 +484,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                       <div>
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
                           Tier {templateLabelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                          {tier.is_elite && (
+                            <span className="ml-2 inline-flex items-center align-middle px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                              Elite
+                            </span>
+                          )}
                         </h3>
                       </div>
 
@@ -494,6 +549,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                     <div className="flex items-center gap-3">
                       <h3 className={`flex items-center font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
                         Tier {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
+                        {tier.is_elite && (
+                          <span className="ml-2 inline-flex items-center align-middle px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                            Elite
+                          </span>
+                        )}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 inline-flex items-center align-middle px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                             Completed

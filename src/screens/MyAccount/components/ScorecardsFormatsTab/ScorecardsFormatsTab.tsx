@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GAME_FORMATS } from '../../../LeagueSchedulePage/utils/formatUtils';
 import { ScorecardsHeader } from './components/ScorecardsHeader';
 import { Scorecard3Teams6Sets } from './components/Scorecard3Teams6Sets';
+import { Scorecard3TeamsElite6Sets } from './components/Scorecard3TeamsElite6Sets';
 import { Scorecard2Teams4Sets } from './components/Scorecard2Teams4Sets';
 import { Scorecard2TeamsBestOf5 } from './components/Scorecard2TeamsBestOf5';
 import { Scorecard4TeamsHeadToHead } from './components/Scorecard4TeamsHeadToHead';
@@ -97,7 +98,7 @@ export function ScorecardsFormatsTab() {
                 </>
               ) : selected.value === '3-teams-elite-6-sets' ? (
                 <>
-                  <Scorecard3Teams6Sets teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }} resultsLabel="Weekly Summary" eliteSummary={true} />
+                  <Scorecard3TeamsElite6Sets teamNames={{ A: 'Setting Cobras', B: 'Hawk Serves', C: 'Prime Net' }} />
                 </>
               ) : selected.value === '3-teams-elite-9-sets' ? (
                 <>

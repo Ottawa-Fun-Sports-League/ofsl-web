@@ -264,14 +264,68 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           schedule_visible: data.schedule_visible ?? true
         });
 
-        // Calculate and set the current week based on actual date
+        // Calculate base week from dates (day-of-week + 11pm rule)
         const calculatedWeek = calculateCurrentWeekToDisplay(
           data.start_date,
           data.end_date,
           data.day_of_week,
         );
-        setCurrentWeek(calculatedWeek);
-        setTodayWeekNumber(calculatedWeek);
+        setTodayWeekNumber(calculatedWeek); // keep an un-gated reference to "today's" week
+
+        // Determine if date logic already advanced beyond the simple week bucket
+        let baseNoAdvance = 1;
+        if (data.start_date) {
+          const start = new Date(data.start_date + 'T00:00:00');
+          const today = new Date();
+          const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          baseNoAdvance = Math.max(1, Math.floor(diffDays / 7) + 1);
+        }
+        const dateAdvanced = calculatedWeek > baseNoAdvance;
+
+        // Figure out which week to check for completeness and where to land if complete
+        const weekToCheck = dateAdvanced ? Math.max(1, calculatedWeek - 1) : calculatedWeek;
+        let targetWeek = dateAdvanced ? calculatedWeek : calculatedWeek + 1;
+
+        // Cap target by total weeks if end_date exists
+        if (data.end_date && data.start_date) {
+          const start = new Date(data.start_date + 'T00:00:00');
+          const end = new Date(data.end_date + 'T00:00:00');
+          const totalWeeks = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 7)));
+          if (targetWeek > totalWeeks) targetWeek = totalWeeks;
+        }
+
+        // Load prior week completeness and choose week accordingly
+        const leagueIdNum = parseInt(leagueId);
+        let weekToShow = weekToCheck;
+        try {
+          const { data: tiers } = await supabase
+            .from('weekly_schedules')
+            .select('tier_number, no_games')
+            .eq('league_id', leagueIdNum)
+            .eq('week_number', weekToCheck)
+            .limit(1000);
+          const playableTiers = (tiers || []).filter((t: any) => !t.no_games);
+
+          if (playableTiers.length > 0) {
+            const { data: submitted } = await supabase
+              .from('game_results')
+              .select('tier_number')
+              .eq('league_id', leagueIdNum)
+              .eq('week_number', weekToCheck)
+              .limit(1000);
+            const submittedSet = new Set<number>((submitted || []).map((r: any) => Number(r.tier_number)));
+            const allTiersHaveScores = playableTiers.every((t: any) => submittedSet.has(Number(t.tier_number)));
+            weekToShow = allTiersHaveScores ? targetWeek : weekToCheck;
+          } else {
+            // No playable tiers (all no-games) — consider complete
+            weekToShow = targetWeek;
+          }
+        } catch {
+          // On error, fall back to showing the week without advancing
+          weekToShow = weekToCheck;
+        }
+
+        setCurrentWeek(weekToShow);
       }
     } catch (error) {
       console.error("Error loading league info:", error);
@@ -1487,6 +1541,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       <div>
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
                           Tier {getLabel(tier)}
+                          {tier.is_elite && (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                              Elite
+                            </span>
+                          )}
                         </h3>
                       </div>
 
@@ -1554,6 +1613,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                         <div className="flex items-center gap-3">
                       <h3 className={`font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
                         Tier {getLabel(tier)}
+                        {tier.is_elite && (
+                          <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                            Elite
+                          </span>
+                        )}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                             Completed
@@ -1638,6 +1702,41 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                                 className="rounded"
                               />
                               No games
+                            </label>
+                          )}
+
+                          {isEditScheduleMode && (
+                            <label className="ml-3 flex items-center gap-2 text-sm text-gray-700" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={!!tier.is_elite}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={async (e) => {
+                                  const nextValue = e.target.checked;
+                                  const previousValue = Boolean(tier.is_elite);
+
+                                  // Optimistic UI update
+                                  setWeeklyTiers((prev) => prev.map((t) => t.id === tier.id ? { ...t, is_elite: nextValue } : t));
+
+                                  try {
+                                    const leagueIdNum = parseInt(leagueId);
+                                    const tierNumber = tier.tier_number;
+                                    const { error } = await supabase
+                                      .from('weekly_schedules')
+                                      .update({ is_elite: nextValue })
+                                      .eq('league_id', leagueIdNum)
+                                      .eq('tier_number', tierNumber);
+                                    if (error) throw error;
+                                  } catch (err) {
+                                    console.error('Failed to update tier is_elite', err);
+                                    alert('Failed to update Elite setting. Reverting.');
+                                    // Revert UI
+                                    setWeeklyTiers((prev) => prev.map((t) => t.id === tier.id ? { ...t, is_elite: previousValue } : t));
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              Elite
                             </label>
                           )}
                           
