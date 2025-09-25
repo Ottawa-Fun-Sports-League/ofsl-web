@@ -206,9 +206,14 @@ export function useTeamsData(userId?: string) {
               const rawRanking = (tier as any)[rankingKey] as number | null;
               if (typeof rawRanking === 'number' && Number.isFinite(rawRanking) && teamIdByRanking.has(rawRanking)) {
                 const matchedTeamId = teamIdByRanking.get(rawRanking)!;
-                const existing = teamMatchups.get(matchedTeamId);
-                if (!existing || existing.weekNumber !== matchup.weekNumber) {
-                  teamMatchups.set(matchedTeamId, matchup);
+                const expectedTeam = leagueTeams.find((team) => team.id === matchedTeamId);
+                const expectedName = expectedTeam ? normalizeTeamName(expectedTeam.name) : null;
+
+                if (expectedName && expectedName === normalized) {
+                  const existing = teamMatchups.get(matchedTeamId);
+                  if (!existing || existing.weekNumber !== matchup.weekNumber) {
+                    teamMatchups.set(matchedTeamId, matchup);
+                  }
                 }
               }
             });
