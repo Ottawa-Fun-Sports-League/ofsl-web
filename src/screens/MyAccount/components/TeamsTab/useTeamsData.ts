@@ -10,6 +10,8 @@ import { calculateCurrentWeekToDisplay } from '../../../LeagueSchedulePage/utils
 import type { WeeklyScheduleTier } from '../../../LeagueSchedulePage/types';
 import { getTeamForPosition } from '../../../LeagueSchedulePage/utils/scheduleLogic';
 
+type TeamMatchupWithMeta = TeamMatchup & { __updatedAt: number };
+
 interface IndividualLeague {
   id: number;
   name: string;
@@ -59,7 +61,7 @@ export function useTeamsData(userId?: string) {
       leagueGroups.get(leagueId)!.push(team);
     });
 
-    const teamMatchups = new Map<number, TeamMatchup>();
+    const teamMatchups = new Map<number, TeamMatchupWithMeta>();
 
     await Promise.all(
       Array.from(leagueGroups.entries()).map(async ([leagueId, leagueTeams]) => {
@@ -100,7 +102,7 @@ export function useTeamsData(userId?: string) {
             .from('weekly_schedules')
             .select('*')
             .eq('league_id', leagueId)
-            .eq('week_number', currentWeek)
+            .order('week_number', { ascending: true })
             .order('tier_number', { ascending: true });
 
           if (error) {
@@ -110,13 +112,14 @@ export function useTeamsData(userId?: string) {
                 status: 'no_schedule',
                 weekNumber: currentWeek,
                 opponents: [],
+                __updatedAt: 0,
               });
             });
             return;
           }
 
           const tiers: WeeklyScheduleTier[] = data || [];
-          const entriesByName = new Map<string, TeamMatchup[]>();
+          const entriesByName = new Map<string, TeamMatchupWithMeta[]>();
           const labelMap = buildWeekTierLabels(tiers);
 
           tiers.forEach((tier) => {
@@ -124,6 +127,7 @@ export function useTeamsData(userId?: string) {
             const tierLabel = labelMap.get((tier.id ?? tier.tier_number) as number) ||
               getTierDisplayLabel(tier.format, tier.tier_number) ||
               (typeof tier.tier_number === 'number' ? `Tier ${tier.tier_number}` : null);
+            const updatedAt = tier.updated_at ? new Date(tier.updated_at).getTime() : 0;
 
             positions.forEach((position) => {
               const teamForPosition = getTeamForPosition(tier, position as any);
@@ -134,7 +138,7 @@ export function useTeamsData(userId?: string) {
                 .map((other) => getTeamForPosition(tier, other as any)?.name || null)
                 .filter((name) => !!name && normalizeTeamName(name) !== normalized) as string[];
 
-              const matchup: TeamMatchup = {
+              const matchup: TeamMatchupWithMeta = {
                 status: tier.no_games || opponents.length === 0 ? 'bye' : 'scheduled',
                 weekNumber: tier.week_number ?? currentWeek,
                 tierNumber: tier.tier_number,
@@ -146,6 +150,7 @@ export function useTeamsData(userId?: string) {
                 court: tier.court,
                 isPlayoff: tier.is_playoff,
                 format: tier.format,
+                __updatedAt: updatedAt,
               };
 
               if (!entriesByName.has(normalized)) {
@@ -157,17 +162,31 @@ export function useTeamsData(userId?: string) {
               const rawRanking = (tier as any)[rankingKey] as number | null;
               if (typeof rawRanking === 'number' && Number.isFinite(rawRanking) && teamIdByRanking.has(rawRanking)) {
                 const matchedTeamId = teamIdByRanking.get(rawRanking)!;
-                if (!teamMatchups.has(matchedTeamId)) {
+                const existing = teamMatchups.get(matchedTeamId);
+                if (!existing || existing.__updatedAt < matchup.__updatedAt) {
                   teamMatchups.set(matchedTeamId, matchup);
                 }
               }
             });
           });
 
+          entriesByName.forEach((list, key) => {
+            const sorted = [...list].sort((a, b) => {
+              if (a.__updatedAt !== b.__updatedAt) {
+                return b.__updatedAt - a.__updatedAt;
+              }
+              if ((a.weekNumber ?? 0) !== (b.weekNumber ?? 0)) {
+                return (a.weekNumber ?? 0) - (b.weekNumber ?? 0);
+              }
+              return (a.tierNumber ?? 0) - (b.tierNumber ?? 0);
+            });
+            entriesByName.set(key, sorted);
+          });
+
           leagueTeams.forEach((team) => {
             const normalized = normalizeTeamName(team.name);
             const preMatched = teamMatchups.get(team.id);
-            let matchup: TeamMatchup | undefined = preMatched;
+            let matchup: TeamMatchupWithMeta | undefined = preMatched;
 
             if (!matchup) {
               const entries = entriesByName.get(normalized) || [];
@@ -183,6 +202,7 @@ export function useTeamsData(userId?: string) {
                 opponents: [],
                 tierLabel: null,
                 tierPosition: null,
+                __updatedAt: 0,
               });
             }
           });
@@ -195,6 +215,7 @@ export function useTeamsData(userId?: string) {
               opponents: [],
               tierLabel: null,
               tierPosition: null,
+              __updatedAt: 0,
             });
           });
         }
@@ -205,8 +226,9 @@ export function useTeamsData(userId?: string) {
       if (!team.league?.id) {
         return { ...team };
       }
-      const matchup = teamMatchups.get(team.id);
-      if (matchup) {
+      const matchupWithMeta = teamMatchups.get(team.id);
+      if (matchupWithMeta) {
+        const { __updatedAt: _ignored, ...matchup } = matchupWithMeta;
         return { ...team, currentMatchup: matchup };
       }
       const fallbackWeek = calculateCurrentWeekToDisplay(
