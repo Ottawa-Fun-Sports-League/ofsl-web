@@ -1541,6 +1541,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                       <div>
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
                           Tier {getLabel(tier)}
+                          {tier.is_elite && (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                              Elite
+                            </span>
+                          )}
                         </h3>
                       </div>
 
@@ -1608,6 +1613,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                         <div className="flex items-center gap-3">
                       <h3 className={`font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
                         Tier {getLabel(tier)}
+                        {tier.is_elite && (
+                          <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
+                            Elite
+                          </span>
+                        )}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
                             Completed
@@ -1692,6 +1702,41 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                                 className="rounded"
                               />
                               No games
+                            </label>
+                          )}
+
+                          {isEditScheduleMode && (
+                            <label className="ml-3 flex items-center gap-2 text-sm text-gray-700" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={!!tier.is_elite}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={async (e) => {
+                                  const nextValue = e.target.checked;
+                                  const previousValue = Boolean(tier.is_elite);
+
+                                  // Optimistic UI update
+                                  setWeeklyTiers((prev) => prev.map((t) => t.id === tier.id ? { ...t, is_elite: nextValue } : t));
+
+                                  try {
+                                    const leagueIdNum = parseInt(leagueId);
+                                    const tierNumber = tier.tier_number;
+                                    const { error } = await supabase
+                                      .from('weekly_schedules')
+                                      .update({ is_elite: nextValue })
+                                      .eq('league_id', leagueIdNum)
+                                      .eq('tier_number', tierNumber);
+                                    if (error) throw error;
+                                  } catch (err) {
+                                    console.error('Failed to update tier is_elite', err);
+                                    alert('Failed to update Elite setting. Reverting.');
+                                    // Revert UI
+                                    setWeeklyTiers((prev) => prev.map((t) => t.id === tier.id ? { ...t, is_elite: previousValue } : t));
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              Elite
                             </label>
                           )}
                           
