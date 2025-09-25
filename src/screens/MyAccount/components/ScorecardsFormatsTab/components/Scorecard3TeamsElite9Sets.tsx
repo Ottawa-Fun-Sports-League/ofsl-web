@@ -55,15 +55,17 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
     }
   }, [initialSets, initialSpares]);
 
-  const clampScore = (value: string): string => {
+  const clampScore = (value: string, rowIndex?: number): string => {
     if (value === '') return '';
     const n = Math.floor(Number(value));
     if (Number.isNaN(n)) return '';
-    return String(Math.max(0, Math.min(40, n)));
+    const isDecider = typeof rowIndex === 'number' ? Boolean(SETS[rowIndex]?.decider) : false;
+    const max = isDecider ? 15 : 25;
+    return String(Math.max(0, Math.min(max, n)));
   };
 
   const handleScoreChange = (rowIndex: number, team: TeamKey, value: string) => {
-    const clamped = clampScore(value);
+    const clamped = clampScore(value, rowIndex);
     setScores(prev => ({ ...prev, [rowIndex]: { ...prev[rowIndex], [team]: clamped } }));
   };
 
@@ -72,11 +74,16 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
   };
 
   const setOutcome = (left: number, right: number, decider: boolean) => {
-    if (left === right) return { decided: false } as const;
-    const hi = Math.max(left, right), lo = Math.min(left, right);
-    const target = decider ? 15 : 25;
-    if (hi < target) return { decided: false } as const;
-    if ((hi - lo) < 2) return { decided: false } as const;
+    if (left === right) return { decided: false } as const; // no ties
+    const winning = Math.max(left, right);
+    // Elite 9-sets rules:
+    // - Sets 1 & 2 (non-decider): valid only if winning score is exactly 21 or 25
+    // - Set 3 (decider): valid only if winning score is exactly 15
+    if (decider) {
+      if (winning !== 15) return { decided: false } as const;
+    } else {
+      if (winning !== 21 && winning !== 25) return { decided: false } as const;
+    }
     return { decided: true, winnerLeft: left > right } as const;
   };
 
@@ -105,7 +112,8 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
         if (oc.winnerLeft) lWins++; else rWins++;
       }
       pairDiff.set(pairKey(L,R), diffLR);
-      if (lWins !== rWins) {
+      // Award the match only when a side reaches 2 wins (best of 3)
+      if (lWins === 2 || rWins === 2) {
         if (lWins > rWins) { matchWins[L]++; matchLosses[R]++; }
         else { matchWins[R]++; matchLosses[L]++; }
       }
@@ -168,19 +176,35 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
               const nR = sR === '' ? null : Number(sR);
               const both = nL !== null && !Number.isNaN(nL) && nR !== null && !Number.isNaN(nR);
               const isTie = both && nL! === nR!;
+              const oc = (both && !isTie) ? setOutcome(nL as number, nR as number, Boolean(entry.decider)) : ({ decided: false } as const);
+              const leftWon = Boolean((oc as any).decided && (oc as any).winnerLeft);
+              const rightWon = Boolean((oc as any).decided && !(oc as any).winnerLeft);
+              const diffAbs = (oc as any).decided ? Math.abs((nL as number) - (nR as number)) : 0;
               return (
                 <>
                   <div key={`set-${idx}`} className="grid grid-cols-1 md:grid-cols-3 items-center gap-1 py-0.5">
-                    <div className="text-[13px] text-[#4B5563] font-medium">{entry.setLabel}{entry.decider && ' (to 15)'}</div>
-                    <div className="flex items-center gap-1">
-                      <label className="text-[11px] text-gray-600 w-8 text-right">{L}</label>
-                      <input type="number" inputMode="numeric" min={0} max={40} step={1} value={row[L] ?? ''} onChange={(e) => handleScoreChange(idx, L, e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${ isTie ? 'border-red-400' : (nL !== null ? 'border-green-400' : 'border-yellow-300') }`} placeholder="0" />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <label className="text-[11px] text-gray-600 w-8 text-right">{R}</label>
-                      <input type="number" inputMode="numeric" min={0} max={40} step={1} value={row[R] ?? ''} onChange={(e) => handleScoreChange(idx, R, e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${ isTie ? 'border-red-400' : (nR !== null ? 'border-green-400' : 'border-yellow-300') }`} placeholder="0" />
-                    </div>
+                  <div className="text-[13px] text-[#4B5563] font-medium">{entry.setLabel}{entry.decider && ' (to 15)'}</div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-8 text-right">{L}</label>
+                    <input type="number" inputMode="numeric" min={0} max={entry.decider ? 15 : 25} step={1} value={row[L] ?? ''} onChange={(e) => handleScoreChange(idx, L, e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${ isTie ? 'border-red-400' : (nL !== null ? 'border-green-400' : 'border-yellow-300') }`} placeholder="0" />
+                    {leftWon && diffAbs > 0 && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diffAbs}</span>
+                    )}
+                    {rightWon && diffAbs > 0 && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diffAbs}</span>
+                    )}
                   </div>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] text-gray-600 w-8 text-right">{R}</label>
+                    <input type="number" inputMode="numeric" min={0} max={entry.decider ? 15 : 25} step={1} value={row[R] ?? ''} onChange={(e) => handleScoreChange(idx, R, e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${ isTie ? 'border-red-400' : (nR !== null ? 'border-green-400' : 'border-yellow-300') }`} placeholder="0" />
+                    {rightWon && diffAbs > 0 && (
+                      <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diffAbs}</span>
+                    )}
+                    {leftWon && diffAbs > 0 && (
+                      <span className="ml-2 text-[10px] font-semibold text-red-600">L -{diffAbs}</span>
+                    )}
+                  </div>
+                </div>
                   {(idx === 2 || idx === 5) && (<div className="h-px bg-gray-200 my-1" />)}
                 </>
               );
@@ -240,7 +264,7 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
         </div>
 
         <div className="flex items-center justify-between pt-0.5">
-          <span className="text-[11px]">First two sets to 25 (win by 2); third set to 15 (win by 2). Submit once all three pairings are decided.</span>
+          <span className="text-[11px]" />
           <Button type="submit" size="sm" disabled={submitting || !canSubmit()} className="rounded-[10px] px-4 py-2 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed">{submitting ? 'Saving…' : 'Submit'}</Button>
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
 import { getTierDisplayLabel, buildWeekTierLabels } from '../utils/formatUtils';
 import type { WeeklyScheduleTier } from '../types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
+import { Scorecard3TeamsElite6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3TeamsElite6Sets';
 import { Scorecard2TeamsBestOf5 } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2TeamsBestOf5';
 import { Scorecard2Teams4Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard2Teams4Sets';
 import { Scorecard4TeamsHeadToHead } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard4TeamsHeadToHead';
@@ -210,12 +211,11 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
             <div className="text-sm text-gray-700">
               Score submission for this format is not available yet. Please check back after the scorecard is built.
             </div>
-          ) : (isThreeTeam || isThreeTeamElite6) ? (
+          ) : (isThreeTeam) ? (
             <Scorecard3Teams6Sets
               teamNames={teamNames as any}
               isTopTier={isTopTier}
               pointsTierOffset={pointsOffset}
-              eliteSummary={isThreeTeamElite6}
               tierNumber={weeklyTier.tier_number}
               leagueId={(weeklyTier as any).league_id as number}
               weekNumber={(weeklyTier as any).week_number as number}
@@ -473,6 +473,55 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                   onClose();
                 } catch (err: any) {
                   console.error('Failed to submit scores', err);
+                  showToast('Failed to submit scores. Please try again.', 'error');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+          ) : (isThreeTeamElite6) ? (
+            <Scorecard3TeamsElite6Sets
+              teamNames={teamNames as any}
+              isTopTier={isTopTier}
+              pointsTierOffset={pointsOffset}
+              tierNumber={weeklyTier.tier_number}
+              leagueId={(weeklyTier as any).league_id as number}
+              weekNumber={(weeklyTier as any).week_number as number}
+              initialSets={initialSets as any}
+              initialSpares={initialSpares as any}
+              submitting={saving}
+              onSubmit={async ({ teamNames: submittedNames, sets, spares }) => {
+                try {
+                  setSaving(true);
+                  // Only admins or facilitators can submit scores
+                  const canSubmit = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+                  if (!canSubmit) {
+                    showToast('You do not have permission to submit scores.', 'error');
+                    return;
+                  }
+                  const leagueId = (weeklyTier as any).league_id as number;
+                  const weekNumber = (weeklyTier as any).week_number as number;
+                  const tierNumber = (weeklyTier as any).tier_number as number;
+                  await submitThreeTeamEliteSixScoresAndMove({
+                    leagueId,
+                    weekNumber,
+                    tierNumber,
+                    tierId: (weeklyTier as any).id as number,
+                    teamNames: {
+                      A: (submittedNames as any).A || (teamNames as any).A || '',
+                      B: (submittedNames as any).B || (teamNames as any).B || '',
+                      C: (submittedNames as any).C || (teamNames as any).C || '',
+                    },
+                    sets: sets as any,
+                    spares: (spares ?? {}) as any,
+                    pointsTierOffset: pointsOffset,
+                    isTopTier,
+                  });
+                  showToast('Scores submitted; standings and next week updated.', 'success');
+                  try { onSuccess && (await onSuccess()); } catch {}
+                  onClose();
+                } catch (err) {
+                  console.error('Failed to submit scores (3-team elite 6 sets)', err);
                   showToast('Failed to submit scores. Please try again.', 'error');
                 } finally {
                   setSaving(false);

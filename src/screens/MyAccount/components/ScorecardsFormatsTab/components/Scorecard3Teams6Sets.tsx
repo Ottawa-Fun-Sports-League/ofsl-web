@@ -68,12 +68,12 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSets, initialSpares]);
 
-  // Clamp score inputs; in eliteSummary mode allow deuce beyond 21 (up to 40)
+  // Clamp score inputs; eliteSummary mode capped at 21 (no deuce)
   const clampScore = (value: string): string => {
     if (value === '') return '';
     const n = Math.floor(Number(value));
     if (Number.isNaN(n)) return '';
-    const max = eliteSummary ? 40 : 21;
+    const max = eliteSummary ? 21 : 21;
     return String(Math.max(0, Math.min(max, n)));
   };
 
@@ -146,13 +146,18 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             const isTie = bothEntered && n1 === n2;
             let winner: TeamKey | null = null;
             if (bothEntered && !isTie) {
-              const maxScore = Math.max(n1 as number, n2 as number);
-              const diff = Math.abs((n1 as number) - (n2 as number));
-              const threshold = 19; // 21-point sets: win-by-2 after 19
-              const isPreThreshold = maxScore <= threshold;
-              const meetsDeuce = diff >= 2;
-              if (isPreThreshold || meetsDeuce) {
+              if (eliteSummary) {
+                // Elite: no win-by-2; any non-equal scores determine winner
                 winner = (n1! > n2!) ? t1 : t2;
+              } else {
+                const maxScore = Math.max(n1 as number, n2 as number);
+                const diff = Math.abs((n1 as number) - (n2 as number));
+                const threshold = 19; // 21-point sets: win-by-2 after 19
+                const isPreThreshold = maxScore <= threshold;
+                const meetsDeuce = diff >= 2;
+                if (isPreThreshold || meetsDeuce) {
+                  winner = (n1! > n2!) ? t1 : t2;
+                }
               }
             }
             return (
@@ -165,7 +170,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={eliteSummary ? 40 : 21}
+                      max={21}
                       step={1}
                       value={row[t1] ?? ''}
                       onChange={(e) => handleScoreChange(idx, t1, e.target.value)}
@@ -188,7 +193,7 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={eliteSummary ? 40 : 21}
+                      max={21}
                       step={1}
                       value={row[t2] ?? ''}
                       onChange={(e) => handleScoreChange(idx, t2, e.target.value)}
@@ -271,12 +276,9 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               if (sLeft === '' || sRight === '') return false;
               const nLeft = Number(sLeft);
               const nRight = Number(sRight);
+              // Elite: no win-by-2; just require valid non-equal scores
               if (Number.isNaN(nLeft) || Number.isNaN(nRight) || nLeft === nRight) return false;
-              if (!eliteSummary) return true;
-              const maxScore = Math.max(nLeft, nRight);
-              const diff = Math.abs(nLeft - nRight);
-              const threshold = 19;
-              return (maxScore <= threshold) || (diff >= 2);
+              return true;
             });
             const sorted = [...order].sort((x, y) => {
               const a = stats[x];
@@ -382,11 +384,8 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               if (s1 === '' || s2 === '') return false;
               const n1 = Number(s1), n2 = Number(s2);
               if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) return false;
-              if (!eliteSummary) return true;
-              const maxScore = Math.max(n1, n2);
-              const diff = Math.abs(n1 - n2);
-              const threshold = 19;
-              return (maxScore <= threshold) || (diff >= 2);
+              // Elite: no win-by-2 requirement; just ensure non-tie numeric entries
+              return true;
             });
             return (
               <span className="text-[11px]">
@@ -414,11 +413,8 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                 if (s1 === '' || s2 === '') return false;
                 const n1 = Number(s1), n2 = Number(s2);
                 if (Number.isNaN(n1) || Number.isNaN(n2) || n1 === n2) return false;
-                if (!eliteSummary) return true;
-                const maxScore = Math.max(n1, n2);
-                const diff = Math.abs(n1 - n2);
-                const threshold = 19;
-                return (maxScore <= threshold) || (diff >= 2);
+                // Elite: no win-by-2 requirement; just ensure non-tie numeric entries
+                return true;
               });
               return anyTie || !allComplete;
             })()}
