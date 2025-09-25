@@ -123,6 +123,7 @@ export function useTeamsData(userId?: string) {
             const positions = getPositionsForFormat(tier.format || '');
             const namesByPosition: Record<string, string | null> = {};
             const rankingByPosition: Record<string, number | null> = {};
+            const updatedAtMs = tier.updated_at ? new Date(tier.updated_at).getTime() : 0;
 
             positions.forEach((position) => {
               namesByPosition[position] = (tier as any)[teamNameKey(position)] as string | null;
@@ -149,7 +150,7 @@ export function useTeamsData(userId?: string) {
               const status: TeamMatchup['status'] =
                 tier.no_games || opponents.length === 0 ? 'bye' : 'scheduled';
 
-              const matchup: TeamMatchup = {
+              const matchup = {
                 status,
                 weekNumber: tier.week_number ?? currentWeek,
                 tierNumber: tier.tier_number,
@@ -163,7 +164,8 @@ export function useTeamsData(userId?: string) {
                 court: tier.court,
                 isPlayoff: tier.is_playoff,
                 format: tier.format,
-              };
+                __updatedAt: updatedAtMs,
+              } as TeamMatchup & { __updatedAt: number };
 
               if (!entriesByName.has(normalized)) {
                 entriesByName.set(normalized, []);
@@ -175,7 +177,8 @@ export function useTeamsData(userId?: string) {
                 const matchedTeamId = teamIdByRanking.get(ranking)!;
                 const existing = teamMatchups.get(matchedTeamId);
                 if (!existing || (existing.weekNumber > matchup.weekNumber)) {
-                  teamMatchups.set(matchedTeamId, matchup);
+                  const { __updatedAt: _ignored, ...sanitized } = matchup;
+                  teamMatchups.set(matchedTeamId, sanitized);
                 }
               }
             });
@@ -183,15 +186,31 @@ export function useTeamsData(userId?: string) {
 
           // Ensure deterministic ordering when selecting matchups by team name
           entriesByName.forEach((list, key) => {
-            const sortedList = [...list].sort((a, b) => {
+            const dedupByWeek = new Map<number, TeamMatchup & { __updatedAt: number }>();
+
+            list.forEach((entry) => {
+              const existing = dedupByWeek.get(entry.weekNumber);
+              if (!existing || entry.__updatedAt > existing.__updatedAt) {
+                dedupByWeek.set(entry.weekNumber, entry);
+              }
+            });
+
+            const sortedList = Array.from(dedupByWeek.values()).sort((a, b) => {
               if (a.weekNumber !== b.weekNumber) {
                 return a.weekNumber - b.weekNumber;
+              }
+              if (a.__updatedAt !== b.__updatedAt) {
+                return b.__updatedAt - a.__updatedAt;
               }
               const aTier = a.tierNumber ?? 0;
               const bTier = b.tierNumber ?? 0;
               return aTier - bTier;
             });
-            entriesByName.set(key, sortedList);
+
+            entriesByName.set(
+              key,
+              sortedList.map(({ __updatedAt, ...rest }) => rest as TeamMatchup),
+            );
           });
 
           leagueTeams.forEach((team) => {
@@ -211,7 +230,8 @@ export function useTeamsData(userId?: string) {
             }
 
             if (matchup) {
-              teamMatchups.set(team.id, matchup);
+              const { __updatedAt: _ignored, ...sanitized } = matchup as TeamMatchup & { __updatedAt?: number };
+              teamMatchups.set(team.id, sanitized);
             } else {
               teamMatchups.set(team.id, {
                 status: 'no_schedule',
