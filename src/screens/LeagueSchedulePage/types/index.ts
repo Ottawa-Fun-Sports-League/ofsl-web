@@ -30,6 +30,7 @@ export interface WeeklyScheduleTier {
   time_slot: string;
   court: string;
   format: string;
+  is_elite?: boolean;
   team_a_name: string | null;
   team_a_ranking: number | null;
   team_b_name: string | null;
@@ -63,6 +64,7 @@ export interface NormalizedTier {
   time_slot: string;
   court: string;
   format: string;
+  is_elite?: boolean;
   teams: {
     A: TeamPosition | null;
     B: TeamPosition | null;
@@ -202,6 +204,7 @@ export interface TierUpdatePayload {
   time_slot?: string;
   court?: string;
   format?: GameFormatId;
+  is_elite?: boolean;
   team_a_name?: string | null;
   team_a_ranking?: number | null;
   team_b_name?: string | null;
