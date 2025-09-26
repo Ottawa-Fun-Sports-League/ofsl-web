@@ -18,6 +18,7 @@ import {
 import { formatLocalDate } from "../../../lib/dateUtils";
 import type { League } from "../../../lib/leagues";
 import { getEffectiveLeagueCost, isEarlyBirdActive } from "../../../lib/leagues";
+import { getLeagueUnitLabel } from "../../../components/leagues/LeagueCard";
 
 // Function to get spots badge color
 const getSpotsBadgeColor = (spots: number) => {
@@ -35,7 +36,6 @@ const getSpotsText = (spots: number) => {
 
 interface LeagueInfoProps {
   league: League;
-  sport: string;
   skillLevels?: string[];
   onSpotsUpdate?: (spots: number) => void;
   openWaitlistModal?: boolean;
@@ -43,7 +43,6 @@ interface LeagueInfoProps {
 
 export function LeagueInfo({
   league,
-  sport,
   skillLevels,
   onSpotsUpdate,
   openWaitlistModal = false,
@@ -293,13 +292,11 @@ export function LeagueInfo({
               <p className="font-medium text-[#6F6F6F]">League Fee</p>
               {stripeProduct ? (
                 <p className="text-sm text-[#6F6F6F]">
-                  {formatPrice(stripeProduct.price)} + HST{" "}
-                  {sport === "Volleyball" ? "per team" : "per player"}
+                  {formatPrice(stripeProduct.price)} + HST {getLeagueUnitLabel(league)}
                 </p>
               ) : getEffectiveLeagueCost(league) ? (
                 <p className="text-sm text-[#6F6F6F]">
-                  ${getEffectiveLeagueCost(league)!.toFixed(2)} + HST{" "}
-                  {sport === "Volleyball" ? "per team" : "per player"}
+                  ${getEffectiveLeagueCost(league)!.toFixed(2)} + HST {getLeagueUnitLabel(league)}
                 </p>
               ) : (
                 <p className="text-sm text-[#6F6F6F]">No fee required</p>

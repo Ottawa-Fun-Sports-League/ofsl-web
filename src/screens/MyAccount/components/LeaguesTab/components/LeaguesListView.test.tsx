@@ -63,6 +63,7 @@ const mockLeagues: LeagueWithTeamCount[] = [
     max_teams: 10,
     gym_ids: [1, 2],
     active: true,
+    team_registration: true,
     hide_day: false,
     payment_due_date: '2024-05-15',
     created_at: '2024-01-01T00:00:00Z',
@@ -95,6 +96,7 @@ const mockLeagues: LeagueWithTeamCount[] = [
     max_teams: 16,
     gym_ids: [],
     active: true,
+    team_registration: false,
     hide_day: false,
     payment_due_date: '2024-08-15',
     created_at: '2024-01-01T00:00:00Z',
@@ -164,6 +166,7 @@ describe('LeaguesListView', () => {
     expect(screen.getByText('Wednesday')).toBeInTheDocument();
     expect(screen.getByText('Full')).toBeInTheDocument();
     expect(screen.getByText('TBD')).toBeInTheDocument();
+    expect(screen.getByText('per player')).toBeInTheDocument();
   });
 
   it('shows correct sport icons', () => {

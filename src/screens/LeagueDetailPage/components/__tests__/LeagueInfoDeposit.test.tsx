@@ -89,7 +89,6 @@ describe('LeagueInfo Deposit Display', () => {
       <BrowserRouter>
         <LeagueInfo
           league={leagueWithDeposit}
-            sport="Volleyball"
             skillLevels={['Intermediate']}
           />
       </BrowserRouter>
@@ -107,7 +106,6 @@ describe('LeagueInfo Deposit Display', () => {
       <BrowserRouter>
         <LeagueInfo
           league={baseLeague}
-            sport="Volleyball"
             skillLevels={['Intermediate']}
           />
       </BrowserRouter>
@@ -129,7 +127,6 @@ describe('LeagueInfo Deposit Display', () => {
       <BrowserRouter>
         <LeagueInfo
           league={leagueWithOnlyAmount}
-            sport="Volleyball"
             skillLevels={['Intermediate']}
           />
       </BrowserRouter>
@@ -150,7 +147,6 @@ describe('LeagueInfo Deposit Display', () => {
       <BrowserRouter>
         <LeagueInfo
           league={leagueWithOnlyDate}
-            sport="Volleyball"
             skillLevels={['Intermediate']}
           />
       </BrowserRouter>
@@ -171,7 +167,6 @@ describe('LeagueInfo Deposit Display', () => {
       <BrowserRouter>
         <LeagueInfo
           league={leagueWithDeposit}
-            sport="Volleyball"
             skillLevels={['Intermediate']}
           />
       </BrowserRouter>
@@ -192,7 +187,6 @@ describe('LeagueInfo Deposit Display', () => {
       <BrowserRouter>
         <LeagueInfo
           league={leagueWithDeposit}
-            sport="Volleyball"
             skillLevels={['Intermediate']}
           />
       </BrowserRouter>

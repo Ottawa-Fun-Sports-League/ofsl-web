@@ -210,7 +210,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
                   })()} + HST
                 </div>
                 <div className="text-sm text-gray-500">
-                  {league.sport_name === "Volleyball" ? "per team" : "per player"}
+                  {league.team_registration === false ? "per player" : "per team"}
                 </div>
               </td>
               <td className="px-4 py-4 whitespace-nowrap">

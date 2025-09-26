@@ -86,7 +86,6 @@ describe('LeagueInfo', () => {
         <BrowserRouter>
           <LeagueInfo
             league={mockLeague}
-            sport="Volleyball"
             skillLevels={['Beginner', 'Intermediate']}
             {...props}
           />
