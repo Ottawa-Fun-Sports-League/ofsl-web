@@ -42,6 +42,9 @@ vi.mock('../../../../../contexts/AuthContext', () => ({
 describe('Payment Totals Calculation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.clear();
+    }
   });
 
   it('should calculate total_owed and total_paid for users', async () => {

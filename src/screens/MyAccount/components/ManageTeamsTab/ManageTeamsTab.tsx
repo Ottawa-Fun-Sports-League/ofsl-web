@@ -27,6 +27,28 @@ import { PaginationState } from "../UsersTab/types";
 import { TransferTeamModal } from "./TransferTeamModal";
 import { TransferIndividualModal } from "./TransferIndividualModal";
 
+const MANAGE_TEAMS_SEARCH_STORAGE_KEY = "manageTeamsTab:search";
+const MANAGE_TEAMS_VIEW_MODE_KEY = "manage_teams_view_mode";
+
+const safeRead = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch (error) {
+    console.warn(`Failed to read localStorage key "${key}"`, error);
+    return null;
+  }
+};
+
+const safeWrite = (key: string, value: string) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Failed to write localStorage key "${key}"`, error);
+  }
+};
+
 interface Team {
   id: number;
   name: string;
@@ -68,10 +90,10 @@ export function ManageTeamsTab() {
   const [filteredIndividuals, setFilteredIndividuals] = useState<IndividualRegistration[]>([]);
   const [paginatedIndividuals, setPaginatedIndividuals] = useState<IndividualRegistration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const initialSearchTerm = safeRead(MANAGE_TEAMS_SEARCH_STORAGE_KEY) ?? "";
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [viewMode, setViewMode] = useState<"card" | "table">(() => {
-    // Get saved preference from localStorage
-    const saved = localStorage.getItem("manage_teams_view_mode");
+    const saved = safeRead(MANAGE_TEAMS_VIEW_MODE_KEY);
     return (saved as "card" | "table") || "card";
   });
   const [activeTab, setActiveTab] = useState<"teams" | "individuals">("teams");
@@ -98,6 +120,10 @@ export function ManageTeamsTab() {
       fetchAllData();
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    safeWrite(MANAGE_TEAMS_SEARCH_STORAGE_KEY, searchTerm);
+  }, [searchTerm]);
 
   useEffect(() => {
     // Filter teams based on search term
@@ -467,7 +493,7 @@ export function ManageTeamsTab() {
             size="sm"
             onClick={() => {
               setViewMode("card");
-              localStorage.setItem("manage_teams_view_mode", "card");
+              safeWrite(MANAGE_TEAMS_VIEW_MODE_KEY, "card");
             }}
             className={viewMode === "card" ? "bg-[#B20000] hover:bg-[#8A0000]" : ""}
           >
@@ -479,7 +505,7 @@ export function ManageTeamsTab() {
             size="sm"
             onClick={() => {
               setViewMode("table");
-              localStorage.setItem("manage_teams_view_mode", "table");
+              safeWrite(MANAGE_TEAMS_VIEW_MODE_KEY, "table");
             }}
             className={viewMode === "table" ? "bg-[#B20000] hover:bg-[#8A0000]" : ""}
           >

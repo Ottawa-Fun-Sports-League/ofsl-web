@@ -62,6 +62,9 @@ describe('ManageTeamsTab Teams Pagination', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.clear();
+    }
     vi.mocked(useAuth).mockReturnValue({
       userProfile: mockUserProfile,
       loading: false

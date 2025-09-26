@@ -13,6 +13,27 @@ import { INITIAL_FILTERS, USER_SEARCH_DEBOUNCE_MS } from "./constants";
 // import { useSearchParams } from "react-router-dom"; // Temporarily disabled
 
 const DEFAULT_PAGE_SIZE = 50;
+const USERS_SEARCH_STORAGE_KEY = "usersTab:search";
+const USERS_FILTERS_STORAGE_KEY = "usersTab:filters";
+
+const readLocalStorage = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch (error) {
+    console.warn(`Failed to read localStorage key "${key}"`, error);
+    return null;
+  }
+};
+
+const writeLocalStorage = (key: string, value: string) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Failed to write localStorage key "${key}"`, error);
+  }
+};
 
 export function useUsersData() {
   const { userProfile } = useAuth();
@@ -21,12 +42,30 @@ export function useUsersData() {
 
   // Parse filters from URL on initial load (temporarily disabled - use defaults)
   const getInitialFilters = (): UserFilters => {
-    return { ...INITIAL_FILTERS };
+    const stored = readLocalStorage(USERS_FILTERS_STORAGE_KEY);
+    if (!stored) {
+      return { ...INITIAL_FILTERS };
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as Partial<UserFilters>;
+      return {
+        ...INITIAL_FILTERS,
+        ...parsed,
+        // Ensure array fields default correctly
+        sportsInLeague: Array.isArray(parsed?.sportsInLeague) ? parsed!.sportsInLeague : [],
+        sportsWithSkill: Array.isArray(parsed?.sportsWithSkill) ? parsed!.sportsWithSkill : [],
+      };
+    } catch (error) {
+      console.warn("Failed to parse stored user filters", error);
+      return { ...INITIAL_FILTERS };
+    }
   };
 
+  const initialSearchTerm = readLocalStorage(USERS_SEARCH_STORAGE_KEY) ?? "";
   const [users, setUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(initialSearchTerm);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<SortField>("date_created");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -46,6 +85,16 @@ export function useUsersData() {
     }, USER_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Persist search term
+  useEffect(() => {
+    writeLocalStorage(USERS_SEARCH_STORAGE_KEY, searchTerm);
+  }, [searchTerm]);
+
+  // Persist filters
+  useEffect(() => {
+    writeLocalStorage(USERS_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  }, [filters]);
 
   // Load users when dependencies change
   useEffect(() => {
@@ -233,7 +282,11 @@ export function useUsersData() {
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters(INITIAL_FILTERS);
+    setFilters({
+      ...INITIAL_FILTERS,
+      sportsInLeague: [],
+      sportsWithSkill: [],
+    });
     // Reset to first page when clearing filters
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   }, []);
