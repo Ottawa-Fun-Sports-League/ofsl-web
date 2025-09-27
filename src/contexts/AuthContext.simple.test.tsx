@@ -6,6 +6,8 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
+      refreshSession: vi.fn(),
+      getUser: vi.fn(),
       onAuthStateChange: vi.fn(),
       signInWithPassword: vi.fn(),
       signInWithOAuth: vi.fn(),
@@ -81,6 +83,16 @@ describe('AuthContext Basic Flow', () => {
       },
       writable: true,
     });
+
+    (mockSupabase.auth.refreshSession as Mock).mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+
+    (mockSupabase.auth.getUser as Mock).mockResolvedValue({
+      data: { user: null },
+      error: null,
+    });
   });
 
   it('should show loading initially', () => {
@@ -119,6 +131,7 @@ describe('AuthContext Basic Flow', () => {
       access_token: 'test-token',
       refresh_token: 'test-refresh-token',
       expires_in: 3600,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
       token_type: 'bearer',
     };
 

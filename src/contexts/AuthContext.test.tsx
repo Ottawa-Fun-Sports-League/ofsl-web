@@ -3,12 +3,15 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 import { UserProfile } from '../types/auth';
+import type { Session } from '@supabase/supabase-js';
 
 // Mock Supabase
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
+      refreshSession: vi.fn(),
+      getUser: vi.fn(),
       onAuthStateChange: vi.fn(() => ({
         data: {
           subscription: {
@@ -51,12 +54,32 @@ describe('AuthContext', () => {
       },
       writable: true,
     });
+
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+      writable: true,
+    });
     
     // Mock getSession to return null initially (no user logged in)
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: null },
       error: null,
     });
+
+    vi.mocked(supabase.auth.refreshSession).mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({
+      data: { user: null },
+      error: null,
+    } as Awaited<ReturnType<typeof supabase.auth.getUser>>);
   });
 
   describe('checkProfileCompletion', () => {
@@ -189,6 +212,78 @@ describe('AuthContext', () => {
           },
         },
       });
+    });
+  });
+
+  describe('validateSession', () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+
+    it('redirects to login when no active session is found', async () => {
+      const setItemSpy = vi.spyOn(window.localStorage, 'setItem');
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      window.location.hash = '#/my-account/teams';
+
+      vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
+        data: { session: null },
+        error: null,
+      });
+
+      let outcome: boolean | undefined;
+      await act(async () => {
+        outcome = await result.current.validateSession();
+      });
+
+      expect(outcome).toBe(false);
+      expect(window.location.hash).toBe('#/login');
+      expect(setItemSpy).toHaveBeenCalledWith('redirectAfterLogin', '/my-account/teams');
+    });
+
+    it('redirects to login when user lookup fails', async () => {
+      const futureExpiry = Math.floor(Date.now() / 1000) + 3600;
+      const mockSession = {
+        access_token: 'access',
+        refresh_token: 'refresh',
+        expires_at: futureExpiry,
+        token_type: 'bearer',
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          email_confirmed_at: new Date().toISOString(),
+          app_metadata: {},
+        },
+      } as unknown as Session;
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
+        data: { session: mockSession },
+        error: null,
+      });
+
+      vi.mocked(supabase.auth.getUser).mockResolvedValueOnce({
+        data: { user: null },
+        error: { message: 'Token expired' },
+      } as unknown as Awaited<ReturnType<typeof supabase.auth.getUser>>);
+
+      let outcome: boolean | undefined;
+      await act(async () => {
+        outcome = await result.current.validateSession();
+      });
+
+      expect(outcome).toBe(false);
+      expect(window.location.hash).toBe('#/login');
     });
   });
 });

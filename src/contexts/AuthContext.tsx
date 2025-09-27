@@ -120,58 +120,79 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Function to validate current session and redirect to login if invalid
   const validateSession = async (): Promise<boolean> => {
+    const redirectToLogin = (reason: string) => {
+      logger.warn('Invalid session detected, redirecting to login', { reason });
+
+      try {
+        const currentPath = window.location.hash.replace('#', '') || '/';
+        if (currentPath !== '/login' && currentPath !== '/signup') {
+          localStorage.setItem('redirectAfterLogin', currentPath);
+        }
+      } catch (storageError) {
+        logger.error('Failed to persist redirectAfterLogin during session validation', storageError);
+      }
+
+      setSession(null);
+      setUser(null);
+      setUserProfile(null);
+      window.location.hash = '#/login';
+    };
+
     try {
       const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-      
+
       if (error) {
         logger.warn('Session validation error', { error: error.message });
+        redirectToLogin('getSession-error');
         return false;
       }
-      
+
       if (!currentSession) {
-        logger.warn('No active session found during validation');
+        redirectToLogin('no-session');
         return false;
       }
-      
+
+      let sessionToValidate = currentSession;
+
       // Check if token is expired (add some buffer time)
       const now = Math.floor(Date.now() / 1000);
-      const expiresAt = currentSession.expires_at || 0;
+      const expiresAt = sessionToValidate.expires_at || 0;
       const bufferTime = 60; // 1 minute buffer
-      
+
       if (now >= (expiresAt - bufferTime)) {
-        logger.warn('Session token is expired or about to expire', { 
-          now, 
+        logger.warn('Session token is expired or about to expire', {
+          now,
           expiresAt,
-          expired: now >= expiresAt 
+          expired: now >= expiresAt,
         });
-        
-        // Try to refresh the token
+
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
+
         if (refreshError || !refreshData.session) {
           logger.warn('Token refresh failed during validation', refreshError ? { error: refreshError.message } : {});
-          
-          // Store current path for redirect after login
-          const currentPath = window.location.hash.replace("#", "") || "/";
-          if (currentPath !== '/login' && currentPath !== '/signup') {
-            localStorage.setItem('redirectAfterLogin', currentPath);
-          }
-          
-          // Clear auth state and redirect
-          setSession(null);
-          setUser(null);
-          setUserProfile(null);
-          window.location.hash = '#/login';
+          redirectToLogin('refresh-failed');
           return false;
         }
-        
+
+        sessionToValidate = refreshData.session;
+        setSession(sessionToValidate);
+        setUser(sessionToValidate.user);
         logger.info('Session refreshed successfully during validation');
-        return true;
       }
-      
+
+      // Perform a lightweight authenticated request to ensure the session is still valid
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !userData.user) {
+        logger.warn('Auth user lookup failed during session validation', userError ? { error: userError.message } : {});
+        redirectToLogin('getUser-failed');
+        return false;
+      }
+
       return true;
     } catch (error) {
       logger.error('Error validating session', error);
+      redirectToLogin('unexpected-error');
       return false;
     }
   };
