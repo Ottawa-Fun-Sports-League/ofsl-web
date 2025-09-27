@@ -7,6 +7,15 @@ export interface Gym {
   available_days: number[] | null;
   available_sports: number[] | null;
   locations: string[] | null;
+  facilitator_id?: string | null;
+  facilitator?: Facilitator | null;
+}
+
+export interface Facilitator {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone?: string | null;
 }
 
 export interface Sport {
@@ -33,6 +42,7 @@ export interface NewGymForm {
   availableDays: number[];
   availableSports: number[];
   locations: string[];
+  facilitatorId: string | null;
 }
 
 export interface EditGymForm {
@@ -43,4 +53,5 @@ export interface EditGymForm {
   availableDays: number[];
   availableSports: number[];
   locations: string[];
+  facilitatorId: string | null;
 }

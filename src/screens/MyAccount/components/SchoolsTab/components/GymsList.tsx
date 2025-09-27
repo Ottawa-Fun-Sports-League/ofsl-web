@@ -1,6 +1,6 @@
 import { Button } from '../../../../../components/ui/button';
 import { MapPin } from 'lucide-react';
-import { Gym, Sport, DayOfWeek, NewGymForm, EditGymForm } from '../types';
+import { Gym, Sport, DayOfWeek, NewGymForm, EditGymForm, Facilitator } from '../types';
 import { PaginationState } from '../../UsersTab/types';
 import { GymCard } from './GymCard';
 import { GymForm } from './GymForm';
@@ -18,6 +18,7 @@ interface GymsListProps {
   deleting: number | null;
   isAnyFilterActive: boolean;
   pagination: PaginationState;
+  facilitators: Facilitator[];
   onEditGym: (gym: Gym) => void;
   onEditGymChange: (gym: EditGymForm) => void;
   onDayToggle: (dayId: number, isNewGym?: boolean) => void;
@@ -43,6 +44,7 @@ export function GymsList({
   deleting,
   isAnyFilterActive,
   pagination,
+  facilitators,
   onEditGym,
   onEditGymChange,
   onDayToggle,
@@ -87,6 +89,7 @@ export function GymsList({
                 sports={sports}
                 daysOfWeek={daysOfWeek}
                 locations={locations}
+                facilitators={facilitators}
                 saving={saving}
                 onGymChange={onEditGymChange as unknown as (gym: NewGymForm | EditGymForm) => void}
                 onDayToggle={(dayId) => onDayToggle(dayId, false)}

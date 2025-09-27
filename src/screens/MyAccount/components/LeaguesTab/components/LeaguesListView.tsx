@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { Button } from "../../../../../components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../../../components/ui/tooltip";
 import { Edit2, Trash2, Copy, Users, ChevronUp, ChevronDown, ChevronsUpDown, Calendar, Trophy } from "lucide-react";
 import { LeagueWithTeamCount } from "../types";
 import {
@@ -108,7 +109,7 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
     
     return (
       <th 
-        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+        className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors"
         onClick={() => handleSort(field)}
       >
         <div className="flex items-center gap-1">
@@ -128,178 +129,195 @@ export function LeaguesListView({ leagues, onDelete, onCopy, onManageSchedule }:
   };
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="min-w-[1200px] w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <SortableHeader field="name">League</SortableHeader>
-            <SortableHeader field="start_date">Schedule</SortableHeader>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Location
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Price
-            </th>
-            <SortableHeader field="spots_remaining">Availability</SortableHeader>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Registrations
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[220px]">
-              Actions
-            </th>
-          </tr>
-        </thead>
+    <TooltipProvider delayDuration={200}>
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="min-w-[980px] w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <SortableHeader field="name">League</SortableHeader>
+              <SortableHeader field="start_date">Schedule</SortableHeader>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Location
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Price
+              </th>
+              <SortableHeader field="spots_remaining">Availability</SortableHeader>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Registrations
+              </th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wide w-[180px]">
+                Actions
+              </th>
+            </tr>
+          </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {sortedLeagues.map((league) => (
-            <tr key={league.id} className="hover:bg-gray-50">
-              <td className="px-4 py-4 whitespace-nowrap">
-                <div className="flex items-center">
-                  <img
-                    src={getSportIcon(league.sport_name)}
-                    alt={`${league.sport_name} icon`}
-                    className="w-6 h-6 object-contain mr-3"
-                  />
-                  <div className="text-sm font-medium text-gray-900">
-                    {league.name}
-                  </div>
-                </div>
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-900">
-                  {getDayName(league.day_of_week)}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {formatLeagueDates(
-                    league.start_date,
-                    league.end_date,
-                    league.hide_day || undefined
-                  )}
-                </div>
-              </td>
-              <td className="px-4 py-4">
-                <div className="flex flex-wrap gap-1">
-                  {(() => {
-                    const gymLocations = getPrimaryLocation(league.gyms || []);
-                    
-                    if (gymLocations.length === 0) {
-                      return <span className="text-sm text-gray-500">TBD</span>;
-                    }
-                    
-                    return gymLocations.map((location, index) => (
-                      <LocationPopover
-                        key={index}
-                        locations={getGymNamesByLocation(league.gyms || [], location)}
-                      >
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                          {location}
-                        </span>
-                      </LocationPopover>
-                    ));
-                  })()}
-                </div>
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-900">
-                  ${(() => {
-                    const ebCost = (league as any).early_bird_cost as number | null | undefined;
-                    const ebDue = (league as any).early_bird_due_date as string | null | undefined;
-                    const today = new Date();
-                    const earlyActive = ebCost && ebDue ? (today.getTime() <= new Date(ebDue + 'T23:59:59').getTime()) : false;
-                    const effective = earlyActive ? (ebCost ?? league.cost ?? 0) : (league.cost ?? 0);
-                    return effective;
-                  })()} + HST
-                </div>
-                <div className="text-sm text-gray-500">
-                  {league.team_registration === false ? "per player" : "per team"}
-                </div>
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap">
-                <span
-                  className={`inline-flex text-xs leading-5 font-semibold rounded-full px-2 py-1 ${getSpotsBadgeColor(
-                    league.spots_remaining
-                  )}`}
-                >
-                  {getSpotsText(league.spots_remaining)}
-                </span>
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap text-center">
-                <div className="flex items-center justify-center space-x-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/leagues/${league.id}/teams`)}
-                    className="h-8 w-8 p-0 hover:bg-blue-100 relative"
-                    title={league.team_registration === false ? "View registered users" : "View registered teams"}
-                  >
-                    <Users className="h-4 w-4 text-blue-600" />
-                    {league.team_count > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                        {league.team_count}
+          {sortedLeagues.map((league) => {
+            const shouldTruncateName = league.name.length > 32;
+            const earlyBirdCost = (league as any).early_bird_cost as number | null | undefined;
+            const earlyBirdDueDate = (league as any).early_bird_due_date as string | null | undefined;
+            const today = new Date();
+            const earlyBirdActive = earlyBirdCost && earlyBirdDueDate
+              ? today.getTime() <= new Date(`${earlyBirdDueDate}T23:59:59`).getTime()
+              : false;
+            const effectiveCost = earlyBirdActive ? (earlyBirdCost ?? league.cost ?? 0) : (league.cost ?? 0);
+
+            return (
+              <tr key={league.id} className="hover:bg-gray-50">
+                <td className="px-3 py-3 align-top">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={getSportIcon(league.sport_name)}
+                      alt={`${league.sport_name} icon`}
+                      className="w-6 h-6 object-contain"
+                    />
+                    {shouldTruncateName ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="max-w-[220px] truncate text-sm font-medium text-gray-900" data-testid="league-name">
+                            {league.name}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs break-words">
+                          {league.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="max-w-[220px] text-sm font-medium text-gray-900 break-words">
+                        {league.name}
                       </span>
                     )}
-                  </Button>
-
-                  {/* Schedule Management Button (Volleyball only) */}
-                  {league.has_schedule && league.sport_name === 'Volleyball' && onManageSchedule && (
+                  </div>
+                </td>
+                <td className="px-3 py-3 align-top">
+                  <div className="text-sm text-gray-900">
+                    {getDayName(league.day_of_week)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {formatLeagueDates(
+                      league.start_date,
+                      league.end_date,
+                      league.hide_day || undefined
+                    )}
+                  </div>
+                </td>
+                <td className="px-3 py-3 align-top">
+                  <div className="flex flex-wrap gap-1">
+                    {(() => {
+                      const gymLocations = getPrimaryLocation(league.gyms || []);
+                      
+                      if (gymLocations.length === 0) {
+                        return <span className="text-sm text-gray-500">TBD</span>;
+                      }
+                      
+                      return gymLocations.map((location, index) => (
+                        <LocationPopover
+                          key={index}
+                          locations={getGymNamesByLocation(league.gyms || [], location)}
+                        >
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
+                            {location}
+                          </span>
+                        </LocationPopover>
+                      ));
+                    })()}
+                  </div>
+                </td>
+                <td className="px-3 py-3 align-top">
+                  <div className="text-sm text-gray-900">
+                    ${effectiveCost} + HST
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {league.team_registration === false ? "per player" : "per team"}
+                  </div>
+                </td>
+                <td className="px-3 py-3 align-top">
+                  <span
+                    className={`inline-flex text-xs leading-5 font-semibold rounded-full px-2 py-1 ${getSpotsBadgeColor(
+                      league.spots_remaining
+                    )}`}
+                  >
+                    {getSpotsText(league.spots_remaining)}
+                  </span>
+                </td>
+                <td className="px-3 py-3 text-center align-top">
+                  <div className="flex items-center justify-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onManageSchedule?.(league.id)}
-                      className="h-8 w-8 p-0 hover:bg-green-100 relative"
-                      title="Manage schedule"
+                      onClick={() => navigate(`/leagues/${league.id}/teams`)}
+                      className="h-8 w-8 p-0 hover:bg-blue-100 relative"
+                      title={league.team_registration === false ? "View registered users" : "View registered teams"}
                     >
-                      <Calendar className="h-4 w-4 text-green-600" />
+                      <Users className="h-4 w-4 text-blue-600" />
+                      {league.team_count > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                          {league.team_count}
+                        </span>
+                      )}
                     </Button>
-                  )}
 
-                  {/* Standings Management Button (Volleyball only - only show if schedule exists) */}
-                  {league.has_standings && league.has_schedule && league.sport_name === 'Volleyball' && (
-                    <Link to={`/leagues/${league.id}/standings`}>
+                    {league.has_schedule && league.sport_name === 'Volleyball' && onManageSchedule && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 hover:bg-yellow-100 relative"
-                        title="Manage standings"
+                        onClick={() => onManageSchedule?.(league.id)}
+                        className="h-8 w-8 p-0 hover:bg-green-100 relative"
+                        title="Manage schedule"
                       >
-                        <Trophy className="h-4 w-4 text-yellow-600" />
+                        <Calendar className="h-4 w-4 text-green-600" />
+                      </Button>
+                    )}
+
+                    {league.has_standings && league.has_schedule && league.sport_name === 'Volleyball' && (
+                      <Link to={`/leagues/${league.id}/standings`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-yellow-100 relative"
+                          title="Manage standings"
+                        >
+                          <Trophy className="h-4 w-4 text-yellow-600" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-right text-sm font-medium w-[180px] align-top">
+                  <div className="flex items-center justify-end gap-1">
+                    <Link to={`/my-account/leagues/edit/${league.id}`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-gray-100"
+                      >
+                        <Edit2 className="h-4 w-4 text-[#6F6F6F]" />
                       </Button>
                     </Link>
-                  )}
-                </div>
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium w-[220px]">
-                <div className="flex items-center justify-end space-x-1">
-                  <Link to={`/my-account/leagues/edit/${league.id}`}>
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => onCopy(league)}
                       className="h-8 w-8 p-0 hover:bg-gray-100"
                     >
-                      <Edit2 className="h-4 w-4 text-[#6F6F6F]" />
+                      <Copy className="h-4 w-4 text-[#6F6F6F]" />
                     </Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onCopy(league)}
-                    className="h-8 w-8 p-0 hover:bg-gray-100"
-                  >
-                    <Copy className="h-4 w-4 text-[#6F6F6F]" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(league.id)}
-                    className="h-8 w-8 p-0 hover:bg-red-100"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(league.id)}
+                      className="h-8 w-8 p-0 hover:bg-red-100"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+    </TooltipProvider>
   );
 }
