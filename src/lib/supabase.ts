@@ -9,36 +9,79 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+const isBrowser = typeof window !== 'undefined';
+let redirectingForUnauthorized = false;
+
+const getCurrentPath = () => {
+  if (!isBrowser) return '/';
+  const hashPath = window.location.hash ? window.location.hash.replace('#', '') : '';
+  if (hashPath) return hashPath;
+  const { pathname, search } = window.location;
+  return `${pathname || ''}${search || ''}` || '/';
+};
+
+const redirectToLogin = (reason: string) => {
+  if (!isBrowser || redirectingForUnauthorized) {
+    return;
+  }
+
+  redirectingForUnauthorized = true;
+
+  try {
+    const currentPath = getCurrentPath();
+    if (currentPath && currentPath !== '/login' && currentPath !== '/signup') {
+      localStorage.setItem('redirectAfterLogin', currentPath);
+    }
+    localStorage.removeItem('supabase.auth.token');
+  } catch (error) {
+    console.warn('Failed to persist redirect path during unauthorized redirect', error);
+  }
+
+  console.warn(`Unauthorized Supabase response detected (${reason}). Redirecting to login.`);
+
+  // Delay to ensure any pending promise handlers settle before navigation
+  setTimeout(() => {
+    window.location.hash = '#/login';
+    redirectingForUnauthorized = false;
+  }, 0);
+};
+
+const nativeFetch = typeof fetch === 'function' ? fetch.bind(globalThis) : null;
+
+const supabaseFetch = nativeFetch
+  ? (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const response = await nativeFetch(input, init);
+
+      if (!response.ok && (response.status === 401 || response.status === 403)) {
+        redirectToLogin(`http-${response.status}`);
+      }
+
+      return response;
+    })
+  : undefined;
+
+const clientOptions: Parameters<typeof createClient>[2] = {
   auth: {
     storage: localStorage,
     autoRefreshToken: true,
-    persistSession: true, 
-    detectSessionInUrl: true, 
+    persistSession: true,
+    detectSessionInUrl: true,
     flowType: 'pkce',
-    debug: false
-  }
-});
+    debug: false,
+  },
+};
+
+if (supabaseFetch) {
+  clientOptions.global = {
+    fetch: supabaseFetch,
+  };
+}
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, clientOptions);
 
 // Set up auth state change handler for the global supabase instance
 supabase.auth.onAuthStateChange((event, session) => {
-  // Handle token refresh failures at the global level
   if (event === 'TOKEN_REFRESHED' && !session) {
-    console.warn('Global: Token refresh failed, user will need to sign in again');
-    
-    // Store current path for redirect after login
-    const currentPath = window.location.hash.replace("#", "") || "/";
-    if (currentPath !== '/login' && currentPath !== '/signup') {
-      localStorage.setItem('redirectAfterLogin', currentPath);
-    }
-    
-    // Clear any stored data and redirect to login
-    localStorage.removeItem('supabase.auth.token');
-    window.location.hash = '#/login';
-  }
-  
-  // Handle successful token refresh
-  if (event === 'TOKEN_REFRESHED' && session) {
-    // Token refresh successful - no action needed
+    redirectToLogin('token-refresh-failed');
   }
 });

@@ -344,18 +344,21 @@ export const SkillsAndDrillsPage = (): React.ReactElement => {
               </div>
               <div className="text-center md:text-left flex-1">
                 <h3 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[28px] leading-7 md:leading-8 mb-3">
-                  There are no skills and drills sessions currently scheduled
+                  Ready to get on the court?
                 </h3>
                 <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-4">
-                  Contact us to inquire about setting up the next training
-                  session.
+                  Browse open Skills &amp; Drills sessions and secure your spot before they fill up.
                 </p>
-                <Link
-                  to="/about-us#contact"
-                  className="text-[#B20000] text-base md:text-lg underline font-bold hover:text-[#8a0000]"
-                >
-                  Contact us
-                </Link>
+                <div className="flex justify-center md:justify-start">
+                  <Link
+                    to="/leagues?sport=Volleyball&type=Skills%20and%20Drills"
+                    className="text-white"
+                  >
+                    <Button className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-3 w-full sm:w-auto">
+                      View Available Sessions
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -414,4 +417,3 @@ export const SkillsAndDrillsPage = (): React.ReactElement => {
     </div>
   );
 };
-

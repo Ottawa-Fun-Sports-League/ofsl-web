@@ -119,7 +119,7 @@ describe('HomePage', () => {
     expect(screen.getByText("Women's Elite Volleyball")).toBeInTheDocument();
     expect(screen.getByText("Mixed Volleyball")).toBeInTheDocument();
     expect(screen.getByText("Advanced Badminton")).toBeInTheDocument();
-    expect(screen.getByText("Indoor Pickleball Coming Soon!")).toBeInTheDocument();
+    expect(screen.getByText("Indoor Pickleball")).toBeInTheDocument();
   });
 
   it('displays league description', () => {

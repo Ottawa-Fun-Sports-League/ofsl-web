@@ -181,17 +181,20 @@ export function Header({ isCompact = false }: HeaderProps) {
                   Badminton
                 </Link>
               </NavigationMenuItem>
-              <NavigationMenuItem className="relative flex items-center">
-                <div className="absolute -top-2.5 w-full text-center">
-                  <span className="text-[10px] text-[#ffeae5] font-medium whitespace-nowrap">
-                    Coming Soon!
-                  </span>
-                </div>
+              <NavigationMenuItem className="flex items-center">
                 <Link
                   to="/pickleball"
                   className={getLinkClasses("/pickleball")}
                 >
                   Pickleball
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem className="flex items-center">
+                <Link
+                  to="/skills-and-drills"
+                  className={getLinkClasses("/skills-and-drills")}
+                >
+                  Skills &amp; Drills
                 </Link>
               </NavigationMenuItem>
 
@@ -323,18 +326,20 @@ export function Header({ isCompact = false }: HeaderProps) {
               >
                 Badminton
               </Link>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-[#ffeae5] font-medium px-4 whitespace-nowrap">
-                  Coming Soon!
-                </span>
-                <Link
-                  to="/pickleball"
-                  className={getMobileLinkClasses("/pickleball")}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Pickleball
-                </Link>
-              </div>
+              <Link
+                to="/pickleball"
+                className={getMobileLinkClasses("/pickleball")}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Pickleball
+              </Link>
+              <Link
+                to="/skills-and-drills"
+                className={getMobileLinkClasses("/skills-and-drills")}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Skills &amp; Drills
+              </Link>
               <Link
                 to="/leagues"
                 className={getMobileLinkClasses("/leagues")}

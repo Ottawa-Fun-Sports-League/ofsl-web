@@ -25,7 +25,7 @@ const leagueCards = [
     link: "/leagues?sport=Badminton&level=Advanced",
   },
   {
-    title: "Indoor Pickleball Coming Soon!",
+    title: "Indoor Pickleball",
     image: "/pickleball-card.jpg",
     alt: "Pickleball",
     link: "/pickleball",
