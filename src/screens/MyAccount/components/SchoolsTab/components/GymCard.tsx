@@ -12,6 +12,8 @@ interface GymCardProps {
 }
 
 export function GymCard({ gym, sports, daysOfWeek, deleting, onEdit, onDelete }: GymCardProps) {
+  const facilitator = gym.facilitator;
+
   return (
     <div className="border border-gray-200 rounded-lg p-6">
       {/* Three-column layout */}
@@ -77,13 +79,26 @@ export function GymCard({ gym, sports, daysOfWeek, deleting, onEdit, onDelete }:
         {/* Second Column: Contact Info */}
         <div className="space-y-1 text-sm">
           <div>
-            <span className="font-medium text-[#6F6F6F]">Contact:</span> <span className="text-[#6F6F6F]">John Smith</span>
+            <span className="font-medium text-[#6F6F6F]">Facilitator:</span>{' '}
+            <span className="text-[#6F6F6F]">
+              {facilitator?.name || facilitator?.email || 'Unassigned'}
+            </span>
           </div>
           <div>
-            <span className="font-medium text-[#6F6F6F]">Phone:</span> <span className="text-[#6F6F6F]">613-520-2600</span>
+            <span className="font-medium text-[#6F6F6F]">Phone:</span>{' '}
+            <span className="text-[#6F6F6F]">
+              {facilitator?.phone || '—'}
+            </span>
           </div>
           <div>
-            <span className="font-medium text-[#6F6F6F]">Email:</span> <span className="text-[#6F6F6F]">facilities@carleton.ca</span>
+            <span className="font-medium text-[#6F6F6F]">Email:</span>{' '}
+            {facilitator?.email ? (
+              <a href={`mailto:${facilitator.email}`} className="text-[#6F6F6F] hover:text-[#B20000]">
+                {facilitator.email}
+              </a>
+            ) : (
+              <span className="text-[#6F6F6F]">—</span>
+            )}
           </div>
         </div>
 

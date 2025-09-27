@@ -36,3 +36,6 @@ test-email-*.js
 /playwright/.cache/
 /blob-report/
 /test-results-*
+
+# supabase
+supabase/.temp

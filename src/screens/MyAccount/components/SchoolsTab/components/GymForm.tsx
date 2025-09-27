@@ -1,7 +1,8 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
-import { X } from 'lucide-react';
-import { NewGymForm, EditGymForm, Sport, DayOfWeek } from '../types';
+import { Search, X } from 'lucide-react';
+import { NewGymForm, EditGymForm, Sport, DayOfWeek, Facilitator } from '../types';
 
 interface GymFormProps {
   isEdit?: boolean;
@@ -10,6 +11,7 @@ interface GymFormProps {
   sports: Sport[];
   daysOfWeek: DayOfWeek[];
   locations: string[];
+  facilitators: Facilitator[];
   saving: boolean;
   onGymChange: (gym: NewGymForm | EditGymForm) => void;
   onDayToggle: (dayId: number) => void;
@@ -26,6 +28,7 @@ export function GymForm({
   sports,
   daysOfWeek,
   locations,
+  facilitators,
   saving,
   onGymChange,
   onDayToggle,
@@ -34,6 +37,62 @@ export function GymForm({
   onSave,
   onCancel
 }: GymFormProps) {
+  const [facilitatorSearch, setFacilitatorSearch] = useState('');
+  const [showFacilitatorList, setShowFacilitatorList] = useState(false);
+  const facilitatorDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (gym.facilitatorId && !facilitators.some((facilitator) => facilitator.id === gym.facilitatorId)) {
+      onGymChange({ ...gym, facilitatorId: null });
+    }
+  }, [facilitators, gym, onGymChange]);
+
+  useEffect(() => {
+    if (!showFacilitatorList) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (facilitatorDropdownRef.current && !facilitatorDropdownRef.current.contains(event.target as Node)) {
+        setShowFacilitatorList(false);
+      }
+    };
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowFacilitatorList(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [showFacilitatorList]);
+
+  const selectedFacilitator = useMemo(() => (
+    gym.facilitatorId
+      ? facilitators.find((facilitator) => facilitator.id === gym.facilitatorId) ?? null
+      : null
+  ), [facilitators, gym.facilitatorId]);
+
+  const filteredFacilitators = useMemo(() => {
+    const query = facilitatorSearch.trim().toLowerCase();
+    if (!query) return facilitators;
+
+    return facilitators.filter((facilitator) => {
+      const values = [facilitator.name, facilitator.email, facilitator.phone].filter(Boolean) as string[];
+      return values.some((value) => value.toLowerCase().includes(query));
+    });
+  }, [facilitators, facilitatorSearch]);
+
+  const handleFacilitatorSelect = (facilitatorId: string | null) => {
+    onGymChange({ ...gym, facilitatorId });
+    setShowFacilitatorList(false);
+    setFacilitatorSearch('');
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
       <div className="flex justify-between items-center mb-6">
@@ -65,6 +124,96 @@ export function GymForm({
             placeholder="Enter address"
             className="w-full"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Assigned Facilitator</label>
+          <div className="relative" ref={facilitatorDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowFacilitatorList((open) => !open)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000] text-left flex items-center justify-between gap-3"
+              aria-haspopup="listbox"
+              aria-expanded={showFacilitatorList}
+              aria-controls="facilitator-selector"
+            >
+              <span className="truncate text-[#6F6F6F]">
+                {selectedFacilitator
+                  ? selectedFacilitator.name || selectedFacilitator.email || 'Unnamed facilitator'
+                  : 'Select a facilitator'}
+              </span>
+              <span className="text-xs text-gray-400">
+                {showFacilitatorList ? 'Hide' : 'Show'}
+              </span>
+            </button>
+
+            {showFacilitatorList && (
+              <div
+                id="facilitator-selector"
+                role="listbox"
+                className="absolute z-20 mt-2 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-72 overflow-hidden md:max-h-80"
+              >
+                <div className="sticky top-0 bg-white p-3 border-b border-gray-100">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={facilitatorSearch}
+                      onChange={(event) => setFacilitatorSearch(event.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                      placeholder="Search by name, email, or phone"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                    <span>
+                      {filteredFacilitators.length} {filteredFacilitators.length === 1 ? 'match' : 'matches'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleFacilitatorSelect(null)}
+                      className="text-[#B20000] hover:text-[#8A0000]"
+                    >
+                      Clear selection
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto divide-y divide-gray-100" role="none">
+                  {filteredFacilitators.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-gray-500">
+                      No facilitators match your search.
+                    </div>
+                  ) : (
+                    filteredFacilitators.map((facilitator) => {
+                      const isSelected = facilitator.id === gym.facilitatorId;
+                      return (
+                        <button
+                          type="button"
+                          key={facilitator.id}
+                          onClick={() => handleFacilitatorSelect(facilitator.id)}
+                          role="option"
+                          aria-selected={isSelected}
+                          className={`w-full text-left px-4 py-3 transition-colors ${
+                            isSelected
+                              ? 'bg-[#B20000]/10 text-[#B20000]'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="text-sm font-medium">
+                            {facilitator.name || facilitator.email || 'Unnamed facilitator'}
+                          </div>
+                          <div className="text-xs text-gray-500 flex flex-wrap gap-2 mt-1">
+                            {facilitator.email && <span>{facilitator.email}</span>}
+                            {facilitator.phone && <span>{facilitator.phone}</span>}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div>

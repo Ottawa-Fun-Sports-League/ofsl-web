@@ -77,6 +77,36 @@ type WeeklyScheduleTeamRow = Pick<
   | 'team_f_ranking'
 >;
 
+interface ScheduleNotificationChange {
+  label: string;
+  previous: string | null;
+  next: string | null;
+}
+
+interface ScheduleNotificationTeam {
+  position: string;
+  name: string | null;
+  ranking: number | null;
+}
+
+interface ScheduleNotificationPayload {
+  hasChanges: boolean;
+  request: {
+    leagueId: number;
+    leagueName: string;
+    weekNumber: number;
+    tierNumber: number;
+    changes: ScheduleNotificationChange[];
+    schedule: {
+      location: string;
+      time: string;
+      court: string;
+      format?: string | null;
+    };
+    teams: ScheduleNotificationTeam[];
+  };
+}
+
 interface AdminLeagueScheduleProps {
   leagueId: string;
   leagueName: string;
@@ -121,6 +151,130 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   } | null>(null);
   const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
   const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
+
+  const buildScheduleNotificationPayload = (
+    originalTier: WeeklyScheduleTier,
+    updatedTierData: Tier,
+  ): ScheduleNotificationPayload => {
+    const changes: ScheduleNotificationChange[] = [];
+    const normalizeForCompare = (value: unknown) => {
+      if (value === null || value === undefined) return '';
+      return String(value).trim();
+    };
+
+    const recordChange = (
+      label: string,
+      previous: string | null | undefined,
+      next: string | null | undefined,
+    ) => {
+      if (normalizeForCompare(previous) !== normalizeForCompare(next)) {
+        changes.push({ label, previous: previous ?? null, next: next ?? null });
+      }
+    };
+
+    recordChange('Location', originalTier.location ?? null, updatedTierData.location ?? null);
+    recordChange('Time', originalTier.time_slot ?? null, updatedTierData.time ?? null);
+    recordChange('Court', originalTier.court ?? null, updatedTierData.court ?? null);
+
+    const originalFormat = (originalTier as { format?: string }).format ?? '3-teams-6-sets';
+    const updatedFormat = updatedTierData.format ?? originalFormat;
+    recordChange('Format', originalFormat, updatedFormat);
+
+    const originalCount = getTeamCountForFormat(originalFormat);
+    const updatedCount = getTeamCountForFormat(updatedFormat);
+    const positionsForDiff = TEAM_POSITIONS.slice(0, Math.max(originalCount, updatedCount));
+
+    positionsForDiff.forEach((position) => {
+      const originalName = (originalTier as Record<string, string | null | undefined>)[`team_${position.toLowerCase()}_name`];
+      const updatedName = updatedTierData.teams[position]?.name ?? null;
+      if (normalizeForCompare(originalName) !== normalizeForCompare(updatedName)) {
+        recordChange(`Team ${position}`, originalName ?? null, updatedName ?? null);
+      }
+    });
+
+    const displayPositions = TEAM_POSITIONS.slice(0, updatedCount);
+    const teams: ScheduleNotificationTeam[] = displayPositions.map((position) => {
+      const team = updatedTierData.teams[position] ?? null;
+      const rankingValue = team?.ranking;
+      const numericRanking = rankingValue === null || rankingValue === undefined
+        ? null
+        : Number.isNaN(Number(rankingValue))
+          ? null
+          : Number(rankingValue);
+
+      return {
+        position,
+        name: team?.name ?? null,
+        ranking: numericRanking,
+      };
+    });
+
+    const parsedLeagueId = Number.parseInt(leagueId, 10);
+    const fallbackLeagueId = (originalTier as { league_id?: number }).league_id;
+    const finalLeagueId = Number.isNaN(parsedLeagueId)
+      ? (typeof fallbackLeagueId === 'number' ? fallbackLeagueId : 0)
+      : parsedLeagueId;
+
+    const weekNumber = originalTier.week_number ?? 0;
+    const tierNumber = originalTier.tier_number ?? 0;
+
+    return {
+      hasChanges: changes.length > 0,
+      request: {
+        leagueId: finalLeagueId,
+        leagueName,
+        weekNumber,
+        tierNumber,
+        changes,
+        schedule: {
+          location: updatedTierData.location ?? '',
+          time: updatedTierData.time ?? '',
+          court: updatedTierData.court ?? '',
+          format: updatedFormat,
+        },
+        teams,
+      },
+    };
+  };
+
+  const notifyScheduleChange = async (payload: ScheduleNotificationPayload) => {
+    try {
+      if (leagueInfo?.schedule_visible === false) {
+        return;
+      }
+
+      if (!payload.hasChanges) {
+        return;
+      }
+
+      const leagueSegment = leagueId || (payload.request.leagueId ? String(payload.request.leagueId) : '');
+      const scheduleUrl = leagueSegment
+        ? `${window.location.origin}/#/leagues/${leagueSegment}/schedule`
+        : undefined;
+
+      const body = {
+        ...payload.request,
+        scheduleUrl,
+        triggeredBy: userProfile
+          ? {
+              id: userProfile.id,
+              name: userProfile.name,
+              email: userProfile.email ?? null,
+            }
+          : undefined,
+      };
+
+      const { error } = await supabase.functions.invoke('notify-schedule-update', {
+        body,
+      });
+
+      if (error) {
+        console.error('Failed to trigger schedule update notification', error);
+      }
+    } catch (notificationError) {
+      console.error('Error sending schedule update notification', notificationError);
+    }
+  };
 
   // Team deletion confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -998,6 +1152,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     try {
       if (!editingWeeklyTier || !updatedTier) return;
 
+      const notificationPayload = buildScheduleNotificationPayload(editingWeeklyTier, updatedTier);
+
       // Convert the legacy Tier format back to WeeklyScheduleTier format for database update
       const updatePayload = {
         location: updatedTier.location,
@@ -1065,6 +1221,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
         if (formatUpdateError) throw formatUpdateError;
       }
+
+      void notifyScheduleChange(notificationPayload);
 
       await loadWeeklySchedule(currentWeek);
       handleModalClose();

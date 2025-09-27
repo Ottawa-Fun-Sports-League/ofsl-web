@@ -38,7 +38,8 @@ export function SchoolsTab() {
     setEditGym,
     loadData,
     isAnyFilterActive,
-    clearFilters
+    clearFilters,
+    facilitators
   } = useSchoolsData();
 
   const {
@@ -195,6 +196,7 @@ export function SchoolsTab() {
           sports={sports}
           daysOfWeek={DAYS_OF_WEEK}
           locations={[...GYM_LOCATIONS]}
+          facilitators={facilitators}
           saving={saving}
           onGymChange={setNewGym}
           onDayToggle={(dayId) => handleDayToggle(dayId, true)}
@@ -216,6 +218,7 @@ export function SchoolsTab() {
         saving={saving}
         deleting={deleting}
         isAnyFilterActive={isAnyFilterActive()}
+        facilitators={facilitators}
         onEditGym={handleEditGym}
         onEditGymChange={setEditGym}
         onDayToggle={handleDayToggle}

@@ -3,7 +3,7 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
 import { fetchSports } from '../../../../lib/leagues';
-import { Gym, Sport, SchoolFilters, NewGymForm, EditGymForm } from './types';
+import { Gym, Sport, SchoolFilters, NewGymForm, EditGymForm, Facilitator } from './types';
 import { INITIAL_NEW_GYM_FORM, INITIAL_EDIT_GYM_FORM, INITIAL_FILTERS } from './constants';
 
 export function useSchoolsData() {
@@ -13,6 +13,7 @@ export function useSchoolsData() {
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [filteredGyms, setFilteredGyms] = useState<Gym[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
+  const [facilitators, setFacilitators] = useState<Facilitator[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<SchoolFilters>(INITIAL_FILTERS);
@@ -37,9 +38,26 @@ export function useSchoolsData() {
       setSports(sportsData);
       
       if (userProfile?.is_admin) {
+        const { data: facilitatorResponse, error: facilitatorError } = await supabase
+          .from('users')
+          .select('id, name, email, phone')
+          .eq('is_facilitator', true)
+          .order('name');
+
+        if (facilitatorError) throw facilitatorError;
+        if (facilitatorResponse) setFacilitators(facilitatorResponse as Facilitator[]);
+
         const { data: gymsResponse, error } = await supabase
           .from('gyms')
-          .select('*')
+          .select(`
+            *,
+            facilitator:facilitator_id (
+              id,
+              name,
+              email,
+              phone
+            )
+          `)
           .order('gym');
 
         if (error) throw error;
@@ -109,6 +127,7 @@ export function useSchoolsData() {
     setEditGym,
     loadData,
     isAnyFilterActive,
-    clearFilters
+    clearFilters,
+    facilitators
   };
 }

@@ -16,27 +16,38 @@ vi.mock('../../../../../components/ui/toast', () => ({
 }));
 
 // Mock supabase
-vi.mock('../../../../../lib/supabase', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => Promise.resolve({ 
-          data: Array.from({ length: 30 }, (_, i) => ({
-            id: i + 1,
-            gym: `Gym ${i + 1}`,
-            address: `Address ${i + 1}`,
-            instructions: `Instructions ${i + 1}`,
-            active: true,
-            available_days: [1, 2, 3],
-            available_sports: [1, 2],
-            locations: ['Downtown']
-          })), 
-          error: null 
-        }))
-      }))
-    }))
-  }
-}));
+vi.mock('../../../../../lib/supabase', () => {
+  const gymsData = Array.from({ length: 30 }, (_, i) => ({
+    id: i + 1,
+    gym: `Gym ${i + 1}`,
+    address: `Address ${i + 1}`,
+    instructions: `Instructions ${i + 1}`,
+    active: true,
+    available_days: [1, 2, 3],
+    available_sports: [1, 2],
+    locations: ['Downtown'],
+    facilitator_id: null,
+    facilitator: null
+  }));
+
+  const createChain = (data: unknown[]) => {
+    const chain: any = {
+      select: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      order: vi.fn(() => Promise.resolve({ data, error: null }))
+    };
+    return chain;
+  };
+
+  const usersChain = createChain([]);
+  const gymsChain = createChain(gymsData);
+
+  return {
+    supabase: {
+      from: vi.fn((table: string) => (table === 'users' ? usersChain : gymsChain))
+    }
+  };
+});
 
 // Mock fetchSports from leagues lib
 vi.mock('../../../../../lib/leagues', () => ({
