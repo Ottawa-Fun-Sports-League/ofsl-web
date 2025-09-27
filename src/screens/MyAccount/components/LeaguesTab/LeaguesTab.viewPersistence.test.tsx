@@ -65,10 +65,26 @@ Object.defineProperty(window, 'localStorage', {
   writable: true
 });
 
+// Mock sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn()
+};
+
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true
+});
+
 describe('LeaguesTab - View Persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
+    sessionStorageMock.getItem.mockReturnValue(null);
   });
 
   it('should save view preference to localStorage when toggled', async () => {
@@ -154,5 +170,53 @@ describe('LeaguesTab - View Persistence', () => {
     // The list view should still be active
     const newListButton = screen.getByRole('button', { name: /list/i });
     expect(newListButton).toHaveClass('bg-white', 'shadow-sm');
+  });
+
+  it('should save filters to sessionStorage when they change', async () => {
+    render(
+      <BrowserRouter>
+        <LeaguesTab />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Test League')).toBeInTheDocument();
+    });
+
+    const locationButton = screen.getByRole('button', { name: 'All Locations' });
+    fireEvent.click(locationButton);
+
+    const centralOption = await screen.findByRole('button', { name: 'Central' });
+    fireEvent.click(centralOption);
+
+    await waitFor(() => {
+      expect(sessionStorageMock.setItem).toHaveBeenLastCalledWith(
+        'leagueFilters:my-account',
+        expect.stringContaining('"location":"Central"')
+      );
+    });
+  });
+
+  it('should restore filters from sessionStorage on mount', async () => {
+    sessionStorageMock.getItem.mockReturnValue(
+      JSON.stringify({ location: 'Central' })
+    );
+
+    render(
+      <BrowserRouter>
+        <LeaguesTab />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Test League')).toBeInTheDocument();
+    });
+
+    expect(sessionStorageMock.getItem).toHaveBeenCalledWith('leagueFilters:my-account');
+
+    // The location filter button should reflect the stored value
+    expect(
+      screen.getByRole('button', { name: 'Central' })
+    ).toBeInTheDocument();
   });
 });

@@ -54,7 +54,10 @@ export function LeaguesTab() {
     clearFilters,
     clearSkillLevels,
     isAnyFilterActive
-  } = useLeagueFilters();
+  } = useLeagueFilters({
+    storageKey: 'leagueFilters:my-account',
+    storage: 'session'
+  });
 
   const {
     saving,

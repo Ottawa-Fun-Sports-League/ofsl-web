@@ -1,11 +1,84 @@
 import { useState, useRef, useEffect } from 'react';
 import { LeagueFilters, DEFAULT_FILTERS } from './types';
 
-export function useLeagueFilters() {
-  const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_FILTERS);
+type StorageType = 'session' | 'local';
+
+interface UseLeagueFiltersConfig {
+  storageKey?: string;
+  storage?: StorageType;
+  initialFilters?: LeagueFilters;
+}
+
+export function useLeagueFilters(config: UseLeagueFiltersConfig = {}) {
+  const { storageKey, storage = 'session', initialFilters = DEFAULT_FILTERS } = config;
+  const storageKeyName = storageKey ?? null;
+
+  const getStorage = (): Storage | null => {
+    if (!storageKeyName || typeof window === 'undefined') {
+      return null;
+    }
+    try {
+      return storage === 'local' ? window.localStorage : window.sessionStorage;
+    } catch (error) {
+      console.error('Error accessing storage for league filters:', error);
+      return null;
+    }
+  };
+
+  const readStoredFilters = (): LeagueFilters => {
+    const fallback = { ...initialFilters, skillLevels: [...initialFilters.skillLevels] };
+    const storageSource = getStorage();
+
+    if (!storageSource) {
+      return fallback;
+    }
+
+    try {
+      const storedValue = storageSource.getItem(storageKeyName!);
+      if (!storedValue) {
+        return fallback;
+      }
+
+      const parsed = JSON.parse(storedValue) as Partial<LeagueFilters> | null;
+      if (!parsed || typeof parsed !== 'object') {
+        return fallback;
+      }
+
+      const sanitized: LeagueFilters = {
+        sport: typeof parsed.sport === 'string' ? parsed.sport : fallback.sport,
+        location: typeof parsed.location === 'string' ? parsed.location : fallback.location,
+        skillLevels: Array.isArray(parsed.skillLevels)
+          ? parsed.skillLevels.filter((level): level is string => typeof level === 'string')
+          : [...fallback.skillLevels],
+        day: typeof parsed.day === 'string' ? parsed.day : fallback.day,
+        type: typeof parsed.type === 'string' ? parsed.type : fallback.type,
+        gender: typeof parsed.gender === 'string' ? parsed.gender : fallback.gender,
+      };
+
+      return sanitized;
+    } catch (error) {
+      console.error('Error parsing stored league filters:', error);
+      return fallback;
+    }
+  };
+
+  const [filters, setFilters] = useState<LeagueFilters>(() => readStoredFilters());
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    const storageSource = getStorage();
+    if (!storageSource) {
+      return;
+    }
+
+    try {
+      storageSource.setItem(storageKeyName!, JSON.stringify(filters));
+    } catch (error) {
+      console.error('Error saving league filters to storage:', error);
+    }
+  }, [filters, storageKeyName, storage]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -46,7 +119,7 @@ export function useLeagueFilters() {
   };
 
   const clearFilters = () => {
-    setFilters(DEFAULT_FILTERS);
+    setFilters({ ...initialFilters, skillLevels: [...initialFilters.skillLevels] });
   };
 
   const clearSkillLevels = () => {
