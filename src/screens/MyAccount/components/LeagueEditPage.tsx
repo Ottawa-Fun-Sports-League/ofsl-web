@@ -22,6 +22,7 @@ import { RichTextEditor } from "../../../components/ui/rich-text-editor";
 import { StripeProductSelector } from "./LeaguesTab/components/StripeProductSelector";
 import { CopyLeagueDialog } from "./LeaguesTab/components/CopyLeagueDialog";
 import { useLeagueActions } from "./LeaguesTab/hooks/useLeagueActions";
+import { GymMultiSelect } from "./LeaguesTab/components/GymMultiSelect";
 
 // Using imported League type from lib/leagues.ts
 
@@ -951,36 +952,18 @@ export function LeagueEditPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                  Gyms
-                </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                  {gyms.map((gym) => (
-                    <label key={gym.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={editLeague.gym_ids.includes(gym.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setEditLeague({
-                              ...editLeague,
-                              gym_ids: [...editLeague.gym_ids, gym.id],
-                            });
-                          } else {
-                            setEditLeague({
-                              ...editLeague,
-                              gym_ids: editLeague.gym_ids.filter(
-                                (id) => id !== gym.id,
-                              ),
-                            });
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">{gym.gym}</span>
-                    </label>
-                  ))}
-                </div>
+                <GymMultiSelect
+                  gyms={gyms}
+                  selectedIds={editLeague.gym_ids}
+                  onChange={(ids) =>
+                    setEditLeague({
+                      ...editLeague,
+                      gym_ids: ids,
+                    })
+                  }
+                  label="Gyms"
+                  helperText="Update the facilities tied to this league."
+                />
               </div>
 
               <div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { MapPin, Clock, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
 import { SubmitScoresModal } from './SubmitScoresModal';
 import { supabase } from '../../../lib/supabase';
@@ -104,6 +105,7 @@ interface ScheduleNotificationPayload {
       format?: string | null;
     };
     teams: ScheduleNotificationTeam[];
+    tierLabel?: string;
   };
 }
 
@@ -150,6 +152,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     position: TeamPositionId;
   } | null>(null);
   const [resultsByTeam, setResultsByTeam] = useState<Map<string, 'W'|'L'|'T'>>(new Map());
+  const [pendingNotification, setPendingNotification] = useState<ScheduleNotificationPayload | null>(null);
+  const [showNotificationConfirm, setShowNotificationConfirm] = useState(false);
+  const [notificationOptions, setNotificationOptions] = useState({ facilitator: true, participants: true });
   const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
 
   const buildScheduleNotificationPayload = (
@@ -217,6 +222,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
     const weekNumber = originalTier.week_number ?? 0;
     const tierNumber = originalTier.tier_number ?? 0;
+    const tierLabel = getTierDisplayLabel(updatedTierData.format ?? '', tierNumber) || `Tier ${tierNumber}`;
 
     return {
       hasChanges: changes.length > 0,
@@ -233,11 +239,15 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           format: updatedFormat,
         },
         teams,
+        tierLabel,
       },
     };
   };
 
-  const notifyScheduleChange = async (payload: ScheduleNotificationPayload) => {
+  const notifyScheduleChange = async (
+    payload: ScheduleNotificationPayload,
+    options?: { facilitator?: boolean; participants?: boolean }
+  ) => {
     try {
       if (leagueInfo?.schedule_visible === false) {
         return;
@@ -255,6 +265,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       const body = {
         ...payload.request,
         scheduleUrl,
+        sendToFacilitator: options?.facilitator !== false,
+        sendToParticipants: options?.participants !== false,
         triggeredBy: userProfile
           ? {
               id: userProfile.id,
@@ -274,6 +286,25 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     } catch (notificationError) {
       console.error('Error sending schedule update notification', notificationError);
     }
+  };
+
+  const handleNotificationDecision = async (send: boolean) => {
+    if (!pendingNotification) {
+      setShowNotificationConfirm(false);
+      setNotificationOptions({ facilitator: true, participants: true });
+      return;
+    }
+
+    if (send && (notificationOptions.facilitator || notificationOptions.participants)) {
+      await notifyScheduleChange(pendingNotification, {
+        facilitator: notificationOptions.facilitator,
+        participants: notificationOptions.participants,
+      });
+    }
+
+    setPendingNotification(null);
+    setShowNotificationConfirm(false);
+    setNotificationOptions({ facilitator: true, participants: true });
   };
 
   // Team deletion confirmation state
@@ -1222,7 +1253,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         if (formatUpdateError) throw formatUpdateError;
       }
 
-      void notifyScheduleChange(notificationPayload);
+      if (notificationPayload.hasChanges && leagueInfo?.schedule_visible !== false) {
+        setPendingNotification(notificationPayload);
+        setNotificationOptions({ facilitator: true, participants: true });
+        setShowNotificationConfirm(true);
+      }
 
       await loadWeeklySchedule(currentWeek);
       handleModalClose();
@@ -2206,6 +2241,89 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
         currentPlayoffWeeks={leagueInfo?.playoff_weeks || 0}
         onPlayoffWeeksAdded={handlePlayoffWeeksAdded}
       />
+
+      <Dialog
+        open={showNotificationConfirm}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingNotification(null);
+            setNotificationOptions({ facilitator: true, participants: true });
+          }
+          setShowNotificationConfirm(open);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-[#6F6F6F]">
+              Send schedule notifications?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[#6F6F6F]">
+              Choose who should receive this update for Week {pendingNotification?.request.weekNumber},
+              {pendingNotification?.request.tierLabel || `Tier ${pendingNotification?.request.tierNumber}`}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {pendingNotification?.request.changes?.length ? (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                <div className="font-medium text-[#6F6F6F] mb-2">Changes included</div>
+                <ul className="space-y-1 text-xs text-gray-600">
+                  {pendingNotification.request.changes.map((change) => (
+                    <li key={change.label}>
+                      <span className="font-medium">{change.label}:</span> {change.previous || 'TBD'} → {change.next || 'TBD'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
+                  checked={notificationOptions.facilitator}
+                  onChange={(event) => setNotificationOptions((prev) => ({
+                    ...prev,
+                    facilitator: event.target.checked,
+                  }))}
+                />
+                Email gym facilitator
+              </label>
+              <label className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
+                  checked={notificationOptions.participants}
+                  onChange={(event) => setNotificationOptions((prev) => ({
+                    ...prev,
+                    participants: event.target.checked,
+                  }))}
+                />
+                Email team captains & participants
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => handleNotificationDecision(false)}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNotificationDecision(true)}
+              className="px-4 py-2 rounded-md bg-[#B20000] text-sm font-medium text-white hover:bg-[#8A0000] disabled:opacity-50"
+              disabled={!notificationOptions.facilitator && !notificationOptions.participants}
+            >
+              Send emails
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AddTeamModal
         isOpen={addTeamModalOpen}

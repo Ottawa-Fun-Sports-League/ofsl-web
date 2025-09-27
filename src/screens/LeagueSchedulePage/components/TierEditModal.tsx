@@ -7,6 +7,7 @@ import type { Tier } from '../../LeagueDetailPage/utils/leagueUtils';
 import type { FormatValidationResult } from '../types';
 import { GAME_FORMATS, getPositionsForFormat, getTierDisplayLabel, isFormatDisabled } from '../utils/formatUtils';
 import { validateFormatChangeCompat, repackTeamsForFormatCompat } from '../utils/scheduleLogic';
+import { GymLocationSelect } from './GymLocationSelect';
 
 interface TierEditModalProps {
   isOpen: boolean;
@@ -21,9 +22,10 @@ interface TierEditModalProps {
 
 interface Gym {
   id: number;
-  gym: string;
-  address: string;
-  locations: string[];
+  gym: string | null;
+  address?: string | null;
+  locations?: string[] | null;
+  instructions?: string | null;
 }
 
 interface DefaultSettings {
@@ -103,7 +105,7 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     try {
       const { data: gymsData, error } = await supabase
         .from('gyms')
-        .select('id, gym, address, locations')
+        .select('id, gym, address, locations, instructions')
         .eq('active', true)
         .order('gym');
 
@@ -296,10 +298,6 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
     }
   };
 
-  const getAllGymNames = () => {
-    return gyms.map(gym => gym.gym).sort();
-  };
-
   // Helpers to parse/assemble the standardized custom time
   function parseCustomTime(s: string): { sh: string; sm: string; startMer: 'am'|'pm'; eh: string; em: string; endMer: 'am'|'pm' } | null {
     const trimmed = s.trim();
@@ -373,21 +371,13 @@ export function TierEditModal({ isOpen, onClose, tier, tierIndex, allTiers, leag
           <div className="space-y-6">
             {/* Location */}
             <div>
-              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                Location
-              </label>
-              <select
+              <GymLocationSelect
+                gyms={gyms}
                 value={editValues.location}
-                onChange={(e) => setEditValues(prev => ({ ...prev, location: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#B20000] focus:border-transparent"
-              >
-                <option value="">Select gym...</option>
-                {getAllGymNames().map((gymName) => (
-                  <option key={gymName} value={gymName}>
-                    {gymName}
-                  </option>
-                ))}
-              </select>
+                onChange={(location) => setEditValues((prev) => ({ ...prev, location }))}
+                label="Location"
+                helperText="Pick from existing gyms or type to use a custom location."
+              />
               <div className="mt-2">
                 <label className="flex items-center">
                   <input

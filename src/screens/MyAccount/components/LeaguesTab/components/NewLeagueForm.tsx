@@ -5,6 +5,7 @@ import { Input } from "../../../../../components/ui/input";
 import { RichTextEditor } from "../../../../../components/ui/rich-text-editor";
 import { X } from "lucide-react";
 import { StripeProductSelector } from "./StripeProductSelector";
+import { GymMultiSelect } from "./GymMultiSelect";
 import { NewLeague, Sport, Skill, Gym } from "../types";
 
 interface NewLeagueFormProps {
@@ -540,36 +541,13 @@ export function NewLeagueForm({
         </div>
 
         <div className="mt-6">
-          <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-            Gyms
-          </label>
-          <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
-            {gyms.map((gym) => (
-              <label key={gym.id} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={newLeague.gym_ids.includes(gym.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setNewLeague({
-                        ...newLeague,
-                        gym_ids: [...newLeague.gym_ids, gym.id],
-                      });
-                    } else {
-                      setNewLeague({
-                        ...newLeague,
-                        gym_ids: newLeague.gym_ids.filter(
-                          (id) => id !== gym.id,
-                        ),
-                      });
-                    }
-                  }}
-                  className="mr-2"
-                />
-                <span className="text-sm">{gym.gym}</span>
-              </label>
-            ))}
-          </div>
+          <GymMultiSelect
+            gyms={gyms}
+            selectedIds={newLeague.gym_ids}
+            onChange={(ids) => setNewLeague({ ...newLeague, gym_ids: ids })}
+            label="Gyms"
+            helperText="Select the facilities where this league will run."
+          />
         </div>
 
         {/* Stripe Product Selector */}

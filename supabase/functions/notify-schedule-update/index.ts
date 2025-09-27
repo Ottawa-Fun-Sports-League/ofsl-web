@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type Json = Record<string, unknown>;
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -44,6 +42,9 @@ interface NotificationRequest {
   teams: ScheduleTeam[];
   scheduleUrl?: string;
   triggeredBy?: TriggeredBy;
+  sendToFacilitator?: boolean;
+  sendToParticipants?: boolean;
+  tierLabel?: string;
 }
 
 interface RecipientMeta {
@@ -145,10 +146,26 @@ serve(async (req: Request) => {
       );
     }
 
-    const recipientMap = await collectRecipients(serviceClient, body.leagueId);
+    const sendToParticipants = body.sendToParticipants !== false;
+    const sendToFacilitator = body.sendToFacilitator !== false;
+
+    if (!sendToParticipants && !sendToFacilitator) {
+      return new Response(
+        JSON.stringify({ message: "Notification skipped by requester" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const recipientMap = sendToParticipants
+      ? await collectRecipients(serviceClient, body.leagueId)
+      : new Map<string, RecipientMeta>();
+
     const facilitator = await getFacilitatorForLocation(serviceClient, body.schedule.location);
 
-    if (facilitator?.email) {
+    if (sendToFacilitator && facilitator?.email) {
       recipientMap.set(facilitator.email.toLowerCase(), { name: facilitator.name ?? null });
     }
 
@@ -179,7 +196,7 @@ serve(async (req: Request) => {
       const html = buildEmailHtml({
         request: body,
         recipientName: meta.name,
-        facilitator,
+        facilitator: sendToFacilitator ? facilitator : null,
       });
 
       const response = await sendEmail(resendApiKey, email, subject, html);
@@ -254,19 +271,39 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
   const chunkSize = 100;
   for (let i = 0; i < idList.length; i += chunkSize) {
     const chunk = idList.slice(i, i + chunkSize);
-    const { data: users, error: userError } = await client
-      .from("users")
-      .select("id, name, email")
-      .in("id", chunk);
 
-    if (userError) {
-      console.error("notify-schedule-update: failed to load users", userError);
-      continue;
+    const { data: usersById, error: usersByIdError } = await client
+      .from('users')
+      .select('id, auth_id, name, email')
+      .in('id', chunk);
+
+    if (usersByIdError) {
+      console.error('notify-schedule-update: failed to load users by id', usersByIdError);
     }
 
-    (users ?? []).forEach((userRow) => {
-      if (userRow && typeof userRow === "object") {
-        const cast = userRow as { id: string; name: string | null; email: string | null };
+    const foundIds = new Set((usersById ?? []).map((user) => user.id));
+    const missingIds = chunk.filter((id) => !foundIds.has(id));
+
+    let combinedUsers = usersById ?? [];
+
+    if (missingIds.length > 0) {
+      const { data: usersByAuthId, error: usersByAuthError } = await client
+        .from('users')
+        .select('id, auth_id, name, email')
+        .in('auth_id', missingIds);
+
+      if (usersByAuthError) {
+        console.error('notify-schedule-update: failed to load users by auth_id', usersByAuthError);
+      }
+
+      if (usersByAuthId && usersByAuthId.length > 0) {
+        combinedUsers = combinedUsers.concat(usersByAuthId);
+      }
+    }
+
+    combinedUsers.forEach((userRow) => {
+      if (userRow && typeof userRow === 'object') {
+        const cast = userRow as { id: string; auth_id: string | null; name: string | null; email: string | null };
         if (cast.email) {
           recipients.set(cast.email.toLowerCase(), { name: cast.name ?? null });
         }
@@ -277,7 +314,10 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
   return recipients;
 }
 
-async function getFacilitatorForLocation(client: SupabaseClient, location: string | null | undefined) {
+async function getFacilitatorForLocation(
+  client: SupabaseClient,
+  location: string | null | undefined,
+) {
   if (!location || !location.trim()) {
     return null;
   }
@@ -303,7 +343,7 @@ async function getFacilitatorForLocation(client: SupabaseClient, location: strin
   const { data: gymLike, error: likeError } = await client
     .from("gyms")
     .select("facilitator:facilitator_id ( id, name, email, phone ), facilitator_id")
-    .ilike("gym", escaped)
+    .ilike("gym", `%${escaped}%`)
     .limit(1);
 
   if (likeError) {
@@ -333,57 +373,37 @@ function buildEmailHtml({
   recipientName: string | null;
   facilitator: FacilitatorInfo | null;
 }) {
+  const tierLabel = request.tierLabel || `Tier ${request.tierNumber}`;
   const greeting = recipientName ? `Hello ${escapeHtml(recipientName)},` : "Hello,";
-  const changeItems = (request.changes ?? []).map((change) => {
-    const previous = formatValue(change.previous);
-    const next = formatValue(change.next);
-    return `
-      <li style="margin-bottom: 8px; color: #2c3e50; font-size: 16px; line-height: 24px;">
-        <strong>${escapeHtml(change.label)}:</strong>
-        <span style="margin-left: 4px;">${escapeHtml(previous)} &rarr; ${escapeHtml(next)}</span>
-      </li>
-    `;
-  });
 
-  const changeSection = changeItems.length > 0
-    ? `
-      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 10px 0; font-family: Arial, sans-serif;">
-        The following updates were made:
-      </p>
-      <ul style="padding-left: 20px; margin: 0 0 20px 0;">${changeItems.join("")}</ul>
-    `
-    : `
-      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; font-family: Arial, sans-serif;">
-        A new schedule update has been posted. Please review the details below.
-      </p>
-    `;
-
-  const teamsRows = (request.teams ?? []).map((team) => `
+  const teamsRows = (request.teams ?? []).map(
+    (team) => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; color: #2c3e50;">${escapeHtml(team.position)}</td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; color: #2c3e50;">${escapeHtml(formatValue(team.name))}</td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; color: #2c3e50;">${team.ranking ?? "-"}</td>
     </tr>
-  `);
+  `,
+  );
 
   const schedule = request.schedule || {};
-  const updatedBy = request.triggeredBy?.name || request.triggeredBy?.email || null;
 
-  const facilitatorLine = facilitator?.name && facilitator.email
-    ? `<p style="color: #2c3e50; font-size: 14px; line-height: 21px; margin: 16px 0 0 0; font-family: Arial, sans-serif;">
+  const facilitatorLine =
+    facilitator?.name && facilitator.email
+      ? `<p style="color: #2c3e50; font-size: 14px; line-height: 21px; margin: 16px 0 0 0; font-family: Arial, sans-serif;">
         Current facilitator for ${escapeHtml(formatValue(schedule.location))}: <strong>${escapeHtml(facilitator.name)}</strong>
-        ${facilitator.phone ? `&nbsp;|&nbsp;${escapeHtml(facilitator.phone)}` : ""}
-        ${facilitator.email ? `&nbsp;|&nbsp;<a href="mailto:${escapeHtml(facilitator.email)}" style="color: #B20000; text-decoration: none;">${escapeHtml(facilitator.email)}</a>` : ""}
       </p>`
-    : "";
+      : "";
 
-  const scheduleUrl = request.scheduleUrl ? `
+  const scheduleUrl = request.scheduleUrl
+    ? `
     <p style="margin: 20px 0 0 0;">
       <a href="${escapeAttribute(request.scheduleUrl)}" style="background-color: #B20000; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 6px; display: inline-block; font-weight: bold;">
         View Full Schedule
       </a>
     </p>
-  ` : "";
+  `
+    : "";
 
   return `
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
@@ -405,13 +425,8 @@ function buildEmailHtml({
                       </p>
                       <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
                         The schedule for <strong style="color: #B20000;">${escapeHtml(request.leagueName)}</strong>
-                        (Week ${request.weekNumber}, Tier ${request.tierNumber}) has been updated.
+                        (Week ${request.weekNumber}, ${escapeHtml(tierLabel)}) has been updated.
                       </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      ${changeSection}
                     </td>
                   </tr>
                   <tr>
@@ -443,9 +458,11 @@ function buildEmailHtml({
                           </tr>
                         </thead>
                         <tbody>
-                          ${teamsRows.length > 0
-                            ? teamsRows.join("")
-                            : `<tr><td colspan="3" style="padding: 10px 12px; color: #2c3e50;">No team assignments available.</td></tr>`}
+                          ${
+                            teamsRows.length > 0
+                              ? teamsRows.join("")
+                              : `<tr><td colspan="3" style="padding: 10px 12px; color: #2c3e50;">No team assignments available.</td></tr>`
+                          }
                         </tbody>
                       </table>
                     </td>
@@ -458,7 +475,6 @@ function buildEmailHtml({
                         If you have any questions, please reach out to us at
                         <a href="mailto:info@ofsl.ca" style="color: #B20000; text-decoration: none; font-weight: bold;">info@ofsl.ca</a>.
                       </p>
-                      ${updatedBy ? `<p style="color: #7f8c8d; font-size: 12px; line-height: 18px; margin: 12px 0 0 0; font-family: Arial, sans-serif;">Update submitted by ${escapeHtml(updatedBy)}.</p>` : ""}
                     </td>
                   </tr>
                 </table>
