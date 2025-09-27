@@ -26,7 +26,7 @@ export const INITIAL_NEW_GYM_FORM = {
   availableDays: [] as number[],
   availableSports: [] as number[],
   locations: [] as string[],
-  facilitatorId: null as string | null
+  facilitatorIds: [] as string[]
 };
 
 export const INITIAL_EDIT_GYM_FORM = {
@@ -37,7 +37,7 @@ export const INITIAL_EDIT_GYM_FORM = {
   availableDays: [] as number[],
   availableSports: [] as number[],
   locations: [] as string[],
-  facilitatorId: null as string | null
+  facilitatorIds: [] as string[]
 };
 
 export const INITIAL_FILTERS = {

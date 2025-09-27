@@ -104,6 +104,13 @@ interface ScheduleNotificationPayload {
       court: string;
       format?: string | null;
     };
+    previousSchedule: {
+      location: string | null;
+      time: string | null;
+      court: string | null;
+      format?: string | null;
+    };
+    relatedLocations: string[];
     teams: ScheduleNotificationTeam[];
     tierLabel?: string;
   };
@@ -197,19 +204,24 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       }
     });
 
-    const displayPositions = TEAM_POSITIONS.slice(0, updatedCount);
+    const originalPositions = TEAM_POSITIONS.slice(0, originalCount);
+    const displayPositions = Array.from(new Set([...originalPositions, ...TEAM_POSITIONS.slice(0, updatedCount)]));
     const teams: ScheduleNotificationTeam[] = displayPositions.map((position) => {
-      const team = updatedTierData.teams[position] ?? null;
-      const rankingValue = team?.ranking;
+      const updatedTeam = updatedTierData.teams[position] ?? null;
+      const originalName = (originalTier as Record<string, string | null | undefined>)[`team_${position.toLowerCase()}_name`];
+      const originalRanking = (originalTier as Record<string, number | null | undefined>)[`team_${position.toLowerCase()}_ranking`];
+      const rankingValue = updatedTeam?.ranking ?? originalRanking ?? null;
       const numericRanking = rankingValue === null || rankingValue === undefined
         ? null
         : Number.isNaN(Number(rankingValue))
           ? null
           : Number(rankingValue);
 
+      const name = updatedTeam?.name ?? (typeof originalName === 'string' ? originalName : null);
+
       return {
         position,
-        name: team?.name ?? null,
+        name,
         ranking: numericRanking,
       };
     });
@@ -223,6 +235,13 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     const weekNumber = originalTier.week_number ?? 0;
     const tierNumber = originalTier.tier_number ?? 0;
     const tierLabel = getTierDisplayLabel(updatedTierData.format ?? '', tierNumber) || `Tier ${tierNumber}`;
+
+    const relatedLocations = Array.from(
+      new Set([
+        originalTier.location ?? '',
+        updatedTierData.location ?? '',
+      ].filter((value) => typeof value === 'string' && value.trim() !== ''))
+    );
 
     return {
       hasChanges: changes.length > 0,
@@ -238,6 +257,13 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           court: updatedTierData.court ?? '',
           format: updatedFormat,
         },
+        previousSchedule: {
+          location: originalTier.location ?? null,
+          time: originalTier.time_slot ?? null,
+          court: originalTier.court ?? null,
+          format: originalFormat,
+        },
+        relatedLocations,
         teams,
         tierLabel,
       },
@@ -259,7 +285,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
 
       const leagueSegment = leagueId || (payload.request.leagueId ? String(payload.request.leagueId) : '');
       const scheduleUrl = leagueSegment
-        ? `${window.location.origin}/#/leagues/${leagueSegment}/schedule`
+        ? `${window.location.origin}/#/leagues/${leagueSegment}?tab=schedule`
         : undefined;
 
       const body = {

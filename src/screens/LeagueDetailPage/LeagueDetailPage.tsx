@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useParams, useSearchParams, useLocation } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useParams, useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -31,6 +31,7 @@ export function LeagueDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { userProfile } = useAuth();
   const [league, setLeague] = useState<League | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,21 @@ export function LeagueDetailPage() {
     tabParam === 'schedule' ? 'schedule' : 'info';
   
   const { activeView, setActiveView } = useActiveView(initialView);
+
+  const handleViewChange = useCallback((view: ActiveView) => {
+    setActiveView(view);
+    const search = view === 'info' ? '' : `?tab=${view}`;
+    navigate(`${location.pathname}${search}`, { replace: true });
+  }, [navigate, location.pathname, setActiveView]);
+
+  useEffect(() => {
+    if (
+      activeView === 'schedule' &&
+      (!hasSchedule || !userProfile || (league?.sport_name ?? '').toLowerCase() !== 'volleyball')
+    ) {
+      handleViewChange('info');
+    }
+  }, [activeView, hasSchedule, userProfile, league?.sport_name, handleViewChange]);
   const { 
     showScoreSubmissionModal, 
     selectedTier, 
@@ -225,7 +241,7 @@ export function LeagueDetailPage() {
             {/* Navigation tabs */}
             <NavigationTabs
               activeView={activeView}
-              setActiveView={setActiveView}
+              setActiveView={handleViewChange}
               sport={league.sport_name || ""}
               isAdmin={userProfile?.is_admin || false}
               hasSchedule={hasSchedule}

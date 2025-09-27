@@ -82,32 +82,35 @@ export interface Database {
           created_at: string
           gym: string | null
           address: string | null
-          instructions: string | null
-          active: boolean
-          available_days: number[] | null
-          available_sports: number[] | null
-        }
-        Insert: {
-          id: number
-          created_at?: string
-          gym?: string | null
-          address?: string | null
-          instructions?: string | null
-          active?: boolean
-          available_days?: number[] | null
-          available_sports?: number[] | null
-        }
-        Update: {
-          id?: number
-          created_at?: string
-          gym?: string | null
-          address?: string | null
-          instructions?: string | null
-          active?: boolean
-          available_days?: number[] | null
-          available_sports?: number[] | null
-        }
-      }
+      instructions: string | null
+      active: boolean
+      available_days: number[] | null
+      available_sports: number[] | null
+      facilitator_ids: string[] | null
+    }
+    Insert: {
+      id: number
+      created_at?: string
+      gym?: string | null
+      address?: string | null
+      instructions?: string | null
+      active?: boolean
+      available_days?: number[] | null
+      available_sports?: number[] | null
+      facilitator_ids?: string[] | null
+    }
+    Update: {
+      id?: number
+      created_at?: string
+      gym?: string | null
+      address?: string | null
+      instructions?: string | null
+      active?: boolean
+      available_days?: number[] | null
+      available_sports?: number[] | null
+      facilitator_ids?: string[] | null
+    }
+  }
       balances: {
         Row: {
           id: number

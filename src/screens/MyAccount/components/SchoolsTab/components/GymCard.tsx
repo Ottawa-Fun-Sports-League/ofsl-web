@@ -12,7 +12,7 @@ interface GymCardProps {
 }
 
 export function GymCard({ gym, sports, daysOfWeek, deleting, onEdit, onDelete }: GymCardProps) {
-  const facilitator = gym.facilitator;
+  const facilitators = Array.isArray(gym.facilitators) ? gym.facilitators : [];
 
   return (
     <div className="border border-gray-200 rounded-lg p-6">
@@ -77,29 +77,34 @@ export function GymCard({ gym, sports, daysOfWeek, deleting, onEdit, onDelete }:
         </div>
 
         {/* Second Column: Contact Info */}
-        <div className="space-y-1 text-sm">
-          <div>
-            <span className="font-medium text-[#6F6F6F]">Facilitator:</span>{' '}
-            <span className="text-[#6F6F6F]">
-              {facilitator?.name || facilitator?.email || 'Unassigned'}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium text-[#6F6F6F]">Phone:</span>{' '}
-            <span className="text-[#6F6F6F]">
-              {facilitator?.phone || '—'}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium text-[#6F6F6F]">Email:</span>{' '}
-            {facilitator?.email ? (
-              <a href={`mailto:${facilitator.email}`} className="text-[#6F6F6F] hover:text-[#B20000]">
-                {facilitator.email}
-              </a>
-            ) : (
-              <span className="text-[#6F6F6F]">—</span>
-            )}
-          </div>
+        <div className="space-y-2 text-sm">
+          <div className="font-medium text-[#6F6F6F]">Facilitators</div>
+          {facilitators.length === 0 ? (
+            <div className="text-[#6F6F6F]">Unassigned</div>
+          ) : (
+            <div className="space-y-2">
+              {facilitators.map((facilitator) => (
+                <div key={facilitator.id} className="border border-gray-200 rounded-md p-2">
+                  <div className="text-[#6F6F6F] font-medium">
+                    {facilitator.name || facilitator.email || 'Unnamed facilitator'}
+                  </div>
+                  <div className="text-xs text-[#6F6F6F] mt-1">
+                    <div>Phone: {facilitator.phone || '—'}</div>
+                    <div>
+                      Email:{' '}
+                      {facilitator.email ? (
+                        <a href={`mailto:${facilitator.email}`} className="text-[#B20000] hover:underline">
+                          {facilitator.email}
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Third Column: Edit/Delete Actions */}

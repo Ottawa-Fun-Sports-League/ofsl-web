@@ -39,12 +39,14 @@ interface NotificationRequest {
   tierNumber: number;
   changes: NotificationChange[];
   schedule: ScheduleDetails;
+  previousSchedule?: ScheduleDetails | null;
   teams: ScheduleTeam[];
   scheduleUrl?: string;
   triggeredBy?: TriggeredBy;
   sendToFacilitator?: boolean;
   sendToParticipants?: boolean;
   tierLabel?: string;
+  relatedLocations?: string[];
 }
 
 interface RecipientMeta {
@@ -163,10 +165,20 @@ serve(async (req: Request) => {
       ? await collectRecipients(serviceClient, body.leagueId)
       : new Map<string, RecipientMeta>();
 
-    const facilitator = await getFacilitatorForLocation(serviceClient, body.schedule.location);
+    const locationsToCheck = Array.from(new Set([
+      body.schedule?.location?.trim() || '',
+      body.previousSchedule?.location?.trim() || '',
+      ...((body.relatedLocations ?? []).map((loc) => (loc || '').trim()))
+    ].filter((loc) => loc !== '')));
 
-    if (sendToFacilitator && facilitator?.email) {
-      recipientMap.set(facilitator.email.toLowerCase(), { name: facilitator.name ?? null });
+    const facilitators = await getFacilitatorsForLocations(serviceClient, locationsToCheck);
+
+    if (sendToFacilitator && facilitators.length > 0) {
+      facilitators.forEach((facilitator) => {
+        if (facilitator.email) {
+          recipientMap.set(facilitator.email.toLowerCase(), { name: facilitator.name ?? null });
+        }
+      });
     }
 
     if (recipientMap.size === 0) {
@@ -188,7 +200,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const subject = buildEmailSubject(body.leagueName, body.weekNumber, body.tierNumber);
+    const subject = buildEmailSubject(body.leagueName, body.weekNumber, body.tierLabel || `Tier ${body.tierNumber}`);
     let delivered = 0;
 
     for (const [email, meta] of recipientMap.entries()) {
@@ -196,7 +208,7 @@ serve(async (req: Request) => {
       const html = buildEmailHtml({
         request: body,
         recipientName: meta.name,
-        facilitator: sendToFacilitator ? facilitator : null,
+        facilitator: sendToFacilitator ? facilitators[0] ?? null : null,
       });
 
       const response = await sendEmail(resendApiKey, email, subject, html);
@@ -314,19 +326,19 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
   return recipients;
 }
 
-async function getFacilitatorForLocation(
+async function getFacilitatorsForLocation(
   client: SupabaseClient,
   location: string | null | undefined,
 ) {
   if (!location || !location.trim()) {
-    return null;
+    return [];
   }
 
   const normalized = location.trim();
 
   const { data: gymExact, error: exactError } = await client
     .from("gyms")
-    .select("facilitator:facilitator_id ( id, name, email, phone ), facilitator_id")
+    .select("facilitator_ids")
     .eq("gym", normalized)
     .maybeSingle();
 
@@ -334,15 +346,17 @@ async function getFacilitatorForLocation(
     console.error("notify-schedule-update: failed exact gym lookup", exactError);
   }
 
-  if (gymExact && gymExact.facilitator && gymExact.facilitator.email) {
-    const facilitatorRow = gymExact.facilitator as unknown as FacilitatorInfo;
-    return facilitatorRow;
+  if (gymExact && Array.isArray(gymExact.facilitator_ids)) {
+    const ids = gymExact.facilitator_ids.filter((id: unknown): id is string => typeof id === 'string');
+    if (ids.length > 0) {
+      return await fetchFacilitatorsByIds(client, ids);
+    }
   }
 
   const escaped = normalized.replace(/%/g, "\\%").replace(/_/g, "\\_");
   const { data: gymLike, error: likeError } = await client
     .from("gyms")
-    .select("facilitator:facilitator_id ( id, name, email, phone ), facilitator_id")
+    .select("facilitator_ids")
     .ilike("gym", `%${escaped}%`)
     .limit(1);
 
@@ -351,17 +365,56 @@ async function getFacilitatorForLocation(
   }
 
   if (gymLike && gymLike.length > 0) {
-    const entry = gymLike[0] as { facilitator: FacilitatorInfo | null };
-    if (entry.facilitator && entry.facilitator.email) {
-      return entry.facilitator;
+    const entry = gymLike[0] as { facilitator_ids: string[] | null };
+    if (Array.isArray(entry.facilitator_ids) && entry.facilitator_ids.length > 0) {
+      return await fetchFacilitatorsByIds(client, entry.facilitator_ids);
     }
   }
 
-  return null;
+  return [];
 }
 
-function buildEmailSubject(leagueName: string, weekNumber: number, tierNumber: number) {
-  return `Schedule Update: ${leagueName} (Week ${weekNumber}, Tier ${tierNumber})`;
+async function fetchFacilitatorsByIds(client: SupabaseClient, ids: string[]) {
+  const uniqueIds = Array.from(new Set(ids.filter((id) => typeof id === 'string')));
+  if (uniqueIds.length === 0) return [];
+
+  const { data, error } = await client
+    .from('users')
+    .select('id, name, email, phone')
+    .in('id', uniqueIds);
+
+  if (error) {
+    console.error('notify-schedule-update: failed to load facilitators by id', error);
+    return [];
+  }
+
+  return (data ?? [])
+    .filter((row) => row && row.email)
+    .map((row) => ({
+      name: row.name ?? null,
+      email: row.email ?? null,
+      phone: row.phone ?? null,
+    } as FacilitatorInfo));
+}
+
+async function getFacilitatorsForLocations(client: SupabaseClient, locations: string[]) {
+  if (!locations.length) return [];
+  const facilitatorsMap = new Map<string, FacilitatorInfo>();
+
+  for (const location of locations) {
+    const facilitators = await getFacilitatorsForLocation(client, location);
+    facilitators.forEach((facilitator) => {
+      if (facilitator.email) {
+        facilitatorsMap.set(facilitator.email.toLowerCase(), facilitator);
+      }
+    });
+  }
+
+  return Array.from(facilitatorsMap.values());
+}
+
+function buildEmailSubject(leagueName: string, weekNumber: number, tierLabel: string) {
+  return `Schedule Update: ${leagueName} (Week ${weekNumber}, ${tierLabel})`;
 }
 
 function buildEmailHtml({
