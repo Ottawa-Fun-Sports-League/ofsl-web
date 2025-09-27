@@ -30,7 +30,7 @@ export function useGymOperations(
           available_days: newGym.availableDays,
           available_sports: newGym.availableSports,
           locations: newGym.locations,
-          facilitator_id: newGym.facilitatorId
+          facilitator_ids: newGym.facilitatorIds
         });
 
       if (error) throw error;
@@ -58,7 +58,7 @@ export function useGymOperations(
       availableDays: gym.available_days || [],
       availableSports: gym.available_sports || [],
       locations: gym.locations || [],
-      facilitatorId: gym.facilitator_id || null
+      facilitatorIds: Array.isArray(gym.facilitator_ids) ? gym.facilitator_ids : []
     });
   };
 
@@ -78,7 +78,7 @@ export function useGymOperations(
           available_days: editGym.availableDays,
           available_sports: editGym.availableSports,
           locations: editGym.locations,
-          facilitator_id: editGym.facilitatorId
+          facilitator_ids: editGym.facilitatorIds
         })
         .eq('id', editingGym);
 

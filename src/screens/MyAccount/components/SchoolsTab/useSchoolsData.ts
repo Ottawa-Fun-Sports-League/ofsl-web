@@ -45,23 +45,31 @@ export function useSchoolsData() {
           .order('name');
 
         if (facilitatorError) throw facilitatorError;
-        if (facilitatorResponse) setFacilitators(facilitatorResponse as Facilitator[]);
+        const facilitatorList = (facilitatorResponse as Facilitator[]) ?? [];
+        setFacilitators(facilitatorList);
 
         const { data: gymsResponse, error } = await supabase
           .from('gyms')
-          .select(`
-            *,
-            facilitator:facilitator_id (
-              id,
-              name,
-              email,
-              phone
-            )
-          `)
+          .select('*')
           .order('gym');
 
         if (error) throw error;
-        if (gymsResponse) setGyms(gymsResponse);
+        if (gymsResponse) {
+          const gymsWithFacilitators: Gym[] = gymsResponse.map((gym) => {
+            const facilitatorIds = Array.isArray(gym.facilitator_ids) ? gym.facilitator_ids : [];
+            const facilitatorDetails = facilitatorIds
+              .map((id: string) => facilitatorList.find((facilitator) => facilitator.id === id))
+              .filter((fac): fac is Facilitator => Boolean(fac));
+
+            return {
+              ...gym,
+              facilitator_ids: facilitatorIds,
+              facilitators: facilitatorDetails,
+            };
+          }) as Gym[];
+
+          setGyms(gymsWithFacilitators);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);

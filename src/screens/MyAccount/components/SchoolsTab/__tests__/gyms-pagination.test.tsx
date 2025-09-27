@@ -26,8 +26,7 @@ vi.mock('../../../../../lib/supabase', () => {
     available_days: [1, 2, 3],
     available_sports: [1, 2],
     locations: ['Downtown'],
-    facilitator_id: null,
-    facilitator: null
+    facilitator_ids: [],
   }));
 
   const createChain = (data: unknown[]) => {

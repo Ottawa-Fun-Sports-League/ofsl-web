@@ -42,8 +42,10 @@ export function GymForm({
   const facilitatorDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (gym.facilitatorId && !facilitators.some((facilitator) => facilitator.id === gym.facilitatorId)) {
-      onGymChange({ ...gym, facilitatorId: null });
+    const ids = Array.isArray(gym.facilitatorIds) ? gym.facilitatorIds : [];
+    const filteredIds = ids.filter((id) => facilitators.some((facilitator) => facilitator.id === id));
+    if (filteredIds.length !== ids.length) {
+      onGymChange({ ...gym, facilitatorIds: filteredIds });
     }
   }, [facilitators, gym, onGymChange]);
 
@@ -71,11 +73,12 @@ export function GymForm({
     };
   }, [showFacilitatorList]);
 
-  const selectedFacilitator = useMemo(() => (
-    gym.facilitatorId
-      ? facilitators.find((facilitator) => facilitator.id === gym.facilitatorId) ?? null
-      : null
-  ), [facilitators, gym.facilitatorId]);
+  const selectedFacilitators = useMemo(() => {
+    const ids = Array.isArray(gym.facilitatorIds) ? gym.facilitatorIds : [];
+    return ids
+      .map((id) => facilitators.find((facilitator) => facilitator.id === id))
+      .filter((fac): fac is Facilitator => Boolean(fac));
+  }, [facilitators, gym.facilitatorIds]);
 
   const filteredFacilitators = useMemo(() => {
     const query = facilitatorSearch.trim().toLowerCase();
@@ -87,8 +90,16 @@ export function GymForm({
     });
   }, [facilitators, facilitatorSearch]);
 
-  const handleFacilitatorSelect = (facilitatorId: string | null) => {
-    onGymChange({ ...gym, facilitatorId });
+  const handleFacilitatorToggle = (facilitatorId: string) => {
+    const ids = Array.isArray(gym.facilitatorIds) ? gym.facilitatorIds : [];
+    const nextIds = ids.includes(facilitatorId)
+      ? ids.filter((id) => id !== facilitatorId)
+      : [...ids, facilitatorId];
+    onGymChange({ ...gym, facilitatorIds: nextIds });
+  };
+
+  const handleClearFacilitators = () => {
+    onGymChange({ ...gym, facilitatorIds: [] });
     setShowFacilitatorList(false);
     setFacilitatorSearch('');
   };
@@ -129,6 +140,20 @@ export function GymForm({
         <div>
           <label className="block text-sm font-medium text-[#6F6F6F] mb-2">Assigned Facilitator</label>
           <div className="relative" ref={facilitatorDropdownRef}>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {selectedFacilitators.length === 0 ? (
+                <span className="text-xs text-gray-500">No facilitators assigned</span>
+              ) : (
+                selectedFacilitators.map((facilitator) => (
+                  <span
+                    key={facilitator.id}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[#B20000]/10 text-[#B20000]"
+                  >
+                    {facilitator.name || facilitator.email || 'Unnamed facilitator'}
+                  </span>
+                ))
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setShowFacilitatorList((open) => !open)}
@@ -138,9 +163,9 @@ export function GymForm({
               aria-controls="facilitator-selector"
             >
               <span className="truncate text-[#6F6F6F]">
-                {selectedFacilitator
-                  ? selectedFacilitator.name || selectedFacilitator.email || 'Unnamed facilitator'
-                  : 'Select a facilitator'}
+                {selectedFacilitators.length > 0
+                  ? `${selectedFacilitators.length} facilitator${selectedFacilitators.length === 1 ? '' : 's'} selected`
+                  : 'Select facilitators'}
               </span>
               <span className="text-xs text-gray-400">
                 {showFacilitatorList ? 'Hide' : 'Show'}
@@ -170,7 +195,7 @@ export function GymForm({
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleFacilitatorSelect(null)}
+                      onClick={handleClearFacilitators}
                       className="text-[#B20000] hover:text-[#8A0000]"
                     >
                       Clear selection
@@ -185,12 +210,13 @@ export function GymForm({
                     </div>
                   ) : (
                     filteredFacilitators.map((facilitator) => {
-                      const isSelected = facilitator.id === gym.facilitatorId;
+                      const ids = Array.isArray(gym.facilitatorIds) ? gym.facilitatorIds : [];
+                      const isSelected = ids.includes(facilitator.id);
                       return (
                         <button
                           type="button"
                           key={facilitator.id}
-                          onClick={() => handleFacilitatorSelect(facilitator.id)}
+                          onClick={() => handleFacilitatorToggle(facilitator.id)}
                           role="option"
                           aria-selected={isSelected}
                           className={`w-full text-left px-4 py-3 transition-colors ${
