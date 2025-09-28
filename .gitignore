@@ -38,4 +38,4 @@ test-email-*.js
 /test-results-*
 
 # supabase
-supabase/.temp
+supabase/.temp/

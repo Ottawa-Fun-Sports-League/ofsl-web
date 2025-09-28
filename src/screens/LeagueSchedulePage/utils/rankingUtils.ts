@@ -230,7 +230,7 @@ export function computeWeeklyNameRanksFromResults(
     try {
       // Debug: log ordering used for weekly ranks
       // eslint-disable-next-line no-console
-      console.info('[Weekly order]', { week, orderedNames: [...orderedNames] });
+      console.info('[Weekly order]', { week, orderedNames: [...orderedSlots] });
     } catch {/* ignore logging issues */}
 
     // Assign sequential ranks; reserve slots for nulls

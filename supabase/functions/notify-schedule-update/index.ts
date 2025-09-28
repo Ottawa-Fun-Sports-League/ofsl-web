@@ -233,6 +233,7 @@ serve(async (req: Request) => {
 async function collectRecipients(client: SupabaseClient, leagueId: number) {
   const recipients = new Map<string, RecipientMeta>();
   const userIds = new Set<string>();
+  const emailAddresses = new Set<string>();
 
   const { data: teamRows, error: teamError } = await client
     .from("teams")
@@ -251,9 +252,20 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
         roster: string[] | null;
       };
 
-      if (cast.captain_id) userIds.add(cast.captain_id);
-      (cast.co_captains ?? []).forEach((id) => id && userIds.add(id));
-      (cast.roster ?? []).forEach((id) => id && userIds.add(id));
+      const addIdentifier = (value: string | null | undefined) => {
+        if (!value) return;
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        if (trimmed.includes('@')) {
+          emailAddresses.add(trimmed.toLowerCase());
+        } else {
+          userIds.add(trimmed);
+        }
+      };
+
+      addIdentifier(cast.captain_id);
+      (cast.co_captains ?? []).forEach(addIdentifier);
+      (cast.roster ?? []).forEach(addIdentifier);
     }
   });
 
@@ -270,12 +282,16 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
     if (row && typeof row === "object" && "user_id" in row) {
       const userId = (row as { user_id: string | null }).user_id;
       if (userId) {
-        userIds.add(userId);
+        if (userId.includes('@')) {
+          emailAddresses.add(userId.toLowerCase());
+        } else {
+          userIds.add(userId);
+        }
       }
     }
   });
 
-  if (userIds.size === 0) {
+  if (userIds.size === 0 && emailAddresses.size === 0) {
     return recipients;
   }
 
@@ -318,10 +334,17 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
         const cast = userRow as { id: string; auth_id: string | null; name: string | null; email: string | null };
         if (cast.email) {
           recipients.set(cast.email.toLowerCase(), { name: cast.name ?? null });
+          emailAddresses.delete(cast.email.toLowerCase());
         }
       }
     });
   }
+
+  emailAddresses.forEach((email) => {
+    if (!recipients.has(email)) {
+      recipients.set(email, { name: null });
+    }
+  });
 
   return recipients;
 }

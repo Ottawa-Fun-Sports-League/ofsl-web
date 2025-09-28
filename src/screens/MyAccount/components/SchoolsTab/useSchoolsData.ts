@@ -58,8 +58,8 @@ export function useSchoolsData() {
           const gymsWithFacilitators: Gym[] = gymsResponse.map((gym) => {
             const facilitatorIds = Array.isArray(gym.facilitator_ids) ? gym.facilitator_ids : [];
             const facilitatorDetails = facilitatorIds
-              .map((id: string) => facilitatorList.find((facilitator) => facilitator.id === id))
-              .filter((fac): fac is Facilitator => Boolean(fac));
+              .map((id: string) => facilitatorList.find((facilitator: Facilitator) => facilitator.id === id))
+              .filter((fac: Facilitator | undefined): fac is Facilitator => Boolean(fac));
 
             return {
               ...gym,

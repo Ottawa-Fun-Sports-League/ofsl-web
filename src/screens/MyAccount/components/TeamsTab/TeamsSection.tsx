@@ -21,12 +21,50 @@ import { PaymentStatusBadge } from "../../../../components/ui/payment-status-bad
 import { PaymentInstructionsModal } from "./PaymentInstructionsModal";
 import { Team, LeaguePayment } from "./types";
 import { PaymentStatusSection } from "./components/PaymentStatusSection";
-import { LocationPopover } from "../../../../components/ui/LocationPopover";
 import { SkillLevelEditModal } from "./SkillLevelEditModal";
-import {
-  getPrimaryLocation,
-  getGymNamesByLocation,
-} from "../../../../lib/leagues";
+import { getPrimaryLocation } from "../../../../lib/leagues";
+
+const normalizeValue = (value?: string | null) => (value ? value.trim().toLowerCase() : '');
+
+const findMatchingGym = (
+  gyms: Array<{ id?: number; gym?: string | null; address?: string | null; instructions?: string | null }>,
+  locationName?: string | null,
+) => {
+  if (!locationName) return undefined;
+  const normalizedLocation = normalizeValue(locationName);
+  if (!normalizedLocation) return undefined;
+
+  return gyms.find((gym) => {
+    const name = normalizeValue(gym.gym);
+    const address = normalizeValue(gym.address);
+    return (name && (normalizedLocation.includes(name) || name.includes(normalizedLocation))) ||
+      (address && normalizedLocation.includes(address));
+  });
+};
+
+const renderLocationDisplay = (
+  label: string,
+  query: string | null,
+  notes?: string | null,
+) => (
+  <div className="flex flex-col" key={`loc-${label}`}>
+    {query ? (
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs font-medium text-[#B20000] hover:text-[#8A0000] hover:underline"
+      >
+        {label}
+      </a>
+    ) : (
+      <span className="text-xs font-medium text-[#6F6F6F]">{label}</span>
+    )}
+    {notes && (
+      <span className="text-[11px] leading-4 text-gray-500 mt-1">{notes}</span>
+    )}
+  </div>
+);
 
 const formatLocationSummary = (
   location?: string | null,
@@ -148,29 +186,30 @@ export function TeamsSection({
             const locationSummary = matchup
               ? formatLocationSummary(matchup.location, matchup.court, matchup.timeSlot)
               : null;
-            const fallbackLocations = getPrimaryLocation(team.league?.gyms || []);
-            const locationElements = locationSummary
-              ? [
-                  <span key="summary" className="text-sm text-[#6F6F6F]">
-                    {locationSummary}
-                  </span>,
-                ]
-              : fallbackLocations.length > 0
-                ? fallbackLocations.map((location, index) => (
-                    <LocationPopover
-                      key={index}
-                      locations={getGymNamesByLocation(team.league?.gyms || [], location)}
-                    >
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                        {location}
-                      </span>
-                    </LocationPopover>
-                  ))
-                : [
-                    <span key="tbd" className="text-sm text-gray-500">
-                      TBD
-                    </span>,
-                  ];
+            const leagueGyms = (team.league?.gyms || []).filter((gym): gym is { id?: number; gym?: string | null; address?: string | null; instructions?: string | null } => Boolean(gym));
+            const locationName = matchup?.location?.trim() || (locationSummary ? locationSummary.split('-')[0].trim() : undefined);
+            const matchedGym = findMatchingGym(leagueGyms, locationName);
+            const queryValue = matchedGym?.address || matchedGym?.gym || locationName || null;
+
+            const locationElements: JSX.Element[] = [];
+
+            if (locationName) {
+              locationElements.push(renderLocationDisplay(locationSummary || locationName, queryValue, matchedGym?.instructions));
+            } else {
+              const fallbackLocations = getPrimaryLocation(team.league?.gyms || []);
+              if (fallbackLocations.length > 0) {
+                const fallbackName = fallbackLocations[0];
+                const fallbackGym = findMatchingGym(leagueGyms, fallbackName);
+                const fallbackQuery = fallbackGym?.address || fallbackGym?.gym || fallbackName;
+                locationElements.push(renderLocationDisplay(fallbackName, fallbackQuery, fallbackGym?.instructions));
+              } else {
+                locationElements.push(
+                  <span key="tbd" className="text-sm text-gray-500">
+                    TBD
+                  </span>
+                );
+              }
+            }
             const isPlayoffWeek = matchup?.isPlayoff;
             const weekTextClass =
               weekLabel === "Week TBD"
@@ -271,7 +310,7 @@ export function TeamsSection({
                             <div className="flex flex-wrap items-center gap-2 w-full">
                               <MapPin className="h-4 w-4 text-[#6F6F6F] flex-shrink-0" />
                               <span className="font-medium text-[#6F6F6F]">Location:</span>
-                              <div className="flex flex-wrap items-center gap-1">
+                              <div className="flex flex-col gap-1">
                                 {locationElements}
                               </div>
                             </div>
@@ -607,31 +646,28 @@ export function TeamsSection({
                     <div className="flex items-center gap-2">
                       <MapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
                       <span className="text-[#6F6F6F]">Location:</span>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-col gap-1">
                         {(() => {
-                          const gymLocations = getPrimaryLocation(
-                            league.gyms || [],
-                          );
+                          const gyms = (league.gyms || []).filter((gym): gym is { id?: number; gym?: string | null; address?: string | null; instructions?: string | null } => Boolean(gym));
+                          const primary = getPrimaryLocation(league.gyms || []);
 
-                          if (gymLocations.length === 0) {
-                            return (
-                              <span className="text-sm text-gray-500">TBD</span>
-                            );
+                          if (gyms.length > 0) {
+                            const primaryGym = gyms[0];
+                            const label = primaryGym.gym || primaryGym.address || 'Facility';
+                            const query = primaryGym.address || primaryGym.gym;
+                            return [renderLocationDisplay(label, query || null, primaryGym.instructions || null)];
                           }
 
-                          return gymLocations.map((location, index) => (
-                            <LocationPopover
-                              key={index}
-                              locations={getGymNamesByLocation(
-                                league.gyms || [],
-                                location,
-                              )}
-                            >
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                                {location}
-                              </span>
-                            </LocationPopover>
-                          ));
+                          if (primary.length > 0) {
+                            const location = primary[0];
+                            return [renderLocationDisplay(location, location, null)];
+                          }
+
+                          return [
+                            <span key="tbd" className="text-sm text-gray-500">
+                              TBD
+                            </span>,
+                          ];
                         })()}
                       </div>
                     </div>

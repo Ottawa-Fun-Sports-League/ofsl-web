@@ -129,6 +129,38 @@ export function useUsersData() {
   }, [searchTerm, filters, sortField, sortDirection, pagination.currentPage, pagination.pageSize]);
   */
 
+  const mapRowsToUsers = useCallback((rows: Record<string, unknown>[]): User[] => {
+    return rows
+      .map((row) => {
+        const userId = row.profile_id || row.auth_id;
+        if (!userId) return null;
+
+        return {
+          id: String(userId),
+          profile_id: row.profile_id ? String(row.profile_id) : null,
+          auth_id: row.auth_id ? String(row.auth_id) : null,
+          name: row.name ? String(row.name) : null,
+          email: String(row.email),
+          phone: row.phone ? String(row.phone) : "",
+          preferred_position: null,
+          is_admin: Boolean(row.is_admin),
+          is_facilitator: Boolean(row.is_facilitator),
+          date_created: String(row.date_created),
+          date_modified: String(row.date_modified || row.date_created),
+          team_ids: row.team_ids as string[] | null,
+          league_ids: row.league_ids as (string | number)[] | null,
+          user_sports_skills: row.user_sports_skills as Record<string, unknown>[] | null,
+          status: row.status as 'active' | 'pending' | 'unconfirmed' | 'confirmed_no_profile' | 'profile_incomplete',
+          confirmed_at: row.confirmed_at ? String(row.confirmed_at) : null,
+          last_sign_in_at: row.last_sign_in_at ? String(row.last_sign_in_at) : null,
+          current_registrations: row.current_registrations as Record<string, unknown>[] | null,
+          total_owed: Number(row.total_owed) || 0,
+          total_paid: Number(row.total_paid) || 0,
+        } as User;
+      })
+      .filter((user): user is User => user !== null);
+  }, []);
+
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -187,36 +219,7 @@ export function useUsersData() {
       // Extract total count from first row (all rows have same total_count)
       const totalCount = paginatedData[0]?.total_count || 0;
 
-      // Map the paginated data to User objects
-      const processedUsers: User[] = paginatedData
-        .map((row: Record<string, unknown>) => {
-          const userId = row.profile_id || row.auth_id;
-          if (!userId) return null;
-
-          return {
-            id: String(userId),
-            profile_id: row.profile_id ? String(row.profile_id) : null,
-            auth_id: row.auth_id ? String(row.auth_id) : null,
-            name: row.name ? String(row.name) : null,
-            email: String(row.email),
-            phone: row.phone ? String(row.phone) : "",
-            preferred_position: null,
-            is_admin: Boolean(row.is_admin),
-            is_facilitator: Boolean(row.is_facilitator),
-            date_created: String(row.date_created),
-            date_modified: String(row.date_modified || row.date_created),
-            team_ids: row.team_ids as string[] | null,
-            league_ids: row.league_ids as (string | number)[] | null,
-            user_sports_skills: row.user_sports_skills as Record<string, unknown>[] | null,
-            status: row.status as 'active' | 'pending' | 'unconfirmed' | 'confirmed_no_profile' | 'profile_incomplete',
-            confirmed_at: row.confirmed_at ? String(row.confirmed_at) : null,
-            last_sign_in_at: row.last_sign_in_at ? String(row.last_sign_in_at) : null,
-            current_registrations: row.current_registrations as Record<string, unknown>[] | null,
-            total_owed: Number(row.total_owed) || 0,
-            total_paid: Number(row.total_paid) || 0,
-          };
-        })
-        .filter((user: User | null): user is User => user !== null);
+      const processedUsers: User[] = mapRowsToUsers(paginatedData as Record<string, unknown>[]);
 
       setUsers(processedUsers);
       setPagination((prev) => ({
@@ -325,9 +328,69 @@ export function useUsersData() {
   // Memoized filtered users for legacy compatibility (now same as users since filtering is server-side)
   const filteredUsers = useMemo(() => users, [users]);
 
+  const fetchAllFilteredUsers = useCallback(async () => {
+    const EXPORT_CHUNK_SIZE = 500;
+    let offset = 0;
+    let allUsers: User[] = [];
+    let totalCount: number | null = null;
+    const params = {
+      p_search: debouncedSearchTerm.trim() || "",
+      p_sort_field: sortField,
+      p_sort_direction: sortDirection,
+      p_administrator: filters.administrator,
+      p_facilitator: filters.facilitator,
+      p_active_player: filters.activePlayer,
+      p_pending_users: filters.pendingUsers,
+      p_players_not_in_league: filters.playersNotInLeague,
+      p_sports_in_league: filters.sportsInLeague,
+      p_sports_has_skill: filters.sportsWithSkill,
+    };
+
+    while (totalCount === null || offset < totalCount) {
+      const { data, error } = await supabase.rpc(
+        "get_users_paginated_admin",
+        {
+          ...params,
+          p_limit: EXPORT_CHUNK_SIZE,
+          p_offset: offset,
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        break;
+      }
+
+      if (totalCount === null) {
+        const firstRow = data[0] as Record<string, unknown> | undefined;
+        const countValue = firstRow?.total_count;
+        totalCount = typeof countValue === "number" ? countValue : Number(countValue) || 0;
+      }
+
+      allUsers = allUsers.concat(mapRowsToUsers(data as Record<string, unknown>[]));
+      offset += data.length;
+
+      if (data.length < EXPORT_CHUNK_SIZE) {
+        break;
+      }
+    }
+
+    return allUsers;
+  }, [
+    debouncedSearchTerm,
+    sortField,
+    sortDirection,
+    filters,
+    mapRowsToUsers,
+  ]);
+
   return {
     users,
     filteredUsers,
+    fetchAllFilteredUsers,
     searchTerm,
     loading,
     sortField,
