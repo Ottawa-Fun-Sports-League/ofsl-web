@@ -31,78 +31,10 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     }
   }, [elite.isElite, elite.seedRanksByTeamId, elite.maxWeek]);
 
-  // Page-level weekly backfill using results to avoid blanks after submit
-  // DISABLED: public now rebuilds weekly ranks from scratch in a later effect
+  // Legacy weekly backfill is intentionally disabled (admin parity handled elsewhere)
   useEffect(() => {
-    const run = async () => {
-      if (!leagueId) return;
-      return; // disabled; rely on rebuild effect below
-      if (!elite.isElite) return;
-      const lid = parseInt(leagueId);
-      try {
-        const { data: weekRows } = await supabase
-          .from('weekly_schedules')
-          .select('id, week_number, tier_number, format')
-          .eq('league_id', lid);
-        const { data: results } = await supabase
-          .from('game_results')
-          .select('team_name, week_number, tier_number, tier_position')
-          .eq('league_id', lid);
-        const { data: teamsRows } = await supabase
-          .from('teams')
-          .select('id,name')
-          .eq('league_id', lid)
-          .eq('active', true);
-        const nameToId = new Map<string, number>();
-        (teamsRows || []).forEach((t: any) => nameToId.set(String((t as any).name || '').toLowerCase(), (t as any).id));
-
-        const { computeWeeklyNameRanksFromResults, computePrevWeekNameRanksFromNextWeekSchedule } = await import('../../LeagueSchedulePage/utils/rankingUtils');
-
-        // 1) Placement-based ranks (authoritative)
-        const weeks = Array.from(new Set((weekRows || []).map((r: any) => r.week_number))).sort((a:number,b:number)=>a-b);
-        setWeeklyRanks((prev) => {
-          const merged: Record<number, Record<number, number>> = { ...(prev || {}) };
-          for (const w of weeks) {
-            const prevWeek = (w || 0) - 1; if (prevWeek < 1) continue;
-            const rows = (weekRows || []).filter((r: any) => r.week_number === w);
-            const nameRankMap = computePrevWeekNameRanksFromNextWeekSchedule(rows as any);
-            Object.entries(nameRankMap).forEach(([nm, rk]) => {
-              const id = nameToId.get(String(nm || '').toLowerCase());
-              if (!id) return;
-              if (!merged[id]) merged[id] = {} as Record<number, number>;
-              merged[id][prevWeek] = rk as number;
-            });
-          }
-          return merged;
-        });
-
-        // 2) Results-based backfill for teams without a value
-        if (Array.isArray(results) && results.length > 0) {
-          const nameRanksByWeek = computeWeeklyNameRanksFromResults(
-            (weekRows || []).map((r: any) => ({ id: r.id ?? null, week_number: r.week_number, tier_number: r.tier_number, format: r.format })) as any,
-            (results as any),
-          );
-          setWeeklyRanks((prev) => {
-            const merged: Record<number, Record<number, number>> = { ...(prev || {}) };
-            Object.keys(nameRanksByWeek || {}).map(Number).forEach((w) => {
-              const nmMap = (nameRanksByWeek as any)[w] || {};
-              Object.entries(nmMap).forEach(([nm, rk]) => {
-                const id = nameToId.get(String(nm || '').toLowerCase());
-                if (!id) return;
-                if (!merged[id]) merged[id] = {} as Record<number, number>;
-                if (typeof merged[id][w] !== 'number') {
-                  merged[id][w] = rk as number;
-                }
-              });
-            });
-            return merged;
-          });
-        }
-      } catch {
-        // non-blocking backfill; ignore
-      }
-    };
-    run();
+    if (!leagueId) return;
+    if (!elite.isElite) return;
   }, [leagueId, elite.isElite]);
 
   // Rebuild from scratch (placements first, then results) to keep parity with Admin
@@ -198,10 +130,6 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   }, [leagueId]);
 
   const isEliteFormat = useMemo(() => (scheduleFormat ?? "").includes("elite"), [scheduleFormat]);
-  const isSixTeamsFormat = useMemo(() => {
-    const fmt = (scheduleFormat ?? "").toLowerCase();
-    return fmt.includes('6-teams') || fmt.includes('6 teams') || fmt === '6-teams-head-to-head';
-  }, [scheduleFormat]);
   const showDifferentialColumn = useMemo(() => {
     const fmt = (scheduleFormat ?? '').toLowerCase();
     return (

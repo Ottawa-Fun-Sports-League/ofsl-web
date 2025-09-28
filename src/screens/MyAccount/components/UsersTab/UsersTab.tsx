@@ -21,6 +21,7 @@ export function UsersTab() {
 
   const {
     filteredUsers,
+    fetchAllFilteredUsers,
     searchTerm,
     loading,
     sortField,
@@ -60,13 +61,20 @@ export function UsersTab() {
   const handleExportCSV = async (selectedColumns: string[]) => {
     try {
       showToast('Preparing export...', 'info');
-      
-      // For now, export current page data
-      // TODO: Implement server-side export for all filtered data
+      const usersToExport = await fetchAllFilteredUsers();
+      if (!usersToExport.length) {
+        showToast('No users found for the current filters.', 'info');
+        return;
+      }
+
       const filename = generateExportFilename();
-      exportUsersToCSV(filteredUsers, selectedColumns, filename, { registrationCounts: regCounts });
-      showToast(`Exported ${filteredUsers.length} users from current page to ${filename}`, 'success');
+      const registrationCounts = Object.fromEntries(
+        usersToExport.map((user) => [user.id, user.current_registrations?.length || 0])
+      );
+      exportUsersToCSV(usersToExport, selectedColumns, filename, { registrationCounts });
+      showToast(`Exported ${usersToExport.length} users to ${filename}`, 'success');
     } catch (error) {
+      console.error('Failed to export users CSV', error);
       showToast('Failed to export CSV. Please try again.', 'error');
     }
   };

@@ -69,17 +69,17 @@ describe('AuthContext', () => {
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: { session: null },
       error: null,
-    });
+    } as Awaited<ReturnType<typeof supabase.auth.getSession>>);
 
     vi.mocked(supabase.auth.refreshSession).mockResolvedValue({
       data: { session: null },
       error: null,
-    });
+    } as Awaited<ReturnType<typeof supabase.auth.refreshSession>>);
 
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
       data: { user: null },
       error: null,
-    } as Awaited<ReturnType<typeof supabase.auth.getUser>>);
+    } as unknown as Awaited<ReturnType<typeof supabase.auth.getUser>>);
   });
 
   describe('checkProfileCompletion', () => {
