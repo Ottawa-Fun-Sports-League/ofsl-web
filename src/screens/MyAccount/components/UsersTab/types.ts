@@ -64,6 +64,12 @@ export interface UserRegistration {
   league_id?: number;
 }
 
+export interface BulkEmailRecipient {
+  userId: string;
+  email: string;
+  name: string | null;
+}
+
 export interface EditUserForm {
   name?: string;
   email?: string;

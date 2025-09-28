@@ -7,6 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
 };
 
+const RATE_LIMIT_DELAY_MS = getRateLimitDelay();
+
 interface NotificationChange {
   label: string;
   previous: string | null;
@@ -202,6 +204,7 @@ serve(async (req: Request) => {
 
     const subject = buildEmailSubject(body.leagueName, body.weekNumber, body.tierLabel || `Tier ${body.tierNumber}`);
     let delivered = 0;
+    const rateLimiter = createRateLimiter(RATE_LIMIT_DELAY_MS);
 
     for (const [email, meta] of recipientMap.entries()) {
       if (!email) continue;
@@ -210,6 +213,8 @@ serve(async (req: Request) => {
         recipientName: meta.name,
         facilitator: sendToFacilitator ? facilitators[0] ?? null : null,
       });
+
+      await waitForRateLimiter(rateLimiter);
 
       const response = await sendEmail(resendApiKey, email, subject, html);
       if (response) {
@@ -592,7 +597,7 @@ async function sendEmail(resendApiKey: string, to: string, subject: string, html
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "Ottawa Fun Sports League <info@ofsl.ca>",
+        from: "OFSL <noreply@ofsl.ca>",
         to: [to],
         subject,
         html,
@@ -610,4 +615,38 @@ async function sendEmail(resendApiKey: string, to: string, subject: string, html
     console.error("notify-schedule-update: failed to send email", error);
     return false;
   }
+}
+
+interface RateLimiterState {
+  nextAvailable: number;
+  delayMs: number;
+}
+
+function getRateLimitDelay(): number {
+  const value = Number(Deno.env.get("RESEND_RATE_DELAY_MS") ?? "600");
+  if (!Number.isFinite(value) || value < 0) {
+    return 600;
+  }
+  return value;
+}
+
+function createRateLimiter(delayMs: number): RateLimiterState {
+  return {
+    nextAvailable: Date.now(),
+    delayMs: Math.max(0, delayMs),
+  };
+}
+
+async function waitForRateLimiter(state: RateLimiterState) {
+  if (state.delayMs <= 0) return;
+  const now = Date.now();
+  if (now < state.nextAvailable) {
+    await sleep(state.nextAvailable - now);
+  }
+  state.nextAvailable = Date.now() + state.delayMs;
+}
+
+function sleep(ms: number) {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
