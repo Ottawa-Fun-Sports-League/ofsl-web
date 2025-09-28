@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ImprovedMobileFilterDrawer } from './components/ImprovedMobileFilterDrawer';
@@ -7,17 +7,29 @@ import { ImprovedFilters } from './components/ImprovedFilters';
 import { UsersTable } from './components/UsersTable';
 import { EditUserModal } from './components/EditUserModal';
 import { ExportColumnsModal } from './components/ExportColumnsModal';
+import { BulkEmailModal } from './components/BulkEmailModal';
 import { useUsersData } from './useUsersData';
 import { useUserOperations } from './useUserOperations';
 import { exportUsersToCSV, generateExportFilename } from './utils/exportCsv';
 import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
+import { DEFAULT_BULK_EMAIL_BODY, DEFAULT_BULK_EMAIL_SUBJECT } from './constants';
+import { BulkEmailRecipient } from './types';
+import { mapUsersToEmailRecipients, sendBulkEmail, BulkEmailResultSummary } from './utils/sendBulkEmail';
 
 export function UsersTab() {
   const { userProfile } = useAuth();
   const { showToast } = useToast();
   const [showMobileFilterDrawer, setShowMobileFilterDrawer] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
+  const [bulkEmailSubject, setBulkEmailSubject] = useState(DEFAULT_BULK_EMAIL_SUBJECT);
+  const [bulkEmailBody, setBulkEmailBody] = useState(DEFAULT_BULK_EMAIL_BODY);
+  const [bulkEmailRecipients, setBulkEmailRecipients] = useState<BulkEmailRecipient[]>([]);
+  const [bulkEmailMissingEmails, setBulkEmailMissingEmails] = useState(0);
+  const [loadingBulkEmailRecipients, setLoadingBulkEmailRecipients] = useState(false);
+  const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
+  const [bulkEmailResult, setBulkEmailResult] = useState<BulkEmailResultSummary | null>(null);
 
   const {
     filteredUsers,
@@ -34,11 +46,35 @@ export function UsersTab() {
     handleFilterChange,
     toggleSportInLeague,
     toggleSportWithSkill,
+    toggleLeagueFilter,
+    toggleTeamFilter,
+    toggleLeagueTierFilter,
     clearFilters,
     isAnyFilterActive,
     handlePageChange,
     handlePageSizeChange
   } = useUsersData();
+
+  const loadBulkEmailRecipients = useCallback(async () => {
+    setLoadingBulkEmailRecipients(true);
+    try {
+      const users = await fetchAllFilteredUsers();
+      const { recipients, invalidCount } = mapUsersToEmailRecipients(
+        users.map((u) => ({ id: u.id, email: u.email, name: u.name }))
+      );
+      setBulkEmailRecipients(recipients);
+      setBulkEmailMissingEmails(invalidCount);
+      return { recipients, invalidCount };
+    } catch (error) {
+      console.error('Failed to load bulk email recipients', error);
+      setBulkEmailRecipients([]);
+      setBulkEmailMissingEmails(0);
+      showToast('Failed to load email recipients. Please try again.', 'error');
+      throw error;
+    } finally {
+      setLoadingBulkEmailRecipients(false);
+    }
+  }, [fetchAllFilteredUsers, showToast]);
 
   const {
     editingUser,
@@ -57,6 +93,68 @@ export function UsersTab() {
     handleCaptchaExpire,
     handleCancelEdit
   } = useUserOperations(loadUsers);
+
+  const handleOpenBulkEmailModal = useCallback(async () => {
+    setBulkEmailSubject(DEFAULT_BULK_EMAIL_SUBJECT);
+    setBulkEmailBody(DEFAULT_BULK_EMAIL_BODY);
+    setBulkEmailResult(null);
+    setShowBulkEmailModal(true);
+    try {
+      await loadBulkEmailRecipients();
+    } catch {
+      // errors handled inside loader
+    }
+  }, [loadBulkEmailRecipients]);
+
+  const handleCloseBulkEmailModal = useCallback(() => {
+    if (sendingBulkEmail) return;
+    setShowBulkEmailModal(false);
+  }, [sendingBulkEmail]);
+
+  const handleSendBulkEmail = useCallback(async () => {
+    if (bulkEmailRecipients.length === 0) {
+      showToast('No recipients available for this email.', 'error');
+      return;
+    }
+
+    setSendingBulkEmail(true);
+    try {
+      const result = await sendBulkEmail({
+        subject: bulkEmailSubject.trim(),
+        htmlBody: bulkEmailBody,
+        recipients: bulkEmailRecipients.map((recipient) => ({
+          email: recipient.email,
+          name: recipient.name,
+          userId: recipient.userId,
+        })),
+      });
+
+      setBulkEmailResult(result);
+
+      if (result.sent > 0 && result.failed === 0) {
+        showToast(`Email sent to ${result.sent} user${result.sent === 1 ? '' : 's'}.`, 'success');
+      } else if (result.sent > 0 && result.failed > 0) {
+        showToast(`Emails sent to ${result.sent} users. ${result.failed} failed.`, 'warning');
+      } else {
+        showToast('No emails were sent.', 'warning');
+      }
+    } catch (error) {
+      console.error('Failed to send bulk email', error);
+      const message = error instanceof Error ? error.message : 'Failed to send emails. Please try again.';
+      showToast(message, 'error');
+    } finally {
+      setSendingBulkEmail(false);
+    }
+  }, [bulkEmailRecipients, bulkEmailSubject, bulkEmailBody, showToast]);
+
+  const handleRefreshBulkEmailRecipients = useCallback(async () => {
+    try {
+      await loadBulkEmailRecipients();
+      showToast('Recipient list refreshed.', 'success');
+    } catch {
+      // errors handled in loader
+    }
+  }, [loadBulkEmailRecipients, showToast]);
 
   const handleExportCSV = async (selectedColumns: string[]) => {
     try {
@@ -174,6 +272,8 @@ export function UsersTab() {
     );
   }
 
+  const hasActiveFilters = isAnyFilterActive();
+
   return (
     <div className="w-full">
       {/* Container with negative margins to extend beyond normal page bounds */}
@@ -184,23 +284,32 @@ export function UsersTab() {
             onOpenMobileFilter={() => setShowMobileFilterDrawer(true)}
             onRefresh={loadUsers}
             onExportCSV={() => setShowExportModal(true)}
+            onSendBulkEmail={handleOpenBulkEmailModal}
             activeFilterCount={[
               filters.administrator,
               filters.facilitator,
               filters.activePlayer,
               filters.pendingUsers,
               filters.playersNotInLeague,
-            ].filter(Boolean).length + (filters.sportsInLeague?.length || 0) + (filters.sportsWithSkill?.length || 0)}
+            ].filter(Boolean).length +
+            (filters.sportsInLeague?.length || 0) +
+            (filters.sportsWithSkill?.length || 0) +
+            (filters.leagueIds?.length || 0) +
+            (filters.teamIds?.length || 0) +
+            (filters.leagueTierFilters?.length || 0)}
           />
 
           <ImprovedFilters
             searchTerm={searchTerm}
             filters={filters}
-            isAnyFilterActive={isAnyFilterActive()}
+            isAnyFilterActive={hasActiveFilters}
             onSearchChange={setSearchTerm}
             onFilterChange={handleFilterChange}
             onToggleSportInLeague={toggleSportInLeague}
             onToggleSportWithSkill={toggleSportWithSkill}
+            onToggleLeague={toggleLeagueFilter}
+            onToggleTeam={toggleTeamFilter}
+            onToggleLeagueTier={toggleLeagueTierFilter}
             onClearFilters={clearFilters}
           />
         </div>
@@ -212,6 +321,9 @@ export function UsersTab() {
           handleFilterChange={handleFilterChange}
           onToggleSportInLeague={toggleSportInLeague}
           onToggleSportWithSkill={toggleSportWithSkill}
+          onToggleLeague={toggleLeagueFilter}
+          onToggleTeam={toggleTeamFilter}
+          onToggleLeagueTier={toggleLeagueTierFilter}
           clearFilters={clearFilters}
           isAnyFilterActive={isAnyFilterActive}
         />
@@ -252,12 +364,28 @@ export function UsersTab() {
           onCaptchaExpire={handleCaptchaExpire}
           captchaSolved={captchaSolved}
         />
-        
+
         <ExportColumnsModal
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
           onExport={handleExportCSV}
           userCount={pagination.totalItems}
+        />
+
+        <BulkEmailModal
+          isOpen={showBulkEmailModal}
+          onClose={handleCloseBulkEmailModal}
+          recipients={bulkEmailRecipients}
+          loadingRecipients={loadingBulkEmailRecipients}
+          missingEmailCount={bulkEmailMissingEmails}
+          onRefreshRecipients={handleRefreshBulkEmailRecipients}
+          subject={bulkEmailSubject}
+          onSubjectChange={setBulkEmailSubject}
+          body={bulkEmailBody}
+          onBodyChange={setBulkEmailBody}
+          onSend={handleSendBulkEmail}
+          sending={sendingBulkEmail}
+          resultSummary={bulkEmailResult}
         />
       </div>
     </div>

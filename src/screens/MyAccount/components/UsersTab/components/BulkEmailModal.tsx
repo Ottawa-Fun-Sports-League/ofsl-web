@@ -1,0 +1,195 @@
+import { useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../../components/ui/dialog';
+import { Button } from '../../../../../components/ui/button';
+import { Input } from '../../../../../components/ui/input';
+import { RichTextEditor } from '../../../../../components/ui/rich-text-editor';
+import { Loader2, RefreshCw, Info, CheckCircle2, AlertTriangle, Mail } from 'lucide-react';
+import { BulkEmailRecipient } from '../types';
+
+interface BulkEmailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  recipients: BulkEmailRecipient[];
+  loadingRecipients: boolean;
+  missingEmailCount: number;
+  onRefreshRecipients: () => void;
+  subject: string;
+  onSubjectChange: (value: string) => void;
+  body: string;
+  onBodyChange: (value: string) => void;
+  onSend: () => void;
+  sending: boolean;
+  resultSummary?: {
+    sent: number;
+    failed: number;
+    invalid: number;
+  } | null;
+}
+
+const PLACEHOLDER_TOKENS: Array<{ token: string; description: string }> = [
+  { token: '{{first_name}}', description: "Replaced with the recipient's first name if available, or their full name." },
+  { token: '{{full_name}}', description: "Replaced with the recipient's full name when provided, otherwise their email." },
+  { token: '{{email}}', description: "Replaced with the recipient's email address." },
+];
+
+export function BulkEmailModal({
+  isOpen,
+  onClose,
+  recipients,
+  loadingRecipients,
+  missingEmailCount,
+  onRefreshRecipients,
+  subject,
+  onSubjectChange,
+  body,
+  onBodyChange,
+  onSend,
+  sending,
+  resultSummary,
+}: BulkEmailModalProps) {
+  const recipientCount = recipients.length;
+
+  const summaryText = useMemo(() => {
+    if (loadingRecipients) {
+      return 'Loading recipients...';
+    }
+    if (recipientCount === 0) {
+      return 'No recipients with valid email addresses were found for the current filters.';
+    }
+    const base = `${recipientCount.toLocaleString()} recipient${recipientCount === 1 ? '' : 's'} will receive an individual email.`;
+    if (missingEmailCount > 0) {
+      return `${base} ${missingEmailCount} filtered user${missingEmailCount === 1 ? ' is' : 's are'} missing an email address and will be skipped.`;
+    }
+    return base;
+  }, [recipientCount, missingEmailCount, loadingRecipients]);
+
+  const isSendDisabled = sending || loadingRecipients || recipientCount === 0 || !subject.trim() || !body.trim();
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Send Bulk Email</DialogTitle>
+          <DialogDescription>
+            Craft a message to everyone in the current filtered list. Each user receives their own email with optional personalization tokens.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-start gap-2">
+              {loadingRecipients ? (
+                <Loader2 className="h-4 w-4 animate-spin text-[#B20000] mt-1" />
+              ) : (
+                <Info className="h-4 w-4 text-[#B20000] mt-1" />
+              )}
+              <p className="text-sm text-gray-700">
+                {summaryText}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRefreshRecipients}
+                disabled={loadingRecipients || sending}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Recipients
+              </Button>
+              {resultSummary && (resultSummary.sent > 0 || resultSummary.failed > 0 || resultSummary.invalid > 0) && (
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                  <span className="flex items-center gap-1 text-green-700">
+                    <CheckCircle2 className="h-4 w-4" /> Sent: {resultSummary.sent}
+                  </span>
+                  {resultSummary.failed > 0 && (
+                    <span className="flex items-center gap-1 text-red-600">
+                      <AlertTriangle className="h-4 w-4" /> Failed: {resultSummary.failed}
+                    </span>
+                  )}
+                  {resultSummary.invalid > 0 && (
+                    <span className="flex items-center gap-1 text-orange-600">
+                      <AlertTriangle className="h-4 w-4" /> Skipped: {resultSummary.invalid}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700" htmlFor="bulk-email-subject">
+              Subject
+            </label>
+            <Input
+              id="bulk-email-subject"
+              name="bulk-email-subject"
+              placeholder="Enter subject line"
+              value={subject}
+              onChange={(event) => onSubjectChange(event.target.value)}
+              maxLength={200}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Message</label>
+              <span className="text-xs text-gray-500">Supports HTML formatting</span>
+            </div>
+            <RichTextEditor
+              value={body}
+              onChange={onBodyChange}
+              placeholder="Write your email message..."
+              rows={12}
+            />
+            <div className="rounded-md border border-dashed border-gray-300 bg-white p-3">
+              <p className="text-xs font-semibold text-gray-600 mb-2">Available personalization tokens</p>
+              <ul className="space-y-1 text-xs text-gray-600">
+                {PLACEHOLDER_TOKENS.map(({ token, description }) => (
+                  <li key={token} className="flex gap-2">
+                    <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-[#B20000]">{token}</code>
+                    <span>{description}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={sending}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={onSend}
+            disabled={isSendDisabled}
+            className="bg-[#B20000] hover:bg-[#8A0000] text-white"
+          >
+            {sending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="mr-2 h-4 w-4" />
+            )}
+            {sending ? 'Sending…' : 'Send Email'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

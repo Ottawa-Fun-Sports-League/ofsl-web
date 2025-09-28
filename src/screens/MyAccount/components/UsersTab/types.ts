@@ -52,6 +52,9 @@ export interface UserFilters {
   playersNotInLeague: boolean;
   sportsInLeague: number[];      // sport IDs where user is active in a league
   sportsWithSkill: number[];     // sport IDs where user has a skill set
+  leagueIds: number[];           // league IDs the user is associated with
+  teamIds: number[];             // team IDs the user is rostered on
+  leagueTierFilters: string[];   // formatted as `${leagueId}:${tierNumber}`
 }
 
 export interface UserRegistration {
@@ -62,6 +65,12 @@ export interface UserRegistration {
   registration_type?: 'team' | 'individual';
   team_id?: number;
   league_id?: number;
+}
+
+export interface BulkEmailRecipient {
+  userId: string;
+  email: string;
+  name: string | null;
 }
 
 export interface EditUserForm {
