@@ -179,14 +179,14 @@ export function BulkEmailModal({
             type="button"
             onClick={onSend}
             disabled={isSendDisabled}
-            className="bg-[#B20000] hover:bg-[#8A0000] text-white"
+            className="bg-[#B20000] hover:bg-[#8A0000] text-white flex items-center gap-2"
           >
             {sending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Mail className="mr-2 h-4 w-4" />
+              <Mail className="h-4 w-4" />
             )}
-            {sending ? 'Sending…' : 'Send Email'}
+            <span>{sending ? 'Sending…' : 'Send Email'}</span>
           </Button>
         </DialogFooter>
       </DialogContent>

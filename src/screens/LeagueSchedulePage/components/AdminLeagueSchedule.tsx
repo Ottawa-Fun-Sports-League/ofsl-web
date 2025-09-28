@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
-import { MapPin, Clock, ChevronLeft, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Clock, ChevronLeft, ChevronRight, Edit, Trash2, Loader2 } from 'lucide-react';
 import { SubmitScoresModal } from './SubmitScoresModal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -162,6 +162,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [pendingNotification, setPendingNotification] = useState<ScheduleNotificationPayload | null>(null);
   const [showNotificationConfirm, setShowNotificationConfirm] = useState(false);
   const [notificationOptions, setNotificationOptions] = useState({ facilitator: true, participants: true });
+  const [sendingNotification, setSendingNotification] = useState(false);
   const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
 
   const buildScheduleNotificationPayload = (
@@ -322,10 +323,15 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     }
 
     if (send && (notificationOptions.facilitator || notificationOptions.participants)) {
-      await notifyScheduleChange(pendingNotification, {
-        facilitator: notificationOptions.facilitator,
-        participants: notificationOptions.participants,
-      });
+      try {
+        setSendingNotification(true);
+        await notifyScheduleChange(pendingNotification, {
+          facilitator: notificationOptions.facilitator,
+          participants: notificationOptions.participants,
+        });
+      } finally {
+        setSendingNotification(false);
+      }
     }
 
     setPendingNotification(null);
@@ -2336,16 +2342,20 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               type="button"
               onClick={() => handleNotificationDecision(false)}
               className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              disabled={sendingNotification}
             >
               Skip
             </button>
             <button
               type="button"
               onClick={() => handleNotificationDecision(true)}
-              className="px-4 py-2 rounded-md bg-[#B20000] text-sm font-medium text-white hover:bg-[#8A0000] disabled:opacity-50"
-              disabled={!notificationOptions.facilitator && !notificationOptions.participants}
+              className="px-4 py-2 rounded-md bg-[#B20000] text-sm font-medium text-white hover:bg-[#8A0000] disabled:opacity-50 flex items-center gap-2"
+              disabled={
+                (!notificationOptions.facilitator && !notificationOptions.participants) || sendingNotification
+              }
             >
-              Send emails
+              {sendingNotification ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {sendingNotification ? 'Sending…' : 'Send emails'}
             </button>
           </div>
         </DialogContent>
