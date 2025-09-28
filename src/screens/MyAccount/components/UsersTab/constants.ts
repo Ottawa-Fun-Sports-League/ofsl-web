@@ -5,7 +5,10 @@ export const INITIAL_FILTERS = {
   pendingUsers: false,
   playersNotInLeague: false,
   sportsInLeague: [] as number[],
-  sportsWithSkill: [] as number[]
+  sportsWithSkill: [] as number[],
+  leagueIds: [] as number[],
+  teamIds: [] as number[],
+  leagueTierFilters: [] as string[],
 };
 
 export const USER_SEARCH_DEBOUNCE_MS = 600;

@@ -55,6 +55,15 @@ export function useUsersData() {
         // Ensure array fields default correctly
         sportsInLeague: Array.isArray(parsed?.sportsInLeague) ? parsed!.sportsInLeague : [],
         sportsWithSkill: Array.isArray(parsed?.sportsWithSkill) ? parsed!.sportsWithSkill : [],
+        leagueIds: Array.isArray(parsed?.leagueIds)
+          ? parsed!.leagueIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+          : [],
+        teamIds: Array.isArray(parsed?.teamIds)
+          ? parsed!.teamIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+          : [],
+        leagueTierFilters: Array.isArray(parsed?.leagueTierFilters)
+          ? parsed!.leagueTierFilters.map((value) => String(value))
+          : [],
       };
     } catch (error) {
       console.warn("Failed to parse stored user filters", error);
@@ -197,6 +206,9 @@ export function useUsersData() {
           p_players_not_in_league: filters.playersNotInLeague,
           p_sports_in_league: filters.sportsInLeague,
           p_sports_has_skill: filters.sportsWithSkill,
+          p_league_ids: filters.leagueIds,
+          p_team_ids: filters.teamIds,
+          p_league_tier_filters: filters.leagueTierFilters,
         }
       );
 
@@ -284,11 +296,49 @@ export function useUsersData() {
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   }, []);
 
+  const toggleLeagueFilter = useCallback((leagueId: number) => {
+    setFilters((prev) => {
+      const exists = prev.leagueIds.includes(leagueId);
+      return {
+        ...prev,
+        leagueIds: exists ? prev.leagueIds.filter((id) => id !== leagueId) : [...prev.leagueIds, leagueId],
+      };
+    });
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
+  const toggleTeamFilter = useCallback((teamId: number) => {
+    setFilters((prev) => {
+      const exists = prev.teamIds.includes(teamId);
+      return {
+        ...prev,
+        teamIds: exists ? prev.teamIds.filter((id) => id !== teamId) : [...prev.teamIds, teamId],
+      };
+    });
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
+  const toggleLeagueTierFilter = useCallback((value: string) => {
+    setFilters((prev) => {
+      const exists = prev.leagueTierFilters.includes(value);
+      return {
+        ...prev,
+        leagueTierFilters: exists
+          ? prev.leagueTierFilters.filter((item) => item !== value)
+          : [...prev.leagueTierFilters, value],
+      };
+    });
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, []);
+
   const clearFilters = useCallback(() => {
     setFilters({
       ...INITIAL_FILTERS,
       sportsInLeague: [],
       sportsWithSkill: [],
+      leagueIds: [],
+      teamIds: [],
+      leagueTierFilters: [],
     });
     // Reset to first page when clearing filters
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
@@ -302,7 +352,10 @@ export function useUsersData() {
       filters.pendingUsers ||
       filters.playersNotInLeague ||
       (filters.sportsInLeague && filters.sportsInLeague.length > 0) ||
-      (filters.sportsWithSkill && filters.sportsWithSkill.length > 0)
+      (filters.sportsWithSkill && filters.sportsWithSkill.length > 0) ||
+      (filters.leagueIds && filters.leagueIds.length > 0) ||
+      (filters.teamIds && filters.teamIds.length > 0) ||
+      (filters.leagueTierFilters && filters.leagueTierFilters.length > 0)
     );
   }, [filters]);
 
@@ -344,6 +397,9 @@ export function useUsersData() {
       p_players_not_in_league: filters.playersNotInLeague,
       p_sports_in_league: filters.sportsInLeague,
       p_sports_has_skill: filters.sportsWithSkill,
+      p_league_ids: filters.leagueIds,
+      p_team_ids: filters.teamIds,
+      p_league_tier_filters: filters.leagueTierFilters,
     };
 
     while (totalCount === null || offset < totalCount) {
@@ -403,6 +459,9 @@ export function useUsersData() {
     handleFilterChange,
     toggleSportInLeague,
     toggleSportWithSkill,
+    toggleLeagueFilter,
+    toggleTeamFilter,
+    toggleLeagueTierFilter,
     clearFilters,
     isAnyFilterActive,
     handlePageChange,

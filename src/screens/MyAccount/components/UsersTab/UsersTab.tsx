@@ -46,6 +46,9 @@ export function UsersTab() {
     handleFilterChange,
     toggleSportInLeague,
     toggleSportWithSkill,
+    toggleLeagueFilter,
+    toggleTeamFilter,
+    toggleLeagueTierFilter,
     clearFilters,
     isAnyFilterActive,
     handlePageChange,
@@ -269,6 +272,8 @@ export function UsersTab() {
     );
   }
 
+  const hasActiveFilters = isAnyFilterActive();
+
   return (
     <div className="w-full">
       {/* Container with negative margins to extend beyond normal page bounds */}
@@ -286,17 +291,25 @@ export function UsersTab() {
               filters.activePlayer,
               filters.pendingUsers,
               filters.playersNotInLeague,
-            ].filter(Boolean).length + (filters.sportsInLeague?.length || 0) + (filters.sportsWithSkill?.length || 0)}
+            ].filter(Boolean).length +
+            (filters.sportsInLeague?.length || 0) +
+            (filters.sportsWithSkill?.length || 0) +
+            (filters.leagueIds?.length || 0) +
+            (filters.teamIds?.length || 0) +
+            (filters.leagueTierFilters?.length || 0)}
           />
 
           <ImprovedFilters
             searchTerm={searchTerm}
             filters={filters}
-            isAnyFilterActive={isAnyFilterActive()}
+            isAnyFilterActive={hasActiveFilters}
             onSearchChange={setSearchTerm}
             onFilterChange={handleFilterChange}
             onToggleSportInLeague={toggleSportInLeague}
             onToggleSportWithSkill={toggleSportWithSkill}
+            onToggleLeague={toggleLeagueFilter}
+            onToggleTeam={toggleTeamFilter}
+            onToggleLeagueTier={toggleLeagueTierFilter}
             onClearFilters={clearFilters}
           />
         </div>
@@ -308,6 +321,9 @@ export function UsersTab() {
           handleFilterChange={handleFilterChange}
           onToggleSportInLeague={toggleSportInLeague}
           onToggleSportWithSkill={toggleSportWithSkill}
+          onToggleLeague={toggleLeagueFilter}
+          onToggleTeam={toggleTeamFilter}
+          onToggleLeagueTier={toggleLeagueTierFilter}
           clearFilters={clearFilters}
           isAnyFilterActive={isAnyFilterActive}
         />
