@@ -124,6 +124,36 @@ export function validateFormatChange(
   tier: WeeklyScheduleTier,
   newFormat: GameFormatId
 ): FormatValidationResult {
+  // Special restriction: When current format is 6-teams-head-to-head, only allow
+  // changing to 4-teams-head-to-head (subject to capacity validation below).
+  // Disallow switching to any elite formats or 2/3-team standard formats.
+  const currentFormat = String(tier.format || '').toLowerCase();
+  if (currentFormat === '6-teams-head-to-head') {
+    const normalizedNew = String(newFormat).toLowerCase();
+    const isSame = normalizedNew === currentFormat;
+    const allowedTarget = '4-teams-head-to-head';
+    if (!isSame && normalizedNew !== allowedTarget) {
+      return {
+        isValid: false,
+        reason: 'Tiers in 6 Teams (Head-to-Head) may only change to 4 Teams (Head-to-Head). Elite and 2/3-team formats are not allowed.'
+      };
+    }
+  }
+  // Special restriction: When current format is 4-teams-head-to-head, only allow
+  // changing to 6-teams-head-to-head (subject to capacity validation below).
+  // Disallow switching to any elite formats or 2/3-team standard formats.
+  if (currentFormat === '4-teams-head-to-head') {
+    const normalizedNew = String(newFormat).toLowerCase();
+    const isSame = normalizedNew === currentFormat;
+    const allowedTarget = '6-teams-head-to-head';
+    if (!isSame && normalizedNew !== allowedTarget) {
+      return {
+        isValid: false,
+        reason: 'Tiers in 4 Teams (Head-to-Head) may only change to 6 Teams (Head-to-Head). Elite and 2/3-team formats are not allowed.'
+      };
+    }
+  }
+
   const newPositions = getPositionsForFormat(newFormat);
   const allPositions: TeamPositionId[] = ['A', 'B', 'C', 'D', 'E', 'F'];
   

@@ -42,7 +42,7 @@ const clampScore = (value: string): string => {
   if (value === '') return '';
   const n = Math.floor(Number(value));
   if (Number.isNaN(n)) return '';
-  return String(Math.max(0, Math.min(21, n)));
+  return String(Math.max(0, Math.min(25, n)));
 };
 
 export function Scorecard6TeamsHeadToHead({
@@ -301,13 +301,13 @@ export function Scorecard6TeamsHeadToHead({
                 <div className="text-[13px] text-[#4B5563]">Court 1 (Set {i+1})</div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-8 text-right">A</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.A ?? ''} onChange={e=>setInput(setG1C1,i,'A',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.A ?? ''} onChange={e=>setInput(setG1C1,i,'A',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !tie && (n1 as number) > (n2 as number) && (<span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>)}
                   {both && !tie && (n1 as number) < (n2 as number) && (<span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>)}
                 </div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-8 text-right">B</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.B ?? ''} onChange={e=>setInput(setG1C1,i,'B',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.B ?? ''} onChange={e=>setInput(setG1C1,i,'B',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !tie && (n2 as number) > (n1 as number) && (<span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>)}
                   {both && !tie && (n2 as number) < (n1 as number) && (<span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>)}
                 </div>
@@ -327,13 +327,13 @@ export function Scorecard6TeamsHeadToHead({
                 <div className="text-[13px] text-[#4B5563]">Court 2 (Set {i+1})</div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-8 text-right">C</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.C ?? ''} onChange={e=>setInput(setG1C2,i,'C',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.C ?? ''} onChange={e=>setInput(setG1C2,i,'C',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !tie && (n1 as number) > (n2 as number) && (<span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>)}
                   {both && !tie && (n1 as number) < (n2 as number) && (<span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>)}
                 </div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-8 text-right">D</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.D ?? ''} onChange={e=>setInput(setG1C2,i,'D',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.D ?? ''} onChange={e=>setInput(setG1C2,i,'D',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !tie && (n2 as number) > (n1 as number) && (<span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>)}
                   {both && !tie && (n2 as number) < (n1 as number) && (<span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>)}
                 </div>
@@ -353,13 +353,13 @@ export function Scorecard6TeamsHeadToHead({
                 <div className="text-[13px] text-[#4B5563]">Court 3 (Set {i+1})</div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-8 text-right">E</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.E ?? ''} onChange={e=>setInput(setG1C3,i,'E',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.E ?? ''} onChange={e=>setInput(setG1C3,i,'E',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !tie && (n1 as number) > (n2 as number) && (<span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>)}
                   {both && !tie && (n1 as number) < (n2 as number) && (<span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>)}
                 </div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-8 text-right">F</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.F ?? ''} onChange={e=>setInput(setG1C3,i,'F',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.F ?? ''} onChange={e=>setInput(setG1C3,i,'F',e.target.value)} aria-invalid={!!tie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${tie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !tie && (n2 as number) > (n1 as number) && (<span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>)}
                   {both && !tie && (n2 as number) < (n1 as number) && (<span className="ml-2 text-[10px] font-semibold text-red-600">L -{diff}</span>)}
                 </div>
@@ -388,7 +388,7 @@ export function Scorecard6TeamsHeadToHead({
                 <div className="text-[13px] text-[#4B5563]">Court 1 (Set {i+1})</div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-14 text-right">W-C1</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.G2C1_L ?? ''} onChange={e=>setInput(setG2C1,i,'G2C1_L',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.G2C1_L ?? ''} onChange={e=>setInput(setG2C1,i,'G2C1_L',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !isTie && (n1 as number) > (n2 as number) && (
                     <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
                   )}
@@ -398,7 +398,7 @@ export function Scorecard6TeamsHeadToHead({
                 </div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-14 text-right">W-C2</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.G2C1_R ?? ''} onChange={e=>setInput(setG2C1,i,'G2C1_R',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.G2C1_R ?? ''} onChange={e=>setInput(setG2C1,i,'G2C1_R',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !isTie && (n2 as number) > (n1 as number) && (
                     <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
                   )}
@@ -426,7 +426,7 @@ export function Scorecard6TeamsHeadToHead({
                 <div className="text-[13px] text-[#4B5563]">Court 2 (Set {i+1})</div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-14 text-right">L-C1</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.G2C2_L ?? ''} onChange={e=>setInput(setG2C2,i,'G2C2_L',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.G2C2_L ?? ''} onChange={e=>setInput(setG2C2,i,'G2C2_L',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !isTie && (n1 as number) > (n2 as number) && (
                     <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
                   )}
@@ -436,7 +436,7 @@ export function Scorecard6TeamsHeadToHead({
                 </div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-14 text-right">W-C3</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.G2C2_R ?? ''} onChange={e=>setInput(setG2C2,i,'G2C2_R',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.G2C2_R ?? ''} onChange={e=>setInput(setG2C2,i,'G2C2_R',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !isTie && (n2 as number) > (n1 as number) && (
                     <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
                   )}
@@ -464,7 +464,7 @@ export function Scorecard6TeamsHeadToHead({
                 <div className="text-[13px] text-[#4B5563]">Court 3 (Set {i+1})</div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-14 text-right">L-C2</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.G2C3_L ?? ''} onChange={e=>setInput(setG2C3,i,'G2C3_L',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.G2C3_L ?? ''} onChange={e=>setInput(setG2C3,i,'G2C3_L',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasLeft ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !isTie && (n1 as number) > (n2 as number) && (
                     <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
                   )}
@@ -474,7 +474,7 @@ export function Scorecard6TeamsHeadToHead({
                 </div>
                 <div className="flex items-center gap-1">
                   <label className="text-[11px] text-gray-600 w-14 text-right">L-C3</label>
-                  <input type="number" inputMode="numeric" min={0} max={21} step={1} value={row.G2C3_R ?? ''} onChange={e=>setInput(setG2C3,i,'G2C3_R',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
+                  <input type="number" inputMode="numeric" min={0} max={25} step={1} value={row.G2C3_R ?? ''} onChange={e=>setInput(setG2C3,i,'G2C3_R',e.target.value)} aria-invalid={isTie} className={`w-16 px-2 py-1 border rounded-md text-xs focus:outline-none focus:border-[#B20000] focus:ring-1 focus:ring-[#B20000]/60 ${isTie ? 'border-red-400' : (hasRight ? 'border-green-400' : 'border-yellow-300')}`} placeholder="0" />
                   {both && !isTie && (n2 as number) > (n1 as number) && (
                     <span className="ml-2 text-[10px] font-semibold text-green-700">W +{diff}</span>
                   )}
@@ -698,19 +698,21 @@ export function Scorecard6TeamsHeadToHead({
                 <span className="absolute right-4 top-3 text-[11px] text-[#4B5563]">
                   <span className="font-semibold">Tier {tierDisplay}:</span> Base 3/4/5/6/7/8 Bonus +{tierBonus}
                 </span>
-                <div className="grid grid-cols-4 gap-x-4 items-center">
+                <div className="grid grid-cols-5 gap-x-4 items-center">
                   {headerCell('Team')}
+                  {headerCell('Record')}
                   {headerCell('Differential')}
                   {headerCell('Movement')}
                   {headerCell('Points')}
-                   {order.map(k => (
-                     <React.Fragment key={`sum-${k}`}>
-                       {rowCell(k, true)}
-                       {rowCell(fmtDiff(g2Display[k] || 0))}
-                       {rowCell(allEntered ? move[k] : '-')}
-                       {rowCell(allEntered ? `+${points[k] || 0}` : '-', true)}
-                     </React.Fragment>
-                   ))}
+                  {order.map(k => (
+                    <React.Fragment key={`sum-${k}`}>
+                      {rowCell(k, true)}
+                      {rowCell(`${summary.stats[k].setWins}-${summary.stats[k].setLosses}`)}
+                      {rowCell(fmtDiff(g2Display[k] || 0))}
+                      {rowCell(allEntered ? move[k] : '-')}
+                      {rowCell(allEntered ? `+${points[k] || 0}` : '-', true)}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
             );
