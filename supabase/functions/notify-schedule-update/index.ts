@@ -154,24 +154,25 @@ serve(async (req: Request) => {
     const sendToFacilitator = body.sendToFacilitator !== false;
 
     if (!sendToParticipants && !sendToFacilitator) {
-      return new Response(
-        JSON.stringify({ message: "Notification skipped by requester" }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ message: "Notification skipped by requester" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const recipientMap = sendToParticipants
       ? await collectRecipients(serviceClient, body.leagueId)
       : new Map<string, RecipientMeta>();
 
-    const locationsToCheck = Array.from(new Set([
-      body.schedule?.location?.trim() || '',
-      body.previousSchedule?.location?.trim() || '',
-      ...((body.relatedLocations ?? []).map((loc) => (loc || '').trim()))
-    ].filter((loc) => loc !== '')));
+    const locationsToCheck = Array.from(
+      new Set(
+        [
+          body.schedule?.location?.trim() || "",
+          body.previousSchedule?.location?.trim() || "",
+          ...(body.relatedLocations ?? []).map((loc) => (loc || "").trim()),
+        ].filter((loc) => loc !== ""),
+      ),
+    );
 
     const facilitators = await getFacilitatorsForLocations(serviceClient, locationsToCheck);
 
@@ -202,7 +203,11 @@ serve(async (req: Request) => {
       });
     }
 
-    const subject = buildEmailSubject(body.leagueName, body.weekNumber, body.tierLabel || `Tier ${body.tierNumber}`);
+    const subject = buildEmailSubject(
+      body.leagueName,
+      body.weekNumber,
+      body.tierLabel || `Tier ${body.tierNumber}`,
+    );
     let delivered = 0;
     const rateLimiter = createRateLimiter(RATE_LIMIT_DELAY_MS);
 
@@ -211,7 +216,7 @@ serve(async (req: Request) => {
       const html = buildEmailHtml({
         request: body,
         recipientName: meta.name,
-        facilitator: sendToFacilitator ? facilitators[0] ?? null : null,
+        facilitator: sendToFacilitator ? (facilitators[0] ?? null) : null,
       });
 
       await waitForRateLimiter(rateLimiter);
@@ -261,7 +266,7 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
         if (!value) return;
         const trimmed = value.trim();
         if (!trimmed) return;
-        if (trimmed.includes('@')) {
+        if (trimmed.includes("@")) {
           emailAddresses.add(trimmed.toLowerCase());
         } else {
           userIds.add(trimmed);
@@ -287,7 +292,7 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
     if (row && typeof row === "object" && "user_id" in row) {
       const userId = (row as { user_id: string | null }).user_id;
       if (userId) {
-        if (userId.includes('@')) {
+        if (userId.includes("@")) {
           emailAddresses.add(userId.toLowerCase());
         } else {
           userIds.add(userId);
@@ -306,12 +311,12 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
     const chunk = idList.slice(i, i + chunkSize);
 
     const { data: usersById, error: usersByIdError } = await client
-      .from('users')
-      .select('id, auth_id, name, email')
-      .in('id', chunk);
+      .from("users")
+      .select("id, auth_id, name, email")
+      .in("id", chunk);
 
     if (usersByIdError) {
-      console.error('notify-schedule-update: failed to load users by id', usersByIdError);
+      console.error("notify-schedule-update: failed to load users by id", usersByIdError);
     }
 
     const foundIds = new Set((usersById ?? []).map((user) => user.id));
@@ -321,12 +326,12 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
 
     if (missingIds.length > 0) {
       const { data: usersByAuthId, error: usersByAuthError } = await client
-        .from('users')
-        .select('id, auth_id, name, email')
-        .in('auth_id', missingIds);
+        .from("users")
+        .select("id, auth_id, name, email")
+        .in("auth_id", missingIds);
 
       if (usersByAuthError) {
-        console.error('notify-schedule-update: failed to load users by auth_id', usersByAuthError);
+        console.error("notify-schedule-update: failed to load users by auth_id", usersByAuthError);
       }
 
       if (usersByAuthId && usersByAuthId.length > 0) {
@@ -335,8 +340,13 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
     }
 
     combinedUsers.forEach((userRow) => {
-      if (userRow && typeof userRow === 'object') {
-        const cast = userRow as { id: string; auth_id: string | null; name: string | null; email: string | null };
+      if (userRow && typeof userRow === "object") {
+        const cast = userRow as {
+          id: string;
+          auth_id: string | null;
+          name: string | null;
+          email: string | null;
+        };
         if (cast.email) {
           recipients.set(cast.email.toLowerCase(), { name: cast.name ?? null });
           emailAddresses.delete(cast.email.toLowerCase());
@@ -375,7 +385,9 @@ async function getFacilitatorsForLocation(
   }
 
   if (gymExact && Array.isArray(gymExact.facilitator_ids)) {
-    const ids = gymExact.facilitator_ids.filter((id: unknown): id is string => typeof id === 'string');
+    const ids = gymExact.facilitator_ids.filter(
+      (id: unknown): id is string => typeof id === "string",
+    );
     if (ids.length > 0) {
       return await fetchFacilitatorsByIds(client, ids);
     }
@@ -403,26 +415,29 @@ async function getFacilitatorsForLocation(
 }
 
 async function fetchFacilitatorsByIds(client: SupabaseClient, ids: string[]) {
-  const uniqueIds = Array.from(new Set(ids.filter((id) => typeof id === 'string')));
+  const uniqueIds = Array.from(new Set(ids.filter((id) => typeof id === "string")));
   if (uniqueIds.length === 0) return [];
 
   const { data, error } = await client
-    .from('users')
-    .select('id, name, email, phone')
-    .in('id', uniqueIds);
+    .from("users")
+    .select("id, name, email, phone")
+    .in("id", uniqueIds);
 
   if (error) {
-    console.error('notify-schedule-update: failed to load facilitators by id', error);
+    console.error("notify-schedule-update: failed to load facilitators by id", error);
     return [];
   }
 
   return (data ?? [])
     .filter((row) => row && row.email)
-    .map((row) => ({
-      name: row.name ?? null,
-      email: row.email ?? null,
-      phone: row.phone ?? null,
-    } as FacilitatorInfo));
+    .map(
+      (row) =>
+        ({
+          name: row.name ?? null,
+          email: row.email ?? null,
+          phone: row.phone ?? null,
+        }) as FacilitatorInfo,
+    );
 }
 
 async function getFacilitatorsForLocations(client: SupabaseClient, locations: string[]) {
@@ -506,7 +521,7 @@ function buildEmailHtml({
                       </p>
                       <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
                         The schedule for <strong style="color: #B20000;">${escapeHtml(request.leagueName)}</strong>
-                        (Week ${request.weekNumber}, ${escapeHtml(tierLabel)}) has been updated.
+                        (Week ${request.weekNumber}) has been updated.
                       </p>
                     </td>
                   </tr>
@@ -529,7 +544,7 @@ function buildEmailHtml({
                   </tr>
                   <tr>
                     <td style="padding-bottom: 25px;">
-                      <h3 style="color: #2c3e50; font-size: 18px; margin: 0 0 10px 0; font-family: Arial, sans-serif;">Teams in this Tier</h3>
+                      <h3 style="color: #2c3e50; font-size: 18px; margin: 0 0 10px 0; font-family: Arial, sans-serif;">Teams in Tier ${escapeHtml(tierLabel)}</h3>
                       <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 6px; border-collapse: collapse;">
                         <thead>
                           <tr style="background-color: #f3f4f6;">
@@ -541,7 +556,12 @@ function buildEmailHtml({
                           ${
                             teamsRows.length > 0
                               ? teamsRows
-                                  .map((row) => row.replace(/<td([^>]*)>\s*<strong>Ranking<\/strong>.*?<\/td>/g, ''))
+                                  .map((row) =>
+                                    row.replace(
+                                      /<td([^>]*)>\s*<strong>Ranking<\/strong>.*?<\/td>/g,
+                                      "",
+                                    ),
+                                  )
                                   .join("")
                               : `<tr><td colspan="2" style="padding: 10px 12px; color: #2c3e50;">No team assignments available.</td></tr>`
                           }
