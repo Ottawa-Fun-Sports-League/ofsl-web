@@ -535,14 +535,15 @@ function buildEmailHtml({
                           <tr style="background-color: #f3f4f6;">
                             <th align="left" style="padding: 10px 12px; color: #2c3e50; font-size: 14px;">Position</th>
                             <th align="left" style="padding: 10px 12px; color: #2c3e50; font-size: 14px;">Team</th>
-                            <th align="left" style="padding: 10px 12px; color: #2c3e50; font-size: 14px;">Ranking</th>
                           </tr>
                         </thead>
                         <tbody>
                           ${
                             teamsRows.length > 0
-                              ? teamsRows.join("")
-                              : `<tr><td colspan="3" style="padding: 10px 12px; color: #2c3e50;">No team assignments available.</td></tr>`
+                              ? teamsRows
+                                  .map((row) => row.replace(/<td([^>]*)>\s*<strong>Ranking<\/strong>.*?<\/td>/g, ''))
+                                  .join("")
+                              : `<tr><td colspan="2" style="padding: 10px 12px; color: #2c3e50;">No team assignments available.</td></tr>`
                           }
                         </tbody>
                       </table>
