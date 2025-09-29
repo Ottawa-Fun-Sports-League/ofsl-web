@@ -160,8 +160,16 @@ serve(async (req: Request) => {
       });
     }
 
+    const targetTeamNames = new Set(
+      (body.teams || [])
+        .map((team) => (team.name || "").trim().toLowerCase())
+        .filter((name) => name.length > 0),
+    );
+
     const recipientMap = sendToParticipants
-      ? await collectRecipients(serviceClient, body.leagueId)
+      ? await collectRecipients(serviceClient, body.leagueId, {
+          teamNames: Array.from(targetTeamNames),
+        })
       : new Map<string, RecipientMeta>();
 
     const locationsToCheck = Array.from(
@@ -240,14 +248,23 @@ serve(async (req: Request) => {
   }
 });
 
-async function collectRecipients(client: SupabaseClient, leagueId: number) {
+async function collectRecipients(
+  client: SupabaseClient,
+  leagueId: number,
+  options?: { teamNames?: string[] },
+) {
   const recipients = new Map<string, RecipientMeta>();
   const userIds = new Set<string>();
   const emailAddresses = new Set<string>();
+  const normalizedTeams = new Set(
+    (options?.teamNames ?? []).map((name) => name.trim().toLowerCase()).filter((name) => name.length > 0),
+  );
+  const restrictToTeams = normalizedTeams.size > 0;
+  const matchedTeamIds = new Set<number>();
 
   const { data: teamRows, error: teamError } = await client
     .from("teams")
-    .select("captain_id, co_captains, roster")
+    .select("id, name, captain_id, co_captains, roster")
     .eq("league_id", leagueId);
 
   if (teamError) {
@@ -257,10 +274,21 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
   (teamRows ?? []).forEach((team) => {
     if (team && typeof team === "object") {
       const cast = team as {
+        id: number | null;
+        name: string | null;
         captain_id: string | null;
         co_captains: string[] | null;
         roster: string[] | null;
       };
+
+      const teamNameNormalized = (cast.name || "").trim().toLowerCase();
+      if (restrictToTeams && !normalizedTeams.has(teamNameNormalized)) {
+        return;
+      }
+
+      if (cast.id != null) {
+        matchedTeamIds.add(cast.id);
+      }
 
       const addIdentifier = (value: string | null | undefined) => {
         if (!value) return;
@@ -281,7 +309,7 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
 
   const { data: payments, error: paymentError } = await client
     .from("league_payments")
-    .select("user_id")
+    .select("user_id, team_id")
     .eq("league_id", leagueId);
 
   if (paymentError) {
@@ -290,7 +318,12 @@ async function collectRecipients(client: SupabaseClient, leagueId: number) {
 
   (payments ?? []).forEach((row) => {
     if (row && typeof row === "object" && "user_id" in row) {
-      const userId = (row as { user_id: string | null }).user_id;
+      const { user_id: userId, team_id: teamId } = row as { user_id: string | null; team_id: number | null };
+      if (restrictToTeams) {
+        if (teamId == null || !matchedTeamIds.has(teamId)) {
+          return;
+        }
+      }
       if (userId) {
         if (userId.includes("@")) {
           emailAddresses.add(userId.toLowerCase());
@@ -477,7 +510,6 @@ function buildEmailHtml({
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; color: #2c3e50;">${escapeHtml(team.position)}</td>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; color: #2c3e50;">${escapeHtml(formatValue(team.name))}</td>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; color: #2c3e50;">${team.ranking ?? "-"}</td>
     </tr>
   `,
   );
@@ -555,14 +587,7 @@ function buildEmailHtml({
                         <tbody>
                           ${
                             teamsRows.length > 0
-                              ? teamsRows
-                                  .map((row) =>
-                                    row.replace(
-                                      /<td([^>]*)>\s*<strong>Ranking<\/strong>.*?<\/td>/g,
-                                      "",
-                                    ),
-                                  )
-                                  .join("")
+                              ? teamsRows.join("")
                               : `<tr><td colspan="2" style="padding: 10px 12px; color: #2c3e50;">No team assignments available.</td></tr>`
                           }
                         </tbody>
