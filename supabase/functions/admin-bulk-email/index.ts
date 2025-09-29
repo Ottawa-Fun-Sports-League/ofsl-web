@@ -247,7 +247,8 @@ async function sendEmail(resendApiKey: string, to: string, subject: string, html
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "OFSL <noreply@ofsl.ca>",
+        from: "OFSL <info@ofsl.ca>",
+        reply_to: "info@ofsl.ca",
         to: [to],
         subject,
         html,
