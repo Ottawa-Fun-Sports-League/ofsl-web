@@ -15,6 +15,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({}); // teamId -> { week -> rank }
   const [seedRanks, setSeedRanks] = useState<Record<number, number>>({}); // teamId -> initial rank from Week 1 schedule
+  const [eliteVariantFormat, setEliteVariantFormat] = useState<string | null>(null); // e.g., '2-teams-elite', '3-teams-elite-6-sets'
 
   // Shared elite standings (single source of truth for elite formats)
   const elite = useEliteStandings(leagueId);
@@ -58,6 +59,14 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
         ]);
 
         const weekRows: any[] = (wq.data || []) as any[];
+        try {
+          // Detect elite variant format from weekly schedules, if present
+          const fmt = ((weekRows || [])
+            .map((r: any) => String((r?.format ?? '')).toLowerCase())
+            .find((f: string) => f.includes('2-teams-elite') || f.includes('3-teams-elite-6-sets') || f.includes('3-teams-elite-9-sets')))
+            || null;
+          if (fmt && fmt !== eliteVariantFormat) setEliteVariantFormat(fmt);
+        } catch {}
         const results: any[] = (rq.data || []) as any[];
         const teamsRows: any[] = (tq.data || []) as any[];
 
@@ -130,6 +139,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   }, [leagueId]);
 
   const isEliteFormat = useMemo(() => (scheduleFormat ?? "").includes("elite"), [scheduleFormat]);
+  const hideStandingsNote = useMemo(() => {
+    // Hide the blue note for specific elite variants only
+    const fmt = String(eliteVariantFormat || '').toLowerCase();
+    return isEliteFormat && (fmt.includes('2-teams-elite') || fmt.includes('3-teams-elite-6-sets'));
+  }, [isEliteFormat, eliteVariantFormat]);
   const showDifferentialColumn = useMemo(() => {
     const fmt = (scheduleFormat ?? '').toLowerCase();
     return (
@@ -329,20 +343,22 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
         League Standings
       </h2>
 
-      {/* Note about standings */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <p className="text-sm text-blue-800">
-          {hasSchedule ? (
-            <>
-              <strong>Note:</strong> Standings are updated weekly. Ordered by points, then wins, then point differential.
-            </>
-          ) : (
-            <>
-              <strong>Note:</strong> Game records and standings will be available once league play begins. Below shows the current registered teams.
-            </>
-          )}
-        </p>
-      </div>
+      {/* Note about standings (hidden for elite 2-team and elite 3-team 6-sets) */}
+      {!hideStandingsNote && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-blue-800">
+            {hasSchedule ? (
+              <>
+                <strong>Note:</strong> Standings are updated weekly. Ordered by points, then wins, then point differential.
+              </>
+            ) : (
+              <>
+                <strong>Note:</strong> Game records and standings will be available once league play begins. Below shows the current registered teams.
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Standings table */}
       <Card className="shadow-md overflow-hidden rounded-lg">
