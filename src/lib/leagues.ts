@@ -213,22 +213,6 @@ export interface GroupedLeagues {
   [dayName: string]: LeagueWithTeamCount[];
 }
 
-export const groupLeaguesByDay = (leagues: LeagueWithTeamCount[]): GroupedLeagues => {
-  const grouped: GroupedLeagues = {};
-  
-  leagues.forEach(league => {
-    const dayName = getDayName(league.day_of_week);
-    if (dayName) {
-      if (!grouped[dayName]) {
-        grouped[dayName] = [];
-      }
-      grouped[dayName].push(league);
-    }
-  });
-
-  return grouped;
-};
-
 // Sort leagues by day of the week (Monday to Sunday)
 export const sortLeaguesByDay = (leagues: LeagueWithTeamCount[]): LeagueWithTeamCount[] => {
   return [...leagues].sort((a, b) => {
@@ -242,6 +226,24 @@ export const sortLeaguesByDay = (leagues: LeagueWithTeamCount[]): LeagueWithTeam
     // If same day, sort by league name
     return a.name.localeCompare(b.name);
   });
+};
+
+export const groupLeaguesByDay = (leagues: LeagueWithTeamCount[]): GroupedLeagues => {
+  const grouped: GroupedLeagues = {};
+
+  const sortedLeagues = sortLeaguesByDay(leagues);
+
+  sortedLeagues.forEach((league) => {
+    const dayName = getDayName(league.day_of_week);
+    if (dayName) {
+      if (!grouped[dayName]) {
+        grouped[dayName] = [];
+      }
+      grouped[dayName].push(league);
+    }
+  });
+
+  return grouped;
 };
 
 // Get ordered day names for consistent display (Monday to Sunday)

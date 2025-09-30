@@ -31,9 +31,12 @@ describe('SportsSkillsSelector', () => {
   ];
 
   const mockSkills = [
-    { id: 1, name: 'Beginner', description: 'New to the sport', order_index: 1 },
-    { id: 2, name: 'Intermediate', description: 'Some experience', order_index: 2 },
-    { id: 3, name: 'Advanced', description: 'Experienced player', order_index: 3 },
+    { id: 1, name: 'Novice', description: 'Brand new to the sport', order_index: 1 },
+    { id: 2, name: 'Beginner', description: 'New to the sport', order_index: 2 },
+    { id: 3, name: 'Low Intermediate', description: 'Building skills', order_index: 3 },
+    { id: 4, name: 'Intermediate', description: 'Some experience', order_index: 4 },
+    { id: 5, name: 'High Intermediate', description: 'Approaching advanced play', order_index: 5 },
+    { id: 6, name: 'Advanced', description: 'Experienced player', order_index: 6 },
   ];
 
   beforeEach(() => {
@@ -103,7 +106,7 @@ describe('SportsSkillsSelector', () => {
     expect(onChange).toHaveBeenCalledWith([
       {
         sport_id: 1,
-        skill_id: 2,
+        skill_id: 4,
         sport_name: 'Volleyball',
         skill_name: 'Intermediate',
       },
@@ -115,7 +118,7 @@ describe('SportsSkillsSelector', () => {
         value={[
           {
             sport_id: 1,
-            skill_id: 2,
+            skill_id: 4,
             sport_name: 'Volleyball',
             skill_name: 'Intermediate',
           },
@@ -151,13 +154,13 @@ describe('SportsSkillsSelector', () => {
     expect(onChange).toHaveBeenCalledWith([
       {
         sport_id: 1,
-        skill_id: 2,
+        skill_id: 4,
         sport_name: 'Volleyball',
         skill_name: 'Intermediate',
       },
       {
         sport_id: 2,
-        skill_id: 3,
+        skill_id: 6,
         sport_name: 'Badminton',
         skill_name: 'Advanced',
       },
@@ -189,7 +192,7 @@ describe('SportsSkillsSelector', () => {
         value={[
           {
             sport_id: 1,
-            skill_id: 1,
+            skill_id: 2,
             sport_name: 'Volleyball',
             skill_name: 'Beginner',
           },
@@ -214,13 +217,13 @@ describe('SportsSkillsSelector', () => {
         value={[
           {
             sport_id: 1,
-            skill_id: 1,
+            skill_id: 2,
             sport_name: 'Volleyball',
             skill_name: 'Beginner',
           },
           {
             sport_id: 2,
-            skill_id: 2,
+            skill_id: 4,
             sport_name: 'Badminton',
             skill_name: 'Intermediate',
           },
