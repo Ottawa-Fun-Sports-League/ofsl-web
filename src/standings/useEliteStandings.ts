@@ -30,7 +30,14 @@ export function useEliteStandings(leagueId?: number | string) {
           .eq('league_id', lid)
           .eq('active', true);
 
-        const elitePresent = Array.isArray(weekRows) && (weekRows as any[]).some(r => String((r as any).format || '').toLowerCase().includes('elite'));
+        const elitePresent = Array.isArray(weekRows) && (weekRows as any[]).some(r => {
+          const fmt = String((r as any).format || '').toLowerCase();
+          return (
+            fmt.includes('2-teams-elite') ||
+            fmt.includes('3-teams-elite-6-sets') ||
+            fmt.includes('3-teams-elite-9-sets')
+          );
+        });
         setIsElite(elitePresent);
 
         const { seedRanksByTeamId, weeklyRanksByTeamId, maxWeek } = computeEliteWeeklyRanks((weekRows || []) as WeeklyScheduleRow[], (teamRows || []) as TeamRow[]);
