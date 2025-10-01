@@ -82,9 +82,10 @@ export function LeagueStandingsPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [isWeek2Completed, setIsWeek2Completed] = useState(false);
+  const [isWeek3Completed, setIsWeek3Completed] = useState(false);
   const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
+  const [standingsResetWeek, setStandingsResetWeek] = useState<number>(1);
 
   const isEliteFormat = (scheduleFormat ?? '').includes('elite');
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({});
@@ -257,7 +258,17 @@ export function LeagueStandingsPage() {
       const initialize = async () => {
         const leagueInfo = await loadLeagueData();
         await loadStandings(leagueInfo ?? null);
-        await checkWeek2Completion();
+        await checkWeek3Completion();
+        try {
+          const lid = parseInt(leagueId);
+          const { data: sched } = await supabase
+            .from('league_schedules')
+            .select('schedule_data')
+            .eq('league_id', lid)
+            .maybeSingle();
+          const reset = Number((sched as any)?.schedule_data?.standings_reset_week ?? 1);
+          if (Number.isFinite(reset) && reset >= 1) setStandingsResetWeek(reset);
+        } catch {}
       };
       void initialize();
     }
@@ -610,7 +621,7 @@ export function LeagueStandingsPage() {
     return (base || 0) + (adjustment || 0);
   };
 
-  const checkWeek2Completion = async () => {
+  const checkWeek3Completion = async () => {
     if (!leagueId) return null;
 
     try {
@@ -618,17 +629,17 @@ export function LeagueStandingsPage() {
         .from('weekly_schedules')
         .select('is_completed')
         .eq('league_id', parseInt(leagueId))
-        .eq('week_number', 2);
+        .eq('week_number', 3);
 
       if (error) {
-        console.warn('Error checking week 2 completion:', error);
+        console.warn('Error checking week 3 completion:', error);
         return;
       }
 
-      const week2Completed = data && data.length > 0 && data.some(tier => tier.is_completed);
-      setIsWeek2Completed(week2Completed);
+      const week3Completed = data && data.length > 0 && data.some(tier => tier.is_completed);
+      setIsWeek3Completed(week3Completed);
     } catch (error) {
-      console.warn('Error checking week 2 completion:', error);
+      console.warn('Error checking week 3 completion:', error);
     }
   };
 
@@ -797,46 +808,60 @@ export function LeagueStandingsPage() {
   const handleClearData = async () => {
     setClearing(true);
     try {
-      
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('league_id', parseInt(leagueId!))
-        .eq('active', true);
-
-      if (teamsError) throw teamsError;
-
-      if (!teamsData || teamsData.length === 0) {
-        alert('No teams found for this league');
-        return;
-      }
-
-      for (const team of teamsData) {
-        const { error: upsertError } = await supabase
-          .from('standings')
-          .upsert({
-            league_id: parseInt(leagueId!),
-            team_id: team.id,
-            wins: 0,
-            losses: 0,
-            points: 0,
-            point_differential: 0,
-            manual_wins_adjustment: 0,
-            manual_losses_adjustment: 0,
-            manual_points_adjustment: 0,
-            manual_differential_adjustment: 0
-          }, {
-            onConflict: 'league_id,team_id',
-            ignoreDuplicates: false
-          });
-
-        if (upsertError) {
-          console.error('Error upserting standings for team:', team.name, upsertError);
-          throw upsertError;
+      if (isEliteFormat) {
+        const lid = parseInt(leagueId!);
+        // Persist reset week in schedule_data JSON
+        const { data: sched } = await supabase
+          .from('league_schedules')
+          .select('schedule_data')
+          .eq('league_id', lid)
+          .maybeSingle();
+        const current = (sched as any)?.schedule_data || {};
+        const updated = { ...current, standings_reset_week: 3 };
+        await supabase
+          .from('league_schedules')
+          .update({ schedule_data: updated })
+          .eq('league_id', lid);
+        setStandingsResetWeek(3);
+        // Clear any local ranking edits and force refresh of elite data
+        setEditedWeeklyRanks({});
+      } else {
+        // Legacy non-elite behavior: reset numeric standings to zero
+        const { data: teamsData, error: teamsError } = await supabase
+          .from('teams')
+          .select('id, name')
+          .eq('league_id', parseInt(leagueId!))
+          .eq('active', true);
+        if (teamsError) throw teamsError;
+        if (!teamsData || teamsData.length === 0) {
+          alert('No teams found for this league');
+          return;
         }
+        for (const team of teamsData) {
+          const { error: upsertError } = await supabase
+            .from('standings')
+            .upsert({
+              league_id: parseInt(leagueId!),
+              team_id: team.id,
+              wins: 0,
+              losses: 0,
+              points: 0,
+              point_differential: 0,
+              manual_wins_adjustment: 0,
+              manual_losses_adjustment: 0,
+              manual_points_adjustment: 0,
+              manual_differential_adjustment: 0
+            }, {
+              onConflict: 'league_id,team_id',
+              ignoreDuplicates: false
+            });
+          if (upsertError) {
+            console.error('Error upserting standings for team:', team.name, upsertError);
+            throw upsertError;
+          }
+        }
+        await loadStandings();
       }
-
-      await loadStandings();
       setShowClearConfirm(false);
     } catch (error) {
       console.error('Error clearing standings data:', error);
@@ -964,14 +989,14 @@ export function LeagueStandingsPage() {
           {!isEditMode && (
             <Button
               onClick={() => setShowClearConfirm(true)}
-              disabled={clearing || isWeek2Completed}
+              disabled={clearing || isWeek3Completed}
               variant="outline"
               className={`flex items-center gap-2 ${
-                isWeek2Completed 
+                isWeek3Completed 
                   ? 'border-gray-300 text-gray-400 cursor-not-allowed' 
                   : 'border-red-300 text-red-600 hover:bg-red-50'
               }`}
-              title={isWeek2Completed ? 'Clear Data is only available during seeding rounds (before week 2 completion)' : 'Reset all standings data to zero'}
+              title={isWeek3Completed ? 'Clear Data is only available during seeding rounds (before week 3 completion)' : 'Reset all standings data to zero'}
             >
               <Trash2 className="h-4 w-4" />
               {clearing ? 'Clearing...' : 'Clear Data'}
@@ -1000,7 +1025,10 @@ export function LeagueStandingsPage() {
                       </tr>
                       <tr>
                         {weeklyColumns.map(week => (
-                          <th key={`week-${week}`} className="px-2 py-2 text-center text-sm font-medium text-[#6F6F6F]">
+                          <th
+                            key={`week-${week}`}
+                            className={`px-2 py-2 text-center text-sm font-medium ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}
+                          >
                             {week}
                           </th>
                         ))}
@@ -1009,17 +1037,18 @@ export function LeagueStandingsPage() {
                   <tbody className="divide-y divide-gray-200">
                       {[...standings]
                         .sort((a, b) => {
-                          const aVals = weeklyColumns.map(w => weeklyRanks[a.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
-                          const bVals = weeklyColumns.map(w => weeklyRanks[b.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
-                          const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (seedRanks[a.team_id] ?? Number.POSITIVE_INFINITY);
-                          const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (seedRanks[b.team_id] ?? Number.POSITIVE_INFINITY);
+                          const aVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(w => weeklyRanks[a.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
+                          const bVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(w => weeklyRanks[b.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
+                          const useSeedFallback = standingsResetWeek <= 1;
+                          const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (useSeedFallback ? (seedRanks[a.team_id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
+                          const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (useSeedFallback ? (seedRanks[b.team_id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
                           if (aAvg !== bAvg) return aAvg - bAvg;
                           return (a.team_name || '').localeCompare(b.team_name || '');
                         })
                         .map((standing, index) => {
                           const editKey = standing.id === 0 ? `team_${standing.team_id}` : standing.id.toString();
                           const isEdited = !!editedStandings[editKey];
-                          const played = weeklyColumns.map(w => weeklyRanks[standing.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
+                          const played = weeklyColumns.filter(w => w >= standingsResetWeek).map(w => weeklyRanks[standing.team_id]?.[w]).filter((v): v is number => typeof v === 'number');
                           const avg = played.length ? (played.reduce((a,b)=>a+b,0) / played.length) : null;
                           return (
                             <tr
@@ -1028,12 +1057,12 @@ export function LeagueStandingsPage() {
                                 index === standings.length - 1 ? "last-row" : ""
                               } ${isEdited ? "ring-2 ring-yellow-400 ring-opacity-50" : ""}`}
                             >
-                               <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (seedRanks[standing.team_id] ?? '-')}</td>
+                              <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === standings.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (standingsResetWeek <= 1 ? (seedRanks[standing.team_id] ?? '-') : '-')}</td>
                               <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{standing.team_name}</td>
                               {weeklyColumns.map(week => {
                                 const current = editedWeeklyRanks[standing.team_id]?.[week] ?? weeklyRanks[standing.team_id]?.[week];
                                 return (
-                                  <td key={`week-${standing.team_id}-${week}`} className="px-2 py-2 text-center text-sm text-[#6F6F6F]">
+                                  <td key={`week-${standing.team_id}-${week}`} className={`px-2 py-2 text-center text-sm ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}>
                                   {isEditMode ? (
                                       <Input
                                         type="number"
@@ -1214,9 +1243,9 @@ export function LeagueStandingsPage() {
                   This will reset all wins, losses, points, and point differentials to zero for all teams in this league. 
                   Team positions and manual adjustments will be preserved.
                 </p>
-                {isWeek2Completed ? (
+                {isWeek3Completed ? (
                   <p className="text-sm text-red-600 mb-6">
-                    <strong>Season Active:</strong> Clear Data is only available during seeding rounds (before week 2 completion).
+                    <strong>Season Active:</strong> Clear Data is only available during seeding rounds (before week 3 completion).
                   </p>
                 ) : (
                   <p className="text-sm text-red-600 mb-6">
@@ -1232,7 +1261,7 @@ export function LeagueStandingsPage() {
                   </Button>
                   <Button
                     onClick={handleClearData}
-                    disabled={clearing || isWeek2Completed}
+                    disabled={clearing || isWeek3Completed}
                     className="bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {clearing ? 'Clearing...' : 'Clear Data'}

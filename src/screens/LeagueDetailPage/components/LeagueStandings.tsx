@@ -16,6 +16,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({}); // teamId -> { week -> rank }
   const [seedRanks, setSeedRanks] = useState<Record<number, number>>({}); // teamId -> initial rank from Week 1 schedule
   const [eliteVariantFormat, setEliteVariantFormat] = useState<string | null>(null); // e.g., '2-teams-elite', '3-teams-elite-6-sets'
+  const [standingsResetWeek, setStandingsResetWeek] = useState<number>(1);
 
   // Shared elite standings (single source of truth for elite formats)
   const elite = useEliteStandings(leagueId);
@@ -45,7 +46,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       if (!elite.isElite) return;
       const lid = parseInt(leagueId);
       try {
-        const [wq, rq, tq] = await Promise.all([
+        const [wq, rq, tq, lq] = await Promise.all([
           supabase.from('weekly_schedules')
             .select('id, week_number, tier_number, format, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
             .eq('league_id', lid),
@@ -56,9 +57,18 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
             .select('id,name')
             .eq('league_id', lid)
             .eq('active', true),
+          supabase.from('league_schedules')
+            .select('schedule_data')
+            .eq('league_id', lid)
+            .maybeSingle(),
         ]);
 
         const weekRows: any[] = (wq.data || []) as any[];
+        // Load reset week if set
+        try {
+          const reset = Number(((lq.data as any)?.schedule_data?.standings_reset_week) ?? 1);
+          if (Number.isFinite(reset) && reset >= 1) setStandingsResetWeek(reset);
+        } catch {}
         try {
           // Detect elite variant format from weekly schedules, if present
           const fmt = ((weekRows || [])
@@ -142,7 +152,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const hideStandingsNote = useMemo(() => {
     // Hide the blue note for specific elite variants only
     const fmt = String(eliteVariantFormat || '').toLowerCase();
-    return isEliteFormat && (fmt.includes('2-teams-elite') || fmt.includes('3-teams-elite-6-sets'));
+    return isEliteFormat && (
+      fmt.includes('2-teams-elite') ||
+      fmt.includes('3-teams-elite-6-sets') ||
+      fmt.includes('3-teams-elite-9-sets')
+    );
   }, [isEliteFormat, eliteVariantFormat]);
   const showDifferentialColumn = useMemo(() => {
     const fmt = (scheduleFormat ?? '').toLowerCase();
@@ -381,7 +395,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   </tr>
                   <tr>
                     {weeklyColumns.map(week => (
-                      <th key={`week-${week}`} className="px-2 py-2 text-center text-sm font-medium text-[#6F6F6F]">
+                      <th key={`week-${week}`} className={`px-2 py-2 text-center text-sm font-medium ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}>
                         {week}
                       </th>
                     ))}
@@ -389,24 +403,25 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {[...teams].sort((a, b) => {
-                    const aVals = weeklyColumns.map(week => weeklyRanks[a.id]?.[week]).filter((v): v is number => typeof v === 'number');
-                    const bVals = weeklyColumns.map(week => weeklyRanks[b.id]?.[week]).filter((v): v is number => typeof v === 'number');
-                    const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (seedRanks[a.id] ?? Number.POSITIVE_INFINITY);
-                    const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (seedRanks[b.id] ?? Number.POSITIVE_INFINITY);
+                    const aVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[a.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                    const bVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[b.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                    const useSeedFallback = standingsResetWeek <= 1;
+                    const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (useSeedFallback ? (seedRanks[a.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
+                    const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (useSeedFallback ? (seedRanks[b.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
                     if (aAvg !== bAvg) return aAvg - bAvg;
                     return (a.name || '').localeCompare(b.name || '');
                   }).map((team, index) => {
-                    const played = weeklyColumns.map(week => weeklyRanks[team.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                    const played = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[team.id]?.[week]).filter((v): v is number => typeof v === 'number');
                     const avg = played.length ? (played.reduce((a,b)=>a+b,0) / played.length) : null;
                     return (
                       <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
-                        <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (seedRanks[team.id] ?? '-')}</td>
+                        <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (standingsResetWeek <= 1 ? (seedRanks[team.id] ?? '-') : '-')}</td>
                         <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
                         {weeklyColumns.map(week => {
                           const val = weeklyRanks[team.id]?.[week];
                           const show = weeksWithData.has(week);
                           return (
-                            <td key={`week-${team.id}-${week}`} className="px-4 py-3 text-center text-sm text-[#6F6F6F]">
+                            <td key={`week-${team.id}-${week}`} className={`px-4 py-3 text-center text-sm ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}>
                               {show ? (typeof val === 'number' ? val : '-') : '-'}
                             </td>
                           );
