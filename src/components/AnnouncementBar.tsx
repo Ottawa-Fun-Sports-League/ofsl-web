@@ -3,7 +3,11 @@ import { Link } from "react-router-dom";
 import { fetchActiveAnnouncement } from "../lib/announcement";
 import type { SiteAnnouncement } from "../lib/announcement";
 
-export function AnnouncementBar() {
+interface AnnouncementBarProps {
+  visible?: boolean;
+}
+
+export function AnnouncementBar({ visible = true }: AnnouncementBarProps) {
   const [announcement, setAnnouncement] = useState<SiteAnnouncement | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -44,7 +48,11 @@ export function AnnouncementBar() {
   }
 
   return (
-    <div className="w-full bg-black py-2 md:py-2.5 relative z-50">
+    <div
+      className={`w-full bg-black relative z-50 overflow-hidden transition-all duration-300 ease-in-out
+        ${visible ? "max-h-24 opacity-100 translate-y-0 py-2 md:py-2.5" : "max-h-0 opacity-0 -translate-y-2 py-0"}`}
+      aria-hidden={!visible}
+    >
       <div className="max-w-[1280px] mx-auto px-4 flex items-center justify-center">
         <div className="font-normal text-white text-sm md:text-base text-center">
           <span className="tracking-[0.08px]">{message} </span>
