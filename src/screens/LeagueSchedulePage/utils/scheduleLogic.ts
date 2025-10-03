@@ -124,12 +124,14 @@ export function validateFormatChange(
   tier: WeeklyScheduleTier,
   newFormat: GameFormatId
 ): FormatValidationResult {
-  // New restriction set: simple formats can only change among themselves
-  // Allowed trio: 3 teams (6 sets), 2 teams (4 sets), 2 teams (Best of 5)
+  // Non-elite formats may change among themselves
+  // Allowed set: 3 teams (6 sets), 2 teams (4 sets), 2 teams (Best of 5), 4 teams (Head-to-head), 6 teams (Head-to-head)
   const SIMPLE_GROUP: readonly GameFormatId[] = [
     '3-teams-6-sets',
     '2-teams-4-sets',
     '2-teams-best-of-5',
+    '4-teams-head-to-head',
+    '6-teams-head-to-head',
   ] as const;
 
   // New restriction set: elite formats can only change among themselves
@@ -150,7 +152,7 @@ export function validateFormatChange(
       return {
         isValid: false,
         reason:
-          'Tiers in 3 teams (6 sets), 2 teams (4 sets), or 2 teams (Best of 5) may only change between those three. Changes to 6 teams (head-to-head), 4 teams (head-to-head), 2 teams (Elite), 3 teams (Elite 6 sets), or 3 teams (Elite 9 sets) are not allowed.'
+          'Non-elite tiers may change only among: 3 teams (6 sets), 2 teams (4 sets), 2 teams (Best of 5), 4 teams (Head-to-head), and 6 teams (Head-to-head). Changes to elite formats are not allowed.'
       };
     }
   }
@@ -166,32 +168,8 @@ export function validateFormatChange(
       };
     }
   }
-  // Special restriction: When current format is 6-teams-head-to-head, only allow
-  // changing to 4-teams-head-to-head (subject to capacity validation below).
-  // Disallow switching to any elite formats or 2/3-team standard formats.
-  if (currentFormat === '6-teams-head-to-head') {
-    const isSame = normalizedNew === currentFormat;
-    const allowedTarget = '4-teams-head-to-head';
-    if (!isSame && normalizedNew !== allowedTarget) {
-      return {
-        isValid: false,
-        reason: 'Tiers in 6 Teams (Head-to-Head) may only change to 4 Teams (Head-to-Head). Elite and 2/3-team formats are not allowed.'
-      };
-    }
-  }
-  // Special restriction: When current format is 4-teams-head-to-head, only allow
-  // changing to 6-teams-head-to-head (subject to capacity validation below).
-  // Disallow switching to any elite formats or 2/3-team standard formats.
-  if (currentFormat === '4-teams-head-to-head') {
-    const isSame = normalizedNew === currentFormat;
-    const allowedTarget = '6-teams-head-to-head';
-    if (!isSame && normalizedNew !== allowedTarget) {
-      return {
-        isValid: false,
-        reason: 'Tiers in 4 Teams (Head-to-Head) may only change to 6 Teams (Head-to-Head). Elite and 2/3-team formats are not allowed.'
-      };
-    }
-  }
+  // Note: Head-to-head formats (4- and 6-team) are included in SIMPLE_GROUP above.
+  // Capacity validation below will prevent data loss when reducing team counts.
 
   const newPositions = getPositionsForFormat(newFormat);
   const allPositions: TeamPositionId[] = ['A', 'B', 'C', 'D', 'E', 'F'];
