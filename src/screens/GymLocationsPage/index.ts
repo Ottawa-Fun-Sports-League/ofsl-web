@@ -1,0 +1,2 @@
+export { GymLocationsPage } from "./GymLocationsPage";
+

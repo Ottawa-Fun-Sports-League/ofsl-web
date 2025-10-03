@@ -115,6 +115,14 @@ export function Footer() {
                   Standards of play
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/gym-locations"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
+                  Gym Locations
+                </Link>
+              </li>
             </ul>
           </div>
 

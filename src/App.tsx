@@ -11,6 +11,7 @@ import { ResetPasswordPage } from "./screens/ResetPasswordPage";
 import { SignupConfirmation } from "./screens/SignupPage";
 import { AboutUsPage } from "./screens/AboutUsPage";
 import { StandardsOfPlayPage } from "./screens/StandardsOfPlayPage";
+import { GymLocationsPage } from "./screens/GymLocationsPage";
 import { SkillsAndDrillsPage } from "./screens/SkillsAndDrillsPage";
 import { TournamentsPage } from "./screens/TournamentsPage";
 import { SuccessPage } from "./screens/SuccessPage";
@@ -138,6 +139,14 @@ export function App() {
               element={
                 <ConditionalRoute>
                   <StandardsOfPlayPage />
+                </ConditionalRoute>
+              }
+            />
+            <Route
+              path="/gym-locations"
+              element={
+                <ConditionalRoute>
+                  <GymLocationsPage />
                 </ConditionalRoute>
               }
             />
