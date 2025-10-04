@@ -11,25 +11,27 @@ export function Layout() {
   const ticking = useRef(false);
   const lastStateChangeTime = useRef(0);
   const lastDirection = useRef<'up' | 'down' | null>(null);
+  const stateLockUntil = useRef(0);
 
   useEffect(() => {
     // Increase the gap between thresholds to prevent oscillation
-    const COMPACT_THRESHOLD = 80; // Increased threshold to switch to compact when scrolling down
-    const EXPAND_THRESHOLD = 30; // Decreased threshold to switch to expanded when scrolling up
-    const ANNOUNCEMENT_HIDE_THRESHOLD = 10;
-    // Allow announcement bar to reappear when near the top (not only at exact 0)
-    const ANNOUNCEMENT_SHOW_THRESHOLD = 30;
-    const STATE_CHANGE_DELAY = 200; // Increased delay between state changes
-    const MIN_SCROLL_DISTANCE = 5; // Minimum scroll distance to consider a direction change
+    const COMPACT_THRESHOLD = 100; // more buffer before compacting header
+    const EXPAND_THRESHOLD = 20; // expand a bit closer to the top
+    const ANNOUNCEMENT_HIDE_THRESHOLD = 24; // hide when scrolling down past this
+    const ANNOUNCEMENT_SHOW_THRESHOLD = 40; // show when near top while scrolling up
+    const STATE_CHANGE_DELAY = 200; // delay between state changes
+    const MIN_SCROLL_DISTANCE = 6; // minimum movement to consider
+    const STATE_LOCK_MS = 350; // ignore opposite toggles during animation
     
     const handleScroll = () => {
       if (!ticking.current) {
         window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
+          const currentScrollY = Math.max(window.scrollY, 0);
           const now = Date.now();
           const scrollDistance = Math.abs(currentScrollY - prevScrollY.current);
           const scrollingDown = currentScrollY > prevScrollY.current;
           const timeSinceLastChange = now - lastStateChangeTime.current;
+          const lockActive = now < stateLockUntil.current;
           
           // Set current direction with minimum distance threshold
           const currentDirection = scrollingDown ? 'down' : 'up';
@@ -40,30 +42,51 @@ export function Layout() {
           }
           
           // Only process state changes if we've waited long enough
-          if (timeSinceLastChange > STATE_CHANGE_DELAY) {
+          if (!lockActive && timeSinceLastChange > STATE_CHANGE_DELAY) {
             // Announcement bar logic
-            if (scrollingDown && currentScrollY > ANNOUNCEMENT_HIDE_THRESHOLD && showAnnouncement) {
+            if (
+              scrollingDown &&
+              currentScrollY > ANNOUNCEMENT_HIDE_THRESHOLD &&
+              showAnnouncement
+            ) {
               setShowAnnouncement(false);
               lastStateChangeTime.current = now;
-            } else if (currentScrollY <= ANNOUNCEMENT_SHOW_THRESHOLD && !showAnnouncement) {
+              stateLockUntil.current = now + STATE_LOCK_MS; // lock to avoid immediate flip
+            } else if (
+              !scrollingDown &&
+              lastDirection.current === 'up' &&
+              currentScrollY <= ANNOUNCEMENT_SHOW_THRESHOLD &&
+              !showAnnouncement
+            ) {
               setShowAnnouncement(true);
               lastStateChangeTime.current = now;
+              stateLockUntil.current = now + STATE_LOCK_MS;
             }
-            
+
             // Compact header logic with enhanced hysteresis
             // Only change states if we're consistently scrolling in one direction
-            if (scrollingDown && lastDirection.current === 'down' && 
-                currentScrollY > COMPACT_THRESHOLD && !isCompactHeader) {
+            if (
+              scrollingDown &&
+              lastDirection.current === 'down' &&
+              currentScrollY > COMPACT_THRESHOLD &&
+              !isCompactHeader
+            ) {
               setIsCompactHeader(true);
               lastStateChangeTime.current = now;
-            } else if (!scrollingDown && lastDirection.current === 'up' && 
-                      currentScrollY < EXPAND_THRESHOLD && isCompactHeader) {
+              stateLockUntil.current = now + STATE_LOCK_MS;
+            } else if (
+              !scrollingDown &&
+              lastDirection.current === 'up' &&
+              currentScrollY < EXPAND_THRESHOLD &&
+              isCompactHeader
+            ) {
               setIsCompactHeader(false);
               // When header expands again near the top, ensure announcement bar is visible
               if (!showAnnouncement) {
                 setShowAnnouncement(true);
               }
               lastStateChangeTime.current = now;
+              stateLockUntil.current = now + STATE_LOCK_MS;
             }
           }
           
