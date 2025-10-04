@@ -225,7 +225,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 
                 <li>If a player on the team using a libero suffers an injury and cannot continue, the libero may replace the injured player in the lineup, losing his/her libero status in the process.</li>
                 
-                <li>All other rules will be following Volleyball Canada 2022/23 rules.</li>
+                <li>All other rules will be following Volleyball Canada rules.</li>
               </ul>
             </section>
 
