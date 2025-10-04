@@ -2257,12 +2257,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
           } catch (err) {
             console.warn('Failed to refresh weekly schedule after submitting scores', err);
           }
-          // Also refresh next week so tier movement is visible immediately
-          try {
-            await loadWeeklySchedule(currentWeek + 1);
-          } catch (err) {
-            // Ignore if next week does not exist yet
-          }
+          // Note: Avoid loading next week here. Doing so would update
+          // the shared weekly state to Week (currentWeek + 1) while the
+          // header still shows Week currentWeek, causing a mismatch.
+          // If we want to prefetch next week later, implement a cache
+          // that does not overwrite the displayed week state.
         }}
       />
 
