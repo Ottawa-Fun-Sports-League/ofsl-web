@@ -67,6 +67,8 @@ vi.mock('../../../../lib/leagues', () => ({
     location: null,
     additional_info: null,
     gyms: [],
+    is_draft: false,
+    publish_date: null,
   }),
   fetchSports: vi.fn().mockResolvedValue([
     { id: 1, name: 'Volleyball' },

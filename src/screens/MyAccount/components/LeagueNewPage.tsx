@@ -11,6 +11,7 @@ import { fetchSports, fetchSkills } from "../../../lib/leagues";
 import { ArrowLeft, Save, X } from "lucide-react";
 import { RichTextEditor } from "../../../components/ui/rich-text-editor";
 import { StripeProductSelector } from "./LeaguesTab/components/StripeProductSelector";
+import { DraftPublishControls } from "../../../components/leagues/DraftPublishControls";
 
 interface Sport {
   id: number;
@@ -62,6 +63,8 @@ export function LeagueNewPage() {
     max_teams: number;
     gym_ids: number[];
     hide_day?: boolean;
+    is_draft: boolean;
+    publish_date: string | null;
   }>({
     name: "",
     description: "",
@@ -78,6 +81,8 @@ export function LeagueNewPage() {
     cost: null,
     max_teams: 20,
     gym_ids: [],
+    is_draft: true,
+    publish_date: null,
   });
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -152,6 +157,8 @@ export function LeagueNewPage() {
           cost: newLeague.cost,
           max_teams: newLeague.max_teams,
           gym_ids: newLeague.gym_ids,
+          is_draft: newLeague.is_draft ?? true,
+          publish_date: newLeague.publish_date,
           active: true,
         })
         .select()
@@ -217,6 +224,22 @@ export function LeagueNewPage() {
         <Card>
           <CardContent className="p-6">
             <div className="space-y-6">
+              <DraftPublishControls
+                isDraft={newLeague.is_draft}
+                onDraftChange={(value) =>
+                  setNewLeague((prev) => ({
+                    ...prev,
+                    is_draft: value,
+                  }))
+                }
+                publishDate={newLeague.publish_date}
+                onPublishDateChange={(value) =>
+                  setNewLeague((prev) => ({
+                    ...prev,
+                    publish_date: value,
+                  }))
+                }
+              />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">

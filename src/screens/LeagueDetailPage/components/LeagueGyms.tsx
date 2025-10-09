@@ -15,9 +15,10 @@ interface LeagueGymsProps {
     instructions: string | null;
     locations: string[] | null;
   }>;
+  showAccessInstructions?: boolean;
 }
 
-export function LeagueGyms({ gyms, gymDetails }: LeagueGymsProps) {
+export function LeagueGyms({ gyms, gymDetails, showAccessInstructions = true }: LeagueGymsProps) {
   // If we have gymDetails, use them; otherwise use the basic gym info
   const displayGyms = gymDetails || gyms;
 
@@ -96,7 +97,7 @@ export function LeagueGyms({ gyms, gymDetails }: LeagueGymsProps) {
               ) : null}
 
               {/* Access Instructions */}
-              {"instructions" in gymInfo && gymInfo.instructions ? (
+              {showAccessInstructions && "instructions" in gymInfo && gymInfo.instructions ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
                   <div className="flex items-start">
                     <Info className="h-5 w-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
@@ -118,4 +119,3 @@ export function LeagueGyms({ gyms, gymDetails }: LeagueGymsProps) {
     </div>
   );
 }
-

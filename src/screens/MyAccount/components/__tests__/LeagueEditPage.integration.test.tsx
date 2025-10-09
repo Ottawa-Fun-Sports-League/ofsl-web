@@ -80,7 +80,9 @@ describe('LeagueEditPage Integration Tests', () => {
     gyms: [
       { id: 1, gym: 'Gym 1', address: 'Address 1', locations: ['Location 1'] },
       { id: 2, gym: 'Gym 2', address: 'Address 2', locations: ['Location 2'] }
-    ]
+    ],
+    is_draft: false,
+    publish_date: null,
   };
 
   beforeEach(() => {

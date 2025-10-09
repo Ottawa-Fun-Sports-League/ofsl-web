@@ -65,3 +65,40 @@ export function parseLocalDate(dateStr: string | null | undefined): Date | null 
   
   return date;
 }
+
+/**
+ * Format an ISO timestamp for use in a datetime-local input.
+ * Preserves the user's local timezone.
+ */
+export function formatDateTimeForInput(
+  dateTime: string | Date | null | undefined
+): string {
+  if (!dateTime) return '';
+
+  const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
+  if (!date || Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  // Convert to local time without timezone offset before slicing
+  const tzOffsetMilliseconds = date.getTimezoneOffset() * 60000;
+  const localDate = new Date(date.getTime() - tzOffsetMilliseconds);
+
+  return localDate.toISOString().slice(0, 16);
+}
+
+/**
+ * Convert a datetime-local form value to an ISO string for persistence.
+ */
+export function convertDateTimeLocalToISO(
+  value: string | null | undefined
+): string | null {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}

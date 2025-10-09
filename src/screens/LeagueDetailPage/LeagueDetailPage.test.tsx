@@ -114,6 +114,8 @@ describe("LeagueDetailPage", () => {
     spots_remaining: 10,
     team_count: 2,
     created_at: new Date().toISOString(),
+    is_draft: false,
+    publish_date: null,
   };
 
   const mockTeams = [
@@ -590,4 +592,3 @@ describe("LeagueDetailPage", () => {
     });
   });
 });
-

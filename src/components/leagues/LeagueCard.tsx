@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Card, CardContent } from "../ui/card";
+import { Badge } from "../ui/badge";
 import { LocationPopover } from "../ui/LocationPopover";
 import {
   LeagueWithTeamCount,
@@ -9,6 +10,8 @@ import {
   getPrimaryLocation,
   getEffectiveLeagueCost,
   isEarlyBirdActive,
+  isLeagueDraftForPublic,
+  hasPublishDatePassed,
 } from "../../lib/leagues";
 import { getSportIcon } from "../../screens/LeagueDetailPage/utils/leagueUtils";
 
@@ -21,6 +24,7 @@ interface LeagueCardProps {
   showEarlyBirdNotice?: boolean;
   className?: string;
   footerClassName?: string;
+  adminView?: boolean;
 }
 
 export function LeagueCard({
@@ -29,29 +33,63 @@ export function LeagueCard({
   showEarlyBirdNotice = false,
   className = "",
   footerClassName = "",
+  adminView = false,
 }: LeagueCardProps) {
-  const dayLabel = league.day_of_week === null || league.day_of_week === undefined
-    ? "TBD"
-    : getDayName(league.day_of_week) || "TBD";
+  const dayLabel =
+    league.day_of_week === null || league.day_of_week === undefined
+      ? "TBD"
+      : getDayName(league.day_of_week) || "TBD";
 
   const primaryLocations = getPrimaryLocation(league.gyms || []);
   const hasLocations = primaryLocations.length > 0;
 
   const perUnitLabel = getLeagueUnitLabel(league);
   const effectiveCost = getEffectiveLeagueCost(league);
-  const priceLabel = effectiveCost !== null
-    ? `$${effectiveCost} + HST ${perUnitLabel}`
-    : `Pricing TBD (${perUnitLabel})`;
+  const priceLabel =
+    effectiveCost !== null
+      ? `$${effectiveCost} + HST ${perUnitLabel}`
+      : `Pricing TBD (${perUnitLabel})`;
 
   const sportIcon = getSportIcon(league.sport_name);
   const earlyBirdActive = showEarlyBirdNotice && isEarlyBirdActive(league);
+  const publishDate = league.publish_date ? new Date(league.publish_date) : null;
+  const hasValidPublishDate = publishDate !== null && !Number.isNaN(publishDate.getTime());
+  const isDraftHidden = isLeagueDraftForPublic(league);
+  const isScheduledPublish = hasValidPublishDate && !hasPublishDatePassed(league.publish_date);
+  const adminStatusLabel = (() => {
+    if (!adminView) return null;
+    if (isDraftHidden && isScheduledPublish && publishDate) {
+      return `Publishes ${publishDate.toLocaleString("en-CA", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })}`;
+    }
+    if (isDraftHidden) {
+      return "draft";
+    }
+    return null;
+  })();
 
   return (
-    <Card className={`overflow-hidden rounded-lg border border-gray-200 flex flex-col h-full ${className}`}>
+    <Card
+      className={`overflow-hidden rounded-lg border border-gray-200 flex flex-col h-full ${className}`}
+    >
       <CardContent className="p-0 flex flex-col h-full">
         <div className="bg-[#F8F8F8] border-b border-gray-200 p-4 flex justify-between items-start">
           <div>
             <h3 className="text-lg font-bold text-[#6F6F6F] line-clamp-2">{league.name}</h3>
+            {adminStatusLabel ? (
+              <div className="mt-1">
+                <Badge
+                  variant="outline"
+                  className="text-xs font-semibold text-[#B20000] bg-[#FFE5E5] border border-[#FFC5C5]"
+                >
+                  {adminStatusLabel}
+                </Badge>
+              </div>
+            ) : null}
           </div>
           {sportIcon ? (
             <img
@@ -87,11 +125,7 @@ export function LeagueCard({
               >
                 <path d="M19,3H18V1H16V3H8V1H6V3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z" />
               </svg>
-              {formatLeagueDates(
-                league.start_date,
-                league.end_date,
-                league.hide_day || undefined,
-              )}
+              {formatLeagueDates(league.start_date, league.end_date, league.hide_day || undefined)}
             </div>
           </div>
 
@@ -138,7 +172,8 @@ export function LeagueCard({
             </div>
             {earlyBirdActive && league.early_bird_due_date && (
               <p className="text-xs text-green-700">
-                Early bird until {new Date(`${league.early_bird_due_date}T00:00:00`).toLocaleDateString()}
+                Early bird until{" "}
+                {new Date(`${league.early_bird_due_date}T00:00:00`).toLocaleDateString()}
               </p>
             )}
           </div>

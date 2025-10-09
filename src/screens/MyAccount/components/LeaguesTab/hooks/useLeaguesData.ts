@@ -164,6 +164,8 @@ export function useLeaguesData() {
               skill_ids: league.skill_ids || [],
               skill_names: skill_names,
               gyms: leagueGyms,
+              is_draft: league.is_draft ?? false,
+              publish_date: league.publish_date ?? null,
               team_count: registrationCount,  // This now represents either teams or individuals
               spots_remaining: spotsRemaining,
               is_individual: isIndividualLeague,

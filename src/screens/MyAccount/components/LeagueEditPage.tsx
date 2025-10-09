@@ -23,6 +23,8 @@ import { StripeProductSelector } from "./LeaguesTab/components/StripeProductSele
 import { CopyLeagueDialog } from "./LeaguesTab/components/CopyLeagueDialog";
 import { useLeagueActions } from "./LeaguesTab/hooks/useLeagueActions";
 import { GymMultiSelect } from "./LeaguesTab/components/GymMultiSelect";
+import { DraftPublishControls } from "../../../components/leagues/DraftPublishControls";
+import { cn } from "../../../lib/utils";
 
 // Using imported League type from lib/leagues.ts
 
@@ -88,6 +90,8 @@ export function LeagueEditPage() {
     deposit_amount: number | null;
     deposit_date: string;
     team_registration: boolean;
+    is_draft: boolean;
+    publish_date: string | null;
   }>({
     name: "",
     description: "",
@@ -110,7 +114,10 @@ export function LeagueEditPage() {
     deposit_amount: null,
     deposit_date: "",
     team_registration: true,
+    is_draft: false,
+    publish_date: null,
   });
+  const [initialEditState, setInitialEditState] = useState<typeof editLeague | null>(null);
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
@@ -197,7 +204,7 @@ export function LeagueEditPage() {
           setHasSchedule(false);
         }
 
-        setEditLeague({
+        const normalizedLeagueState = {
           name: leagueData.name,
           description: leagueData.description || "",
           league_type: leagueData.league_type || "regular_season",
@@ -220,7 +227,12 @@ export function LeagueEditPage() {
           deposit_amount: leagueData.deposit_amount,
           deposit_date: leagueData.deposit_date || "",
           team_registration: leagueData.team_registration !== false,
-        });
+          is_draft: leagueData.is_draft ?? false,
+          publish_date: leagueData.publish_date ?? null,
+        };
+
+        setEditLeague(normalizedLeagueState);
+        setInitialEditState(normalizedLeagueState);
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -285,6 +297,8 @@ export function LeagueEditPage() {
           deposit_amount: editLeague.deposit_amount,
           deposit_date: editLeague.deposit_date || null,
           team_registration: editLeague.team_registration,
+          is_draft: editLeague.is_draft,
+          publish_date: editLeague.publish_date,
         })
         .eq("id", id);
 
@@ -309,6 +323,7 @@ export function LeagueEditPage() {
       }
 
       showToast("League updated successfully!", "success");
+      setInitialEditState(editLeague);
       navigate(`/my-account/leagues`);
     } catch (error) {
       console.error("Error updating league:", error);
@@ -333,6 +348,8 @@ export function LeagueEditPage() {
         deposit_amount: editLeague.deposit_amount,
         deposit_date: editLeague.deposit_date || null,
         team_registration: editLeague.team_registration,
+        is_draft: editLeague.is_draft,
+        publish_date: editLeague.publish_date,
       });
       showToast(`Failed to update league: ${error instanceof Error ? error.message : 'Unknown error'}`, "error");
     } finally {
@@ -392,22 +409,54 @@ export function LeagueEditPage() {
     );
   }
 
+  const isSaveButtonDisabled =
+    saving ||
+    !editLeague.name ||
+    !editLeague.league_type ||
+    !editLeague.gender ||
+    !editLeague.sport_id ||
+    (editLeague.skill_ids.length === 0 && !editLeague.skill_id) ||
+    editLeague.day_of_week === null ||
+    !editLeague.start_date ||
+    !editLeague.end_date ||
+    editLeague.cost === null ||
+    !editLeague.max_teams;
+
+  const hasUnsavedChanges =
+    initialEditState !== null &&
+    JSON.stringify(initialEditState) !== JSON.stringify(editLeague);
+
+  const stickyHeaderClassName = cn(
+    "sticky top-0 z-20 mb-6 border-b border-gray-200 bg-white/95 supports-[backdrop-filter]:backdrop-blur py-4 transition-shadow",
+    hasUnsavedChanges ? "shadow-sm" : "shadow-none",
+  );
+
   return (
     <div className="bg-white w-full min-h-screen">
       <div className="max-w-[1280px] mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="mb-6">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center text-[#B20000] hover:underline mb-4"
+            className="flex items-center text-[#B20000] hover:underline"
           >
             <ArrowLeft className="h-5 w-5 mr-1" />
             Back
           </button>
+        </div>
 
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[#6F6F6F]">
-              Edit League Details
-            </h2>
+        <div className={stickyHeaderClassName}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-[#6F6F6F]">
+                Edit League Details
+              </h2>
+              {hasUnsavedChanges ? (
+                <p className="mt-1 text-xs font-medium uppercase tracking-wide text-[#B20000]">
+                  Unsaved changes
+                </p>
+              ) : null}
+            </div>
+
             <div className="flex items-center gap-3">
               <Link to={`/leagues/${id}`} target="_blank">
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-[10px] px-4 py-2 flex items-center gap-2">
@@ -422,6 +471,14 @@ export function LeagueEditPage() {
                 <Copy className="h-4 w-4" />
                 Copy League
               </Button>
+              <Button
+                onClick={handleUpdateLeague}
+                disabled={isSaveButtonDisabled}
+                className="bg-[#B20000] hover:bg-[#8A0000] disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-[10px] px-4 py-2 flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
           </div>
         </div>
@@ -430,6 +487,22 @@ export function LeagueEditPage() {
         <Card>
           <CardContent className="p-6">
             <div className="space-y-6">
+              <DraftPublishControls
+                isDraft={editLeague.is_draft}
+                onDraftChange={(value) =>
+                  setEditLeague((prev) => ({
+                    ...prev,
+                    is_draft: value,
+                  }))
+                }
+                publishDate={editLeague.publish_date}
+                onPublishDateChange={(value) =>
+                  setEditLeague((prev) => ({
+                    ...prev,
+                    publish_date: value,
+                  }))
+                }
+              />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
@@ -670,13 +743,13 @@ export function LeagueEditPage() {
                       <span className="text-sm">Individual Registration</span>
                     </label>
                   </div>
-                </div>
-              </div>
+          </div>
+        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                  Skill Level
-                </label>
+        <div>
+          <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+            Skill Level
+          </label>
                 <div className="flex flex-wrap gap-4 border border-gray-300 rounded-lg p-3">
                   {skills.map((skill) => (
                     <label key={skill.id} className="flex items-center">
@@ -973,35 +1046,6 @@ export function LeagueEditPage() {
                   onChange={setSelectedProductId}
                 />
               </div>
-            </div>
-
-            <div className="mt-8 flex gap-4">
-              <Button
-                onClick={handleUpdateLeague}
-                disabled={
-                  saving ||
-                  !editLeague.name ||
-                  !editLeague.league_type ||
-                  !editLeague.gender ||
-                  !editLeague.sport_id ||
-                  (editLeague.skill_ids.length === 0 && !editLeague.skill_id) ||
-                  editLeague.day_of_week === null ||
-                  !editLeague.start_date ||
-                  !editLeague.end_date ||
-                  editLeague.cost === null ||
-                  !editLeague.max_teams
-                }
-                className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-2 flex items-center gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
-              <button
-                onClick={() => navigate(-1)}
-                className="text-[#B20000] hover:underline px-6 py-2"
-              >
-                Back
-              </button>
             </div>
           </CardContent>
         </Card>

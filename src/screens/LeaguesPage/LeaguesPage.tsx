@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "../../components/ui/button";
 import { Users } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -36,6 +36,7 @@ import {
 import { logger } from "../../lib/logger";
 import { getSportIcon } from "../LeagueDetailPage/utils/leagueUtils";
 import { LeagueFilters, useLeagueFilters, filterLeagues, DEFAULT_FILTER_OPTIONS } from "../../components/leagues/filters";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Customize filter options for this page
 const filterOptions = {
@@ -45,6 +46,8 @@ const filterOptions = {
 
 export const LeaguesPage = (): React.ReactElement => {
   const [searchParams] = useSearchParams();
+  const { userProfile } = useAuth();
+  const isAdmin = userProfile?.is_admin === true;
   
   // Data state
   const [leagues, setLeagues] = useState<LeagueWithTeamCount[]>([]);
@@ -70,11 +73,6 @@ export const LeaguesPage = (): React.ReactElement => {
     clearSkillLevels,
     isAnyFilterActive
   } = useLeagueFilters();
-
-  // Load data on component mount
-  useEffect(() => {
-    loadData();
-  }, []);
 
   // Load Stripe products for leagues
   useEffect(() => {
@@ -122,11 +120,12 @@ export const LeaguesPage = (): React.ReactElement => {
     }
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const [leaguesData, sportsData, skillsData] = await Promise.all([
-        fetchLeagues(),
+        fetchLeagues({ includeDrafts: isAdmin }),
         fetchSports(),
         fetchSkills()
       ]);
@@ -140,7 +139,12 @@ export const LeaguesPage = (): React.ReactElement => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
+
+  // Load data on component mount / when admin status changes
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
 
   // Filter leagues using the shared filter function
@@ -178,7 +182,7 @@ export const LeaguesPage = (): React.ReactElement => {
           <div className="text-center py-20">
             <p className="text-red-600 text-lg">{error}</p>
             <Button 
-              onClick={loadData} 
+              onClick={() => loadData()} 
               className="mt-4 bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-3"
             >
               Try Again
@@ -236,6 +240,7 @@ export const LeaguesPage = (): React.ReactElement => {
                     >
                       <SharedLeagueCard
                         league={league}
+                        adminView={isAdmin}
                         showEarlyBirdNotice
                         footer={(
                           <div className="flex justify-between items-center">

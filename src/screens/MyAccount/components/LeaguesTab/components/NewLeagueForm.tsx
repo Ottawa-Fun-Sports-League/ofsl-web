@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { StripeProductSelector } from "./StripeProductSelector";
 import { GymMultiSelect } from "./GymMultiSelect";
 import { NewLeague, Sport, Skill, Gym } from "../types";
+import { DraftPublishControls } from "../../../../../components/leagues/DraftPublishControls";
 
 interface NewLeagueFormProps {
   sports: Sport[];
@@ -46,6 +47,8 @@ export function NewLeagueForm({
     hide_day: false,
     payment_due_date: "2025-08-21",
     team_registration: true,
+    is_draft: true,
+    publish_date: null,
   });
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -89,7 +92,9 @@ export function NewLeagueForm({
       hide_day: false,
       payment_due_date: "2025-08-21",
       team_registration: true,
-      });
+      is_draft: true,
+      publish_date: null,
+    });
   };
 
   return (
@@ -106,6 +111,24 @@ export function NewLeagueForm({
             <X className="h-5 w-5" />
           </Button>
         </div>
+
+        <DraftPublishControls
+          isDraft={newLeague.is_draft}
+          onDraftChange={(value) =>
+            setNewLeague((prev) => ({
+              ...prev,
+              is_draft: value,
+            }))
+          }
+          publishDate={newLeague.publish_date}
+          onPublishDateChange={(value) =>
+            setNewLeague((prev) => ({
+              ...prev,
+              publish_date: value,
+            }))
+          }
+          className="mb-6"
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -337,13 +360,13 @@ export function NewLeagueForm({
                 <option value="5">Friday</option>
                 <option value="6">Saturday</option>
               </select>
-            </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-              Skill Level
-            </label>
+        <div>
+          <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+            Skill Level
+          </label>
             <div className="flex flex-wrap gap-4 border border-gray-300 rounded-lg p-3">
               {skills.map((skill) => (
                 <label key={skill.id} className="flex items-center">

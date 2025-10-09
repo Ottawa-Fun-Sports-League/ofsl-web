@@ -12,6 +12,7 @@ import {
   getDayName,
   formatLeagueDates,
   type League,
+  isLeagueVisibleToPublic,
 } from "../../lib/leagues";
 import { logger } from "../../lib/logger";
 import { supabase } from "../../lib/supabase";
@@ -33,6 +34,7 @@ export function LeagueDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { userProfile } = useAuth();
+  const isAdmin = userProfile?.is_admin === true;
   const [league, setLeague] = useState<League | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,12 +104,11 @@ export function LeagueDetailPage() {
   };
 
   useEffect(() => {
-    loadLeague();
     loadSchedule();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const loadLeague = async () => {
+  const loadLeague = useCallback(async () => {
     if (!id) {
       setError("League ID is required");
       setLoading(false);
@@ -118,7 +119,10 @@ export function LeagueDetailPage() {
       setLoading(true);
       const leagueData = await fetchLeagueById(parseInt(id));
 
-      if (!leagueData || (leagueData.is_archived && !userProfile?.is_admin)) {
+      if (!leagueData) {
+        setError("League not found");
+        setLeague(null);
+      } else if (!isAdmin && (leagueData.is_archived || !isLeagueVisibleToPublic(leagueData))) {
         setError("League not found");
         setLeague(null);
       } else {
@@ -144,7 +148,11 @@ export function LeagueDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, isAdmin]);
+
+  useEffect(() => {
+    loadLeague();
+  }, [loadLeague]);
 
   if (loading) {
     return (
@@ -243,7 +251,7 @@ export function LeagueDetailPage() {
               activeView={activeView}
               setActiveView={handleViewChange}
               sport={league.sport_name || ""}
-              isAdmin={userProfile?.is_admin || false}
+              isAdmin={isAdmin}
               hasSchedule={hasSchedule}
               isLoggedIn={!!userProfile}
             />
@@ -279,7 +287,11 @@ export function LeagueDetailPage() {
 
             {/* Gyms View */}
             {activeView === "gyms" && (
-              <LeagueGyms gyms={league.gyms || []} gymDetails={gymDetails || undefined} />
+              <LeagueGyms
+                gyms={league.gyms || []}
+                gymDetails={gymDetails || undefined}
+                showAccessInstructions={!!userProfile}
+              />
             )}
 
           </div>

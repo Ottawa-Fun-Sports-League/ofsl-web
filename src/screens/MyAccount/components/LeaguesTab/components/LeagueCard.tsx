@@ -107,6 +107,6 @@ export function LeagueCard({ league, onDelete, onCopy, onManageSchedule }: Leagu
   );
 
   return (
-    <BaseLeagueCard league={league} footer={footer} />
+    <BaseLeagueCard league={league} footer={footer} adminView />
   );
 }

@@ -74,6 +74,8 @@ describe('LeagueSchedule visibility overlay', () => {
       sport_name: null,
       skill_name: null,
       gyms: [],
+      is_draft: false,
+      publish_date: null,
     });
 
     render(<LeagueSchedule leagueId="1" />);
@@ -114,6 +116,8 @@ describe('LeagueSchedule visibility overlay', () => {
       sport_name: null,
       skill_name: null,
       gyms: [],
+      is_draft: false,
+      publish_date: null,
     });
 
     render(<LeagueSchedule leagueId="1" />);

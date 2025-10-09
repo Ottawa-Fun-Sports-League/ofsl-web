@@ -30,6 +30,8 @@ export interface League {
   deposit_date: string | null;
   team_registration: boolean | null;
   playoff_weeks?: number | null;
+  is_draft?: boolean | null;
+  publish_date?: string | null;
   created_at: string;
   is_archived?: boolean;
 
@@ -61,6 +63,40 @@ export const isLeagueArchived = (league: { end_date: string | null }): boolean =
   const endOfLeague = new Date(`${league.end_date}T23:59:59`);
   return endOfLeague.getTime() < now.getTime();
 };
+
+export const hasPublishDatePassed = (
+  publishDate: string | null | undefined,
+  referenceDate: Date = new Date()
+): boolean => {
+  if (!publishDate) {
+    return false;
+  }
+
+  const publishOn = new Date(publishDate);
+  if (Number.isNaN(publishOn.getTime())) {
+    return false;
+  }
+
+  return publishOn.getTime() <= referenceDate.getTime();
+};
+
+export const isLeagueDraftForPublic = (
+  league: { is_draft?: boolean | null; publish_date?: string | null },
+  referenceDate: Date = new Date()
+): boolean => {
+  const isDraft = league.is_draft ?? false;
+  if (!isDraft) {
+    return false;
+  }
+
+  // Draft leagues remain hidden until publish date has passed (if set)
+  return !hasPublishDatePassed(league.publish_date ?? null, referenceDate);
+};
+
+export const isLeagueVisibleToPublic = (
+  league: { is_draft?: boolean | null; publish_date?: string | null },
+  referenceDate: Date = new Date()
+): boolean => !isLeagueDraftForPublic(league, referenceDate);
 
 // Convert day_of_week number to day name
 export const getDayName = (dayOfWeek: number | null): string => {
@@ -260,8 +296,16 @@ export const getOrderedDayNames = (): string[] => {
 };
 
 // Fetch all leagues with related data
-export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
+export interface FetchLeaguesOptions {
+  includeDrafts?: boolean;
+}
+
+export const fetchLeagues = async (
+  options: FetchLeaguesOptions = {}
+): Promise<LeagueWithTeamCount[]> => {
   try {
+    const { includeDrafts = false } = options;
+
     // First, get leagues with sport and skill information
     const { data: leaguesData, error: leaguesError } = await supabase
       .from("leagues")
@@ -385,13 +429,25 @@ export const fetchLeagues = async (): Promise<LeagueWithTeamCount[]> => {
         skill_ids: league.skill_ids || [],
         skill_names: skillNames,
         gyms: leagueGyms,
+        is_draft: league.is_draft ?? false,
+        publish_date: league.publish_date ?? null,
         team_count: registrationCount,  // This now represents either teams or individuals
         spots_remaining: spotsRemaining,
         is_archived: isArchived,
       };
     });
 
-    return leagues.filter((league) => !league.is_archived);
+    return leagues.filter((league) => {
+      if (league.is_archived) {
+        return false;
+      }
+
+      if (includeDrafts) {
+        return true;
+      }
+
+      return isLeagueVisibleToPublic(league);
+    });
   } catch (error) {
     logger.error("Error in fetchLeagues", error);
     return [];
@@ -463,6 +519,8 @@ export const fetchLeagueById = async (id: number): Promise<League | null> => {
       skill_name: data.skills?.name || null,
       skill_names: skillNames,
       gyms: gyms || [],
+      is_draft: data.is_draft ?? false,
+      publish_date: data.publish_date ?? null,
       is_archived,
     };
   } catch (error) {

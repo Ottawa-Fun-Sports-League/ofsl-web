@@ -46,4 +46,6 @@ export interface NewLeague {
   payment_due_date: string;
   team_registration?: boolean;
   playoff_weeks?: number;
+  is_draft: boolean;
+  publish_date: string | null;
 }
