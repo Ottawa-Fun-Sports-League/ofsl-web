@@ -19,6 +19,7 @@ interface IndividualRegistrationNotification {
   amountPaid: number;
   paymentMethod: string;
   isWaitlisted?: boolean;
+  skillLevelName?: string | null;
 }
 
 const skillNameCache = new Map<number, string>();
@@ -114,9 +115,10 @@ serve(async (req: Request) => {
       amountPaid,
       paymentMethod,
       isWaitlisted = false,
+      skillLevelName = null,
     }: IndividualRegistrationNotification = await req.json();
 
-    if (!userId || !userName || !userEmail || !leagueName) {
+    if (!userId || !userName || !userEmail || !leagueName || !leagueId) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         {
@@ -178,7 +180,9 @@ serve(async (req: Request) => {
       minute: '2-digit',
       timeZone: 'America/Toronto'
     });
-    const skillLevelLabel = await resolveLeagueSkillLevel(serviceClient, leagueId);
+    const skillLevelLabel = skillLevelName && skillLevelName.trim().length > 0
+      ? skillLevelName.trim()
+      : await resolveLeagueSkillLevel(serviceClient, leagueId);
 
     const emailContent = {
       to: ["info@ofsl.ca"],

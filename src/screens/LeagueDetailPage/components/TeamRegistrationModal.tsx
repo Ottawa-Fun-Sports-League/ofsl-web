@@ -193,6 +193,31 @@ Please select a skill level that meets these requirements.`
       if (leagueError) throw leagueError;
 
       const isTeamRegistration = leagueData.team_registration !== false;
+      const selectedSkillName = (() => {
+        if (skillLevelId !== null) {
+          const skillMatch = skillOptions.find((skill) => skill.id === skillLevelId);
+          if (skillMatch?.name) {
+            return skillMatch.name;
+          }
+        }
+
+        const skillNamesArray = Array.isArray(league?.skill_names)
+          ? (league?.skill_names ?? []).filter((name): name is string => !!name && name.trim().length > 0)
+          : [];
+        if (skillNamesArray.length > 0) {
+          return skillNamesArray.join(", ");
+        }
+
+        if (league?.skill_name && league.skill_name.trim().length > 0) {
+          return league.skill_name;
+        }
+
+        if (league?.gender && league.gender.trim().length > 0) {
+          return league.gender;
+        }
+
+        return null;
+      })();
 
       // For individual registrations, update user's league_ids
       if (!isTeamRegistration) {
@@ -250,7 +275,8 @@ Please select a skill level that meets these requirements.`
                   registeredAt: new Date().toISOString(),
                   amountPaid: 0, // Will be updated when payment is made
                   paymentMethod: "Pending",
-                  isWaitlisted: isWaitlist // Include waitlist status
+                  isWaitlisted: isWaitlist, // Include waitlist status
+                  skillLevelName: selectedSkillName,
                 },
               },
             );
@@ -333,31 +359,6 @@ Please select a skill level that meets these requirements.`
       try {
         if (user?.email) {
           const isTeamRegistration = leagueData.team_registration !== false;
-          const selectedSkillName = (() => {
-            if (skillLevelId !== null) {
-              const skillMatch = skillOptions.find((skill) => skill.id === skillLevelId);
-              if (skillMatch?.name) {
-                return skillMatch.name;
-              }
-            }
-
-            const skillNamesArray = Array.isArray(league?.skill_names)
-              ? (league?.skill_names ?? []).filter((name): name is string => !!name && name.trim().length > 0)
-              : [];
-            if (skillNamesArray.length > 0) {
-              return skillNamesArray.join(", ");
-            }
-
-            if (league?.skill_name && league.skill_name.trim().length > 0) {
-              return league.skill_name;
-            }
-
-            if (league?.gender && league.gender.trim().length > 0) {
-              return league.gender;
-            }
-
-            return null;
-          })();
 
           const response = await supabase.functions.invoke(
             "send-registration-confirmation",

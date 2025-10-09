@@ -10,6 +10,7 @@ const corsHeaders = {
 
 const individualSkillNameCache = new Map<number, string>();
 const individualLeagueSkillCache = new Map<number, string>();
+const individualUserLeagueCache = new Map<string, string>();
 
 async function fetchIndividualSkillName(client: ReturnType<typeof createClient>, skillId: number | null | undefined): Promise<string | null> {
   if (skillId === null || skillId === undefined) {
@@ -38,7 +39,7 @@ async function fetchIndividualSkillName(client: ReturnType<typeof createClient>,
   return name;
 }
 
-async function resolveIndividualLeagueSkillLevel(client: ReturnType<typeof createClient>, leagueId: number): Promise<string> {
+async function resolveLeagueSkillFallback(client: ReturnType<typeof createClient>, leagueId: number): Promise<string> {
   if (individualLeagueSkillCache.has(leagueId)) {
     return individualLeagueSkillCache.get(leagueId) ?? "Not specified";
   }
@@ -71,6 +72,39 @@ async function resolveIndividualLeagueSkillLevel(client: ReturnType<typeof creat
   const resolved = skillName ?? fallback;
   individualLeagueSkillCache.set(leagueId, resolved);
   return resolved;
+}
+
+async function resolveIndividualSkillLevel(
+  client: ReturnType<typeof createClient>,
+  userId: string,
+  leagueId: number,
+): Promise<string> {
+  const cacheKey = `${userId}-${leagueId}`;
+  if (individualUserLeagueCache.has(cacheKey)) {
+    return individualUserLeagueCache.get(cacheKey) ?? "Not specified";
+  }
+
+  const { data: paymentRecord, error } = await client
+    .from("league_payments")
+    .select("skill_level_id")
+    .eq("user_id", userId)
+    .eq("league_id", leagueId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("process-individual-notification-queue: failed to fetch league payment", error);
+  }
+
+  let skillName = await fetchIndividualSkillName(client, paymentRecord?.skill_level_id ?? null);
+
+  if (!skillName) {
+    skillName = await resolveLeagueSkillFallback(client, leagueId);
+  }
+
+  individualUserLeagueCache.set(cacheKey, skillName ?? "Not specified");
+  return skillName ?? "Not specified";
 }
 
 serve(async (req: Request) => {
@@ -159,7 +193,11 @@ serve(async (req: Request) => {
           timeZone: 'America/Toronto'
         });
 
-        const skillLevelLabel = await resolveIndividualLeagueSkillLevel(supabase, notification.league_id);
+        const skillLevelLabel = await resolveIndividualSkillLevel(
+          supabase,
+          notification.user_id,
+          notification.league_id,
+        );
 
         // Prepare email content
         const emailContent = {

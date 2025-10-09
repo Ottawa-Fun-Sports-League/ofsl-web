@@ -186,6 +186,7 @@ describe('Individual Registration Notification', () => {
             userPhone: '123-456-7890',
             leagueId: 1,
             leagueName: 'Badminton League',
+            skillLevelName: 'Intermediate',
             amountPaid: 0,
             paymentMethod: 'Pending',
           }),
