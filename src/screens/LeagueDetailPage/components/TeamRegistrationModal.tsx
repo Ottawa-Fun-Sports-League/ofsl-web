@@ -332,6 +332,14 @@ Please select a skill level that meets these requirements.`
       try {
         if (user?.email) {
           const isTeamRegistration = leagueData.team_registration !== false;
+          const selectedSkillName =
+            (skillLevelId !== null
+              ? skillOptions.find((skill) => skill.id === skillLevelId)?.name ?? null
+              : null) ??
+            (Array.isArray(league?.skill_names) && league?.skill_names.length > 0
+              ? league?.skill_names.filter(Boolean).join(", ")
+              : league?.skill_name ?? null);
+
           const response = await supabase.functions.invoke(
             "send-registration-confirmation",
             {
@@ -346,6 +354,7 @@ Please select a skill level that meets these requirements.`
                 depositAmount: league?.deposit_amount || null,
                 depositDate: league?.deposit_date || null,
                 isIndividualRegistration: !isTeamRegistration,
+                leagueSkillLevel: selectedSkillName,
               },
             },
           );

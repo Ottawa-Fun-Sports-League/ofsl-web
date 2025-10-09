@@ -34,6 +34,7 @@ interface RegistrationRequest {
   depositAmount?: number | null;
   depositDate?: string | null;
   isIndividualRegistration?: boolean;
+  leagueSkillLevel?: string | null;
 }
 
 serve(async (req: Request) => {
@@ -62,6 +63,7 @@ serve(async (req: Request) => {
       depositAmount = null,
       depositDate = null,
       isIndividualRegistration = false,
+      leagueSkillLevel = null,
     }: RegistrationRequest = await req.json();
 
     if (!email || !userName || !teamName || !leagueName) {
@@ -118,6 +120,10 @@ serve(async (req: Request) => {
       ? `Waitlist Confirmation: ${isIndividualRegistration ? userName : teamName} in ${leagueName}`
       : `Registration Confirmation: ${isIndividualRegistration ? userName : teamName} in ${leagueName}`;
 
+    const skillLevelLabel = leagueSkillLevel && leagueSkillLevel.trim().length > 0
+      ? leagueSkillLevel.trim()
+      : "Not specified";
+
     const emailContent = {
       to: [email],
       subject: emailSubject,
@@ -165,6 +171,12 @@ serve(async (req: Request) => {
                                         ? `Thank you for registering for <strong style="color: #B20000;">${leagueName}</strong>!`
                                         : `Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> for <strong style="color: #B20000;">${leagueName}</strong>!`
                                   }
+                                </p>
+                                <p style="color: #2c3e50; font-size: 15px; line-height: 22px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
+                                  <strong style="color: #5a6c7d;">League:</strong>
+                                  <span style="margin-left: 6px;">${leagueName}</span><br>
+                                  <strong style="color: #5a6c7d;">Skill Level:</strong>
+                                  <span style="margin-left: 6px;">${skillLevelLabel}</span>
                                 </p>
                               </td>
                             </tr>

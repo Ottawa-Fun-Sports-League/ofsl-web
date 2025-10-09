@@ -15,6 +15,7 @@ interface TeamRegistrationNotification {
   captainEmail: string;
   captainPhone?: string;
   leagueName: string;
+  leagueSkillLevel?: string | null;
   registeredAt: string;
   rosterCount: number;
 }
@@ -43,6 +44,7 @@ serve(async (req: Request) => {
       captainEmail,
       captainPhone,
       leagueName,
+      leagueSkillLevel,
       registeredAt,
       rosterCount,
     }: TeamRegistrationNotification = await req.json();
@@ -107,6 +109,9 @@ serve(async (req: Request) => {
       minute: '2-digit',
       timeZone: 'America/Toronto'
     });
+    const skillLevelLabel = leagueSkillLevel && leagueSkillLevel.trim().length > 0
+      ? leagueSkillLevel
+      : 'Not specified';
 
     const emailContent = {
       to: ["info@ofsl.ca"],
@@ -165,6 +170,12 @@ serve(async (req: Request) => {
                                     <td style="padding: 8px 0;">
                                       <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">League:</strong>
                                       <span style="color: #B20000; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif; margin-left: 10px;">${leagueName}</span>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Skill Level:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${skillLevelLabel}</span>
                                     </td>
                                   </tr>
                                   <tr>

@@ -95,6 +95,10 @@ serve(async (req: Request) => {
         });
 
         // Prepare email content
+        const skillLevelLabel = notification.league_skill_level && notification.league_skill_level.trim().length > 0
+          ? notification.league_skill_level
+          : 'Not specified';
+
         const emailContent = {
           to: ["info@ofsl.ca"],
           subject: `New Team Registration: ${notification.team_name} in ${notification.league_name}`,
@@ -150,16 +154,22 @@ serve(async (req: Request) => {
                                       </tr>
                                       <tr>
                                         <td style="padding: 8px 0;">
-                                          <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">League:</strong>
-                                          <span style="color: #B20000; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif; margin-left: 10px;">${notification.league_name}</span>
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <td style="padding: 8px 0;">
-                                          <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Team ID:</strong>
-                                          <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">#${notification.team_id}</span>
-                                        </td>
-                                      </tr>
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">League:</strong>
+                                      <span style="color: #B20000; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif; margin-left: 10px;">${notification.league_name}</span>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Skill Level:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${skillLevelLabel}</span>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Team ID:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">#${notification.team_id}</span>
+                                    </td>
+                                  </tr>
                                       <tr>
                                         <td style="padding: 8px 0;">
                                           <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Registration Date:</strong>

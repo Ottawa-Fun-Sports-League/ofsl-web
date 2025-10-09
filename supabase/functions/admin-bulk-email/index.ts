@@ -34,6 +34,7 @@ const SUBJECT_MAX_LENGTH = 200;
 const HTML_MAX_LENGTH = 20000;
 
 const RATE_LIMIT_DELAY_MS = getRateLimitDelay();
+const INFO_COPY_EMAIL = "info@ofsl.ca";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -154,8 +155,16 @@ serve(async (req: Request) => {
       const wrappedHtml = wrapWithTemplate(personalizedSubject, personalizedHtml);
 
       await waitForRateLimiter(rateLimiter);
+      const bccList =
+        trimmedEmail.toLowerCase() === INFO_COPY_EMAIL ? [] : [INFO_COPY_EMAIL];
 
-      const sent = await sendEmail(resendApiKey, trimmedEmail, personalizedSubject, wrappedHtml);
+      const sent = await sendEmail(
+        resendApiKey,
+        trimmedEmail,
+        personalizedSubject,
+        wrappedHtml,
+        bccList,
+      );
       if (sent) {
         summary.sent += 1;
       } else {
@@ -238,7 +247,13 @@ function deriveFirstName(fullName: string, fallbackEmail: string): string {
   return segments.length > 0 ? segments[0] : fullName;
 }
 
-async function sendEmail(resendApiKey: string, to: string, subject: string, html: string) {
+async function sendEmail(
+  resendApiKey: string,
+  to: string,
+  subject: string,
+  html: string,
+  bcc: string[] = [],
+) {
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -250,6 +265,7 @@ async function sendEmail(resendApiKey: string, to: string, subject: string, html
         from: "OFSL <info@ofsl.ca>",
         reply_to: "info@ofsl.ca",
         to: [to],
+        bcc: bcc.length > 0 ? bcc : undefined,
         subject,
         html,
       }),
