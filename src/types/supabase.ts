@@ -219,6 +219,29 @@ export interface Database {
           is_active?: boolean
         }
       }
+      page_content: {
+        Row: {
+          id: string
+          page_slug: string
+          content: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          page_slug: string
+          content: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          page_slug?: string
+          content?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+      }
       attendance: {
         Row: {
           id: number

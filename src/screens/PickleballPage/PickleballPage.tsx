@@ -14,11 +14,60 @@ import {
   getPrimaryLocation,
 } from "../../lib/leagues";
 import { Calendar, DollarSign, MapPin, Users } from "lucide-react";
+import { fetchPageContent } from "../../lib/pageContent";
+
+export interface PickleballPageContent {
+  hero: {
+    image: string;
+    imageAlt: string;
+    containerClassName: string;
+    title: string;
+    subtitle: string;
+    buttons: Array<{ text: string; link: string }>;
+  };
+  intro: {
+    heading: string;
+    description: string;
+  };
+  leagueCardImage: string;
+  emptyState: {
+    title: string;
+    description: string;
+  };
+}
+
+export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
+  hero: {
+    image: "/pickleball-card.jpg",
+    imageAlt: "Pickleball players",
+    containerClassName: "h-[500px]",
+    title: "Pickleball Leagues",
+    subtitle:
+      "Serve, rally, and score with OFSL pickleball. Join competitive and social doubles play across Ottawa's top facilities.",
+    buttons: [
+      {
+        text: "View Pickleball Leagues",
+        link: "/leagues?sport=Pickleball",
+      },
+    ],
+  },
+  intro: {
+    heading: "Find a pickleball league",
+    description:
+      "OFSL pickleball leagues feature doubles play with an emphasis on fun, fair matchups, and community. Whether you're building up your dink game or chasing tournament-level rallies, our leagues deliver great competition in a welcoming environment.",
+  },
+  leagueCardImage: "/pickleball-card.jpg",
+  emptyState: {
+    title: "No pickleball leagues available at this time.",
+    description: "Check back soon or join our newsletter for updates.",
+  },
+};
 
 export const PickleballPage = (): React.ReactElement => {
   const [leagues, setLeagues] = useState<LeagueWithTeamCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [content, setContent] = useState<PickleballPageContent>(DEFAULT_PICKLEBALL_CONTENT);
 
   useEffect(() => {
     const loadLeagues = async () => {
@@ -37,7 +86,19 @@ export const PickleballPage = (): React.ReactElement => {
       }
     };
 
-    loadLeagues();
+    void loadLeagues();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchPageContent<PickleballPageContent>(
+      "pickleball",
+      DEFAULT_PICKLEBALL_CONTENT,
+      controller.signal,
+    ).then((data) => setContent(data));
+
+    return () => controller.abort();
   }, []);
 
   const groupedLeagues: GroupedLeagues = groupLeaguesByDay(leagues);
@@ -56,37 +117,34 @@ export const PickleballPage = (): React.ReactElement => {
     <div className="bg-white flex flex-row justify-center w-full">
       <div className="bg-white w-full relative">
         <HeroBanner
-          image="/pickleball-card.jpg"
-          imageAlt="Pickleball players"
-          containerClassName="h-[500px]"
+          image={content.hero.image}
+          imageAlt={content.hero.imageAlt}
+          containerClassName={content.hero.containerClassName}
         >
           <div className="text-center text-white">
-            <h1 className="text-5xl mb-4 font-heading">Pickleball Leagues</h1>
-            <p className="text-xl max-w-2xl mx-auto mb-8">
-              Serve, rally, and score with OFSL pickleball. Join competitive and social doubles play
-              across Ottawa&apos;s top facilities.
-            </p>
+            <h1 className="text-5xl mb-4 font-heading">{content.hero.title}</h1>
+            <p className="text-xl max-w-2xl mx-auto mb-8">{content.hero.subtitle}</p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-              <Link to="/leagues?sport=Pickleball" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-                >
-                  <span className="text-base md:text-lg text-white">View Pickleball Leagues</span>
-                </Button>
-              </Link>
+              {content.hero.buttons.map((button) => (
+                <Link key={button.text} to={button.link} className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
+                  >
+                    <span className="text-base md:text-lg text-white">{button.text}</span>
+                  </Button>
+                </Link>
+              ))}
             </div>
           </div>
         </HeroBanner>
 
         <div className="max-w-[1280px] mx-auto px-4 pt-16 md:pt-24 pb-8 md:pb-12">
-          <h2 className="text-3xl font-bold text-center mb-16">Find a pickleball league</h2>
+          <h2 className="text-3xl font-bold text-center mb-16">{content.intro.heading}</h2>
 
           <div className="text-center mb-12">
             <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-              OFSL pickleball leagues feature doubles play with an emphasis on fun, fair matchups, and
-              community. Whether you&apos;re building up your dink game or chasing tournament-level rallies,
-              our leagues deliver great competition in a welcoming environment.
+              {content.intro.description}
             </p>
           </div>
 
@@ -126,10 +184,12 @@ export const PickleballPage = (): React.ReactElement => {
                               <img
                                 className="w-full h-[300px] object-cover rounded-t-lg"
                                 alt={league.name}
-                                src="/pickleball-card.jpg"
+                                src={content.leagueCardImage}
                               />
                               <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-4">
-                                <h3 className="text-white font-bold text-lg text-center mb-2">{league.name}</h3>
+                                <h3 className="text-white font-bold text-lg text-center mb-2">
+                                  {league.name}
+                                </h3>
 
                                 <div className="space-y-1 text-sm text-white/90">
                                   <div className="flex items-center justify-center">
@@ -160,10 +220,12 @@ export const PickleballPage = (): React.ReactElement => {
                                     <div className="flex flex-col items-start text-xs">
                                       <div className="flex items-center">
                                         <DollarSign className="h-3 w-3 mr-1" />
-                                        <span>{league.cost !== null ? `$${league.cost}` : 'Cost TBD'}</span>
+                                        <span>
+                                          {league.cost !== null ? `$${league.cost}` : "Cost TBD"}
+                                        </span>
                                       </div>
                                       <span className="ml-4 text-[10px] uppercase text-white/70">
-                                        {league.team_registration === false ? 'per player' : 'per team'}
+                                        {league.team_registration === false ? "per player" : "per team"}
                                       </span>
                                     </div>
                                     <div className="flex items-center">
@@ -171,10 +233,10 @@ export const PickleballPage = (): React.ReactElement => {
                                       <span
                                         className={`text-xs py-0.5 px-1 rounded ${
                                           league.spots_remaining === 0
-                                            ? 'bg-red-600'
+                                            ? "bg-red-600"
                                             : league.spots_remaining <= 3
-                                            ? 'bg-orange-600'
-                                            : 'bg-green-600'
+                                            ? "bg-orange-600"
+                                            : "bg-green-600"
                                         }`}
                                       >
                                         {getSpotsText(league.spots_remaining)}
@@ -194,13 +256,11 @@ export const PickleballPage = (): React.ReactElement => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-[#6F6F6F] text-lg">No pickleball leagues available at this time.</p>
-              <p className="text-[#6F6F6F]">Check back soon or join our newsletter for updates.</p>
+              <p className="text-[#6F6F6F] text-lg">{content.emptyState.title}</p>
+              <p className="text-[#6F6F6F]">{content.emptyState.description}</p>
             </div>
           )}
         </div>
-
-        
       </div>
     </div>
   );

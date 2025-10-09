@@ -10,6 +10,11 @@ import {
   type SiteAnnouncement,
 } from "../../../../lib/announcement";
 import { logger } from "../../../../lib/logger";
+import { HomePageContentForm } from "./components/HomePageContentForm";
+import { SportPageContentForm } from "./components/SportPageContentForm";
+import { VolleyballContentForm } from "./components/VolleyballContentForm";
+import { DEFAULT_BADMINTON_CONTENT } from "../../../BadmintonPage/BadmintonPage";
+import { DEFAULT_PICKLEBALL_CONTENT } from "../../../PickleballPage/PickleballPage";
 
 interface FormState {
   message: string;
@@ -31,6 +36,9 @@ export function SiteSettingsTab() {
   const [currentAnnouncement, setCurrentAnnouncement] = useState<SiteAnnouncement | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "announcement" | "home" | "badminton" | "pickleball" | "volleyball"
+  >("announcement");
 
   useEffect(() => {
     let isMounted = true;
@@ -174,25 +182,29 @@ export function SiteSettingsTab() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  return (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
-        <div className="px-6 py-5 border-b border-gray-200">
-          <h2 className="text-2xl font-semibold text-[#6F6F6F]">Announcement Bar</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Update the message displayed at the top of the website. Leave the announcement disabled to hide the bar for visitors.
-          </p>
-          {lastUpdatedLabel ? (
-            <p className="mt-2 text-xs text-gray-400">Last updated {lastUpdatedLabel}</p>
-          ) : null}
-        </div>
+  const renderAnnouncementForm = () => (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+      <div className="px-6 py-5 border-b border-gray-200">
+        <h2 className="text-2xl font-semibold text-[#6F6F6F]">Announcement Bar</h2>
+        <p className="mt-2 text-sm text-gray-500">
+          Update the message displayed at the top of the website. Leave the announcement disabled to hide the bar for visitors.
+        </p>
+        {lastUpdatedLabel ? (
+          <p className="mt-2 text-xs text-gray-400">Last updated {lastUpdatedLabel}</p>
+        ) : null}
+      </div>
 
+      {loading ? (
+        <div className="px-6 py-10">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : (
         <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[#6F6F6F]" htmlFor="announcement-message">
@@ -256,7 +268,75 @@ export function SiteSettingsTab() {
             </Button>
           </div>
         </form>
+      )}
+    </div>
+  );
+
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case "announcement":
+        return renderAnnouncementForm();
+      case "home":
+        return <HomePageContentForm />;
+      case "badminton":
+        return (
+          <SportPageContentForm
+            pageSlug="badminton"
+            label="Badminton Landing Page"
+            description="Update the hero banner, intro text, and default imagery used on the badminton landing page."
+            defaultContent={DEFAULT_BADMINTON_CONTENT}
+          />
+        );
+      case "pickleball":
+        return (
+          <SportPageContentForm
+            pageSlug="pickleball"
+            label="Pickleball Landing Page"
+            description="Manage the hero and supporting copy for pickleball, including the default card imagery."
+            defaultContent={DEFAULT_PICKLEBALL_CONTENT}
+          />
+        );
+      case "volleyball":
+        return <VolleyballContentForm />;
+      default:
+        return null;
+    }
+  };
+
+  const tabs: Array<{
+    id: typeof activeTab;
+    label: string;
+  }> = [
+    { id: "announcement", label: "Announcement" },
+    { id: "home", label: "Home Page" },
+    { id: "badminton", label: "Badminton" },
+    { id: "volleyball", label: "Volleyball" },
+    { id: "pickleball", label: "Pickleball" },
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-10 pb-12">
+      <div className="sticky top-[56px] z-10 bg-white/90 backdrop-blur border-b border-gray-200">
+        <div className="flex flex-wrap gap-2 px-1 py-4">
+          {tabs.map((tab) => (
+            <Button
+              key={tab.id}
+              type="button"
+              variant={tab.id === activeTab ? "default" : "outline"}
+              className={
+                tab.id === activeTab
+                  ? "bg-[#B20000] hover:bg-[#8A0000] text-white"
+                  : "text-[#6F6F6F] border-gray-300"
+              }
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
       </div>
+
+      {renderActiveTab()}
     </div>
   );
 }
