@@ -184,6 +184,7 @@ describe('Individual Registration Notification', () => {
             userName: 'Test User',
             userEmail: 'test@example.com',
             userPhone: '123-456-7890',
+            leagueId: 1,
             leagueName: 'Badminton League',
             amountPaid: 0,
             paymentMethod: 'Pending',

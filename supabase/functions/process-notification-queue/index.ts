@@ -8,6 +8,118 @@ const corsHeaders = {
     "Content-Type, Authorization, x-client-info, apikey",
 };
 
+const skillNameCache = new Map<number, string>();
+const leagueSkillCache = new Map<number, string>();
+const teamSkillCache = new Map<number, string>();
+
+async function fetchSkillName(client: ReturnType<typeof createClient>, skillId: number | null | undefined): Promise<string | null> {
+  if (skillId === null || skillId === undefined) {
+    return null;
+  }
+
+  if (skillNameCache.has(skillId)) {
+    return skillNameCache.get(skillId) ?? null;
+  }
+
+  const { data, error } = await client
+    .from("skills")
+    .select("name")
+    .eq("id", skillId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("process-notification-queue: failed to fetch skill name", error);
+    return null;
+  }
+
+  const name = data?.name ?? null;
+  if (name) {
+    skillNameCache.set(skillId, name);
+  }
+  return name;
+}
+
+async function resolveLeagueSkillLevel(
+  client: ReturnType<typeof createClient>,
+  leagueId: number | null | undefined,
+): Promise<string> {
+  if (leagueId === null || leagueId === undefined) {
+    return "Not specified";
+  }
+
+  if (leagueSkillCache.has(leagueId)) {
+    return leagueSkillCache.get(leagueId) ?? "Not specified";
+  }
+
+  const { data: leagueRecord, error } = await client
+    .from("leagues")
+    .select("skill_id, skill_ids, gender")
+    .eq("id", leagueId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("process-notification-queue: failed to fetch league", error);
+    return "Not specified";
+  }
+
+  if (!leagueRecord) {
+    return "Not specified";
+  }
+
+  let skillName = await fetchSkillName(client, leagueRecord.skill_id);
+
+  if (!skillName && Array.isArray(leagueRecord.skill_ids) && leagueRecord.skill_ids.length > 0) {
+    skillName = await fetchSkillName(client, leagueRecord.skill_ids[0]);
+  }
+
+  const fallback = leagueRecord.gender && leagueRecord.gender.trim().length > 0
+    ? leagueRecord.gender
+    : "Not specified";
+
+  const resolved = skillName ?? fallback;
+  leagueSkillCache.set(leagueId, resolved);
+  return resolved;
+}
+
+async function resolveTeamSkillLevel(
+  client: ReturnType<typeof createClient>,
+  teamId: number,
+  leagueId: number | null | undefined,
+): Promise<string> {
+  if (teamSkillCache.has(teamId)) {
+    return teamSkillCache.get(teamId) ?? "Not specified";
+  }
+
+  const { data: teamRecord, error } = await client
+    .from("teams")
+    .select("skill_level_id, league_id")
+    .eq("id", teamId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("process-notification-queue: failed to fetch team", error);
+    const resolved = await resolveLeagueSkillLevel(client, leagueId);
+    teamSkillCache.set(teamId, resolved);
+    return resolved;
+  }
+
+  if (!teamRecord) {
+    const resolved = await resolveLeagueSkillLevel(client, leagueId);
+    teamSkillCache.set(teamId, resolved);
+    return resolved;
+  }
+
+  const skillFromTeam = await fetchSkillName(client, teamRecord.skill_level_id);
+  if (skillFromTeam) {
+    teamSkillCache.set(teamId, skillFromTeam);
+    return skillFromTeam;
+  }
+
+  const resolved = await resolveLeagueSkillLevel(client, teamRecord.league_id ?? leagueId);
+  teamSkillCache.set(teamId, resolved);
+  return resolved;
+}
+
 serve(async (req: Request) => {
   try {
     // Handle CORS preflight requests
@@ -95,9 +207,11 @@ serve(async (req: Request) => {
         });
 
         // Prepare email content
-        const skillLevelLabel = notification.league_skill_level && notification.league_skill_level.trim().length > 0
-          ? notification.league_skill_level
-          : 'Not specified';
+        const skillLevelLabel = await resolveTeamSkillLevel(
+          supabase,
+          notification.team_id,
+          notification.league_id,
+        );
 
         const emailContent = {
           to: ["info@ofsl.ca"],

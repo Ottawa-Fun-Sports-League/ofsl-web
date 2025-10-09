@@ -15,9 +15,110 @@ interface TeamRegistrationNotification {
   captainEmail: string;
   captainPhone?: string;
   leagueName: string;
-  leagueSkillLevel?: string | null;
   registeredAt: string;
   rosterCount: number;
+}
+
+const skillNameCache = new Map<number, string>();
+const leagueSkillCache = new Map<number, string>();
+
+async function fetchSkillName(client: ReturnType<typeof createClient>, skillId: number | null | undefined): Promise<string | null> {
+  if (skillId === null || skillId === undefined) {
+    return null;
+  }
+
+  if (skillNameCache.has(skillId)) {
+    return skillNameCache.get(skillId) ?? null;
+  }
+
+  const { data, error } = await client
+    .from("skills")
+    .select("name")
+    .eq("id", skillId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("notify-team-registration: failed to fetch skill name", error);
+    return null;
+  }
+
+  const name = data?.name ?? null;
+  if (name) {
+    skillNameCache.set(skillId, name);
+  }
+  return name;
+}
+
+async function resolveLeagueSkillLevel(
+  client: ReturnType<typeof createClient>,
+  leagueId: number | null | undefined,
+  fallbackSkillId: number | null | undefined,
+): Promise<string> {
+  const fallbackSkill = await fetchSkillName(client, fallbackSkillId);
+  if (fallbackSkill) {
+    return fallbackSkill;
+  }
+
+  if (leagueId === null || leagueId === undefined) {
+    return "Not specified";
+  }
+
+  if (leagueSkillCache.has(leagueId)) {
+    return leagueSkillCache.get(leagueId) ?? "Not specified";
+  }
+
+  const { data: leagueRecord, error } = await client
+    .from("leagues")
+    .select("skill_id, skill_ids, gender")
+    .eq("id", leagueId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("notify-team-registration: failed to fetch league", error);
+    return "Not specified";
+  }
+
+  if (!leagueRecord) {
+    return "Not specified";
+  }
+
+  let skillName = await fetchSkillName(client, leagueRecord.skill_id);
+
+  if (!skillName && Array.isArray(leagueRecord.skill_ids) && leagueRecord.skill_ids.length > 0) {
+    skillName = await fetchSkillName(client, leagueRecord.skill_ids[0]);
+  }
+
+  const fallback = leagueRecord.gender && leagueRecord.gender.trim().length > 0
+    ? leagueRecord.gender
+    : "Not specified";
+
+  const resolved = skillName ?? fallback;
+  leagueSkillCache.set(leagueId, resolved);
+  return resolved;
+}
+
+async function resolveTeamSkillLevel(client: ReturnType<typeof createClient>, teamId: number): Promise<string> {
+  const { data: teamRecord, error } = await client
+    .from("teams")
+    .select("skill_level_id, league_id")
+    .eq("id", teamId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("notify-team-registration: failed to fetch team", error);
+    return "Not specified";
+  }
+
+  if (!teamRecord) {
+    return "Not specified";
+  }
+
+  const skillFromTeam = await fetchSkillName(client, teamRecord.skill_level_id);
+  if (skillFromTeam) {
+    return skillFromTeam;
+  }
+
+  return resolveLeagueSkillLevel(client, teamRecord.league_id, null);
 }
 
 serve(async (req: Request) => {
@@ -44,7 +145,6 @@ serve(async (req: Request) => {
       captainEmail,
       captainPhone,
       leagueName,
-      leagueSkillLevel,
       registeredAt,
       rosterCount,
     }: TeamRegistrationNotification = await req.json();
@@ -74,7 +174,7 @@ serve(async (req: Request) => {
     // Initialize Supabase client with service role for database operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const _supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the user is authenticated by checking their token
     const token = authHeader.replace("Bearer ", "");
@@ -99,6 +199,8 @@ serve(async (req: Request) => {
     }
 
     // Create the notification email content
+    const skillLevelLabel = await resolveTeamSkillLevel(serviceClient, teamId);
+
     const emailSubject = `New Team Registration: ${teamName} in ${leagueName}`;
     const registrationDate = new Date(registeredAt).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -170,6 +272,12 @@ serve(async (req: Request) => {
                                     <td style="padding: 8px 0;">
                                       <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">League:</strong>
                                       <span style="color: #B20000; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif; margin-left: 10px;">${leagueName}</span>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Skill Level:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${skillLevelLabel}</span>
                                     </td>
                                   </tr>
                                   <tr>

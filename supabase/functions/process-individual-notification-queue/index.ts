@@ -8,6 +8,71 @@ const corsHeaders = {
     "Content-Type, Authorization, x-client-info, apikey",
 };
 
+const individualSkillNameCache = new Map<number, string>();
+const individualLeagueSkillCache = new Map<number, string>();
+
+async function fetchIndividualSkillName(client: ReturnType<typeof createClient>, skillId: number | null | undefined): Promise<string | null> {
+  if (skillId === null || skillId === undefined) {
+    return null;
+  }
+
+  if (individualSkillNameCache.has(skillId)) {
+    return individualSkillNameCache.get(skillId) ?? null;
+  }
+
+  const { data, error } = await client
+    .from("skills")
+    .select("name")
+    .eq("id", skillId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("process-individual-notification-queue: failed to fetch skill name", error);
+    return null;
+  }
+
+  const name = data?.name ?? null;
+  if (name) {
+    individualSkillNameCache.set(skillId, name);
+  }
+  return name;
+}
+
+async function resolveIndividualLeagueSkillLevel(client: ReturnType<typeof createClient>, leagueId: number): Promise<string> {
+  if (individualLeagueSkillCache.has(leagueId)) {
+    return individualLeagueSkillCache.get(leagueId) ?? "Not specified";
+  }
+
+  const { data: leagueRecord, error } = await client
+    .from("leagues")
+    .select("skill_id, skill_ids, gender")
+    .eq("id", leagueId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("process-individual-notification-queue: failed to fetch league", error);
+    return "Not specified";
+  }
+
+  if (!leagueRecord) {
+    return "Not specified";
+  }
+
+  let skillName = await fetchIndividualSkillName(client, leagueRecord.skill_id);
+
+  if (!skillName && Array.isArray(leagueRecord.skill_ids) && leagueRecord.skill_ids.length > 0) {
+    skillName = await fetchIndividualSkillName(client, leagueRecord.skill_ids[0]);
+  }
+
+  const fallback = leagueRecord.gender && leagueRecord.gender.trim().length > 0
+    ? leagueRecord.gender
+    : "Not specified";
+
+  const resolved = skillName ?? fallback;
+  individualLeagueSkillCache.set(leagueId, resolved);
+  return resolved;
+}
+
 serve(async (req: Request) => {
   try {
     // Handle CORS preflight requests
@@ -94,10 +159,12 @@ serve(async (req: Request) => {
           timeZone: 'America/Toronto'
         });
 
+        const skillLevelLabel = await resolveIndividualLeagueSkillLevel(supabase, notification.league_id);
+
         // Prepare email content
         const emailContent = {
           to: ["info@ofsl.ca"],
-          subject: `New Individual Registration: ${notification.user_name} in ${notification.league_name}`,
+          subject: `${notification.is_waitlisted ? 'New Waitlist Registration' : 'New Individual Registration'}: ${notification.user_name} in ${notification.league_name}`,
           html: `
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
               <tr>
@@ -162,17 +229,23 @@ serve(async (req: Request) => {
                                         </td>
                                       </tr>
                                       ` : ''}
-                                      <tr>
-                                        <td style="padding: 8px 0;">
-                                          <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">League:</strong>
-                                          <span style="color: #B20000; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif; margin-left: 10px;">${notification.league_name}</span>
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <td style="padding: 8px 0;">
-                                          <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Registration Date:</strong>
-                                          <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${registrationDate}</span>
-                                        </td>
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">League:</strong>
+                                      <span style="color: #B20000; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif; margin-left: 10px;">${notification.league_name}</span>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Skill Level:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${skillLevelLabel}</span>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Registration Date:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${registrationDate}</span>
+                                    </td>
                                       </tr>
                                       <tr>
                                         <td style="padding: 8px 0;">
