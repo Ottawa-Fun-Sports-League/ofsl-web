@@ -195,9 +195,7 @@ export const HomePage = (): React.ReactElement => {
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const isAtStart = container.scrollLeft <= 0;
-      const isAtEnd =
-        container.scrollLeft + container.clientWidth >=
-        container.scrollWidth - 1;
+      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
 
       setShowLeftButton(!isAtStart);
       setShowRightButton(!isAtEnd);
@@ -228,9 +226,8 @@ export const HomePage = (): React.ReactElement => {
             Welcome to OFSL!
           </h1>
           <p className="text-base md:text-lg lg:text-xl">
-            Ottawa&apos;s leading adult volleyball and badminton league—where
-            sportsmanship meets healthy competition from competitive to
-            intermediate levels.
+            Ottawa&apos;s leading adult volleyball and badminton league—where sportsmanship meets
+            healthy competition from competitive to intermediate levels.
           </p>
           {/* Hero buttons */}
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-6 md:mt-12 justify-center">
@@ -239,9 +236,7 @@ export const HomePage = (): React.ReactElement => {
                 variant="outline"
                 className="w-full sm:w-auto bg-[#0d0d0d42] hover:bg-[#b20000] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
               >
-                <span className="text-base md:text-lg text-white">
-                  Womens Elite
-                </span>
+                <span className="text-base md:text-lg text-white">Womens Elite</span>
               </Button>
             </Link>
             <Link to="/leagues" className="w-full sm:w-auto">
@@ -249,9 +244,7 @@ export const HomePage = (): React.ReactElement => {
                 variant="outline"
                 className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
               >
-                <span className="text-base md:text-lg text-white">
-                  Register Now
-                </span>
+                <span className="text-base md:text-lg text-white">Register Now</span>
               </Button>
             </Link>
             <Link to="/tournaments" className="w-full sm:w-auto">
@@ -259,9 +252,7 @@ export const HomePage = (): React.ReactElement => {
                 variant="outline"
                 className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
               >
-                <span className="text-base md:text-lg text-white">
-                  Tournaments
-                </span>
+                <span className="text-base md:text-lg text-white">Tournaments</span>
               </Button>
             </Link>
           </div>
@@ -280,8 +271,8 @@ export const HomePage = (): React.ReactElement => {
             />
             <div className="text-base md:text-lg text-center">
               <span className="text-[#6f6f6f] leading-6 md:leading-7">
-                Proudly partnering with Diabetes Canada to promote healthier
-                lifestyles through sport and community wellness.
+                Proudly partnering with Diabetes Canada to promote healthier lifestyles through
+                sport and community wellness.
               </span>
               <a
                 href="https://www.diabetes.ca"
@@ -293,36 +284,13 @@ export const HomePage = (): React.ReactElement => {
           </div>
         </div>
 
-        {/* Holiday break notification */}
-        <div className="flex justify-center mb-16 md:mb-24">
-          <Card className="bg-[#ffeae5] rounded-lg shadow-none border-none max-w-4xl w-full">
-            <CardContent className="flex flex-col md:flex-row items-center justify-center p-6 md:p-8 gap-6 md:gap-8">
-              <div className="flex-shrink-0">
-                <span className="material-symbols-outlined text-[50px] md:text-[64px] text-[#B20000]">
-                  diversity_4
-                </span>
-              </div>
-              <div className="text-center md:text-left flex-1">
-                <h3 className="font-bold text-[#6f6f6f] text-xl md:text-2xl lg:text-[28px] leading-7 md:leading-8 mb-3">
-                  LoveGive&apos;s Charity Tournament
-                </h3>
-                <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-                  Come out and experience a day of fun on Aug 17, 2025 at
-                  Britannia Beach, for a 6v6 and 4v4 tournament.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* League description */}
         <div className="text-center mb-16 md:mb-24">
           <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-            Our leagues provide a well-organized structure and experience for
-            those who take their play seriously—but still want to have a good
-            time. Geared toward intermediate to competitive play, it&apos;s a
-            great way to stay active, maintain your fitness, and connect with
-            others who share your passion for the games.
+            Our leagues provide a well-organized structure and experience for those who take their
+            play seriously—but still want to have a good time. Geared toward intermediate to
+            competitive play, it&apos;s a great way to stay active, maintain your fitness, and
+            connect with others who share your passion for the games.
           </p>
         </div>
       </div>
@@ -330,9 +298,7 @@ export const HomePage = (): React.ReactElement => {
       {/* League cards with overflow handling */}
       <div className="w-full mb-8 md:mb-12">
         <div className="max-w-[1280px] mx-auto px-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-[#6F6F6F] mb-8">
-            Popular Leagues
-          </h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-[#6F6F6F] mb-8">Popular Leagues</h2>
           <div className="relative">
             <div
               ref={scrollContainerRef}
@@ -374,9 +340,7 @@ export const HomePage = (): React.ReactElement => {
                           src={card.image}
                         />
                         <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 h-[90px] flex items-center justify-center px-4">
-                          <h3 className="text-white font-bold text-lg text-center">
-                            {card.title}
-                          </h3>
+                          <h3 className="text-white font-bold text-lg text-center">{card.title}</h3>
                         </div>
                       </div>
                     </CardContent>
@@ -447,12 +411,9 @@ export const HomePage = (): React.ReactElement => {
               src="/rebase-24dp-000000-fill0-wght300-grad0-opsz24-1.svg"
             />
             <div className="md:ml-6 flex-1 text-center md:text-left">
-              <h2 className="text-xl md:text-2xl font-bold text-white mb-3">
-                Skills and Drills
-              </h2>
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Skills and Drills</h2>
               <p className="text-white text-base md:text-lg leading-6 md:leading-7">
-                Led by James Battiston, former member of the Canadian Beach
-                National Team.
+                Led by James Battiston, former member of the Canadian Beach National Team.
               </p>
             </div>
             <Link to="/skills-and-drills">
@@ -479,12 +440,12 @@ export const HomePage = (): React.ReactElement => {
                 Skills and drills
               </h2>
               <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-6 md:mb-8">
-                Whether you&apos;re just starting out or a seasoned player
-                aiming to refine your fundamentals, elevate your skills with{" "}
+                Whether you&apos;re just starting out or a seasoned player aiming to refine your
+                fundamentals, elevate your skills with{" "}
                 <strong>OFSL&apos;s Skills & Drills Program</strong>, led by{" "}
-                <strong>James Battiston</strong>, former professional volleyball
-                player and Canadian Beach National Team member. Learn from one
-                of the best and take your game to the next level!
+                <strong>James Battiston</strong>, former professional volleyball player and Canadian
+                Beach National Team member. Learn from one of the best and take your game to the
+                next level!
               </p>
               <Link
                 to="/skills-and-drills"
@@ -507,12 +468,11 @@ export const HomePage = (): React.ReactElement => {
                 About us
               </h2>
               <p className="text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7 mb-6 md:mb-8">
-                The <strong>Ottawa Fun Sports League (OFSL)</strong> is
-                dedicated to promoting active living and healthy lifestyles for
-                youth and adults—while keeping fun at the heart of it all.
-                Throughout the year, we organize a variety of tournaments and
-                teams, creating opportunities to connect, compete, and celebrate
-                community through sport.
+                The <strong>Ottawa Fun Sports League (OFSL)</strong> is dedicated to promoting
+                active living and healthy lifestyles for youth and adults—while keeping fun at the
+                heart of it all. Throughout the year, we organize a variety of tournaments and
+                teams, creating opportunities to connect, compete, and celebrate community through
+                sport.
               </p>
               <Link
                 to="/about-us"
@@ -529,8 +489,7 @@ export const HomePage = (): React.ReactElement => {
       <div
         className="w-full py-12 md:py-16"
         style={{
-          background:
-            "linear-gradient(90deg, rgba(178,0,0,1) 0%, rgba(120,18,18,1) 100%)",
+          background: "linear-gradient(90deg, rgba(178,0,0,1) 0%, rgba(120,18,18,1) 100%)",
         }}
       >
         <div className="max-w-[1280px] mx-auto px-4 text-center text-white">
