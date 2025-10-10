@@ -677,215 +677,25 @@ If the match result is tied (e.g., 24–25 / 25–24), teams play one additional
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">4x4 Rules / Standards of Play</h3>
-                </section>
-
-                <section>
-                  <pre className="whitespace-pre-wrap text-lg text-[#6F6F6F]">
-4x4 Rules/Standards of play sub-section
-
-Gender rules
-
-Minimum 2 females at all times
-Males can not hit beyond the 3m line (attack line)
-Males can not block women 
-Net is mixed height 
-Minimum of 2 female players on court. Additional females allowed, but extras must play under the “guys' rules/position”
-
-Gameplay rules
-Block does not count as a touch 
-Open hand tips are allowed
-For the first contact (except serve reception), you can double-hit unless it's a lift; volleys are okay.
-
-Substitutes
-Teams may play with only 3 players if no substitute is available.
-Extra girls on the court still must follow the “guy rules/position” guideline 
-
-
-
-6x6 Rules to be added
-
-
-General (Officiated)
-Officials must announce the possibility of a time cap at least 5 minutes before it. No time-outs allowed after announcement. When the cap is reached, finish the current point. Leading team wins; if tied, play one more point.
-
-Women’s Elite & Women's Premiere
-
-Minimum of 5 players allowed on court only in special situations during regular season (injury, late arrival, cancellation). Otherwise, the default applies.
-With 5 players: must maintain 3 front-row players; once you start the set with 5, must finish with 5; injured regular players can be replaced by a libero for the remainder of the set.
-
-
-
-
-
-AI VERSION 
- Minimum Players on Court
- A team may compete with a minimum of five (5) players only under special circumstances during the regular season (e.g., injury, late arrival, or player cancellation).
-When playing with five (5) players:
-Teams must maintain three (3) players in the front row.
-
-
-If a set begins with five (5) players, it must be completed with five (5) players.
-
-
-An injured regular player may be replaced by a libero for the remainder of the set.
-
-
-Mens 6x6
-
-
-
-Wording to be changed
-
-OLD
-Minimum 2 females on the court
-If a team only has 1 female, it is encouraged to borrow a player sitting off. If this is not an option and a team still has only 1 female, only 3 males are allowed on the court which makes it a maximum of 4 players during play. All agreement should be done prior to game starting.
-
-
-New
-Minimum 2 females on the court
-If a team only has 1 female, it is encouraged to borrow a player sitting off. If all captains agree, and a team only has 1 female, only 3 males are allowed, making it 4. 
-
-
- FINAL
-If a team has only one female player, it is encouraged that they borrow a female player who is sitting off to help balance the lineup.
-However, if all captains agree, and a team still has only one female, then that team may field no more than three male players, making a total of four on the field
-
-
-
-
-OLD 
-If a team show up 10 minutes after scheduled first game, every minute will be deducted a point, accumulating up to when the team arrives.This rule does not apply if sitting team agrees to play games first in place of late team.
-NEW
-If a team arrives 20 minutes after the first scheduled game, they will forfeit the first set. If a team shows up 10 minutes after the scheduled first game, they will be deducted one point every minute, accumulating until the opposing team arrives. This rule does not apply if the sitting team agrees to play games first in place of the late team.
-
-
-Note: Rules may differ depending on certain circumstances, for example, a last minute gym cancellation. The league will then decide how to move forward.
-
-
-
-SEE AI VERSION BELOW
-
-
-
-
-
-
-
-
-
-
-
-AI VERSION
-
-
-Late Arrival Policy
-If a team arrives 20 minutes after the first scheduled game, they will forfeit the first set.
-
-
-If a team arrives 10 minutes after the scheduled first game, they will be deducted one point per minute, accumulating until the opposing team arrives or the 20-minute threshold is met..
-
-
-This rule does not apply if the sitting team agrees to play their games first in place of the late team.
-
-
-Important Note:
- Rules may differ in special circumstances (e.g., a last-minute gym cancellation). In such cases, the league will determine the next steps to take.
-SUNDAY FORMAT
-
-
-Game Format & Rules
-Timeslot: 2 hours
- Courts: 3 per timeslot
- Match Format: Head-to-head, best of 2 sets (to 25 points)
-Tiers & Times
-Tier 1: 8:00 – 10:00 PM
-
-
-Tier 2: 6:00 – 8:00 PM
-
-
-Tier 3: 4:00 – 6:00 PM
-
-
-Court Assignments
-Court 1 = Tier #A (highest court in tier)
-
-
-Court 2 = Tier #B (middle court in tier)
-
-
-Court 3 = Tier #C (lowest court in tier)
-
-
-Movement Rules
-Court 1 (Top Court):
-
-
-The winning team stays on Court 1.
-
-
-They must win again to be promoted to the next tier.
-
-
-The losing team moves down to Court 2.
-
-
-Court 2 (Middle Court):
-
-
-The winning team moves up to Court 1.
-
-
-The losing team moves down to Court 3.
-
-
-Court 3 (Bottom Court):
-
-
-The winning team moves up to Court 2.
-
-
-The losing team remains on Court 3.
-
-
-A team that loses twice in the same night on Court 3 is relegated to a lower tier for the following week.
-
-
-Next Week's Placement
-A team starting on Court 3 that wins their matchup and then wins on Court 2 will start the following week on Court 1 of their tier.
-
-
-A team starting on Court 1 that loses their matchup and then loses on Court 2 will start the following week on Court 3 of their tier.
-
-
-A team starting on Court 1 or Court 2 that wins their last match on Court 1 will start the following week in a higher tier.
-
-
-A team starting on Court 2 or Court 3 that loses all their matches will start the following week in a lower tier.
-
-
-Tiebreaker Rule
-If the match result is tied (e.g., 24–25 / 25–24), teams play one additional point to determine which team advances.
-                  </pre>
+                  <h4 className="text-2xl font-bold text-[#6F6F6F] mb-2">4x4 Rules/Standards of play sub-section</h4>
                 </section>
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gender rules</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Minimum 2 females at all times.</li>
-                    <li>Males can not hit beyond the 3m line (attack line).</li>
-                    <li>Males can not block women.</li>
-                    <li>Net is mixed height.</li>
-                    <li>Minimum 2 female players on court. Additional females allowed, but extras must play under the “guys&apos; rules/position”.</li>
+                    <li>Minimum 2 females at all times</li>
+                    <li>Males can not hit beyond the 3m line (attack line)</li>
+                    <li>Males can not block women</li>
+                    <li>Net is mixed height</li>
+                    <li>Minimum of 2 female players on court. Additional females allowed, but extras must play under the �guys' rules/position�</li>
                   </ul>
                 </section>
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gameplay rules</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Block does not count as a touch.</li>
-                    <li>Open hand tips are allowed.</li>
+                    <li>Block does not count as a touch</li>
+                    <li>Open hand tips are allowed</li>
                     <li>For the first contact (except serve reception), you can double-hit unless it's a lift; volleys are okay.</li>
                   </ul>
                 </section>
@@ -894,22 +704,31 @@ If the match result is tied (e.g., 24–25 / 25–24), teams play one additional
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with only 3 players if no substitute is available.</li>
-                    <li>Extra female players on the court must still follow the “guy rules/position” guideline.</li>
+                    <li>Extra girls on the court still must follow the �guy rules/position� guideline </li>
                   </ul>
                 </section>
-                )}
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">6x6 Rules to be added</h4>
+                </section>
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">General (Officiated)</h4>
-                  <p className="text-lg text-[#6F6F6F]">
-                    Officials must announce the possibility of a time cap at least 5 minutes before it. No time-outs allowed after announcement. When the cap is reached, finish the current point. Leading team wins; if tied, play one more point.
-                  </p>
+                  <p className="text-lg text-[#6F6F6F]">Officials must announce the possibility of a time cap at least 5 minutes before it. No time-outs allowed after announcement. When the cap is reached, finish the current point. Leading team wins; if tied, play one more point.</p>
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Minimum Players on Court</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women�s Elite &amp; Women's Premiere</h4>
+                  <p className="text-lg text-[#6F6F6F]">Minimum of 5 players allowed on court only in special situations during regular season (injury, late arrival, cancellation). Otherwise, the default applies.</p>
+                  <p className="text-lg text-[#6F6F6F]">With 5 players: must maintain 3 front-row players; once you start the set with 5, must finish with 5; injured regular players can be replaced by a libero for the remainder of the set.</p>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">AI VERSION</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1"> Minimum Players on Court</h5>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>A team may compete with a minimum of five (5) players only under special circumstances during the regular season (e.g., injury, late arrival, or player cancellation).</li>
+                    <li> A team may compete with a minimum of five (5) players only under special circumstances during the regular season (e.g., injury, late arrival, or player cancellation).</li>
+                    <li>When playing with five (5) players:</li>
                     <li>Teams must maintain three (3) players in the front row.</li>
                     <li>If a set begins with five (5) players, it must be completed with five (5) players.</li>
                     <li>An injured regular player may be replaced by a libero for the remainder of the set.</li>
@@ -917,25 +736,102 @@ If the match result is tied (e.g., 24–25 / 25–24), teams play one additional
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Minimum 2 females on the court (clarification)</h4>
-                  <p className="text-lg text-[#6F6F6F]">
-                    If a team has only one female player, it is encouraged that they borrow a female player who is sitting off to help balance the lineup. However, if all captains agree, and a team still has only one female, then that team may field no more than three male players, making a total of four on the court.
-                  </p>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Mens 6x6</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Wording to be changed</h5>
+                  <h6 className="text-base font-medium text-[#6F6F6F] mb-1">OLD</h6>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Minimum 2 females on the court</li>
+                    <li>If a team only has 1 female, it is encouraged to borrow a player sitting off. If this is not an option and a team still has only 1 female, only 3 males are allowed on the court which makes it a maximum of 4 players during play. All agreement should be done prior to game starting.</li>
+                  </ul>
+                  <h6 className="text-base font-medium text-[#6F6F6F] mb-1">New</h6>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Minimum 2 females on the court</li>
+                    <li>If a team only has 1 female, it is encouraged to borrow a player sitting off. If all captains agree, and a team only has 1 female, only 3 males are allowed, making it 4. </li>
+                  </ul>
+                  <h6 className="text-base font-medium text-[#6F6F6F] mb-1"> FINAL</h6>
+                  <p className="text-lg text-[#6F6F6F]">If a team has only one female player, it is encouraged that they borrow a female player who is sitting off to help balance the lineup.</p>
+                  <p className="text-lg text-[#6F6F6F]">However, if all captains agree, and a team still has only one female, then that team may field no more than three male players, making a total of four on the field</p>
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Late Arrival Policy</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">OLD</h5>
+                  <p className="text-lg text-[#6F6F6F]">If a team show up 10 minutes after scheduled first game, every minute will be deducted a point, accumulating up to when the team arrives.This rule does not apply if sitting team agrees to play games first in place of late team.</p>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">NEW</h5>
+                  <p className="text-lg text-[#6F6F6F]">If a team arrives 20 minutes after the first scheduled game, they will forfeit the first set. If a team shows up 10 minutes after the scheduled first game, they will be deducted one point every minute, accumulating until the opposing team arrives. This rule does not apply if the sitting team agrees to play games first in place of the late team.</p>
+                  <p className="text-lg text-[#6F6F6F] mt-2">Note: Rules may differ depending on certain circumstances, for example, a last minute gym cancellation. The league will then decide how to move forward.</p>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">SEE AI VERSION BELOW</h4>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">AI VERSION</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Late Arrival Policy</h5>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>If a team arrives 20 minutes after the first scheduled game, they will forfeit the first set.</li>
-                    <li>If a team arrives 10 minutes after the scheduled first game, they will be deducted one point per minute, accumulating until the opposing team arrives or the 20-minute threshold is met.</li>
+                    <li>If a team arrives 10 minutes after the scheduled first game, they will be deducted one point per minute, accumulating until the opposing team arrives or the 20-minute threshold is met..</li>
                     <li>This rule does not apply if the sitting team agrees to play their games first in place of the late team.</li>
                   </ul>
-                  <p className="text-lg text-[#6F6F6F] mt-2">Important Note: Rules may differ in special circumstances (e.g., a last-minute gym cancellation). In such cases, the league will determine the next steps to take.</p>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Important Note:</h5>
+                  <p className="text-lg text-[#6F6F6F]"> Rules may differ in special circumstances (e.g., a last-minute gym cancellation). In such cases, the league will determine the next steps to take.</p>
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Sunday Format</h4>
-                  <p className="text-lg text-[#6F6F6F]">See the “Sunday Mixed Volleyball” tab for detailed Sunday evening format and movement rules.</p>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">SUNDAY FORMAT</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Game Format &amp; Rules</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Timeslot: 2 hours</li>
+                    <li> Courts: 3 per timeslot</li>
+                    <li> Match Format: Head-to-head, best of 2 sets (to 25 points)</li>
+                  </ul>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Tiers &amp; Times</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Tier 1: 8:00 � 10:00 PM</li>
+                    <li>Tier 2: 6:00 � 8:00 PM</li>
+                    <li>Tier 3: 4:00 � 6:00 PM</li>
+                  </ul>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Court Assignments</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Court 1 = Tier #A (highest court in tier)</li>
+                    <li>Court 2 = Tier #B (middle court in tier)</li>
+                    <li>Court 3 = Tier #C (lowest court in tier)</li>
+                  </ul>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Movement Rules</h5>
+                  <div className="space-y-3">
+                    <div>
+                      <h6 className="text-base font-medium text-[#6F6F6F]">Court 1 (Top Court):</h6>
+                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                        <li>The winning team stays on Court 1.</li>
+                        <li>They must win again to be promoted to the next tier.</li>
+                        <li>The losing team moves down to Court 2.</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h6 className="text-base font-medium text-[#6F6F6F]">Court 2 (Middle Court):</h6>
+                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                        <li>The winning team moves up to Court 1.</li>
+                        <li>The losing team moves down to Court 3.</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h6 className="text-base font-medium text-[#6F6F6F]">Court 3 (Bottom Court):</h6>
+                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                        <li>The winning team moves up to Court 2.</li>
+                        <li>The losing team remains on Court 3.</li>
+                        <li>A team that loses twice in the same night on Court 3 is relegated to a lower tier for the following week.</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Next Week's Placement</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>A team starting on Court 3 that wins their matchup and then wins on Court 2 will start the following week on Court 1 of their tier.</li>
+                    <li>A team starting on Court 1 that loses their matchup and then loses on Court 2 will start the following week on Court 3 of their tier.</li>
+                    <li>A team starting on Court 1 or Court 2 that wins their last match on Court 1 will start the following week in a higher tier.</li>
+                    <li>A team starting on Court 2 or Court 3 that loses all their matches will start the following week in a lower tier.</li>
+                  </ul>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Tiebreaker Rule</h5>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24�25 / 25�24), teams play one additional point to determine which team advances.</p>
                 </section>
               </div>
             </div>
