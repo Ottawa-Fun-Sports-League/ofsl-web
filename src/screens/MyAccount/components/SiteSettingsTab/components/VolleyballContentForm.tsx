@@ -7,6 +7,7 @@ import {
   DEFAULT_VOLLEYBALL_CONTENT,
   VolleyballPageContent,
 } from "../../../../../screens/VolleyballPage/VolleyballPage";
+import { useAuth } from "../../../../../contexts/AuthContext";
 
 function TextArea({
   id,
@@ -39,6 +40,7 @@ function TextArea({
 
 export function VolleyballContentForm() {
   const { showToast } = useToast();
+  const { userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [content, setContent] = useState<VolleyballPageContent>(DEFAULT_VOLLEYBALL_CONTENT);
@@ -76,12 +78,13 @@ export function VolleyballContentForm() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isDirty) return;
+    if (!isDirty || saving) return;
 
     setSaving(true);
     const result = await savePageContent({
       pageSlug: "volleyball",
       content,
+      updatedBy: userProfile?.id ?? null,
     });
     setSaving(false);
 
@@ -94,8 +97,7 @@ export function VolleyballContentForm() {
     showToast("Volleyball content updated.", "success");
   };
 
-  const resetToBaseline = () => setContent(baseline);
-  const resetToDefaults = () => setContent(DEFAULT_VOLLEYBALL_CONTENT);
+  const handleReset = () => setContent(baseline);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -106,7 +108,12 @@ export function VolleyballContentForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+      <form
+        id="site-settings-form-volleyball"
+        onSubmit={handleSubmit}
+        onReset={handleReset}
+        className="px-6 py-6 space-y-6"
+      >
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Hero Banner</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -723,23 +730,6 @@ export function VolleyballContentForm() {
             }
           />
         </section>
-
-        <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200">
-          <Button type="submit" disabled={!isDirty || saving} className="bg-[#B20000] hover:bg-[#8A0000]">
-            {saving ? "Saving..." : "Save changes"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!isDirty || saving}
-            onClick={resetToBaseline}
-          >
-            Discard changes
-          </Button>
-          <Button type="button" variant="ghost" disabled={saving} onClick={resetToDefaults}>
-            Reset to defaults
-          </Button>
-        </div>
       </form>
     </div>
   );

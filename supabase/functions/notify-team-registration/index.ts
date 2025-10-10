@@ -82,17 +82,34 @@ async function resolveLeagueSkillLevel(
     return "Not specified";
   }
 
-  let skillName = await fetchSkillName(client, leagueRecord.skill_id);
+  let skillLabel = await fetchSkillName(client, leagueRecord.skill_id);
 
-  if (!skillName && Array.isArray(leagueRecord.skill_ids) && leagueRecord.skill_ids.length > 0) {
-    skillName = await fetchSkillName(client, leagueRecord.skill_ids[0]);
+  if (!skillLabel && Array.isArray(leagueRecord.skill_ids) && leagueRecord.skill_ids.length > 0) {
+    const uniqueIds = Array.from(new Set(leagueRecord.skill_ids.filter((id: number | null) => id !== null))) as number[];
+    if (uniqueIds.length > 0) {
+      const { data: skillRows, error: skillsError } = await client
+        .from("skills")
+        .select("name")
+        .in("id", uniqueIds);
+
+      if (skillsError) {
+        console.error("notify-team-registration: failed to fetch multi skill names", skillsError);
+      } else if (skillRows && skillRows.length > 0) {
+        const names = skillRows
+          .map((row) => row.name)
+          .filter((name): name is string => !!name && name.trim().length > 0);
+        if (names.length > 0) {
+          skillLabel = names.join(", ");
+        }
+      }
+    }
   }
 
-  const fallback = leagueRecord.gender && leagueRecord.gender.trim().length > 0
-    ? leagueRecord.gender
-    : "Not specified";
+  if (!skillLabel && leagueRecord.gender && leagueRecord.gender.trim().length > 0) {
+    skillLabel = leagueRecord.gender;
+  }
 
-  const resolved = skillName ?? fallback;
+  const resolved = skillLabel ?? "Not specified";
   leagueSkillCache.set(leagueId, resolved);
   return resolved;
 }

@@ -7,6 +7,7 @@ import {
   DEFAULT_HOME_CONTENT,
   HomePageContent,
 } from "../../../../../screens/HomePage/HomePage";
+import { useAuth } from "../../../../../contexts/AuthContext";
 
 function TextArea({
   label,
@@ -39,6 +40,7 @@ function TextArea({
 
 export function HomePageContentForm() {
   const { showToast } = useToast();
+  const { userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [content, setContent] = useState<HomePageContent>(DEFAULT_HOME_CONTENT);
@@ -71,12 +73,13 @@ export function HomePageContentForm() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isDirty) return;
+    if (!isDirty || saving) return;
     setSaving(true);
 
     const result = await savePageContent({
       pageSlug: "home",
       content,
+      updatedBy: userProfile?.id ?? null,
     });
 
     setSaving(false);
@@ -90,8 +93,7 @@ export function HomePageContentForm() {
     showToast("Home page content updated.", "success");
   };
 
-  const resetToBaseline = () => setContent(baseline);
-  const resetToDefaults = () => setContent(DEFAULT_HOME_CONTENT);
+  const handleReset = () => setContent(baseline);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -102,7 +104,12 @@ export function HomePageContentForm() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+      <form
+        id="site-settings-form-home"
+        onSubmit={handleSubmit}
+        onReset={handleReset}
+        className="px-6 py-6 space-y-6"
+      >
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Hero Banner</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -313,6 +320,106 @@ export function HomePageContentForm() {
                 }))
               }
               placeholder="Link URL"
+            />
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h3 className="text-lg font-semibold text-[#6F6F6F]">Sponsor Banner</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              id="home-sponsor-logo"
+              value={content.sponsorBanner.logo}
+              onChange={(event) =>
+                setContent((prev) => ({
+                  ...prev,
+                  sponsorBanner: { ...prev.sponsorBanner, logo: event.target.value },
+                }))
+              }
+              placeholder="Logo URL"
+            />
+            <Input
+              id="home-sponsor-logo-alt"
+              value={content.sponsorBanner.logoAlt}
+              onChange={(event) =>
+                setContent((prev) => ({
+                  ...prev,
+                  sponsorBanner: { ...prev.sponsorBanner, logoAlt: event.target.value },
+                }))
+              }
+              placeholder="Logo alt text"
+            />
+          </div>
+          <TextArea
+            id="home-sponsor-description"
+            label="Primary message"
+            rows={3}
+            value={content.sponsorBanner.description}
+            onChange={(value) =>
+              setContent((prev) => ({
+                ...prev,
+                sponsorBanner: { ...prev.sponsorBanner, description: value },
+              }))
+            }
+          />
+          <TextArea
+            id="home-sponsor-secondary-text"
+            label="Secondary message"
+            rows={2}
+            value={content.sponsorBanner.secondaryText}
+            onChange={(value) =>
+              setContent((prev) => ({
+                ...prev,
+                sponsorBanner: { ...prev.sponsorBanner, secondaryText: value },
+              }))
+            }
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              id="home-sponsor-primary-link-text"
+              value={content.sponsorBanner.primaryLinkText}
+              onChange={(event) =>
+                setContent((prev) => ({
+                  ...prev,
+                  sponsorBanner: { ...prev.sponsorBanner, primaryLinkText: event.target.value },
+                }))
+              }
+              placeholder="Primary link text"
+            />
+            <Input
+              id="home-sponsor-primary-link-url"
+              value={content.sponsorBanner.primaryLinkUrl}
+              onChange={(event) =>
+                setContent((prev) => ({
+                  ...prev,
+                  sponsorBanner: { ...prev.sponsorBanner, primaryLinkUrl: event.target.value },
+                }))
+              }
+              placeholder="Primary link URL"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              id="home-sponsor-secondary-link-text"
+              value={content.sponsorBanner.secondaryLinkText}
+              onChange={(event) =>
+                setContent((prev) => ({
+                  ...prev,
+                  sponsorBanner: { ...prev.sponsorBanner, secondaryLinkText: event.target.value },
+                }))
+              }
+              placeholder="Secondary link text"
+            />
+            <Input
+              id="home-sponsor-secondary-link-url"
+              value={content.sponsorBanner.secondaryLinkUrl}
+              onChange={(event) =>
+                setContent((prev) => ({
+                  ...prev,
+                  sponsorBanner: { ...prev.sponsorBanner, secondaryLinkUrl: event.target.value },
+                }))
+              }
+              placeholder="Secondary link URL"
             />
           </div>
         </section>
@@ -615,22 +722,6 @@ export function HomePageContentForm() {
           />
         </section>
 
-        <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200">
-          <Button type="submit" disabled={!isDirty || saving} className="bg-[#B20000] hover:bg-[#8A0000]">
-            {saving ? "Saving..." : "Save changes"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!isDirty || saving}
-            onClick={resetToBaseline}
-          >
-            Discard changes
-          </Button>
-          <Button type="button" variant="ghost" onClick={resetToDefaults} disabled={saving}>
-            Reset to defaults
-          </Button>
-        </div>
       </form>
     </div>
   );

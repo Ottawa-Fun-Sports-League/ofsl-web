@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
@@ -25,6 +25,17 @@ export interface HomePageContent {
     text: string;
     linkText: string;
     linkUrl: string;
+  };
+  sponsorBanner: {
+    logo: string;
+    logoAlt: string;
+    title: string;
+    description: string;
+    primaryLinkText: string;
+    primaryLinkUrl: string;
+    secondaryText: string;
+    secondaryLinkText: string;
+    secondaryLinkUrl: string;
   };
   leagueDescription: string;
   popularLeagues: Array<{
@@ -77,6 +88,18 @@ export const DEFAULT_HOME_CONTENT: HomePageContent = {
     text: "Proudly partnering with Diabetes Canada to promote healthier lifestyles through sport and community wellness.",
     linkText: "Learn more",
     linkUrl: "https://www.diabetes.ca",
+  },
+  sponsorBanner: {
+    logo: "/popeyes-supplements-logo.png",
+    logoAlt: "Popeye's Supplements logo",
+    title: "Stack your savings with Popeye's Supplements",
+    description:
+      "Use our exclusive Popeye's link to save 10% on every regular-priced product, then double down with an extra 10% rebate from OFSL.",
+    primaryLinkText: "Shop with 10% off",
+    primaryLinkUrl: "https://popeyesonlineorders.com/discount/OFSL20",
+    secondaryText: "Email your online receipt to unlock OFSL's additional 10% rebate:",
+    secondaryLinkText: "info@ofsl.ca",
+    secondaryLinkUrl: "mailto:info@ofsl.ca",
   },
   leagueDescription:
     "Our leagues provide a well-organized structure and experience for those who take their play seriously—but still want to have a good time. Geared toward intermediate to competitive play, it's a great way to stay active, maintain your fitness, and connect with others who share your passion for the games.",
@@ -170,6 +193,131 @@ export const HomePage = (): React.ReactElement => {
   const [showLeftButton, setShowLeftButton] = useState(false);
   const [showRightButton, setShowRightButton] = useState(true);
   const [content, setContent] = useState<HomePageContent>(DEFAULT_HOME_CONTENT);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+
+  const bannerItems = useMemo(() => {
+    const items: Array<{ type: "partner" | "sponsor" }> = [];
+
+    if (
+      content.sponsorBanner.logo ||
+      content.sponsorBanner.logoAlt ||
+      content.sponsorBanner.title ||
+      content.sponsorBanner.description ||
+      content.sponsorBanner.primaryLinkText ||
+      content.sponsorBanner.primaryLinkUrl
+    ) {
+      items.push({ type: "sponsor" });
+    }
+
+    if (
+      content.partner.logo ||
+      content.partner.logoAlt ||
+      content.partner.text ||
+      content.partner.linkText ||
+      content.partner.linkUrl
+    ) {
+      items.push({ type: "partner" });
+    }
+
+    return items;
+  }, [content.partner, content.sponsorBanner]);
+
+  useEffect(() => {
+    setActiveBannerIndex(0);
+  }, [bannerItems.length]);
+
+  useEffect(() => {
+    if (bannerItems.length <= 1) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActiveBannerIndex((prev) => (prev + 1) % bannerItems.length);
+    }, 9000);
+
+    return () => window.clearInterval(intervalId);
+  }, [bannerItems.length]);
+
+  const BannerCard = ({ itemType }: { itemType: "partner" | "sponsor" }) => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+      const frame = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }, []);
+
+    const baseClassName =
+      "w-full rounded-2xl border border-gray-200 bg-white px-5 py-6 shadow-sm transition-all duration-500 ease-out md:px-8 md:py-6 min-h-[200px] flex items-center";
+    const animatedState = isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3";
+
+    if (itemType === "partner") {
+      return (
+        <div className={`${baseClassName} ${animatedState}`}>
+        <div className="flex flex-col items-center gap-3 md:flex-row md:items-center md:gap-7 w-full">
+            <img
+              className="h-auto w-[150px] md:w-[180px] object-contain"
+              alt={content.partner.logoAlt}
+              src={content.partner.logo}
+            />
+            <div className="text-center md:text-left space-y-2 w-full">
+              <p className="text-sm leading-6 text-[#6f6f6f] md:text-base md:leading-7">
+                {content.partner.text}
+              </p>
+              {content.partner.linkUrl && content.partner.linkText ? (
+                <a
+                  href={content.partner.linkUrl}
+                  className="mt-2 inline-block text-sm font-semibold text-[#b20000] underline md:text-base"
+                >
+                  {content.partner.linkText}
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`${baseClassName} ${animatedState}`}>
+        <div className="flex flex-col items-center gap-3 md:flex-row md:items-center md:gap-7 w-full">
+          <img
+            src={content.sponsorBanner.logo}
+            alt={content.sponsorBanner.logoAlt}
+            className="h-auto w-[150px] md:w-[180px] object-contain"
+          />
+          <div className="flex-1 text-center md:text-left space-y-2">
+            <p className="text-sm text-[#4B5563] md:text-base leading-6 md:leading-7">
+              {content.sponsorBanner.description}{" "}
+              {content.sponsorBanner.primaryLinkUrl && content.sponsorBanner.primaryLinkText ? (
+                <a
+                  href={content.sponsorBanner.primaryLinkUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-[#B20000] underline"
+                >
+                  {content.sponsorBanner.primaryLinkText}
+                </a>
+              ) : null}
+              {content.sponsorBanner.secondaryText ? (
+                <span className="mt-1 block text-xs text-[#6F6F6F] md:text-sm">
+                  {content.sponsorBanner.secondaryText}{" "}
+                  {content.sponsorBanner.secondaryLinkUrl &&
+                  content.sponsorBanner.secondaryLinkText ? (
+                    <a
+                      href={content.sponsorBanner.secondaryLinkUrl}
+                      className="font-semibold text-[#B20000] underline"
+                    >
+                      {content.sponsorBanner.secondaryLinkText}
+                    </a>
+                  ) : null}
+                </span>
+              ) : null}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollContainerRef.current) return;
@@ -347,22 +495,33 @@ export const HomePage = (): React.ReactElement => {
       </HeroBanner>
 
       <div className="max-w-[1280px] mx-auto px-4">
-        <div className="flex justify-center pt-8 md:pt-12 pb-8 md:pb-12">
-          <div className="flex flex-col md:flex-row items-center max-w-[800px] gap-6">
-            <img
-              className="w-[120px] md:w-[153px] h-auto md:h-[53px] object-contain"
-              alt={content.partner.logoAlt}
-              src={content.partner.logo}
-            />
-            <div className="text-base md:text-lg text-center">
-              <span className="text-[#6f6f6f] leading-6 md:leading-7">{content.partner.text}</span>
-              <a
-                href={content.partner.linkUrl}
-                className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold"
-              >
-                {content.partner.linkText}
-              </a>
-            </div>
+        <div className="pt-8 md:pt-12 pb-8 md:pb-12">
+          <div className="mx-auto flex max-w-[880px] flex-col items-center gap-5 px-4">
+            {bannerItems.length > 0 ? (
+              <>
+                <BannerCard
+                  key={`banner-${bannerItems[activeBannerIndex]?.type ?? "partner"}-${activeBannerIndex}`}
+                  itemType={bannerItems[activeBannerIndex]?.type ?? "partner"}
+                />
+                {bannerItems.length > 1 ? (
+                  <div className="flex items-center gap-3">
+                    {bannerItems.map((item, index) => (
+                      <button
+                        key={`${item.type}-${index}`}
+                        type="button"
+                        onClick={() => setActiveBannerIndex(index)}
+                        className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                          index === activeBannerIndex ? "bg-[#B20000]" : "bg-gray-300"
+                        }`}
+                        aria-label={`Show ${
+                          item.type === "partner" ? "partner highlight" : "sponsor highlight"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
           </div>
         </div>
 

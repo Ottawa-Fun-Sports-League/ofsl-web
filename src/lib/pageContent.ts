@@ -79,26 +79,34 @@ export async function fetchPageContent<TContent>(
 interface SavePageContentOptions<TContent> {
   pageSlug: string;
   content: TContent;
+  updatedBy?: string | null;
 }
 
 export async function savePageContent<TContent>({
   pageSlug,
   content,
+  updatedBy,
 }: SavePageContentOptions<TContent>): Promise<PageContentRow | null> {
   try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    let resolvedUpdatedBy = updatedBy ?? null;
 
-    if (userError) {
-      console.error("Failed to resolve current user before saving content", userError);
+    if (resolvedUpdatedBy === null) {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Failed to resolve current user before saving content", userError);
+      }
+
+      resolvedUpdatedBy = user?.user_metadata?.user_id ?? user?.id ?? null;
     }
 
     const payload = {
       page_slug: pageSlug,
       content: content as Json,
-      updated_by: user?.id ?? null,
+      updated_by: resolvedUpdatedBy,
     };
 
     const { data, error } = await supabase

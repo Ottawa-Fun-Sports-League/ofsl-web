@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, act } from '@testing-library/react';
 import { HomePage } from './HomePage';
 import { render } from '../../test/test-utils';
 
@@ -109,7 +109,9 @@ describe('HomePage', () => {
     
     // Get the Learn more links and check the second one (for skills and drills)
     const learnMoreLinks = screen.getAllByRole('link', { name: /learn more/i });
-    expect(learnMoreLinks[1]).toHaveAttribute('href', '/skills-and-drills');
+    const skillsLink = learnMoreLinks.find((link) => link.getAttribute('href') === '/skills-and-drills');
+    expect(skillsLink).toBeDefined();
+    expect(skillsLink).toHaveAttribute('href', '/skills-and-drills');
   });
 
   it('displays sport categories as league cards', () => {
@@ -144,8 +146,27 @@ describe('HomePage', () => {
   it('displays partner section', () => {
     render(<HomePage />);
     
-    // Check for Diabetes Canada logo
+    // Initial banner should show Popeye's sponsor
+    expect(screen.getByAltText("Popeye's Supplements logo")).toBeInTheDocument();
+  });
+
+  it('rotates through partner and sponsor banners', () => {
+    vi.useFakeTimers();
+    render(<HomePage />);
+
+    expect(screen.getByAltText("Popeye's Supplements logo")).toBeInTheDocument();
+    const discountLink = screen.getByRole('link', { name: /Shop with 10% off/i });
+    expect(discountLink).toHaveAttribute('href', 'https://popeyesonlineorders.com/discount/OFSL20');
+    const emailLink = screen.getByRole('link', { name: /info@ofsl.ca/i });
+    expect(emailLink).toHaveAttribute('href', 'mailto:info@ofsl.ca');
+
+    act(() => {
+      vi.advanceTimersByTime(9500);
+    });
+
     expect(screen.getByAltText('Diabetes Canada logo')).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 
   it('displays all league cards in carousel', () => {

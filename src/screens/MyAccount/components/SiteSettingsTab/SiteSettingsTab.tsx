@@ -35,7 +35,6 @@ export function SiteSettingsTab() {
   const [formState, setFormState] = useState<FormState>(DEFAULT_FORM_STATE);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<SiteAnnouncement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "announcement" | "home" | "badminton" | "pickleball" | "volleyball"
   >("announcement");
@@ -82,26 +81,6 @@ export function SiteSettingsTab() {
     };
   }, [showToast]);
 
-  const isDirty = useMemo(() => {
-    const baseline = currentAnnouncement;
-
-    if (!baseline) {
-      return (
-        formState.message.trim() !== "" ||
-        formState.linkText.trim() !== "" ||
-        formState.linkUrl.trim() !== "" ||
-        formState.isActive !== DEFAULT_FORM_STATE.isActive
-      );
-    }
-
-    return (
-      (baseline.message ?? "") !== formState.message ||
-      (baseline.link_text ?? "") !== formState.linkText ||
-      (baseline.link_url ?? "") !== formState.linkUrl ||
-      baseline.is_active !== formState.isActive
-    );
-  }, [currentAnnouncement, formState]);
-
   const lastUpdatedLabel = useMemo(() => {
     if (!currentAnnouncement?.updated_at) {
       return null;
@@ -117,9 +96,8 @@ export function SiteSettingsTab() {
     }
   }, [currentAnnouncement]);
 
-  const handleTextChange = (
-    field: "message" | "linkText" | "linkUrl",
-  ) =>
+  const handleTextChange =
+    (field: "message" | "linkText" | "linkUrl") =>
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { value } = event.target;
       setFormState((prev) => ({
@@ -152,8 +130,6 @@ export function SiteSettingsTab() {
       return;
     }
 
-    setSaving(true);
-
     const result = await saveAnnouncement({
       id: currentAnnouncement?.id,
       message: trimmedMessage,
@@ -161,8 +137,6 @@ export function SiteSettingsTab() {
       linkUrl: trimmedLinkUrl || null,
       isActive: formState.isActive,
     });
-
-    setSaving(false);
 
     if (!result) {
       showToast("Failed to save announcement.", "error");
@@ -190,85 +164,79 @@ export function SiteSettingsTab() {
 
   const renderAnnouncementForm = () => (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
-      <div className="px-6 py-5 border-b border-gray-200">
-        <h2 className="text-2xl font-semibold text-[#6F6F6F]">Announcement Bar</h2>
-        <p className="mt-2 text-sm text-gray-500">
-          Update the message displayed at the top of the website. Leave the announcement disabled to hide the bar for visitors.
-        </p>
-        {lastUpdatedLabel ? (
-          <p className="mt-2 text-xs text-gray-400">Last updated {lastUpdatedLabel}</p>
-        ) : null}
-      </div>
-
-      {loading ? (
-        <div className="px-6 py-10">
-          <LoadingSpinner size="lg" />
+      <form id="site-settings-form" onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+        <div className="border-b border-gray-200 pb-5">
+          <h2 className="text-2xl font-semibold text-[#6F6F6F]">Announcement Bar</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            Update the message displayed at the top of the website. Leave the announcement disabled
+            to hide the bar for visitors.
+          </p>
+          {lastUpdatedLabel ? (
+            <p className="mt-2 text-xs text-gray-400">Last updated {lastUpdatedLabel}</p>
+          ) : null}
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+
+        <div className="space-y-2">
+          <label
+            className="block text-sm font-medium text-[#6F6F6F]"
+            htmlFor="announcement-message"
+          >
+            Message
+          </label>
+          <textarea
+            id="announcement-message"
+            value={formState.message}
+            onChange={handleTextChange("message")}
+            rows={3}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-[#333333] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B20000] focus-visible:ring-offset-1"
+            placeholder="Share important updates, deadlines, or announcements"
+            required
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-[#6F6F6F]" htmlFor="announcement-message">
-              Message
-            </label>
-            <textarea
-              id="announcement-message"
-              value={formState.message}
-              onChange={handleTextChange("message")}
-              rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-[#333333] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B20000] focus-visible:ring-offset-1"
-              placeholder="Share important updates, deadlines, or announcements"
-              required
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#6F6F6F]" htmlFor="announcement-link-text">
-                Link Text
-              </label>
-              <Input
-                id="announcement-link-text"
-                value={formState.linkText}
-                onChange={handleTextChange("linkText")}
-                placeholder="e.g. Register now"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#6F6F6F]" htmlFor="announcement-link-url">
-                Link URL
-              </label>
-              <Input
-                id="announcement-link-url"
-                value={formState.linkUrl}
-                onChange={handleTextChange("linkUrl")}
-                placeholder="e.g. /leagues or https://example.com"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="announcement-active"
-              checked={formState.isActive}
-              onCheckedChange={(checked) => handleActiveChange(checked === true)}
-            />
-            <label htmlFor="announcement-active" className="text-sm text-[#6F6F6F]">
-              Display announcement bar on the site
-            </label>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-            <Button
-              type="submit"
-              disabled={saving || !isDirty}
-              className="min-w-[120px]"
+            <label
+              className="block text-sm font-medium text-[#6F6F6F]"
+              htmlFor="announcement-link-text"
             >
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
+              Link Text
+            </label>
+            <Input
+              id="announcement-link-text"
+              value={formState.linkText}
+              onChange={handleTextChange("linkText")}
+              placeholder="e.g. Register now"
+            />
           </div>
-        </form>
-      )}
+
+          <div className="space-y-2">
+            <label
+              className="block text-sm font-medium text-[#6F6F6F]"
+              htmlFor="announcement-link-url"
+            >
+              Link URL
+            </label>
+            <Input
+              id="announcement-link-url"
+              value={formState.linkUrl}
+              onChange={handleTextChange("linkUrl")}
+              placeholder="e.g. /leagues or https://example.com"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Checkbox
+            id="announcement-active"
+            checked={formState.isActive}
+            onCheckedChange={(checked) => handleActiveChange(checked === true)}
+          />
+          <label htmlFor="announcement-active" className="text-sm text-[#6F6F6F]">
+            Display announcement bar on the site
+          </label>
+        </div>
+      </form>
     </div>
   );
 
@@ -316,23 +284,73 @@ export function SiteSettingsTab() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-12">
-      <div className="sticky top-[56px] z-10 bg-white/90 backdrop-blur border-b border-gray-200">
-        <div className="flex flex-wrap gap-2 px-1 py-4">
-          {tabs.map((tab) => (
-            <Button
-              key={tab.id}
-              type="button"
-              variant={tab.id === activeTab ? "default" : "outline"}
-              className={
-                tab.id === activeTab
-                  ? "bg-[#B20000] hover:bg-[#8A0000] text-white"
-                  : "text-[#6F6F6F] border-gray-300"
-              }
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </Button>
-          ))}
+      <div className="sticky top-[64px] z-20 bg-white/95 backdrop-blur border-b border-gray-200">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-4">
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <Button
+                key={tab.id}
+                type="button"
+                variant={tab.id === activeTab ? "default" : "outline"}
+                className={
+                  tab.id === activeTab
+                    ? "bg-[#B20000] hover:bg-[#8A0000] text-white"
+                    : "text-[#6F6F6F] border-gray-300"
+                }
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            {(() => {
+              const formId = (() => {
+                switch (activeTab) {
+                  case "announcement":
+                    return "site-settings-form";
+                  case "home":
+                    return "site-settings-form-home";
+                  case "badminton":
+                    return "site-settings-form-badminton";
+                  case "pickleball":
+                    return "site-settings-form-pickleball";
+                  case "volleyball":
+                    return "site-settings-form-volleyball";
+                  default:
+                    return null;
+                }
+              })();
+
+              if (!formId) return null;
+
+              const handleDiscard = () => {
+                const form = document.getElementById(formId) as HTMLFormElement | null;
+                form?.reset();
+              };
+
+              return (
+                <>
+                  <Button
+                    type="submit"
+                    form={formId}
+                    className="bg-[#B20000] hover:bg-[#8A0000] text-white"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-[#6F6F6F] border-gray-300"
+                    onClick={handleDiscard}
+                  >
+                    Discard
+                  </Button>
+                </>
+              );
+            })()}
+          </div>
         </div>
       </div>
 
