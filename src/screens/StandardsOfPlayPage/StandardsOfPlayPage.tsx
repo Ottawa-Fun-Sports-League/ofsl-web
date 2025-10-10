@@ -70,9 +70,10 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             <div className="flex flex-grow">
               <div
                 onClick={() => setActiveTab("coed")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "coed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                `}
+                className={
+                  "px-6 py-3 text-center cursor-pointer relative transition-all " +
+                  (activeTab === "coed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]")
+                }
               >
                 <span>Co-ed Volleyball</span>
                 {activeTab === "coed" && (
@@ -81,9 +82,10 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               </div>
               <div
                 onClick={() => setActiveTab("womenElite")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "womenElite" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                `}
+                className={
+                  "px-6 py-3 text-center cursor-pointer relative transition-all " +
+                  (activeTab === "womenElite" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]")
+                }
               >
                 <span>Women&apos;s Elite Volleyball</span>
                 {activeTab === "womenElite" && (
@@ -92,9 +94,10 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               </div>
               <div
                 onClick={() => setActiveTab("men")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                `}
+                className={
+                  "px-6 py-3 text-center cursor-pointer relative transition-all " +
+                  (activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]")
+                }
               >
                 <span>Men's Volleyball</span>
                 {activeTab === "men" && (
@@ -103,9 +106,10 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               </div>
               <div
                 onClick={() => setActiveTab("wednesday4x4")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "wednesday4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                `}
+                className={
+                  "px-6 py-3 text-center cursor-pointer relative transition-all " +
+                  (activeTab === "wednesday4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]")
+                }
               >
                 <span>Wednesday 4x4 Volleyball</span>
                 {activeTab === "wednesday4x4" && (
@@ -114,9 +118,10 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               </div>
               <div
                 onClick={() => setActiveTab("sundayMixed")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "sundayMixed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                `}
+                className={
+                  "px-6 py-3 text-center cursor-pointer relative transition-all " +
+                  (activeTab === "sundayMixed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]")
+                }
               >
                 <span>Sunday Mixed Volleyball</span>
                 {activeTab === "sundayMixed" && (
@@ -125,9 +130,10 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               </div>
               <div
                 onClick={() => setActiveTab("rules4x4")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "rules4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                `}
+                className={
+                  "px-6 py-3 text-center cursor-pointer relative transition-all " +
+                  (activeTab === "rules4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]")
+                }
               >
                 <span>4x4 Volleyball Rules</span>
                 {activeTab === "rules4x4" && (
