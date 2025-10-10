@@ -241,9 +241,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>The league will operate on a ladder system, cycling every 2 weeks.</li>
                     <li>Each tier will consist of four teams, except for tiers with 3 teams.</li>
                     <li>All matches are best-of-five sets.</li>
-                    <li>Sets 1â€“4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the game will play to 25 (with a hard cap of 27).</li>
+                    <li>Sets 1â€"4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the game will play to 25 (with a hard cap of 27).</li>
                     <li>The 5th set is played to 15 points (hard cap) or time cap, whichever comes first.</li>
-                    <li>Playoffs: Sets 1â€“4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
+                    <li>Playoffs: Sets 1â€"4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
                     <li>Each match has a maximum of 15 minutes of warm-up and 90 minutes of play.</li>
                     <li>Total timeslot = 105 minutes.</li>
                     <li>Warm-up: 8 minutes team warm-up + Volleyball Canada format (5 minutes hitting, 1 minute serving).</li>
@@ -338,9 +338,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiers &amp; Times</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 â€“ 10:00 PM</li>
-                    <li>Tier 2: 6:00 â€“ 8:00 PM</li>
-                    <li>Tier 3: 4:00 â€“ 6:00 PM</li>
+                    <li>Tier 1: 8:00 â€" 10:00 PM</li>
+                    <li>Tier 2: 6:00 â€" 8:00 PM</li>
+                    <li>Tier 3: 4:00 â€" 6:00 PM</li>
                   </ul>
                 </section>
 
@@ -394,7 +394,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiebreaker Rule</h4>
-                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24â€“25 / 25â€“24), teams play one additional point to determine which team advances.</p>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24â€"25 / 25â€"24), teams play one additional point to determine which team advances.</p>
                 </section>
 
                 <section>
@@ -460,7 +460,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Males can not hit beyond the 3m line (attack line)</li>
                     <li>Males can not block women</li>
                     <li>Net is mixed height</li>
-                    <li>Minimum of 2 female players on court. Additional females allowed, but extras must play under the “guys' rules/position”</li>
+                    <li>Minimum of 2 female players on court. Additional females allowed, but extras must play under the "guys' rules/position"</li>
                   </ul>
                 </section>
 
@@ -477,7 +477,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with only 3 players if no substitute is available.</li>
-                    <li>Extra girls on the court still must follow the “guy rules/position” guideline </li>
+                    <li>Extra girls on the court still must follow the "guy rules/position" guideline </li>
                   </ul>
                 </section>
 
@@ -491,7 +491,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women’s Elite &amp; Women's Premiere</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women's Elite &amp; Women's Premiere</h4>
                   <p className="text-lg text-[#6F6F6F]">Minimum of 5 players allowed on court only in special situations during regular season (injury, late arrival, cancellation). Otherwise, the default applies.</p>
                   <p className="text-lg text-[#6F6F6F]">With 5 players: must maintain 3 front-row players; once you start the set with 5, must finish with 5; injured regular players can be replaced by a libero for the remainder of the set.</p>
                 </section>
@@ -706,5 +706,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     </div>
   );
 };
+
 
 
