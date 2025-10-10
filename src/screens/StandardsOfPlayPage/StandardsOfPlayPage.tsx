@@ -86,40 +86,109 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 }`}
               >
                 <span>Women&apos;s Elite Volleyball</span>
-                {activeTab === "womenElite" && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-                )}
+                          {activeTab === "womenElite" && (
+            <div className="border border-gray-200 rounded-md p-6">
+              <div className="space-y-8">
+                <section>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women&rsquo;s Elite Volleyball League</h3>
+                  <p className="text-lg text-[#6F6F6F]">
+                    The OFSL Women&rsquo;s Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
+                  </p>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">League Information</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Format</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>The league will operate on a ladder system, cycling every 2 weeks.</li>
+                    <li>Each tier will consist of four teams, except for tiers with 3 teams.</li>
+                    <li>All matches are best-of-five sets.</li>
+                    <li>Sets 1&ndash;4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the Game will play to 25 (with a hard cap of 27).</li>
+                    <li>The 5th set is played to 15 points (hard cap) or time cap, whichever comes first.</li>
+                    <li>Playoffs: Sets 1&ndash;4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
+                    <li>Each match has a maximum of 15 minutes of warm-up and 90 minutes of play.</li>
+                    <li>Total timeslot = 105 minutes.</li>
+                    <li>Warm-up: 8 minutes team warm-up + Volleyball Canada format (5 minutes hitting, 1 minute serving).</li>
+                    <li>Time Outs: 1 per set to a maximum of 30 seconds.</li>
+                    <li>All matches are officiated.</li>
+                    <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Balls provided by teams.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Minimum Player Requirement</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Teams must have at least 5 players to begin a match.</li>
+                    <li>If a team cannot field 5 players at the scheduled start time:</li>
+                    <li>The first set is defaulted.</li>
+                    <li>Each additional set is defaulted every 10 minutes until 5 players are present.</li>
+                    <li>When playing with 5 players:</li>
+                    <li>Must always have 3 players in the front row.</li>
+                    <li>Must identify starting positions, including a ghost player position.</li>
+                    <li>When the ghost player&rsquo;s rotation reaches service, the team loses that point.</li>
+                    <li>A libero cannot be used if a ghost player is in play.</li>
+                    <li>If a set begins with 5 players, it must finish with those 5 (except injury replacement by libero).</li>
+                    <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Team Registration</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Teams must register a minimum of 6 players.</li>
+                    <li>All players must complete registration and the waiver on the league website.</li>
+                    <li>All subs must be registered with the official before matches begin.</li>
+                    <li>Captains must register subs on the website after each match (same evening).</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Substitutes &amp; Playoffs Eligibility</h4>
+                  <p className="text-lg text-[#6F6F6F] font-medium">Regular season:</p>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2 mb-2">
+                    <li>Players from other teams may sub during the regular season.</li>
+                  </ul>
+                  <p className="text-lg text-[#6F6F6F] font-medium">Playoffs:</p>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Players from other teams may not sub.</li>
+                    <li>Subs must have played at least 5 matches during the regular season.</li>
+                    <li>All rostered players must have played a minimum of 5 games to be eligible.</li>
+                    <li>Subs will be tracked via scoresheet.</li>
+                    <li>Teams may use multiple subs in playoffs, provided they meet the 5-game requirement.</li>
+                    <li>Teams may include a 7th player (sub) in playoffs only if they are playing with a libero for the entire match.</li>
+                    <li>Injury exception: If no bench subs are available, the libero may replace an injured player for the remainder of the set, but must take their position.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Jerseys &amp; Equipment</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>All players must wear numbered jerseys.</li>
+                    <li>Libero must wear a different colored jersey.</li>
+                    <li>Sub players should wear jerseys that are similar in color to the team&rsquo;s.</li>
+                    <li>OFSL will provide jerseys for the inaugural season. (Future seasons are not guaranteed.)</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Officials &amp; Set-Up</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Officials provided for every match.</li>
+                    <li>Set-up and take-down is the responsibility of league supervisors and players, as assigned.</li>
+                    <li>Referees are responsible for net height and proper set-up.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Playoffs</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Playoffs will be held at the end of the season.</li>
+                    <li>Seeding is determined by overall standings, using the average of the last 18 weeks of regular-season play.</li>
+                  </ul>
+                </section>
               </div>
-              <div
-                onClick={() => setActiveTab("men")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
-              >
-                <span>Men's Volleyball</span>
-                {activeTab === "men" && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-                )}
-              </div>
-              <div
-                onClick={() => setActiveTab("wednesday4x4")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "wednesday4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
-              >
-                <span>Wednesday 4x4 Volleyball</span>
-                {activeTab === "wednesday4x4" && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-                )}
-              </div>
-              <div
-                onClick={() => setActiveTab("sundayMixed")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "sundayMixed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
-              >
-                <span>Sunday Mixed Volleyball</span>
-                {activeTab === "sundayMixed" && (
+            </div>
+          )}{activeTab === "sundayMixed" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
               </div>
@@ -706,6 +775,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     </div>
   );
 };
+
 
 
 
