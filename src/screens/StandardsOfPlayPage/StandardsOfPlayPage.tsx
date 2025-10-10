@@ -426,34 +426,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Wednesday 4x4 Rules / Standards of Play</h3>
                 </section>
 
-                {false && (
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gender Rules</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>A minimum of two females must be on the court at all times.</li>
-                    <li>Men must jump before the 3m line to perform an attack</li>
-                    <li>Males may not block females.</li>
-                    <li>The net is of mixed height.</li>
-                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the “male rules/position” guideline.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gameplay Rules</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>A block does not count as a touch.</li>
-                    <li>Open hand tips are allowed.</li>
-                    <li>On the first contact (except serve reception), a double-hit is allowed unless it is a lift; volleys are permitted.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Teams may play with 3 players if no substitute is available.</li>
-                    <li>Extra female players on the court must still follow the “guy rules/position” guideline.</li>
-                  </ul>
-                </section>
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Format</h4>
