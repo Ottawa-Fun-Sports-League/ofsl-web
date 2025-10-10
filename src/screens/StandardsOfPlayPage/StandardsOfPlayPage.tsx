@@ -345,9 +345,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiers &amp; Times</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 GÇô 10:00 PM</li>
-                    <li>Tier 2: 6:00 GÇô 8:00 PM</li>
-                    <li>Tier 3: 4:00 GÇô 6:00 PM</li>
+                    <li>Tier 1: 8:00 &ndash; 10:00 PM</li>
+                    <li>Tier 2: 6:00 &ndash; 8:00 PM</li>
+                    <li>Tier 3: 4:00 &ndash; 6:00 PM</li>
                   </ul>
                 </section>
 
