@@ -474,7 +474,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women�s Elite &amp; Women's Premiere</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women’s Elite &amp; Women's Premiere</h4>
                   <p className="text-lg text-[#6F6F6F]">Minimum of 5 players allowed on court only in special situations during regular season (injury, late arrival, cancellation). Otherwise, the default applies.</p>
                   <p className="text-lg text-[#6F6F6F]">With 5 players: must maintain 3 front-row players; once you start the set with 5, must finish with 5; injured regular players can be replaced by a libero for the remainder of the set.</p>
                 </section>
@@ -932,7 +932,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Men must jump before the 3m line to perform an attack</li>
                     <li>Males may not block females.</li>
                     <li>The net is of mixed height.</li>
-                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the GÇ£male rules/positionGÇ¥ guideline.</li>
+                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the GÃ‡Â£male rules/positionGÃ‡Â¥ guideline.</li>
                   </ul>
                 </section>
 
@@ -1043,7 +1043,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Sunday Format</h4>
-                  <p className="text-lg text-[#6F6F6F]">See the GÇ£Sunday Mixed VolleyballGÇ¥ tab for detailed Sunday evening format and movement rules.</p>
+                  <p className="text-lg text-[#6F6F6F]">See the GÃ‡Â£Sunday Mixed VolleyballGÃ‡Â¥ tab for detailed Sunday evening format and movement rules.</p>
                 </section>
               </div>
             </div>
