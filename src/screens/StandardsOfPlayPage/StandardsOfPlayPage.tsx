@@ -235,9 +235,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">WomenGÇÖs Elite Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women's Elite Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">
-                    The OFSL WomenGÇÖs Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
+                    The OFSL Women's Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
                   </p>
                 </section>
 
@@ -248,9 +248,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>The league will operate on a ladder system, cycling every 2 weeks.</li>
                     <li>Each tier will consist of four teams, except for tiers with 3 teams.</li>
                     <li>All matches are best-of-five sets.</li>
-                    <li>Sets 1GÇô4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the game will play to 25 (with a hard cap of 27).</li>
+                    <li>Sets 1&ndash;4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the game will play to 25 (with a hard cap of 27).</li>
                     <li>The 5th set is played to 15 points (hard cap) or time cap, whichever comes first.</li>
-                    <li>Playoffs: Sets 1GÇô4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
+                    <li>Playoffs: Sets 1&ndash;4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
                     <li>Each match has a maximum of 15 minutes of warm-up and 90 minutes of play.</li>
                     <li>Total timeslot = 105 minutes.</li>
                     <li>Warm-up: 8 minutes team warm-up + Volleyball Canada format (5 minutes hitting, 1 minute serving).</li>
@@ -265,7 +265,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>Teams must have at least 5 players to begin a match.</li>
                     <li>If a team cannot field 5 players at the scheduled start time: the first set is defaulted; each additional set is defaulted every 10 minutes until 5 players are present.</li>
-                    <li>When playing with 5 players: must always have 3 players in the front row; must identify starting positions, including a ghost player position; when the ghost playerGÇÖs rotation reaches service, the team loses that point; a libero cannot be used if a ghost player is in play.</li>
+                    <li>When playing with 5 players: must always have 3 players in the front row; must identify starting positions, including a ghost player position; when the ghost player's rotation reaches service, the team loses that point; a libero cannot be used if a ghost player is in play.</li>
                     <li>If a set begins with 5 players, it must finish with those 5 (except injury replacement by libero).</li>
                     <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
                   </ul>
@@ -304,7 +304,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>All players must wear numbered jerseys.</li>
                     <li>Libero must wear a different colored jersey.</li>
-                    <li>Sub players should wear jerseys that are similar in color to the teamGÇÖs.</li>
+                    <li>Sub players should wear jerseys that are similar in color to the team's.</li>
                     <li>OFSL will provide jerseys for the inaugural season. (Future seasons are not guaranteed.)</li>
                   </ul>
                 </section>
@@ -345,9 +345,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiers &amp; Times</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 GÇô 10:00 PM</li>
-                    <li>Tier 2: 6:00 GÇô 8:00 PM</li>
-                    <li>Tier 3: 4:00 GÇô 6:00 PM</li>
+                    <li>Tier 1: 8:00 GÃ‡Ã´ 10:00 PM</li>
+                    <li>Tier 2: 6:00 GÃ‡Ã´ 8:00 PM</li>
+                    <li>Tier 3: 4:00 GÃ‡Ã´ 6:00 PM</li>
                   </ul>
                 </section>
 
@@ -401,7 +401,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiebreaker Rule</h4>
-                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24GÇô25 / 25GÇô24), teams play one additional point to determine which team advances.</p>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24&ndash;25 / 25&ndash;24), teams play one additional point to determine which team advances.</p>
                 </section>
 
                 <section>
@@ -440,7 +440,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Men must jump before the 3m line to perform an attack</li>
                     <li>Males may not block females.</li>
                     <li>The net is of mixed height.</li>
-                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the GÇ£male rules/positionGÇ¥ guideline.</li>
+                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the GÃ‡Â£male rules/positionGÃ‡Â¥ guideline.</li>
                   </ul>
                 </section>
 
@@ -457,7 +457,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with 3 players if no substitute is available.</li>
-                    <li>Extra female players on the court must still follow the GÇ£guy rules/positionGÇ¥ guideline.</li>
+                    <li>Extra female players on the court must still follow the &ldquo;guy rules/position&rdquo; guideline.</li>
                   </ul>
                 </section>
 
@@ -481,30 +481,29 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
           )}
 
           {activeTab === "rules4x4" && (
-          {activeTab === "rules4x4" && (
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h4 className="text-2xl font-bold text-[#6F6F6F] mb-2">4x4 Rules/Standards of play sub-section</h4>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">4x4 Rules / Standards of Play</h3>
                 </section>
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gender rules</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Minimum 2 females at all times</li>
-                    <li>Males can not hit beyond the 3m line (attack line)</li>
-                    <li>Males can not block women</li>
-                    <li>Net is mixed height</li>
-                    <li>Minimum of 2 female players on court. Additional females allowed, but extras must play under the &ldquo;guys' rules/position&rdquo;</li>
+                    <li>Minimum 2 females at all times.</li>
+                    <li>Males cannot hit beyond the 3m line (attack line).</li>
+                    <li>Males cannot block females.</li>
+                    <li>Net is mixed height.</li>
+                    <li>Minimum 2 female players on court. Additional females allowed, but extras must play under the &ldquo;guys' rules/position&rdquo;.</li>
                   </ul>
                 </section>
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gameplay rules</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Block does not count as a touch</li>
-                    <li>Open hand tips are allowed</li>
-                    <li>For the first contact (except serve reception), you can double-hit unless it's a lift; volleys are okay.</li>
+                    <li>Block does not count as a touch.</li>
+                    <li>Open hand tips are allowed.</li>
+                    <li>For the first contact (except serve reception), a double-hit is allowed unless it&apos;s a lift; volleys are allowed.</li>
                   </ul>
                 </section>
 
@@ -512,31 +511,21 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with only 3 players if no substitute is available.</li>
-                    <li>Extra girls on the court still must follow the &ldquo;guy rules/position&rdquo; guideline </li>
+                    <li>Extra female players on the court must still follow the &ldquo;guy rules/position&rdquo; guideline.</li>
                   </ul>
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">6x6 Rules to be added</h4>
-                </section>
-
-                <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">General (Officiated)</h4>
-                  <p className="text-lg text-[#6F6F6F]">Officials must announce the possibility of a time cap at least 5 minutes before it. No time-outs allowed after announcement. When the cap is reached, finish the current point. Leading team wins; if tied, play one more point.</p>
+                  <p className="text-lg text-[#6F6F6F]">
+                    Officials must announce the possibility of a time cap at least 5 minutes before it. No time-outs allowed after announcement. When the cap is reached, finish the current point. Leading team wins; if tied, play one more point.
+                  </p>
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women’s Elite &amp; Women's Premiere</h4>
-                  <p className="text-lg text-[#6F6F6F]">Minimum of 5 players allowed on court only in special situations during regular season (injury, late arrival, cancellation). Otherwise, the default applies.</p>
-                  <p className="text-lg text-[#6F6F6F]">With 5 players: must maintain 3 front-row players; once you start the set with 5, must finish with 5; injured regular players can be replaced by a libero for the remainder of the set.</p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">AI VERSION</h4>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1"> Minimum Players on Court</h5>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Minimum Players on Court</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li> A team may compete with a minimum of five (5) players only under special circumstances during the regular season (e.g., injury, late arrival, or player cancellation).</li>
-                    <li>When playing with five (5) players:</li>
+                    <li>A team may compete with a minimum of five (5) players only under special circumstances during the regular season (e.g., injury, late arrival, or player cancellation).</li>
                     <li>Teams must maintain three (3) players in the front row.</li>
                     <li>If a set begins with five (5) players, it must be completed with five (5) players.</li>
                     <li>An injured regular player may be replaced by a libero for the remainder of the set.</li>
@@ -544,102 +533,25 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Mens 6x6</h4>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Wording to be changed</h5>
-                  <h6 className="text-base font-medium text-[#6F6F6F] mb-1">OLD</h6>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Minimum 2 females on the court</li>
-                    <li>If a team only has 1 female, it is encouraged to borrow a player sitting off. If this is not an option and a team still has only 1 female, only 3 males are allowed on the court which makes it a maximum of 4 players during play. All agreement should be done prior to game starting.</li>
-                  </ul>
-                  <h6 className="text-base font-medium text-[#6F6F6F] mb-1">New</h6>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Minimum 2 females on the court</li>
-                    <li>If a team only has 1 female, it is encouraged to borrow a player sitting off. If all captains agree, and a team only has 1 female, only 3 males are allowed, making it 4. </li>
-                  </ul>
-                  <h6 className="text-base font-medium text-[#6F6F6F] mb-1"> FINAL</h6>
-                  <p className="text-lg text-[#6F6F6F]">If a team has only one female player, it is encouraged that they borrow a female player who is sitting off to help balance the lineup.</p>
-                  <p className="text-lg text-[#6F6F6F]">However, if all captains agree, and a team still has only one female, then that team may field no more than three male players, making a total of four on the field</p>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Minimum 2 females on the court (clarification)</h4>
+                  <p className="text-lg text-[#6F6F6F]">
+                    If a team has only one female player, it is encouraged that they borrow a female player who is sitting off to help balance the lineup. However, if all captains agree, and a team still has only one female, then that team may field no more than three male players, making a total of four on the court.
+                  </p>
                 </section>
 
                 <section>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">OLD</h5>
-                  <p className="text-lg text-[#6F6F6F]">If a team show up 10 minutes after scheduled first game, every minute will be deducted a point, accumulating up to when the team arrives.This rule does not apply if sitting team agrees to play games first in place of late team.</p>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">NEW</h5>
-                  <p className="text-lg text-[#6F6F6F]">If a team arrives 20 minutes after the first scheduled game, they will forfeit the first set. If a team shows up 10 minutes after the scheduled first game, they will be deducted one point every minute, accumulating until the opposing team arrives. This rule does not apply if the sitting team agrees to play games first in place of the late team.</p>
-                  <p className="text-lg text-[#6F6F6F] mt-2">Note: Rules may differ depending on certain circumstances, for example, a last minute gym cancellation. The league will then decide how to move forward.</p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">SEE AI VERSION BELOW</h4>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">AI VERSION</h4>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Late Arrival Policy</h5>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Late Arrival Policy</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>If a team arrives 20 minutes after the first scheduled game, they will forfeit the first set.</li>
-                    <li>If a team arrives 10 minutes after the scheduled first game, they will be deducted one point per minute, accumulating until the opposing team arrives or the 20-minute threshold is met..</li>
+                    <li>If a team arrives 10 minutes after the scheduled first game, they will be deducted one point per minute, accumulating until the opposing team arrives or the 20-minute threshold is met.</li>
                     <li>This rule does not apply if the sitting team agrees to play their games first in place of the late team.</li>
                   </ul>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Important Note:</h5>
-                  <p className="text-lg text-[#6F6F6F]"> Rules may differ in special circumstances (e.g., a last-minute gym cancellation). In such cases, the league will determine the next steps to take.</p>
+                  <p className="text-lg text-[#6F6F6F] mt-2">Important Note: Rules may differ in special circumstances (e.g., a last-minute gym cancellation). In such cases, the league will determine the next steps to take.</p>
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">SUNDAY FORMAT</h4>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Game Format &amp; Rules</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Timeslot: 2 hours</li>
-                    <li> Courts: 3 per timeslot</li>
-                    <li> Match Format: Head-to-head, best of 2 sets (to 25 points)</li>
-                  </ul>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Tiers &amp; Times</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 &ndash; 10:00 PM</li>
-                    <li>Tier 2: 6:00 &ndash; 8:00 PM</li>
-                    <li>Tier 3: 4:00 &ndash; 6:00 PM</li>
-                  </ul>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Court Assignments</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Court 1 = Tier #A (highest court in tier)</li>
-                    <li>Court 2 = Tier #B (middle court in tier)</li>
-                    <li>Court 3 = Tier #C (lowest court in tier)</li>
-                  </ul>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Movement Rules</h5>
-                  <div className="space-y-3">
-                    <div>
-                      <h6 className="text-base font-medium text-[#6F6F6F]">Court 1 (Top Court):</h6>
-                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                        <li>The winning team stays on Court 1.</li>
-                        <li>They must win again to be promoted to the next tier.</li>
-                        <li>The losing team moves down to Court 2.</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h6 className="text-base font-medium text-[#6F6F6F]">Court 2 (Middle Court):</h6>
-                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                        <li>The winning team moves up to Court 1.</li>
-                        <li>The losing team moves down to Court 3.</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h6 className="text-base font-medium text-[#6F6F6F]">Court 3 (Bottom Court):</h6>
-                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                        <li>The winning team moves up to Court 2.</li>
-                        <li>The losing team remains on Court 3.</li>
-                        <li>A team that loses twice in the same night on Court 3 is relegated to a lower tier for the following week.</li>
-                      </ul>
-                    </div>
-                  </div>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Next Week's Placement</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>A team starting on Court 3 that wins their matchup and then wins on Court 2 will start the following week on Court 1 of their tier.</li>
-                    <li>A team starting on Court 1 that loses their matchup and then loses on Court 2 will start the following week on Court 3 of their tier.</li>
-                    <li>A team starting on Court 1 or Court 2 that wins their last match on Court 1 will start the following week in a higher tier.</li>
-                    <li>A team starting on Court 2 or Court 3 that loses all their matches will start the following week in a lower tier.</li>
-                  </ul>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Tiebreaker Rule</h5>
-                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24&ndash;25 / 25&ndash;24), teams play one additional point to determine which team advances.</p>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Sunday Format</h4>
+                  <p className="text-lg text-[#6F6F6F]">See the GÃ‡Â£Sunday Mixed VolleyballGÃ‡Â¥ tab for detailed Sunday evening format and movement rules.</p>
                 </section>
               </div>
             </div>
