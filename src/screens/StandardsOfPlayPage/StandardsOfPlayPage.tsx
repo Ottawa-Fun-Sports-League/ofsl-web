@@ -560,9 +560,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   </ul>
                   <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Tiers &amp; Times</h5>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 – 10:00 PM</li>
-                    <li>Tier 2: 6:00 – 8:00 PM</li>
-                    <li>Tier 3: 4:00 – 6:00 PM</li>
+                    <li>Tier 1: 8:00 &ndash; 10:00 PM</li>
+                    <li>Tier 2: 6:00 &ndash; 8:00 PM</li>
+                    <li>Tier 3: 4:00 &ndash; 6:00 PM</li>
                   </ul>
                   <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Court Assignments</h5>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
@@ -604,7 +604,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>A team starting on Court 2 or Court 3 that loses all their matches will start the following week in a lower tier.</li>
                   </ul>
                   <h5 className="text-lg font-medium text-[#6F6F6F] mb-1">Tiebreaker Rule</h5>
-                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24–25 / 25–24), teams play one additional point to determine which team advances.</p>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24&ndash;25 / 25&ndash;24), teams play one additional point to determine which team advances.</p>
                 </section>
               </div>
             </div>
@@ -706,4 +706,5 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     </div>
   );
 };
+
 
