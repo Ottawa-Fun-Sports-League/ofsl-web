@@ -86,109 +86,40 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 }`}
               >
                 <span>Women&apos;s Elite Volleyball</span>
-                          {activeTab === "womenElite" && (
-            <div className="border border-gray-200 rounded-md p-6">
-              <div className="space-y-8">
-                <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women&rsquo;s Elite Volleyball League</h3>
-                  <p className="text-lg text-[#6F6F6F]">
-                    The OFSL Women&rsquo;s Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
-                  </p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">League Information</h4>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Format</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>The league will operate on a ladder system, cycling every 2 weeks.</li>
-                    <li>Each tier will consist of four teams, except for tiers with 3 teams.</li>
-                    <li>All matches are best-of-five sets.</li>
-                    <li>Sets 1&ndash;4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the Game will play to 25 (with a hard cap of 27).</li>
-                    <li>The 5th set is played to 15 points (hard cap) or time cap, whichever comes first.</li>
-                    <li>Playoffs: Sets 1&ndash;4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
-                    <li>Each match has a maximum of 15 minutes of warm-up and 90 minutes of play.</li>
-                    <li>Total timeslot = 105 minutes.</li>
-                    <li>Warm-up: 8 minutes team warm-up + Volleyball Canada format (5 minutes hitting, 1 minute serving).</li>
-                    <li>Time Outs: 1 per set to a maximum of 30 seconds.</li>
-                    <li>All matches are officiated.</li>
-                    <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Balls provided by teams.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Minimum Player Requirement</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Teams must have at least 5 players to begin a match.</li>
-                    <li>If a team cannot field 5 players at the scheduled start time:</li>
-                    <li>The first set is defaulted.</li>
-                    <li>Each additional set is defaulted every 10 minutes until 5 players are present.</li>
-                    <li>When playing with 5 players:</li>
-                    <li>Must always have 3 players in the front row.</li>
-                    <li>Must identify starting positions, including a ghost player position.</li>
-                    <li>When the ghost player&rsquo;s rotation reaches service, the team loses that point.</li>
-                    <li>A libero cannot be used if a ghost player is in play.</li>
-                    <li>If a set begins with 5 players, it must finish with those 5 (except injury replacement by libero).</li>
-                    <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Team Registration</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Teams must register a minimum of 6 players.</li>
-                    <li>All players must complete registration and the waiver on the league website.</li>
-                    <li>All subs must be registered with the official before matches begin.</li>
-                    <li>Captains must register subs on the website after each match (same evening).</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Substitutes &amp; Playoffs Eligibility</h4>
-                  <p className="text-lg text-[#6F6F6F] font-medium">Regular season:</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2 mb-2">
-                    <li>Players from other teams may sub during the regular season.</li>
-                  </ul>
-                  <p className="text-lg text-[#6F6F6F] font-medium">Playoffs:</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Players from other teams may not sub.</li>
-                    <li>Subs must have played at least 5 matches during the regular season.</li>
-                    <li>All rostered players must have played a minimum of 5 games to be eligible.</li>
-                    <li>Subs will be tracked via scoresheet.</li>
-                    <li>Teams may use multiple subs in playoffs, provided they meet the 5-game requirement.</li>
-                    <li>Teams may include a 7th player (sub) in playoffs only if they are playing with a libero for the entire match.</li>
-                    <li>Injury exception: If no bench subs are available, the libero may replace an injured player for the remainder of the set, but must take their position.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Jerseys &amp; Equipment</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>All players must wear numbered jerseys.</li>
-                    <li>Libero must wear a different colored jersey.</li>
-                    <li>Sub players should wear jerseys that are similar in color to the team&rsquo;s.</li>
-                    <li>OFSL will provide jerseys for the inaugural season. (Future seasons are not guaranteed.)</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Officials &amp; Set-Up</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Officials provided for every match.</li>
-                    <li>Set-up and take-down is the responsibility of league supervisors and players, as assigned.</li>
-                    <li>Referees are responsible for net height and proper set-up.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Playoffs</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Playoffs will be held at the end of the season.</li>
-                    <li>Seeding is determined by overall standings, using the average of the last 18 weeks of regular-season play.</li>
-                  </ul>
-                </section>
+                {activeTab === "womenElite" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
               </div>
-            </div>
-          )}{activeTab === "sundayMixed" && (
+              <div
+                onClick={() => setActiveTab("men")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Men's Volleyball</span>
+                {activeTab === "men" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("wednesday4x4")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "wednesday4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Wednesday 4x4 Volleyball</span>
+                {activeTab === "wednesday4x4" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("sundayMixed")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "sundayMixed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Sunday Mixed Volleyball</span>
+                {activeTab === "sundayMixed" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
               </div>
@@ -261,6 +192,13 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </section>
 
                 <section>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Tiering system</h3>
+                  <p className="text-lg text-[#6F6F6F]">
+                    Each tier has 3 teams who all play a total of 4 sets (2 each against opposing teams). The team with the most wins moves up a tier, team with second best record stays and team with third best record moves down a tier. Tiebreakers will be determined by head-to-head result, points for/against, then total points between the 2 teams. If still tied, use previous week&apos;s schedule position: higher-ranked on the schedule wins (A &gt; B &gt; C when in the same tier). In case of a three-way tie, we use points for/against, then total points of all 3 teams. If still tied, previous week&apos;s schedule position applies. When a team forfeits in a 3 tier, points will be scored as 0 pts and the other two teams will receive 21 pts per set. The remaining two teams will play their two sets as per the original schedule.
+                  </p>
+                </section>
+
+                <section>
                   <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Games Self-Refereed</h3>
                   <p className="text-lg text-[#6F6F6F]">
                     All teams are responsible to call own faults including touching the net, doubles and ball in or out of bounds. If a dispute occurs, captains need to agree on how to proceed. If both captains disagree, point for that rally will be concluded as a re-serve.
@@ -297,9 +235,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Womenâ€™s Elite Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">WomenGÇÖs Elite Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">
-                    The OFSL Womenâ€™s Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
+                    The OFSL WomenGÇÖs Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
                   </p>
                 </section>
 
@@ -310,9 +248,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>The league will operate on a ladder system, cycling every 2 weeks.</li>
                     <li>Each tier will consist of four teams, except for tiers with 3 teams.</li>
                     <li>All matches are best-of-five sets.</li>
-                    <li>Sets 1â€"4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the game will play to 25 (with a hard cap of 27).</li>
+                    <li>Sets 1GÇô4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the game will play to 25 (with a hard cap of 27).</li>
                     <li>The 5th set is played to 15 points (hard cap) or time cap, whichever comes first.</li>
-                    <li>Playoffs: Sets 1â€"4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
+                    <li>Playoffs: Sets 1GÇô4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
                     <li>Each match has a maximum of 15 minutes of warm-up and 90 minutes of play.</li>
                     <li>Total timeslot = 105 minutes.</li>
                     <li>Warm-up: 8 minutes team warm-up + Volleyball Canada format (5 minutes hitting, 1 minute serving).</li>
@@ -327,7 +265,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>Teams must have at least 5 players to begin a match.</li>
                     <li>If a team cannot field 5 players at the scheduled start time: the first set is defaulted; each additional set is defaulted every 10 minutes until 5 players are present.</li>
-                    <li>When playing with 5 players: must always have 3 players in the front row; must identify starting positions, including a ghost player position; when the ghost playerâ€™s rotation reaches service, the team loses that point; a libero cannot be used if a ghost player is in play.</li>
+                    <li>When playing with 5 players: must always have 3 players in the front row; must identify starting positions, including a ghost player position; when the ghost playerGÇÖs rotation reaches service, the team loses that point; a libero cannot be used if a ghost player is in play.</li>
                     <li>If a set begins with 5 players, it must finish with those 5 (except injury replacement by libero).</li>
                     <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
                   </ul>
@@ -366,7 +304,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>All players must wear numbered jerseys.</li>
                     <li>Libero must wear a different colored jersey.</li>
-                    <li>Sub players should wear jerseys that are similar in color to the teamâ€™s.</li>
+                    <li>Sub players should wear jerseys that are similar in color to the teamGÇÖs.</li>
                     <li>OFSL will provide jerseys for the inaugural season. (Future seasons are not guaranteed.)</li>
                   </ul>
                 </section>
@@ -407,9 +345,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiers &amp; Times</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 â€" 10:00 PM</li>
-                    <li>Tier 2: 6:00 â€" 8:00 PM</li>
-                    <li>Tier 3: 4:00 â€" 6:00 PM</li>
+                    <li>Tier 1: 8:00 GÇô 10:00 PM</li>
+                    <li>Tier 2: 6:00 GÇô 8:00 PM</li>
+                    <li>Tier 3: 4:00 GÇô 6:00 PM</li>
                   </ul>
                 </section>
 
@@ -463,7 +401,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiebreaker Rule</h4>
-                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24â€"25 / 25â€"24), teams play one additional point to determine which team advances.</p>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24GÇô25 / 25GÇô24), teams play one additional point to determine which team advances.</p>
                 </section>
 
                 <section>
@@ -495,6 +433,33 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Wednesday 4x4 Rules / Standards of Play</h3>
                 </section>
 
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gender Rules</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>A minimum of two females must be on the court at all times.</li>
+                    <li>Men must jump before the 3m line to perform an attack</li>
+                    <li>Males may not block females.</li>
+                    <li>The net is of mixed height.</li>
+                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the GÇ£male rules/positionGÇ¥ guideline.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gameplay Rules</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>A block does not count as a touch.</li>
+                    <li>Open hand tips are allowed.</li>
+                    <li>On the first contact (except serve reception), a double-hit is allowed unless it is a lift; volleys are permitted.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Teams may play with 3 players if no substitute is available.</li>
+                    <li>Extra female players on the court must still follow the GÇ£guy rules/positionGÇ¥ guideline.</li>
+                  </ul>
+                </section>
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Format</h4>
@@ -516,6 +481,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
           )}
 
           {activeTab === "rules4x4" && (
+          {activeTab === "rules4x4" && (
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
@@ -529,7 +495,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Males can not hit beyond the 3m line (attack line)</li>
                     <li>Males can not block women</li>
                     <li>Net is mixed height</li>
-                    <li>Minimum of 2 female players on court. Additional females allowed, but extras must play under the "guys' rules/position"</li>
+                    <li>Minimum of 2 female players on court. Additional females allowed, but extras must play under the &ldquo;guys' rules/position&rdquo;</li>
                   </ul>
                 </section>
 
@@ -546,7 +512,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with only 3 players if no substitute is available.</li>
-                    <li>Extra girls on the court still must follow the "guy rules/position" guideline </li>
+                    <li>Extra girls on the court still must follow the &ldquo;guy rules/position&rdquo; guideline </li>
                   </ul>
                 </section>
 
@@ -560,7 +526,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women's Elite &amp; Women's Premiere</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women’s Elite &amp; Women's Premiere</h4>
                   <p className="text-lg text-[#6F6F6F]">Minimum of 5 players allowed on court only in special situations during regular season (injury, late arrival, cancellation). Otherwise, the default applies.</p>
                   <p className="text-lg text-[#6F6F6F]">With 5 players: must maintain 3 front-row players; once you start the set with 5, must finish with 5; injured regular players can be replaced by a libero for the remainder of the set.</p>
                 </section>
@@ -775,8 +741,3 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     </div>
   );
 };
-
-
-
-
-
