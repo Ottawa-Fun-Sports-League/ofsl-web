@@ -72,7 +72,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("coed")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "coed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>Co-ed Volleyball</span>
                 {activeTab === "coed" && (
@@ -83,7 +83,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("womenElite")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "womenElite" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>Women&apos;s Elite Volleyball</span>
                 {activeTab === "womenElite" && (
@@ -94,7 +94,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("men")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>Men's Volleyball</span>
                 {activeTab === "men" && (
@@ -105,7 +105,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("wednesday4x4")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "wednesday4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>Wednesday 4x4 Volleyball</span>
                 {activeTab === "wednesday4x4" && (
@@ -116,7 +116,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("sundayMixed")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "sundayMixed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>Sunday Mixed Volleyball</span>
                 {activeTab === "sundayMixed" && (
@@ -127,7 +127,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("rules4x4")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "rules4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>4x4 Volleyball Rules</span>
                 {activeTab === "rules4x4" && (
@@ -474,7 +474,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </section>
 
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Women’s Elite &amp; Women's Premiere</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Womenâ€™s Elite &amp; Women's Premiere</h4>
                   <p className="text-lg text-[#6F6F6F]">Minimum of 5 players allowed on court only in special situations during regular season (injury, late arrival, cancellation). Otherwise, the default applies.</p>
                   <p className="text-lg text-[#6F6F6F]">With 5 players: must maintain 3 front-row players; once you start the set with 5, must finish with 5; injured regular players can be replaced by a libero for the remainder of the set.</p>
                 </section>
@@ -597,7 +597,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("wednesday4x4")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "wednesday4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>Wednesday 4x4 Volleyball</span>
                 {activeTab === "wednesday4x4" && (
@@ -608,7 +608,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("sundayMixed")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "sundayMixed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>Sunday Mixed Volleyball</span>
                 {activeTab === "sundayMixed" && (
@@ -619,7 +619,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 onClick={() => setActiveTab("rules4x4")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "rules4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
+                `}
               >
                 <span>4x4 Volleyball Rules</span>
                 {activeTab === "rules4x4" && (
@@ -932,7 +932,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Men must jump before the 3m line to perform an attack</li>
                     <li>Males may not block females.</li>
                     <li>The net is of mixed height.</li>
-                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the GÃ‡Â£male rules/positionGÃ‡Â¥ guideline.</li>
+                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the GÃƒâ€¡Ã‚Â£male rules/positionGÃƒâ€¡Ã‚Â¥ guideline.</li>
                   </ul>
                 </section>
 
@@ -1043,7 +1043,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Sunday Format</h4>
-                  <p className="text-lg text-[#6F6F6F]">See the GÃ‡Â£Sunday Mixed VolleyballGÃ‡Â¥ tab for detailed Sunday evening format and movement rules.</p>
+                  <p className="text-lg text-[#6F6F6F]">See the GÃƒâ€¡Ã‚Â£Sunday Mixed VolleyballGÃƒâ€¡Ã‚Â¥ tab for detailed Sunday evening format and movement rules.</p>
                 </section>
               </div>
             </div>
