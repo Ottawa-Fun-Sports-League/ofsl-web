@@ -25,6 +25,8 @@ export function UsersTab() {
   const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
   const [bulkEmailSubject, setBulkEmailSubject] = useState(DEFAULT_BULK_EMAIL_SUBJECT);
   const [bulkEmailBody, setBulkEmailBody] = useState(DEFAULT_BULK_EMAIL_BODY);
+  const [sendCopyToInfo, setSendCopyToInfo] = useState(true);
+  const [sendCopyToFacilitator, setSendCopyToFacilitator] = useState(true);
   const [bulkEmailRecipients, setBulkEmailRecipients] = useState<BulkEmailRecipient[]>([]);
   const [bulkEmailMissingEmails, setBulkEmailMissingEmails] = useState(0);
   const [loadingBulkEmailRecipients, setLoadingBulkEmailRecipients] = useState(false);
@@ -97,6 +99,8 @@ export function UsersTab() {
   const handleOpenBulkEmailModal = useCallback(async () => {
     setBulkEmailSubject(DEFAULT_BULK_EMAIL_SUBJECT);
     setBulkEmailBody(DEFAULT_BULK_EMAIL_BODY);
+    setSendCopyToInfo(true);
+    setSendCopyToFacilitator(true);
     setBulkEmailResult(null);
     setShowBulkEmailModal(true);
     try {
@@ -122,6 +126,8 @@ export function UsersTab() {
       const result = await sendBulkEmail({
         subject: bulkEmailSubject.trim(),
         htmlBody: bulkEmailBody,
+        sendCopyToInfo,
+        sendCopyToFacilitator,
         recipients: bulkEmailRecipients.map((recipient) => ({
           email: recipient.email,
           name: recipient.name,
@@ -145,7 +151,7 @@ export function UsersTab() {
     } finally {
       setSendingBulkEmail(false);
     }
-  }, [bulkEmailRecipients, bulkEmailSubject, bulkEmailBody, showToast]);
+  }, [bulkEmailRecipients, bulkEmailSubject, bulkEmailBody, showToast, sendCopyToInfo, sendCopyToFacilitator]);
 
   const handleRefreshBulkEmailRecipients = useCallback(async () => {
     try {
@@ -385,6 +391,10 @@ export function UsersTab() {
           onBodyChange={setBulkEmailBody}
           onSend={handleSendBulkEmail}
           sending={sendingBulkEmail}
+          sendCopyToInfo={sendCopyToInfo}
+          onToggleSendCopyToInfo={setSendCopyToInfo}
+          sendCopyToFacilitator={sendCopyToFacilitator}
+          onToggleSendCopyToFacilitator={setSendCopyToFacilitator}
           resultSummary={bulkEmailResult}
         />
       </div>

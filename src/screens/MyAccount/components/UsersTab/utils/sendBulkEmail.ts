@@ -4,6 +4,8 @@ import { BulkEmailRecipient } from '../types';
 export interface BulkEmailRequest {
   subject: string;
   htmlBody: string;
+  sendCopyToInfo?: boolean;
+  sendCopyToFacilitator?: boolean;
   recipients: Array<{
     email: string;
     name?: string | null;
