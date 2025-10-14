@@ -11,6 +11,7 @@ import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
 import { RichTextEditor } from '../../../../../components/ui/rich-text-editor';
 import { Loader2, RefreshCw, Info, CheckCircle2, AlertTriangle, Mail } from 'lucide-react';
+import { Checkbox } from '../../../../../components/ui/checkbox';
 import { BulkEmailRecipient } from '../types';
 
 interface BulkEmailModalProps {
@@ -26,6 +27,10 @@ interface BulkEmailModalProps {
   onBodyChange: (value: string) => void;
   onSend: () => void;
   sending: boolean;
+  sendCopyToInfo: boolean;
+  onToggleSendCopyToInfo: (value: boolean) => void;
+  sendCopyToFacilitator: boolean;
+  onToggleSendCopyToFacilitator: (value: boolean) => void;
   resultSummary?: {
     sent: number;
     failed: number;
@@ -52,6 +57,10 @@ export function BulkEmailModal({
   onBodyChange,
   onSend,
   sending,
+  sendCopyToInfo,
+  onToggleSendCopyToInfo,
+  sendCopyToFacilitator,
+  onToggleSendCopyToFacilitator,
   resultSummary,
 }: BulkEmailModalProps) {
   const recipientCount = recipients.length;
@@ -161,6 +170,37 @@ export function BulkEmailModal({
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3">
+            <p className="text-sm font-medium text-gray-700">Send copies</p>
+            <p className="text-xs text-gray-600">
+              These addresses will receive the same personalized message once. Leave checked to keep OFSL staff in the loop.
+            </p>
+            <div className="space-y-2">
+              <label className="flex items-start gap-3 text-sm text-gray-700">
+                <Checkbox
+                  id="bulk-email-copy-info"
+                  checked={sendCopyToInfo}
+                  onCheckedChange={(checked) => onToggleSendCopyToInfo(checked === true)}
+                />
+                <span>
+                  <strong>info@ofsl.ca</strong>
+                  <span className="block text-xs text-gray-500">General OFSL inbox receives a copy.</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-gray-700">
+                <Checkbox
+                  id="bulk-email-copy-facilitator"
+                  checked={sendCopyToFacilitator}
+                  onCheckedChange={(checked) => onToggleSendCopyToFacilitator(checked === true)}
+                />
+                <span>
+                  <strong>facilitator@ofsl.ca</strong>
+                  <span className="block text-xs text-gray-500">Facilitator inbox gets the same message.</span>
+                </span>
+              </label>
             </div>
           </div>
         </div>

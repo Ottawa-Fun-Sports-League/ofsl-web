@@ -35,6 +35,7 @@ const HTML_MAX_LENGTH = 20000;
 
 const RATE_LIMIT_DELAY_MS = getRateLimitDelay();
 const INFO_COPY_EMAIL = "info@ofsl.ca";
+const FACILITATOR_COPY_EMAIL = "facilitator@ofsl.ca";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -56,6 +57,8 @@ serve(async (req: Request) => {
     }
 
     const { subject, htmlBody, recipients } = body;
+    const sendCopyToInfo = body.sendCopyToInfo ?? true;
+    const sendCopyToFacilitator = body.sendCopyToFacilitator ?? true;
 
     if (!Array.isArray(recipients) || recipients.length === 0) {
       return buildErrorResponse("At least one recipient is required", 400);
@@ -136,8 +139,7 @@ serve(async (req: Request) => {
     };
 
     const rateLimiter = createRateLimiter(RATE_LIMIT_DELAY_MS);
-
-    let bccCopySent = false;
+    const deliveredEmails = new Set<string>();
 
     for (const recipient of recipients) {
       if (!recipient?.email || typeof recipient.email !== "string") {
@@ -157,23 +159,43 @@ serve(async (req: Request) => {
       const wrappedHtml = wrapWithTemplate(personalizedSubject, personalizedHtml);
 
       await waitForRateLimiter(rateLimiter);
-      const shouldBccInfo = !bccCopySent && trimmedEmail.toLowerCase() !== INFO_COPY_EMAIL;
-      const bccList = shouldBccInfo ? [INFO_COPY_EMAIL] : [];
-
       const sent = await sendEmail(
         resendApiKey,
         trimmedEmail,
         personalizedSubject,
         wrappedHtml,
-        bccList,
       );
       if (sent) {
         summary.sent += 1;
-        if (shouldBccInfo) {
-          bccCopySent = true;
-        }
+        deliveredEmails.add(trimmedEmail.toLowerCase());
       } else {
         summary.failed += 1;
+      }
+    }
+
+    const copyTargets: Array<{ email: string; name: string | null }> = [];
+    if (sendCopyToInfo) {
+      copyTargets.push({ email: INFO_COPY_EMAIL, name: null });
+    }
+    if (sendCopyToFacilitator) {
+      copyTargets.push({ email: FACILITATOR_COPY_EMAIL, name: null });
+    }
+
+    for (const target of copyTargets) {
+      const lowerEmail = target.email.toLowerCase();
+      if (deliveredEmails.has(lowerEmail)) {
+        continue;
+      }
+
+      const personalization = buildPersonalization(target.name, target.email);
+      const personalizedSubject = replaceTokens(subject, personalization.plain);
+      const personalizedHtml = replaceTokens(htmlBody, personalization.html);
+      const wrappedHtml = wrapWithTemplate(personalizedSubject, personalizedHtml);
+
+      await waitForRateLimiter(rateLimiter);
+      const sent = await sendEmail(resendApiKey, target.email, personalizedSubject, wrappedHtml);
+      if (!sent) {
+        console.error("admin-bulk-email: failed to send copy to", target.email);
       }
     }
 
