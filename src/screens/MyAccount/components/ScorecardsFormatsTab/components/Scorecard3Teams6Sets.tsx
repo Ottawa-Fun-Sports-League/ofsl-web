@@ -244,6 +244,12 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               B: { wins: 0, losses: 0, diff: 0 },
               C: { wins: 0, losses: 0, diff: 0 },
             };
+            // Track head-to-head differential (only between the two tied teams)
+            const h2h: Record<TeamKey, Record<TeamKey, number>> = {
+              A: { A: 0, B: 0, C: 0 },
+              B: { A: 0, B: 0, C: 0 },
+              C: { A: 0, B: 0, C: 0 },
+            };
             SETS.forEach((entry, i) => {
               const row = (scores[i] || {}) as Record<TeamKey, string>;
               const sLeft = row[entry.teams[0]] ?? '';
@@ -257,6 +263,9 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
                   const diff = nLeft - nRight;
                   stats[left].diff += diff;
                   stats[right].diff -= diff;
+                  // accumulate head-to-head differential for the pair only
+                  h2h[left][right] += diff;
+                  h2h[right][left] -= diff;
                   if (nLeft > nRight) {
                     stats[left].wins += 1;
                     stats[right].losses += 1;
@@ -283,7 +292,13 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
             const sorted = [...order].sort((x, y) => {
               const a = stats[x];
               const b = stats[y];
+              // Primary: set wins
               if (b.wins !== a.wins) return b.wins - a.wins;
+              // Tie-breaker: head-to-head differential between x and y only
+              const hx = h2h[x][y];
+              const hy = h2h[y][x];
+              if ((hx - hy) !== 0) return (hy - hx);
+              // Fallback: overall differential (displayed as-is in summary)
               if (b.diff !== a.diff) return b.diff - a.diff;
               return order.indexOf(x) - order.indexOf(y);
             });
