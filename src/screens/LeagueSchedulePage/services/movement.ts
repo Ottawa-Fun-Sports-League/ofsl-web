@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabase';
 import { applyThreeTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 import { applyFourTeamTierMovementNextWeek } from '../database/scheduleDatabase';
+import { getNextPlayableWeek } from '../database/scheduleDatabase';
 import { applyTwoTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 import { applyEliteThreeTeamMovementNextWeek } from '../database/scheduleDatabase';
 
@@ -159,6 +160,9 @@ export async function applySixTeamMovementAfterStandings(params: {
 
   const positionColumns = ['team_a_name', 'team_b_name', 'team_c_name', 'team_d_name', 'team_e_name', 'team_f_name'] as const;
 
+  // Determine destination week, skipping full no-games weeks to match other formats
+  const destWeek = await getNextPlayableWeek(leagueId, nextWeek);
+
   const uniqueNames = new Set(
     teamStats.map((stat) => teamNames[stat.team as keyof typeof teamNames]).filter((name): name is string => Boolean(name))
   );
@@ -169,10 +173,10 @@ export async function applySixTeamMovementAfterStandings(params: {
         .from('weekly_schedules')
         .update({ [column]: null, updated_at: new Date().toISOString() })
         .eq('league_id', leagueId)
-        .eq('week_number', nextWeek)
+        .eq('week_number', destWeek)
         .eq(column, name);
       if (clearErr && (clearErr as any).code !== 'PGRST116') {
-        console.warn(`Error clearing team ${name} from ${column} in week ${nextWeek}:`, clearErr);
+        console.warn(`Error clearing team ${name} from ${column} in week ${destWeek}:`, clearErr);
       }
     }
   }
@@ -200,17 +204,17 @@ export async function applySixTeamMovementAfterStandings(params: {
       .from('weekly_schedules')
       .select('id')
       .eq('league_id', leagueId)
-      .eq('week_number', nextWeek)
+      .eq('week_number', destWeek)
       .eq('tier_number', targetTier)
       .maybeSingle();
 
     if (findErr && (findErr as any).code !== 'PGRST116') {
-      console.warn(`Error locating tier ${targetTier} for week ${nextWeek}:`, findErr);
+      console.warn(`Error locating tier ${targetTier} for week ${destWeek}:`, findErr);
       continue;
     }
 
     if (!targetTierRow) {
-      console.warn(`Target tier ${targetTier} not found for week ${nextWeek}; unable to place ${teamName}.`);
+      console.warn(`Target tier ${targetTier} not found for week ${destWeek}; unable to place ${teamName}.`);
       continue;
     }
 

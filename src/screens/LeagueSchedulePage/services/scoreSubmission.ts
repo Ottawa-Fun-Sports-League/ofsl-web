@@ -101,6 +101,12 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     B: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
     C: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
   };
+  // Pairwise head-to-head point differential (only between the two teams involved)
+  const h2hDiff: Record<TeamKey, Record<TeamKey, number>> = {
+    A: { A: 0, B: 0, C: 0 },
+    B: { A: 0, B: 0, C: 0 },
+    C: { A: 0, B: 0, C: 0 },
+  };
   sets.forEach((entry) => {
     const [left, right] = entry.teams;
     const sLeft = entry.scores[left] ?? '';
@@ -111,6 +117,9 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     if (Number.isNaN(nLeft) || Number.isNaN(nRight) || nLeft === nRight) return; // ignore invalid/tie
     stats[left].pf += nLeft; stats[left].pa += nRight;
     stats[right].pf += nRight; stats[right].pa += nLeft;
+    // Track head-to-head differential for these two teams only
+    h2hDiff[left][right] += (nLeft - nRight);
+    h2hDiff[right][left] += (nRight - nLeft);
     if (nLeft > nRight) { stats[left].setWins += 1; stats[right].setLosses += 1; }
     else { stats[right].setWins += 1; stats[left].setLosses += 1; }
   });
@@ -122,8 +131,15 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
   };
   const teamKeys: TeamKey[] = ['A', 'B', 'C'];
   const sorted = [...teamKeys].sort((x, y) => {
+    // Primary: total set wins (higher first)
     if (stats[y].setWins !== stats[x].setWins) return stats[y].setWins - stats[x].setWins;
+    // Tie-breaker: head-to-head differential between tied teams only
+    const hx = h2hDiff[x][y];
+    const hy = h2hDiff[y][x];
+    if ((hx - hy) !== 0) return (hy - hx); // if x beat y head-to-head on points, place x ahead
+    // Fallback: overall differential (unchanged — used for summary/standings consistency)
     if (diff[y] !== diff[x]) return diff[y] - diff[x];
+    // Stable fallback
     return teamKeys.indexOf(x) - teamKeys.indexOf(y);
   });
 
