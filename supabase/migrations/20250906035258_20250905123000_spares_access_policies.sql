@@ -1,6 +1,33 @@
 -- Expand RLS policies so captains can view volleyball spares
 -- and all authenticated users can view individual-sport spares (Badminton, Pickleball)
 
+-- Ensure the core spares table exists for older local databases
+CREATE TABLE IF NOT EXISTS public.spares (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  sport_id BIGINT NOT NULL,
+  skill_level TEXT NOT NULL,
+  share_phone BOOLEAN NOT NULL DEFAULT false,
+  available_monday BOOLEAN NOT NULL DEFAULT false,
+  available_tuesday BOOLEAN NOT NULL DEFAULT false,
+  available_wednesday BOOLEAN NOT NULL DEFAULT false,
+  available_thursday BOOLEAN NOT NULL DEFAULT false,
+  available_friday BOOLEAN NOT NULL DEFAULT false,
+  available_saturday BOOLEAN NOT NULL DEFAULT false,
+  available_sunday BOOLEAN NOT NULL DEFAULT false,
+  gender_identity TEXT,
+  gender_identity_other TEXT,
+  volleyball_positions TEXT[] DEFAULT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Add basic indexes to support lookups (no-op if they already exist)
+CREATE INDEX IF NOT EXISTS idx_spares_user_id ON public.spares (user_id);
+CREATE INDEX IF NOT EXISTS idx_spares_sport_id ON public.spares (sport_id);
+CREATE INDEX IF NOT EXISTS idx_spares_is_active ON public.spares (is_active);
+
 -- Ensure RLS is enabled (no-op if already enabled)
 DO $$ BEGIN
   EXECUTE 'ALTER TABLE public.spares ENABLE ROW LEVEL SECURITY';
