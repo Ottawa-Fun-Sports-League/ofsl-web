@@ -12,12 +12,10 @@ import { Input } from '../../../../../components/ui/input';
 import { RichTextEditor } from '../../../../../components/ui/rich-text-editor';
 import { Loader2, RefreshCw, Info, CheckCircle2, AlertTriangle, Mail } from 'lucide-react';
 import { Checkbox } from '../../../../../components/ui/checkbox';
-import { BulkEmailRecipient } from '../types';
 
 interface BulkEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  recipients: BulkEmailRecipient[];
   loadingRecipients: boolean;
   missingEmailCount: number;
   onRefreshRecipients: () => void;
@@ -31,6 +29,11 @@ interface BulkEmailModalProps {
   onToggleSendCopyToInfo: (value: boolean) => void;
   sendCopyToFacilitator: boolean;
   onToggleSendCopyToFacilitator: (value: boolean) => void;
+  filteredRecipientCount: number;
+  manualRecipientCount: number;
+  manualOverlapCount: number;
+  includeFilteredRecipients: boolean;
+  onToggleIncludeFilteredRecipients: (value: boolean) => void;
   resultSummary?: {
     sent: number;
     failed: number;
@@ -47,7 +50,6 @@ const PLACEHOLDER_TOKENS: Array<{ token: string; description: string }> = [
 export function BulkEmailModal({
   isOpen,
   onClose,
-  recipients,
   loadingRecipients,
   missingEmailCount,
   onRefreshRecipients,
@@ -61,25 +63,48 @@ export function BulkEmailModal({
   onToggleSendCopyToInfo,
   sendCopyToFacilitator,
   onToggleSendCopyToFacilitator,
+  includeFilteredRecipients,
+  onToggleIncludeFilteredRecipients,
+  filteredRecipientCount,
+  manualRecipientCount,
+  manualOverlapCount,
   resultSummary,
 }: BulkEmailModalProps) {
-  const recipientCount = recipients.length;
+  const filteredCount = includeFilteredRecipients ? filteredRecipientCount : 0;
+  const manualOnlyCount = includeFilteredRecipients
+    ? Math.max(manualRecipientCount - manualOverlapCount, 0)
+    : manualRecipientCount;
+  const totalRecipients = filteredCount + manualOnlyCount;
 
   const summaryText = useMemo(() => {
     if (loadingRecipients) {
       return 'Loading recipients...';
     }
-    if (recipientCount === 0) {
-      return 'No recipients with valid email addresses were found for the current filters.';
+    if (totalRecipients === 0) {
+      return 'No recipients selected. Add users manually or adjust your filters.';
     }
-    const base = `${recipientCount.toLocaleString()} recipient${recipientCount === 1 ? '' : 's'} will receive an individual email.`;
-    if (missingEmailCount > 0) {
-      return `${base} ${missingEmailCount} filtered user${missingEmailCount === 1 ? ' is' : 's are'} missing an email address and will be skipped.`;
+    let base = `${totalRecipients.toLocaleString()} recipient${totalRecipients === 1 ? '' : 's'} will receive an individual email.`;
+    if (includeFilteredRecipients && missingEmailCount > 0) {
+      base += ` ${missingEmailCount} filtered user${missingEmailCount === 1 ? ' is' : 's are'} missing an email address will be skipped.`;
+    }
+    if (!includeFilteredRecipients) {
+      if (manualRecipientCount > 0) {
+        base += ` Only manually selected contacts (${manualRecipientCount}) will receive this message.`;
+      } else {
+        base += ' Only manually selected contacts will receive this message.';
+      }
+    } else if (manualRecipientCount > 0) {
+      if (manualOnlyCount > 0) {
+        base += ` Includes ${manualOnlyCount} manually added contact${manualOnlyCount === 1 ? '' : 's'}.`;
+      }
+      if (manualOverlapCount > 0) {
+        base += ` (${manualOverlapCount} already matched the filtered list.)`;
+      }
     }
     return base;
-  }, [recipientCount, missingEmailCount, loadingRecipients]);
+  }, [includeFilteredRecipients, loadingRecipients, manualOnlyCount, manualOverlapCount, manualRecipientCount, missingEmailCount, totalRecipients]);
 
-  const isSendDisabled = sending || loadingRecipients || recipientCount === 0 || !subject.trim() || !body.trim();
+  const isSendDisabled = sending || loadingRecipients || totalRecipients === 0 || !subject.trim() || !body.trim();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -173,7 +198,7 @@ export function BulkEmailModal({
             </div>
           </div>
 
-          <div className="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3">
+          <div className="rounded-md border border-gray-200 bg-white p-4 space-y-3">
             <p className="text-sm font-medium text-gray-700">Send copies</p>
             <p className="text-xs text-gray-600">
               These addresses will receive the same personalized message once. Leave checked to keep OFSL staff in the loop.
@@ -202,6 +227,20 @@ export function BulkEmailModal({
                 </span>
               </label>
             </div>
+          </div>
+
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+            <label className="flex items-start gap-3 text-sm text-gray-700">
+              <Checkbox
+                id="bulk-email-include-filtered"
+                checked={includeFilteredRecipients}
+                onCheckedChange={(checked) => onToggleIncludeFilteredRecipients(checked === true)}
+              />
+              <span>
+                <strong>Include users matching current filters</strong>
+                <span className="block text-xs text-gray-500">When unchecked, only manually added contacts will be emailed.</span>
+              </span>
+            </label>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { Button } from '../../../../../components/ui/button';
-import { SlidersHorizontal, Download, Mail } from 'lucide-react';
+import { SlidersHorizontal, Download, Mail, MailPlus, MailX, Users2 } from 'lucide-react';
 
 interface UsersHeaderProps {
   userCount: number;
@@ -7,10 +7,14 @@ interface UsersHeaderProps {
   onRefresh: () => void;
   onExportCSV: () => void;
   onSendBulkEmail: () => void;
+  onAddFilteredToBulkQueue: () => void;
+  onClearBulkEmailQueue: () => void;
+  onViewBulkEmailQueue: () => void;
+  manualQueueCount: number;
   activeFilterCount?: number;
 }
 
-export function UsersHeader({ userCount, onOpenMobileFilter, onRefresh, onExportCSV, onSendBulkEmail, activeFilterCount = 0 }: UsersHeaderProps) {
+export function UsersHeader({ userCount, onOpenMobileFilter, onRefresh, onExportCSV, onSendBulkEmail, onAddFilteredToBulkQueue, onClearBulkEmailQueue, onViewBulkEmailQueue, manualQueueCount, activeFilterCount = 0 }: UsersHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pb-4">
       <div className="flex items-center gap-2 justify-between">
@@ -30,10 +34,38 @@ export function UsersHeader({ userCount, onOpenMobileFilter, onRefresh, onExport
         </Button>
       </div>
       <div className="flex items-center justify-between md:justify-end gap-2 md:gap-4">
-        <div className="text-sm text-[#6F6F6F]">
-          Total Users: {userCount}
-        </div>
+        <div className="text-sm text-[#6F6F6F] text-right md:text-left">Filtered Users: {userCount}</div>
         <div className="flex gap-2">
+          <Button
+            onClick={onViewBulkEmailQueue}
+            className="bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-[10px] px-3 md:px-4 py-2 text-sm flex items-center gap-2"
+            disabled={manualQueueCount === 0}
+          >
+            <Users2 className="h-4 w-4" />
+            <span className="hidden md:inline">View Queue</span>
+            {manualQueueCount > 0 && (
+              <span className="text-xs font-semibold">({manualQueueCount})</span>
+            )}
+          </Button>
+          <Button
+            onClick={onAddFilteredToBulkQueue}
+            className="bg-purple-600 hover:bg-purple-700 text-white rounded-[10px] px-3 md:px-4 py-2 text-sm flex items-center gap-2"
+            disabled={userCount === 0}
+          >
+            <MailPlus className="h-4 w-4" />
+            <span className="hidden md:inline">Add Filtered to Queue</span>
+          </Button>
+          <Button
+            onClick={onClearBulkEmailQueue}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-[10px] px-3 md:px-4 py-2 text-sm flex items-center gap-2"
+            disabled={manualQueueCount === 0}
+          >
+            <MailX className="h-4 w-4" />
+            <span className="hidden md:inline">Clear Queue</span>
+            {manualQueueCount > 0 && (
+              <span className="text-xs font-semibold text-gray-600">({manualQueueCount})</span>
+            )}
+          </Button>
           <Button
             onClick={onSendBulkEmail}
             className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-3 md:px-4 py-2 text-sm flex items-center gap-2"

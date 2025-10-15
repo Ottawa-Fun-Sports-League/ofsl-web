@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
-import { Edit2, Trash2, Mail, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
+import { Edit2, Trash2, Mail, MailPlus, MailX, Phone, Calendar, ChevronUp, ChevronDown, Users } from 'lucide-react';
 import { User, SortField, SortDirection, PaginationState } from '../types';
 import { Link } from 'react-router-dom';
 import { UserStatusBadge } from './UserStatusBadge';
@@ -24,6 +24,9 @@ interface UsersTableProps {
   loading?: boolean;
   registrationCounts?: Record<string, number>;
   registrationLoadingIds?: Record<string, boolean>;
+  manualRecipientEmails: Set<string>;
+  onAddManualRecipient: (user: User) => void;
+  onRemoveManualRecipient: (email: string) => void;
 }
 
 export function UsersTable({
@@ -40,7 +43,10 @@ export function UsersTable({
   onPageSizeChange,
   loading = false,
   registrationCounts,
-  registrationLoadingIds
+  registrationLoadingIds,
+  manualRecipientEmails,
+  onAddManualRecipient,
+  onRemoveManualRecipient,
 }: UsersTableProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string | null; email: string } | null>(null);
@@ -294,6 +300,36 @@ export function UsersTable({
                   </td>
                   <td className="px-4 xl:px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
+                      {user.email && (
+                        (() => {
+                          const trimmedEmail = user.email.trim();
+                          const lower = trimmedEmail.toLowerCase();
+                          const isManual = manualRecipientEmails.has(lower);
+                          const handleClick = () => {
+                            if (isManual) {
+                              onRemoveManualRecipient(trimmedEmail);
+                            } else {
+                              onAddManualRecipient(user);
+                            }
+                          };
+
+                          return (
+                            <Button
+                              type="button"
+                              onClick={handleClick}
+                              className={
+                                isManual
+                                  ? 'bg-green-50 text-green-600 hover:bg-green-100 rounded-lg p-2 transition-colors'
+                                  : 'bg-transparent hover:bg-purple-50 text-purple-500 hover:text-purple-600 rounded-lg p-2 transition-colors'
+                              }
+                              title={isManual ? 'Remove from bulk email list' : 'Add to bulk email list'}
+                              aria-label={isManual ? 'Remove from bulk email list' : 'Add to bulk email list'}
+                            >
+                              {isManual ? <MailX className="h-3 w-3" /> : <MailPlus className="h-3 w-3" />}
+                            </Button>
+                          );
+                        })()
+                      )}
                       {user.email && (
                         <ImpersonateButton userEmail={user.email} userName={user.name} />
                       )}

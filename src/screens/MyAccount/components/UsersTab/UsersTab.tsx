@@ -8,13 +8,14 @@ import { UsersTable } from './components/UsersTable';
 import { EditUserModal } from './components/EditUserModal';
 import { ExportColumnsModal } from './components/ExportColumnsModal';
 import { BulkEmailModal } from './components/BulkEmailModal';
+import { ManualQueueModal } from './components/ManualQueueModal';
 import { useUsersData } from './useUsersData';
 import { useUserOperations } from './useUserOperations';
 import { exportUsersToCSV, generateExportFilename } from './utils/exportCsv';
 import { useToast } from '../../../../components/ui/toast';
 import { supabase } from '../../../../lib/supabase';
 import { DEFAULT_BULK_EMAIL_BODY, DEFAULT_BULK_EMAIL_SUBJECT } from './constants';
-import { BulkEmailRecipient } from './types';
+import { BulkEmailRecipient, User } from './types';
 import { mapUsersToEmailRecipients, sendBulkEmail, BulkEmailResultSummary } from './utils/sendBulkEmail';
 
 export function UsersTab() {
@@ -28,10 +29,13 @@ export function UsersTab() {
   const [sendCopyToInfo, setSendCopyToInfo] = useState(true);
   const [sendCopyToFacilitator, setSendCopyToFacilitator] = useState(true);
   const [bulkEmailRecipients, setBulkEmailRecipients] = useState<BulkEmailRecipient[]>([]);
+  const [manualBulkEmailRecipients, setManualBulkEmailRecipients] = useState<BulkEmailRecipient[]>([]);
   const [bulkEmailMissingEmails, setBulkEmailMissingEmails] = useState(0);
   const [loadingBulkEmailRecipients, setLoadingBulkEmailRecipients] = useState(false);
   const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
   const [bulkEmailResult, setBulkEmailResult] = useState<BulkEmailResultSummary | null>(null);
+  const [includeFilteredRecipients, setIncludeFilteredRecipients] = useState(true);
+  const [showManualQueueModal, setShowManualQueueModal] = useState(false);
 
   const {
     filteredUsers,
@@ -96,6 +100,126 @@ export function UsersTab() {
     handleCancelEdit
   } = useUserOperations(loadUsers);
 
+  const manualRecipientEmails = useMemo(
+    () => new Set(manualBulkEmailRecipients.map((recipient) => recipient.email.toLowerCase())),
+    [manualBulkEmailRecipients]
+  );
+
+  const filteredEmailSet = useMemo(() => {
+    const set = new Set<string>();
+    bulkEmailRecipients.forEach((recipient) => {
+      if (!recipient?.email) return;
+      set.add(recipient.email.trim().toLowerCase());
+    });
+    return set;
+  }, [bulkEmailRecipients]);
+
+  const manualOverlapCount = useMemo(() => {
+    let overlap = 0;
+    manualRecipientEmails.forEach((email) => {
+      if (filteredEmailSet.has(email)) {
+        overlap += 1;
+      }
+    });
+    return overlap;
+  }, [filteredEmailSet, manualRecipientEmails]);
+
+  const manualRecipientCount = manualRecipientEmails.size;
+
+  const handleAddManualRecipient = useCallback((user: User) => {
+    const email = user.email?.trim();
+    if (!email) {
+      showToast('Selected user does not have an email address.', 'warning');
+      return;
+    }
+
+    const lower = email.toLowerCase();
+    let added = false;
+    setManualBulkEmailRecipients((prev) => {
+      if (prev.some((recipient) => recipient.email.toLowerCase() === lower)) {
+        showToast('User already added to bulk email list.', 'info');
+        return prev;
+      }
+
+      added = true;
+      return [
+        ...prev,
+        {
+          email,
+          name: user.name ?? null,
+          userId: user.id,
+        },
+      ];
+    });
+
+    if (added) {
+      setIncludeFilteredRecipients(false);
+      showToast('User added to bulk email list.', 'success');
+    }
+  }, [setIncludeFilteredRecipients, showToast]);
+
+  const handleRemoveManualRecipient = useCallback((email: string) => {
+    const lower = email.trim().toLowerCase();
+    setManualBulkEmailRecipients((prev) => {
+      const next = prev.filter((recipient) => recipient.email.toLowerCase() !== lower);
+      if (next.length === 0) {
+        setIncludeFilteredRecipients(true);
+      }
+      return next;
+    });
+    showToast('Recipient removed from bulk email queue.', 'info');
+  }, [showToast]);
+
+  const handleClearManualRecipients = useCallback(() => {
+    setManualBulkEmailRecipients([]);
+    setIncludeFilteredRecipients(true);
+    showToast('Bulk email queue cleared.', 'info');
+  }, [showToast]);
+
+  const handleAddFilteredUsersToManual = useCallback(async () => {
+    try {
+      const users = await fetchAllFilteredUsers();
+      if (!users.length) {
+        showToast('No users found for the current filters.', 'info');
+        return;
+      }
+
+      const { recipients, invalidCount } = mapUsersToEmailRecipients(
+        users.map((u) => ({ id: u.id, email: u.email, name: u.name }))
+      );
+
+      let addedCount = 0;
+      setManualBulkEmailRecipients((prev) => {
+        const map = new Map(prev.map((recipient) => [recipient.email.toLowerCase(), recipient]));
+        recipients.forEach((recipient) => {
+          const trimmed = recipient.email.trim();
+          const key = trimmed.toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, { ...recipient, email: trimmed });
+            addedCount += 1;
+          }
+        });
+        return Array.from(map.values());
+      });
+
+      if (addedCount > 0) {
+        setIncludeFilteredRecipients(false);
+        showToast(`Added ${addedCount} user${addedCount === 1 ? '' : 's'} to the bulk email queue.`, 'success');
+        if (invalidCount > 0) {
+          showToast(`${invalidCount} user${invalidCount === 1 ? '' : 's'} without email were skipped.`, 'warning');
+        }
+      } else {
+        showToast('All filtered users are already in the bulk email queue.', 'info');
+        if (invalidCount > 0) {
+          showToast(`${invalidCount} user${invalidCount === 1 ? '' : 's'} without email were skipped.`, 'warning');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add filtered users to bulk email queue', error);
+      showToast('Unable to add users to the bulk email queue. Please try again.', 'error');
+    }
+  }, [fetchAllFilteredUsers, setIncludeFilteredRecipients, showToast]);
+
   const handleOpenBulkEmailModal = useCallback(async () => {
     setBulkEmailSubject(DEFAULT_BULK_EMAIL_SUBJECT);
     setBulkEmailBody(DEFAULT_BULK_EMAIL_BODY);
@@ -116,10 +240,30 @@ export function UsersTab() {
   }, [sendingBulkEmail]);
 
   const handleSendBulkEmail = useCallback(async () => {
-    if (bulkEmailRecipients.length === 0) {
+    const combinedMap = new Map<string, BulkEmailRecipient>();
+
+    if (includeFilteredRecipients) {
+      for (const recipient of bulkEmailRecipients) {
+        if (!recipient?.email) continue;
+        const trimmed = recipient.email.trim();
+        if (!trimmed) continue;
+        combinedMap.set(trimmed.toLowerCase(), { ...recipient, email: trimmed });
+      }
+    }
+
+    for (const recipient of manualBulkEmailRecipients) {
+      if (!recipient?.email) continue;
+      const trimmed = recipient.email.trim();
+      if (!trimmed) continue;
+      combinedMap.set(trimmed.toLowerCase(), { ...recipient, email: trimmed });
+    }
+
+    if (combinedMap.size === 0) {
       showToast('No recipients available for this email.', 'error');
       return;
     }
+
+    const combinedRecipients = Array.from(combinedMap.values());
 
     setSendingBulkEmail(true);
     try {
@@ -128,9 +272,9 @@ export function UsersTab() {
         htmlBody: bulkEmailBody,
         sendCopyToInfo,
         sendCopyToFacilitator,
-        recipients: bulkEmailRecipients.map((recipient) => ({
+        recipients: combinedRecipients.map((recipient) => ({
           email: recipient.email,
-          name: recipient.name,
+          name: recipient.name ?? null,
           userId: recipient.userId,
         })),
       });
@@ -151,7 +295,7 @@ export function UsersTab() {
     } finally {
       setSendingBulkEmail(false);
     }
-  }, [bulkEmailRecipients, bulkEmailSubject, bulkEmailBody, showToast, sendCopyToInfo, sendCopyToFacilitator]);
+  }, [bulkEmailRecipients, manualBulkEmailRecipients, bulkEmailSubject, bulkEmailBody, showToast, sendCopyToInfo, sendCopyToFacilitator, includeFilteredRecipients]);
 
   const handleRefreshBulkEmailRecipients = useCallback(async () => {
     try {
@@ -291,6 +435,10 @@ export function UsersTab() {
             onRefresh={loadUsers}
             onExportCSV={() => setShowExportModal(true)}
             onSendBulkEmail={handleOpenBulkEmailModal}
+            onAddFilteredToBulkQueue={handleAddFilteredUsersToManual}
+            onClearBulkEmailQueue={handleClearManualRecipients}
+            onViewBulkEmailQueue={() => setShowManualQueueModal(true)}
+            manualQueueCount={manualRecipientCount}
             activeFilterCount={[
               filters.administrator,
               filters.facilitator,
@@ -298,11 +446,11 @@ export function UsersTab() {
               filters.pendingUsers,
               filters.playersNotInLeague,
             ].filter(Boolean).length +
-            (filters.sportsInLeague?.length || 0) +
-            (filters.sportsWithSkill?.length || 0) +
-            (filters.leagueIds?.length || 0) +
-            (filters.teamIds?.length || 0) +
-            (filters.leagueTierFilters?.length || 0)}
+              (filters.sportsInLeague?.length || 0) +
+              (filters.sportsWithSkill?.length || 0) +
+              (filters.leagueIds?.length || 0) +
+              (filters.teamIds?.length || 0) +
+              (filters.leagueTierFilters?.length || 0)}
           />
 
           <ImprovedFilters
@@ -349,9 +497,12 @@ export function UsersTab() {
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
             loading={loading}
-            registrationCounts={regCounts}
-            registrationLoadingIds={registrationLoadingIds}
-          />
+          registrationCounts={regCounts}
+          registrationLoadingIds={registrationLoadingIds}
+          manualRecipientEmails={manualRecipientEmails}
+          onAddManualRecipient={handleAddManualRecipient}
+          onRemoveManualRecipient={handleRemoveManualRecipient}
+        />
         </div>
 
         <EditUserModal
@@ -381,7 +532,6 @@ export function UsersTab() {
         <BulkEmailModal
           isOpen={showBulkEmailModal}
           onClose={handleCloseBulkEmailModal}
-          recipients={bulkEmailRecipients}
           loadingRecipients={loadingBulkEmailRecipients}
           missingEmailCount={bulkEmailMissingEmails}
           onRefreshRecipients={handleRefreshBulkEmailRecipients}
@@ -395,7 +545,20 @@ export function UsersTab() {
           onToggleSendCopyToInfo={setSendCopyToInfo}
           sendCopyToFacilitator={sendCopyToFacilitator}
           onToggleSendCopyToFacilitator={setSendCopyToFacilitator}
+          filteredRecipientCount={bulkEmailRecipients.length}
+          manualRecipientCount={manualRecipientCount}
+          manualOverlapCount={manualOverlapCount}
+          includeFilteredRecipients={includeFilteredRecipients}
+          onToggleIncludeFilteredRecipients={setIncludeFilteredRecipients}
           resultSummary={bulkEmailResult}
+        />
+
+        <ManualQueueModal
+          isOpen={showManualQueueModal}
+          onClose={() => setShowManualQueueModal(false)}
+          recipients={manualBulkEmailRecipients}
+          onRemoveRecipient={handleRemoveManualRecipient}
+          onClearRecipients={handleClearManualRecipients}
         />
       </div>
     </div>

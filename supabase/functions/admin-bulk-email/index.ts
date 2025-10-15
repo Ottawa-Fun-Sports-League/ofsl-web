@@ -16,6 +16,8 @@ interface BulkEmailRecipient {
 interface BulkEmailRequest {
   subject: string;
   htmlBody: string;
+  sendCopyToInfo?: boolean;
+  sendCopyToFacilitator?: boolean;
   recipients: BulkEmailRecipient[];
 }
 
