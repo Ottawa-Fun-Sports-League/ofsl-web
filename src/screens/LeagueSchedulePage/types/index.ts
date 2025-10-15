@@ -31,6 +31,7 @@ export interface WeeklyScheduleTier {
   court: string;
   format: string;
   is_elite?: boolean;
+  movement_week?: boolean;
   team_a_name: string | null;
   team_a_ranking: number | null;
   team_b_name: string | null;
