@@ -144,7 +144,9 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   // Admin-specific state
   const [isEditScheduleMode, setIsEditScheduleMode] = useState(false);
   const [noGamesWeek, setNoGamesWeek] = useState(false);
+  const [movementWeek, setMovementWeek] = useState(false);
   const [savingNoGames, setSavingNoGames] = useState(false);
+  const [savingMovementWeek, setSavingMovementWeek] = useState(false);
   const [savingScheduleVisibility, setSavingScheduleVisibility] = useState(false);
   
   // Modal states
@@ -457,6 +459,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     // Proactively clear per-week state then load the selected week.
     setWeeklyTiers([]);
     setNoGamesWeek(false);
+    setMovementWeek(false);
     setSubmittedTierNumbers(new Set());
     setResultsByTeam(new Map());
     lastRequestedWeekRef.current = currentWeek;
@@ -620,6 +623,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       if (lastRequestedWeekRef.current !== weekNumber) return; // ignore stale
       setNoGamesWeek(allNoGames);
 
+      // Movement Week flag is true if ANY tier row has it (stored per row but intended week-level)
+      const anyMovement = tiers.length > 0 && tiers.some((tier) => Boolean((tier as any).movement_week));
+      if (lastRequestedWeekRef.current !== weekNumber) return; // ignore stale
+      setMovementWeek(anyMovement);
+
       // Load which tiers already have a submitted scorecard this week
       try {
         const { data: submitted } = await supabase
@@ -674,6 +682,27 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       setNoGamesWeek(false);
     } finally {
       setLoadingWeekData(false);
+    }
+  };
+
+  const handleMovementWeekChange = async (isMovement: boolean) => {
+    try {
+      // Allow toggling Movement Week regardless of completion/past status
+      setSavingMovementWeek(true);
+      const { error } = await supabase.rpc('set_week_movement_week', {
+        p_league_id: parseInt(leagueId),
+        p_week_number: currentWeek,
+        p_movement: isMovement,
+      });
+      if (error) {
+        console.error('Error setting movement_week flag:', error);
+        return;
+      }
+      setMovementWeek(isMovement);
+    } catch (error) {
+      console.error('Error setting movement_week flag:', error);
+    } finally {
+      setSavingMovementWeek(false);
     }
   };
 
@@ -946,35 +975,39 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       if (updAllErr) console.warn('Failed to update no_games across tiers for week', updAllErr);
 
         // Apply movement after flags are updated (RPC preferred, fallback to client)
+        // IMPORTANT: Do NOT bump when marking a future week as no-games; only handle current week.
         try {
           const leagueIdNum = parseInt(leagueId);
-          if (noGames) {
-            const { error: rpcErr } = await supabase.rpc('apply_week_bump_auto', {
-              p_league_id: leagueIdNum,
-              p_from_week: currentWeek,
-            });
-            if (rpcErr) {
-              const toWeek = await getNextPlayableWeek(leagueIdNum, currentWeek + 1);
-              await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek: currentWeek, toWeek });
-            }
-          } else {
-            const { error: rpcErr } = await supabase.rpc('apply_week_rewind_auto', {
-              p_league_id: leagueIdNum,
-              p_to_week: currentWeek,
-            });
-            if (rpcErr) {
-              let fromWeek = currentWeek + 1;
-              for (let i = 0; i < 52; i++) {
-                const candidate = currentWeek + 1 + i;
-                const { data } = await supabase
-                  .from('weekly_schedules')
-                  .select('id')
-                  .eq('league_id', leagueIdNum)
-                  .eq('week_number', candidate)
-                  .limit(1);
-                if (Array.isArray(data) && data.length > 0) { fromWeek = candidate; break; }
+          const isFutureWeek = todayWeekNumber !== null && currentWeek > todayWeekNumber;
+          if (!isFutureWeek) {
+            if (noGames) {
+              const { error: rpcErr } = await supabase.rpc('apply_week_bump_auto', {
+                p_league_id: leagueIdNum,
+                p_from_week: currentWeek,
+              });
+              if (rpcErr) {
+                const toWeek = await getNextPlayableWeek(leagueIdNum, currentWeek + 1);
+                await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek: currentWeek, toWeek });
               }
-              await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek, toWeek: currentWeek });
+            } else {
+              const { error: rpcErr } = await supabase.rpc('apply_week_rewind_auto', {
+                p_league_id: leagueIdNum,
+                p_to_week: currentWeek,
+              });
+              if (rpcErr) {
+                let fromWeek = currentWeek + 1;
+                for (let i = 0; i < 52; i++) {
+                  const candidate = currentWeek + 1 + i;
+                  const { data } = await supabase
+                    .from('weekly_schedules')
+                    .select('id')
+                    .eq('league_id', leagueIdNum)
+                    .eq('week_number', candidate)
+                    .limit(1);
+                  if (Array.isArray(data) && data.length > 0) { fromWeek = candidate; break; }
+                }
+                await moveWeekPlacements({ leagueId: leagueIdNum, fromWeek, toWeek: currentWeek });
+              }
             }
           }
         } catch (mvErr) {
@@ -1647,8 +1680,26 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
               >
                 No Games This Week
               </span>
-              {savingNoGames && <span className="text-xs text-gray-500">(Saving...)</span>}
-            </label>
+            {savingNoGames && <span className="text-xs text-gray-500">(Saving...)</span>}
+          </label>
+
+            {isEditScheduleMode && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={movementWeek}
+                  onChange={(e) => handleMovementWeekChange(e.target.checked)}
+                  disabled={savingMovementWeek}
+                  className="rounded"
+                />
+                <span
+                  className={`text-sm ${savingMovementWeek ? 'text-gray-400' : 'text-gray-700'}`}
+                >
+                  Movement Week
+                </span>
+                {savingMovementWeek && <span className="text-xs text-gray-500">(Saving...)</span>}
+              </label>
+            )}
 
           </div>
 
@@ -1718,6 +1769,11 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
                   {currentWeek <= 2 && !isPlayoffWeek(currentWeek) && (
                     <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
                       Seeding week
+                    </span>
+                  )}
+                  {movementWeek && (
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
+                      Movement Week
                     </span>
                   )}
                 </div>

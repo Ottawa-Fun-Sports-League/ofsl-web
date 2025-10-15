@@ -7,6 +7,7 @@ export type WeeklyScheduleRow = {
   week_number: number;
   tier_number: number;
   format?: string | null;
+  no_games?: boolean | null;
   team_a_name?: string | null;
   team_b_name?: string | null;
   team_c_name?: string | null;
@@ -81,9 +82,30 @@ export function computeEliteWeeklyRanks(
   const weeklyRanksByTeamId: Record<number, Record<number, number>> = {};
   const weeks = Array.from(new Set((weeklySchedules || []).map((r) => r.week_number))).sort((a, b) => a - b);
 
+  // Determine which weeks are full no-games (all rows marked no_games)
+  const noGameWeeks = new Set<number>();
+  {
+    const byWeek = new Map<number, { total: number; noGames: number }>();
+    (weeklySchedules || []).forEach((r) => {
+      const w = Number(r.week_number || 0);
+      if (!byWeek.has(w)) byWeek.set(w, { total: 0, noGames: 0 });
+      const agg = byWeek.get(w)!;
+      agg.total += 1;
+      if ((r as any).no_games) agg.noGames += 1;
+    });
+    byWeek.forEach((agg, w) => {
+      if (agg.total > 0 && agg.noGames === agg.total) noGameWeeks.add(w);
+    });
+  }
+
   for (const w of weeks) {
     if (w < 2) continue; // week 1 ranks come from seed (week 1 positions) and are filled after movement via week 2 placements
-    const prevWeek = w - 1;
+    // Find the last played week before w (skip full no-games weeks)
+    let prevWeek = w - 1;
+    while (prevWeek >= 1 && noGameWeeks.has(prevWeek)) {
+      prevWeek -= 1;
+    }
+    if (prevWeek < 1) continue;
     const rowsForNext = (weeklySchedules || []).filter((r) => r.week_number === w);
     if (rowsForNext.length === 0) continue;
     const idRanks = computePrevWeekRanks(rowsForNext as WeeklyScheduleRow[], teams);
