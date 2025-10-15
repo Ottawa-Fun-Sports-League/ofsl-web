@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import { LeaguePayment, Team, TeamMatchup } from './types';
 import { getPositionsForFormat, getTierDisplayLabel, buildWeekTierLabels } from '../../../LeagueSchedulePage/utils/formatUtils';
-import { calculateCurrentWeekToDisplay } from '../../../LeagueSchedulePage/utils/weekCalculation';
+import { calculateCurrentWeekToDisplay, getWeekStatus } from '../../../LeagueSchedulePage/utils/weekCalculation';
 import type { WeeklyScheduleTier } from '../../../LeagueSchedulePage/types';
 import { getTeamForPosition } from '../../../LeagueSchedulePage/utils/scheduleLogic';
 
@@ -69,6 +69,11 @@ export function useTeamsData(userId?: string) {
           sampleLeague?.end_date ?? null,
           sampleLeague?.day_of_week ?? null,
         );
+        const currentWeekStatus = getWeekStatus(
+          currentWeek,
+          sampleLeague?.start_date ?? null,
+          sampleLeague?.day_of_week ?? null,
+        );
 
         const teamIdByRanking = new Map<number, number>();
         try {
@@ -119,6 +124,10 @@ export function useTeamsData(userId?: string) {
 
           let tiers: WeeklyScheduleTier[] = data || [];
           let effectiveWeek = currentWeek;
+
+          if (tiers.length > 0 && currentWeekStatus === 'past') {
+            tiers = [];
+          }
 
           if (tiers.length === 0) {
             // No schedule for current week – look ahead to the next published week
