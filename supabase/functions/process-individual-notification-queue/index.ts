@@ -62,14 +62,31 @@ async function resolveLeagueSkillFallback(client: ReturnType<typeof createClient
   let skillName = await fetchIndividualSkillName(client, leagueRecord.skill_id);
 
   if (!skillName && Array.isArray(leagueRecord.skill_ids) && leagueRecord.skill_ids.length > 0) {
-    skillName = await fetchIndividualSkillName(client, leagueRecord.skill_ids[0]);
+    const uniqueIds = Array.from(new Set(leagueRecord.skill_ids.filter((id: number | null) => id !== null))) as number[];
+    if (uniqueIds.length > 0) {
+      const { data: skillRows, error: skillsError } = await client
+        .from("skills")
+        .select("name")
+        .in("id", uniqueIds);
+
+      if (skillsError) {
+        console.error("process-individual-notification-queue: failed to fetch multi skill names", skillsError);
+      } else if (skillRows && skillRows.length > 0) {
+        const names = skillRows
+          .map((row) => row.name)
+          .filter((name): name is string => !!name && name.trim().length > 0);
+        if (names.length > 0) {
+          skillName = names.join(", ");
+        }
+      }
+    }
   }
 
-  const fallback = leagueRecord.gender && leagueRecord.gender.trim().length > 0
-    ? leagueRecord.gender
-    : "Not specified";
+  if (!skillName && leagueRecord.gender && leagueRecord.gender.trim().length > 0) {
+    skillName = leagueRecord.gender;
+  }
 
-  const resolved = skillName ?? fallback;
+  const resolved = skillName ?? "Not specified";
   individualLeagueSkillCache.set(leagueId, resolved);
   return resolved;
 }

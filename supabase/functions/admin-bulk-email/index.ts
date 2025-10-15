@@ -137,6 +137,8 @@ serve(async (req: Request) => {
 
     const rateLimiter = createRateLimiter(RATE_LIMIT_DELAY_MS);
 
+    let bccCopySent = false;
+
     for (const recipient of recipients) {
       if (!recipient?.email || typeof recipient.email !== "string") {
         summary.invalid += 1;
@@ -155,8 +157,8 @@ serve(async (req: Request) => {
       const wrappedHtml = wrapWithTemplate(personalizedSubject, personalizedHtml);
 
       await waitForRateLimiter(rateLimiter);
-      const bccList =
-        trimmedEmail.toLowerCase() === INFO_COPY_EMAIL ? [] : [INFO_COPY_EMAIL];
+      const shouldBccInfo = !bccCopySent && trimmedEmail.toLowerCase() !== INFO_COPY_EMAIL;
+      const bccList = shouldBccInfo ? [INFO_COPY_EMAIL] : [];
 
       const sent = await sendEmail(
         resendApiKey,
@@ -167,6 +169,9 @@ serve(async (req: Request) => {
       );
       if (sent) {
         summary.sent += 1;
+        if (shouldBccInfo) {
+          bccCopySent = true;
+        }
       } else {
         summary.failed += 1;
       }

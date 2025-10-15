@@ -145,9 +145,11 @@ export function App() {
             <Route
               path="/gym-locations"
               element={
-                <ConditionalRoute>
-                  <GymLocationsPage />
-                </ConditionalRoute>
+                <ProtectedRoute>
+                  <ConditionalRoute>
+                    <GymLocationsPage />
+                  </ConditionalRoute>
+                </ProtectedRoute>
               }
             />
             <Route
