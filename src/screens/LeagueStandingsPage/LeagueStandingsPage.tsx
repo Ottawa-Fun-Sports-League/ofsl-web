@@ -86,6 +86,8 @@ export function LeagueStandingsPage() {
   const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
   const [standingsResetWeek, setStandingsResetWeek] = useState<number>(1);
+  const [noGameWeeks, setNoGameWeeks] = useState<Set<number>>(new Set());
+  const [movementWeeks, setMovementWeeks] = useState<Set<number>>(new Set());
 
   const isEliteFormat = (scheduleFormat ?? '').includes('elite');
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({});
@@ -179,6 +181,42 @@ export function LeagueStandingsPage() {
     };
     run();
   // Re-run when league or elite mode toggles; avoid weeklyRanks to prevent loops
+  }, [leagueId, elite.isElite]);
+
+  // Load weeks that are marked as no-games and movement-week (elite formats only) to style columns in standings
+  useEffect(() => {
+    const run = async () => {
+      if (!leagueId) return;
+      if (!elite.isElite) return;
+      const lid = parseInt(leagueId);
+      try {
+        const { data } = await supabase
+          .from('weekly_schedules')
+          .select('week_number, no_games, movement_week')
+          .eq('league_id', lid);
+        const weeks = new Map<number, { total: number; noGames: number; anyMovement: boolean }>();
+        (data || []).forEach((row: any) => {
+          const w = Number(row.week_number || 0);
+          if (!weeks.has(w)) weeks.set(w, { total: 0, noGames: 0, anyMovement: false });
+          const agg = weeks.get(w)!;
+          agg.total += 1;
+          if (row.no_games) agg.noGames += 1;
+          if (row.movement_week) agg.anyMovement = true;
+        });
+        const noSet = new Set<number>();
+        const mvSet = new Set<number>();
+        weeks.forEach((agg, w) => {
+          if (agg.total > 0 && agg.noGames === agg.total) noSet.add(w);
+          if (agg.anyMovement) mvSet.add(w);
+        });
+        setNoGameWeeks(noSet);
+        setMovementWeeks(mvSet);
+      } catch {
+        setNoGameWeeks(new Set());
+        setMovementWeeks(new Set());
+      }
+    };
+    run();
   }, [leagueId, elite.isElite]);
 
   // TEMP: visibility that the page mounted
@@ -535,7 +573,7 @@ export function LeagueStandingsPage() {
     try {
       const { data: weekRowsAll } = await supabase
         .from('weekly_schedules')
-        .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name,team_a_ranking,team_b_ranking,team_c_ranking,team_d_ranking,team_e_ranking,team_f_ranking')
+        .select('id,week_number,tier_number,format,no_games,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name,team_a_ranking,team_b_ranking,team_c_ranking,team_d_ranking,team_e_ranking,team_f_ranking')
         .eq('league_id', parseInt(leagueId!))
         .order('week_number', { ascending: true })
         .order('tier_number', { ascending: true });
@@ -1027,7 +1065,7 @@ export function LeagueStandingsPage() {
                         {weeklyColumns.map(week => (
                           <th
                             key={`week-${week}`}
-                            className={`px-2 py-2 text-center text-sm font-medium ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}
+                            className={`px-2 py-2 text-center text-sm font-medium ${week < standingsResetWeek || noGameWeeks.has(week) ? 'text-gray-300' : 'text-[#6F6F6F]'} ${movementWeeks.has(week) ? 'bg-yellow-50' : ''}`}
                           >
                             {week}
                           </th>
@@ -1062,7 +1100,7 @@ export function LeagueStandingsPage() {
                               {weeklyColumns.map(week => {
                                 const current = editedWeeklyRanks[standing.team_id]?.[week] ?? weeklyRanks[standing.team_id]?.[week];
                                 return (
-                                  <td key={`week-${standing.team_id}-${week}`} className={`px-2 py-2 text-center text-sm ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}>
+                                  <td key={`week-${standing.team_id}-${week}`} className={`px-2 py-2 text-center text-sm ${week < standingsResetWeek || noGameWeeks.has(week) ? 'text-gray-300' : 'text-[#6F6F6F]'} ${movementWeeks.has(week) ? 'bg-yellow-50' : ''}`}>
                                   {isEditMode ? (
                                       <Input
                                         type="number"

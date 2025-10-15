@@ -39,6 +39,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   const restrictToTwoWeeks = true;
   // Public schedule: do not show per-team W/L badges
   const weekNoGames = weeklyTiers.length > 0 && weeklyTiers.every((t) => !!t.no_games);
+  const movementWeek = weeklyTiers.length > 0 && weeklyTiers.some((t) => !!(t as any).movement_week);
   const labelMap = buildWeekTierLabels(weeklyTiers);
   const templateLabelMap = buildWeekTierLabels(week1TierStructure);
   
@@ -434,6 +435,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                 {currentWeek <= 2 && !isPlayoffWeek(currentWeek) && (
                   <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
                     Seeding week
+                  </span>
+                )}
+                {movementWeek && (
+                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
+                    Movement Week
                   </span>
                 )}
               </div>

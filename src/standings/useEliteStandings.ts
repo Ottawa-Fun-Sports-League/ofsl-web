@@ -19,7 +19,7 @@ export function useEliteStandings(leagueId?: number | string) {
         const lid = typeof leagueId === 'string' ? parseInt(leagueId) : leagueId;
         const { data: weekRows } = await supabase
           .from('weekly_schedules')
-          .select('id,week_number,tier_number,format,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name,team_a_ranking,team_b_ranking,team_c_ranking,team_d_ranking,team_e_ranking,team_f_ranking')
+          .select('id,week_number,tier_number,format,no_games,team_a_name,team_b_name,team_c_name,team_d_name,team_e_name,team_f_name,team_a_ranking,team_b_ranking,team_c_ranking,team_d_ranking,team_e_ranking,team_f_ranking')
           .eq('league_id', lid)
           .order('week_number', { ascending: true })
           .order('tier_number', { ascending: true });

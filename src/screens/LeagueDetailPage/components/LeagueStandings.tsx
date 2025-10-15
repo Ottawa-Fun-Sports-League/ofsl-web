@@ -17,6 +17,8 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const [seedRanks, setSeedRanks] = useState<Record<number, number>>({}); // teamId -> initial rank from Week 1 schedule
   const [eliteVariantFormat, setEliteVariantFormat] = useState<string | null>(null); // e.g., '2-teams-elite', '3-teams-elite-6-sets'
   const [standingsResetWeek, setStandingsResetWeek] = useState<number>(1);
+  const [noGameWeeks, setNoGameWeeks] = useState<Set<number>>(new Set());
+  const [movementWeeks, setMovementWeeks] = useState<Set<number>>(new Set());
 
   // Shared elite standings (single source of truth for elite formats)
   const elite = useEliteStandings(leagueId);
@@ -39,6 +41,42 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     if (!elite.isElite) return;
   }, [leagueId, elite.isElite]);
 
+  // Load weeks marked as no-games and movement-week for elite formats (to style columns)
+  useEffect(() => {
+    const run = async () => {
+      if (!leagueId) return;
+      if (!elite.isElite) return;
+      const lid = parseInt(leagueId);
+      try {
+        const { data } = await supabase
+          .from('weekly_schedules')
+          .select('week_number, no_games, movement_week')
+          .eq('league_id', lid);
+        const weeks = new Map<number, { total: number; noGames: number; anyMovement: boolean }>();
+        (data || []).forEach((row: any) => {
+          const w = Number(row.week_number || 0);
+          if (!weeks.has(w)) weeks.set(w, { total: 0, noGames: 0, anyMovement: false });
+          const agg = weeks.get(w)!;
+          agg.total += 1;
+          if (row.no_games) agg.noGames += 1;
+          if (row.movement_week) agg.anyMovement = true;
+        });
+        const noSet = new Set<number>();
+        const mvSet = new Set<number>();
+        weeks.forEach((agg, w) => {
+          if (agg.total > 0 && agg.noGames === agg.total) noSet.add(w);
+          if (agg.anyMovement) mvSet.add(w);
+        });
+        setNoGameWeeks(noSet);
+        setMovementWeeks(mvSet);
+      } catch {
+        setNoGameWeeks(new Set());
+        setMovementWeeks(new Set());
+      }
+    };
+    run();
+  }, [leagueId, elite.isElite]);
+
   // Rebuild from scratch (placements first, then results) to keep parity with Admin
   useEffect(() => {
     const rebuild = async () => {
@@ -48,7 +86,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       try {
         const [wq, rq, tq, lq] = await Promise.all([
           supabase.from('weekly_schedules')
-            .select('id, week_number, tier_number, format, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
+            .select('id, week_number, tier_number, format, no_games, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
             .eq('league_id', lid),
           supabase.from('game_results')
             .select('team_name, week_number, tier_number, tier_position')
@@ -87,8 +125,23 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
 
         const computed: Record<number, Record<number, number>> = {};
         const weeks = Array.from(new Set((weekRows || []).map((r: any) => r.week_number))).sort((a:number,b:number)=>a-b);
+        // Aggregate which weeks are full no-games
+        const noGameByWeek = new Map<number, { total: number; noGames: number }>();
+        (weekRows || []).forEach((r: any) => {
+          const w = Number(r.week_number || 0);
+          if (!noGameByWeek.has(w)) noGameByWeek.set(w, { total: 0, noGames: 0 });
+          const agg = noGameByWeek.get(w)!;
+          agg.total += 1;
+          if (r.no_games) agg.noGames += 1;
+        });
+        const isFullNoGames = (w: number) => {
+          const agg = noGameByWeek.get(w);
+          return !!(agg && agg.total > 0 && agg.noGames === agg.total);
+        };
         for (const w of weeks) {
-          const prevWeek = (w || 0) - 1; if (prevWeek < 1) continue;
+          let prevWeek = (w || 0) - 1;
+          while (prevWeek >= 1 && isFullNoGames(prevWeek)) prevWeek -= 1;
+          if (prevWeek < 1) continue;
           const rows = (weekRows || []).filter((r: any) => r.week_number === w);
           const map = computePrevWeekNameRanksFromNextWeekSchedule(rows as any);
           Object.entries(map).forEach(([nm, rk]) => {
@@ -395,7 +448,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   </tr>
                   <tr>
                     {weeklyColumns.map(week => (
-                      <th key={`week-${week}`} className={`px-2 py-2 text-center text-sm font-medium ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}>
+                      <th key={`week-${week}`} className={`px-2 py-2 text-center text-sm font-medium ${week < standingsResetWeek || noGameWeeks.has(week) ? 'text-gray-300' : 'text-[#6F6F6F]'} ${movementWeeks.has(week) ? 'bg-yellow-50' : ''}`}>
                         {week}
                       </th>
                     ))}
@@ -421,7 +474,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                           const val = weeklyRanks[team.id]?.[week];
                           const show = weeksWithData.has(week);
                           return (
-                            <td key={`week-${team.id}-${week}`} className={`px-4 py-3 text-center text-sm ${week < standingsResetWeek ? 'text-gray-300' : 'text-[#6F6F6F]'}`}>
+                            <td key={`week-${team.id}-${week}`} className={`px-4 py-3 text-center text-sm ${week < standingsResetWeek || noGameWeeks.has(week) ? 'text-gray-300' : 'text-[#6F6F6F]'} ${movementWeeks.has(week) ? 'bg-yellow-50' : ''}`}>
                               {show ? (typeof val === 'number' ? val : '-') : '-'}
                             </td>
                           );
