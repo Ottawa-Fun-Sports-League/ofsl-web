@@ -1,0 +1,88 @@
+          {activeTab === "men" && (
+            <div className="border border-gray-200 rounded-md p-6">
+              <div className="space-y-8">
+                <section>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Monday Men's Volleyball League</h3>
+                  <p className="text-lg text-[#6F6F6F]">
+                    The OFSL Monday Men's League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
+                  </p>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">League Information</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Format</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>The league uses a tiered format.</li>
+                    <li>All matches are played as best-of-five sets.</li>
+                  </ul>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mt-4 mb-2">Set scoring</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>All sets are played to 21 points (hard cap at 21).</li>
+                    <li>The 5th set is played to 15 points (hard cap).</li>
+                  </ul>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2 mt-4">
+                    <li>Match length: Each match is scheduled within its allotted timeslot. 90 minutes including warmup.</li>
+                    <li>Warm-up: Teams should warm up within their timeslot, using available court time efficiently. The official will whistle once the warm-up starts.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Court Set-Up &amp; Equipment</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Players are responsible for setting up and taking down nets for their assigned court.</li>
+                    <li>Officials are responsible for checking net height and equipment where applicable.</li>
+                    <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Teams are expected to provide balls.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Officials</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Matches are officiated in some tiers (tiers assigned by the league).</li>
+                    <li>Tiers without officials will require teams to self-officiate in good faith.</li>
+                    <li>Any disputes should be brought to the league facilitator and reported to <a href="mailto:info@ofsl.ca" className="text-[#B20000] hover:underline">info@ofsl.ca</a>.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Player Requirements</h4>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Libero-specific rules</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>If a libero is being used, the official must be advised before the match begins.</li>
+                    <li>A libero cannot be used if a ghost player is in play.</li>
+                    <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
+                    <li>If a set begins with 5 players, it must finish with those 5 players (except for injury replacements by the libero).</li>
+                  </ul>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2 mt-4">
+                    <li>Teams must start matches with a minimum of 5 players.</li>
+                    <li>If fewer than 4 players are available at start time, the team will lose a point a minute until a 4th player arrives.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Team Registration</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Teams must register a minimum of 6 players on their roster. Teams will not be placed on the schedule until this criteria is met.</li>
+                    <li>All players must be registered and have signed a waiver through the league website.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Jerseys &amp; Equipment</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Teams are encouraged to wear matching jerseys with numbers. Otherwise, not required.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Playoffs</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>Playoffs will be held at the end of the season.</li>
+                    <li>Seeding will be determined by overall standings within each tier.</li>
+                  </ul>
+                </section>
+              </div>
+            </div>
+          )}
+
+
