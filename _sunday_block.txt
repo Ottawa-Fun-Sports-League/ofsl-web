@@ -1,0 +1,98 @@
+          {activeTab === "sundayMixed" && (
+            <div className="border border-gray-200 rounded-md p-6">
+              <div className="space-y-8">
+                <section>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Sunday Evening Mixed 6x6 Game Format &amp; Rules</h3>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Timeslot: 2 hours</li>
+                    <li>Courts: 3 per timeslot</li>
+                    <li>Match Format: Head-to-head, best of 2 sets (to 25 points)</li>
+                    <li>There are 6 teams per tier/timeslot.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiers &amp; Times</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Tier 1: 8:00 &ndash; 10:00 PM</li>
+                    <li>Tier 2: 6:00 &ndash; 8:00 PM</li>
+                    <li>Tier 3: 4:00 &ndash; 6:00 PM</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Court Assignments</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Court 1 = Tier #A (highest court in tier)</li>
+                    <li>Court 2 = Tier #B (middle court in tier)</li>
+                    <li>Court 3 = Tier #C (lowest court in tier)</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Movement Rules</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <h5 className="text-lg font-medium text-[#6F6F6F]">Court 1 (Top Court):</h5>
+                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                        <li>The winning team stays on Court 1.</li>
+                        <li>They must win again to be promoted to the next tier.</li>
+                        <li>The losing team moves down to Court 2.</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="text-lg font-medium text-[#6F6F6F]">Court 2 (Middle Court):</h5>
+                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                        <li>The winning team moves up to Court 1.</li>
+                        <li>The losing team moves down to Court 3.</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="text-lg font-medium text-[#6F6F6F]">Court 3 (Bottom Court):</h5>
+                      <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                        <li>The winning team moves up to Court 2.</li>
+                        <li>The losing team remains on Court 3.</li>
+                        <li>A team that loses twice in the same night on Court 3 is relegated to a lower tier for the following week.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Next Week&apos;s Placement</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>A team starting on Court 3 that wins their matchup and then wins on Court 2 will start the following week on Court 1 of their tier.</li>
+                    <li>A team starting on Court 1 that loses their matchup and then loses on Court 2 will start the following week on Court 3 of their tier.</li>
+                    <li>A team starting on Court 1 or Court 2 that wins their last match on Court 1 will start the following week in a higher tier.</li>
+                    <li>A team starting on Court 2 or Court 3 that loses all their matches will start the following week in a lower tier.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiebreaker Rule</h4>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24&ndash;25 / 25&ndash;24), teams play one additional point to determine which team advances.</p>
+                </section>
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Point system</h4>
+                  <p className="text-lg text-[#6F6F6F] mb-2">Teams earn 1 point per win.</p>
+                  <p className="text-lg text-[#6F6F6F] mb-2">At the end of the evening, teams also receive bonus points based on the tier they finish in:</p>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Tier 1 = 3 points</li>
+                    <li>Tier 2 = 2 points</li>
+                    <li>Tier 3 = 1 point</li>
+                  </ul>
+                  <div className="mt-3">
+                    <h5 className="text-lg font-medium text-[#6F6F6F]">Example scoring:</h5>
+                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                      <li>Tier 1 (3 points) + 2 wins = 5 points total</li>
+                      <li>Tier 2 (2 points) + 1 win = 3 points total</li>
+                      <li>Tier 3 (1 point) + 2 wins = 3 points total</li>
+                    </ul>
+                  </div>
+                </section>
+              </div>
+            </div>
+          )}
+
+

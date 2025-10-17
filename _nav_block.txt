@@ -1,0 +1,13 @@
+            <div className="flex flex-grow">
+              <div
+                onClick={() => setActiveTab("coed")}
+                className={
+                  "px-6 py-3 text-center cursor-pointer relative transition-all " +
+                  (activeTab === "coed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]")
+                }
+              >
+                <span>Co-ed Volleyball</span>
+                {activeTab === "coed" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
