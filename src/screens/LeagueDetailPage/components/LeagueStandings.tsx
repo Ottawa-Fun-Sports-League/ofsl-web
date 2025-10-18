@@ -19,6 +19,9 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const [standingsResetWeek, setStandingsResetWeek] = useState<number>(1);
   const [noGameWeeks, setNoGameWeeks] = useState<Set<number>>(new Set());
   const [movementWeeks, setMovementWeeks] = useState<Set<number>>(new Set());
+  // Regular formats only: public divider controls
+  const [topTierLineEnabled, setTopTierLineEnabled] = useState(false);
+  const [topTierLineAfter, setTopTierLineAfter] = useState<number>(0);
 
   // Shared elite standings (single source of truth for elite formats)
   const elite = useEliteStandings(leagueId);
@@ -244,7 +247,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
         const lid = parseInt(leagueId);
         const { data: scheduleRecord, error: scheduleError } = await supabase
           .from('league_schedules')
-          .select('format')
+          .select('format, schedule_data')
           .eq('league_id', lid)
           .maybeSingle();
         if (!scheduleError) {
@@ -252,6 +255,11 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
           // If DB says elite, skip legacy public computation entirely
           const isEliteDb = String(scheduleRecord?.format || '').toLowerCase().includes('elite');
           if (isEliteDb) return;
+          // Load public divider settings for regular formats
+          const sd = (scheduleRecord as any)?.schedule_data || {};
+          setTopTierLineEnabled(Boolean(sd?.standings_top_tier_line_enabled));
+          const cutoff = Number(sd?.standings_top_tier_line_after ?? 0);
+          if (Number.isFinite(cutoff) && cutoff > 0) setTopTierLineAfter(cutoff);
         }
 
         const { data: weekRows, error: weeksErr } = await supabase
@@ -429,8 +437,8 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
 
       {/* Standings table */}
       <Card className="shadow-md overflow-hidden rounded-lg">
-        <CardContent className="p-0 overflow-hidden">
-          <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <CardContent className="p-0 overflow-visible">
+          <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch', overflowX: 'visible' }}>
             {isEliteFormat ? (
               <table className="w-full min-w-max table-auto">
                 <thead className="bg-gray-50 border-b">
@@ -466,8 +474,12 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   }).map((team, index) => {
                     const played = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[team.id]?.[week]).filter((v): v is number => typeof v === 'number');
                     const avg = played.length ? (played.reduce((a,b)=>a+b,0) / played.length) : null;
+                    const cols = 5 + (showDifferentialColumn ? 1 : 0);
                     return (
-                      <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
+                      <>
+                      <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""} ${
+                        topTierLineEnabled && index === Number(topTierLineAfter) ? 'border-t-2 border-[#B20000]' : ''
+                      }`}>
                         <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (standingsResetWeek <= 1 ? (seedRanks[team.id] ?? '-') : '-')}</td>
                         <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
                         {weeklyColumns.map(week => {
@@ -481,6 +493,22 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                         })}
                         
                       </tr>
+                      {topTierLineEnabled && (index + 1) === Number(topTierLineAfter) && (
+                        <tr key={`divider-${team.id}`}>
+                          <td colSpan={cols} className="p-0">
+                            <div className="relative py-2 overflow-visible z-20">
+                              <img
+                                src="/elite-badge.svg"
+                                alt="Top tier"
+                                className="absolute z-30 top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5 pointer-events-none"
+                                  style={{ left: 'calc(5% + 16px)' }}
+                              />
+                              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#B20000] z-10"></div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     );
                   })}
                 </tbody>
@@ -510,18 +538,38 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {teams.map((team, index) => (
-                    <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
-                      <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{index + 1}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
-                      <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.wins}</td>
-                      <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.losses}</td>
-                      <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50">{team.points}</td>
-                      {showDifferentialColumn && (
-                        <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.differential > 0 ? `+${team.differential}` : `${team.differential}`}</td>
-                      )}
-                    </tr>
-                  ))}
+                  {teams.map((team, index) => {
+                    const cols = 5 + (showDifferentialColumn ? 1 : 0);
+                    return (
+                      <>
+                        <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
+                          <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{index + 1}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
+                          <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.wins}</td>
+                          <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.losses}</td>
+                          <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center bg-red-50">{team.points}</td>
+                          {showDifferentialColumn && (
+                            <td className={`px-4 py-3 text-sm text-[#6F6F6F] text-center ${index === teams.length - 1 ? "rounded-br-lg" : ""}`}>{team.differential > 0 ? `+${team.differential}` : `${team.differential}`}</td>
+                          )}
+                        </tr>
+                        {topTierLineEnabled && (index + 1) === Number(topTierLineAfter) && (
+                          <tr key={`divider-${team.id}`}>
+                            <td colSpan={cols} className="p-0">
+                              <div className="relative py-2 overflow-visible z-20">
+                                <img
+                                  src="/elite-badge.svg"
+                                  alt="Top tier"
+                                  className="absolute z-30 top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5 pointer-events-none"
+                                  style={{ left: 'calc(5% + 16px)' }}
+                                />
+                                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#B20000] z-10"></div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

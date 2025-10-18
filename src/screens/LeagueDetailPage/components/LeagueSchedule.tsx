@@ -491,9 +491,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
                           Tier {templateLabelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                           {tier.is_elite && (
-                            <span className="ml-2 inline-flex items-center align-middle px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
-                              Elite
-                            </span>
+                            <img
+                              src="/elite-badge.svg"
+                              alt="Top tier"
+                              className="ml-2 inline-block align-middle h-5 w-5"
+                            />
                           )}
                         </h3>
                       </div>
@@ -556,9 +558,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                       <h3 className={`flex items-center font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
                         Tier {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                         {tier.is_elite && (
-                          <span className="ml-2 inline-flex items-center align-middle px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
-                            Elite
-                          </span>
+                          <img
+                            src="/elite-badge.svg"
+                            alt="Top tier"
+                            className="ml-2 inline-block align-middle h-5 w-5"
+                          />
                         )}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 inline-flex items-center align-middle px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
