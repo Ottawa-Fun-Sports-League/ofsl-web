@@ -3,18 +3,14 @@ import { Link } from "react-router-dom";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
-import { LoadingSpinner } from "../../components/ui/loading-spinner";
-import {
-  fetchLeagues,
-  LeagueWithTeamCount,
-  groupLeaguesByDay,
-  getOrderedDayNames,
-  GroupedLeagues,
-  formatLeagueDates,
-  getPrimaryLocation,
-} from "../../lib/leagues";
-import { Calendar, DollarSign, MapPin, Users } from "lucide-react";
+import { BookOpen, Star } from "lucide-react";
 import { fetchPageContent } from "../../lib/pageContent";
+
+interface SkillLevel {
+  title: string;
+  bullets: string[];
+  rating: number;
+}
 
 export interface PickleballPageContent {
   hero: {
@@ -34,6 +30,40 @@ export interface PickleballPageContent {
     title: string;
     description: string;
   };
+  leagueCards: Array<{
+    title: string;
+    image: string;
+    link: string;
+    imagePosition?: string; // CSS object-position value, e.g., 'bottom'
+  }>;
+  standardsCard: {
+    title: string;
+    buttonText: string;
+    buttonLink: string;
+  };
+  aboutSection: {
+    image: string;
+    imageAlt: string;
+    title: string;
+    bullets: string[];
+    buttonText: string;
+    buttonLink: string;
+  };
+  skillLevels: SkillLevel[];
+  partner: {
+    logo: string;
+    logoAlt: string;
+    text: string;
+    linkText: string;
+    linkUrl: string;
+  };
+  cta: {
+    title: string;
+    subtitle: string;
+    buttonText: string;
+    buttonLink: string;
+    background: string;
+  };
 }
 
 export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
@@ -41,9 +71,9 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
     image: "/pickleball-card.jpg",
     imageAlt: "Pickleball players",
     containerClassName: "h-[500px]",
-    title: "Pickleball Leagues",
+    title: "Pickleball Programs",
     subtitle:
-      "Serve, rally, and score with OFSL pickleball. Join competitive and social doubles play across Ottawa's top facilities.",
+      "OFSL's pickleball programs are organized to provide participants with a social and organized environment with players of a similar skill level that encourages sportsmanship, exercise, and improving your pickleball game in a supportive community.",
     buttons: [
       {
         text: "View Pickleball Leagues",
@@ -52,42 +82,128 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
     ],
   },
   intro: {
-    heading: "Find a pickleball league",
+    heading: "Find a Pickleball Program For You",
     description:
-      "OFSL pickleball leagues feature doubles play with an emphasis on fun, fair matchups, and community. Whether you're building up your dink game or chasing tournament-level rallies, our leagues deliver great competition in a welcoming environment.",
+      "OFSL's fall pickleball programs will use different formats for organizing matchups to keep things interesting each week, which will be the case for each fall program. OFSL asks you review the skill definitions carefully to ensure you register for the appropriate program.",
   },
   leagueCardImage: "/pickleball-card.jpg",
   emptyState: {
     title: "No pickleball leagues available at this time.",
     description: "Check back soon or join our newsletter for updates.",
   },
+  leagueCards: [
+    {
+      title: "Novice",
+      image: "/pickleball-novice.jpg",
+      link: "/leagues?sport=Pickleball",
+      imagePosition: "bottom",
+    },
+    {
+      title: "Strong Beginner",
+      image: "/pickleball 02.webp",
+      link: "/leagues?sport=Pickleball",
+      imagePosition: "top right",
+    },
+    {
+      title: "Intermediate (low and high)",
+      image: "/pickleball 03.jpg",
+      link: "/leagues?sport=Pickleball",
+    },
+  ],
+  standardsCard: {
+    title: "Standards of Play",
+    buttonText: "View Rules",
+    buttonLink: "/standards-of-play",
+  },
+  aboutSection: {
+    image: "/Pickleball 04.jpg",
+    imageAlt: "Pickleball community",
+    title: "About our pickleball programs",
+    bullets: [
+      "Capacity: 4 courts with 16 players playing simultaneously.",
+      "Quality venue: hardwood floors, bright lighting, high ceilings.",
+      "Rotating formats: random partners/opponents, ladder play, fixed-partner and same-gender days.",
+    ],
+    buttonText: "Register now",
+    buttonLink: "/leagues?sport=Pickleball",
+  },
+  skillLevels: [
+    {
+      title: "Novice",
+      bullets: [
+        "Understands all/some of the basic rules of pickleball but sometimes forgets them",
+        "Can serve and return the ball with some success",
+        "Can sustain a short rally",
+        "Can usually hit ‘easy’ (high, slow) ball into opponents’ court",
+        "Sometimes hesitates to move forward to the non-volley zone line (comfortable staying closer to the baseline)",
+        "Often makes a mistake early in the rally",
+        "Some difficulty hitting backhands",
+      ],
+      rating: 1,
+    },
+    {
+      title: "Strong Beginner",
+      bullets: [
+        "Understands all of the basic rules of pickleball",
+        "Can consistently serve and return the ball",
+        "Can sustain longer rallies with ‘easy balls’ but has difficulty sustaining rally with lower, harder balls",
+        "Comfortable moving forward to non-volley zone line and reaches that position in most rallies",
+        "Sometimes makes a mistake early in the rally",
+        "Can hit backhands with some control and power",
+        "Can dink easy (slow) balls back and forth a few times",
+        "Comfortable attempting the 3rd shot drop",
+        "Can volley medium/high balls with some success",
+        "Tries to keep balls low",
+      ],
+      rating: 2,
+    },
+    {
+      title: "Low Intermediate",
+      bullets: [
+        "Can consistently serve and return the ball with some precision",
+        "Can sustain longer rallies with some fast and low balls",
+        "Moves forward to the non-volley zone as soon as possible",
+        "Uses backhand as confidently and as often as a forehand",
+        "Can sustain a longer dink rally including some fast and low dinks",
+        "Attempts the 3rd shot drop and has some success in landing ball in non-volley zone",
+        "Can consistently volley medium/high balls to take control of a rally",
+        "Keeps most balls low (rarely pops a ball up high)",
+      ],
+      rating: 3,
+    },
+    {
+      title: "High Intermediate",
+      bullets: [
+        "Can consistently serve and return with power, depth, and precision",
+        "Can sustain rallies with several low and fast balls",
+        "Rarely makes a mistake early in the rally",
+        "Strong groundstrokes on forehand and backhand side",
+        "Can sustain a dink rally with fast and low balls with spin (slice, topspin)",
+        "Consistently lands the 3rd shot drop into the opponents’ non-volley zone with it bouncing low to ground",
+        "Can volley ‘low’ balls into the opponents’ non-volley zone",
+        "Can sustain a medium-fast volley exchange back and forth with an opponent",
+      ],
+      rating: 4,
+    },
+  ],
+  partner: {
+    logo: "/diabetes-canada-logo-svg-1.png",
+    logoAlt: "Diabetes Canada logo",
+    text: "Proudly partnering with Diabetes Canada to promote healthier lifestyles through sport and community wellness.",
+    linkText: "Learn more",
+    linkUrl: "/about-us#diabetes-canada-section",
+  },
+  cta: {
+    title: "Ready to play?",
+    subtitle: "Join thousands of athletes in our community.",
+    buttonText: "Register now",
+    buttonLink: "/leagues?sport=Pickleball",
+    background: "linear-gradient(90deg, rgba(178,0,0,1) 0%, rgba(120,18,18,1) 100%)",
+  },
 };
 
 export const PickleballPage = (): React.ReactElement => {
-  const [leagues, setLeagues] = useState<LeagueWithTeamCount[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [content, setContent] = useState<PickleballPageContent>(DEFAULT_PICKLEBALL_CONTENT);
-
-  useEffect(() => {
-    const loadLeagues = async () => {
-      try {
-        setLoading(true);
-        const allLeagues = await fetchLeagues();
-        const pickleballLeagues = allLeagues.filter((league) =>
-          league.sport_name?.toLowerCase().includes("pickleball"),
-        );
-        setLeagues(pickleballLeagues);
-      } catch (err) {
-        console.error("Error loading pickleball leagues:", err);
-        setError("Failed to load pickleball leagues");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadLeagues();
-  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -101,17 +217,24 @@ export const PickleballPage = (): React.ReactElement => {
     return () => controller.abort();
   }, []);
 
-  const groupedLeagues: GroupedLeagues = groupLeaguesByDay(leagues);
-  const orderedDayNames = getOrderedDayNames();
-  const activeDays = orderedDayNames.filter(
-    (dayName) => groupedLeagues[dayName] && groupedLeagues[dayName].length > 0,
-  );
-
-  const getSpotsText = (spots: number) => {
-    if (spots === 0) return "Full";
-    if (spots === 1) return "1 spot left";
-    return `${spots} spots left`;
-  };
+  const renderRatingStars = (rating: number) =>
+    Array.from({ length: 4 }, (_, index) => {
+      const starIndex = index + 1;
+      if (rating >= starIndex) {
+        return <Star key={starIndex} className="text-[#b20000] fill-[#b20000]" />;
+      }
+      if (rating > starIndex - 1 && rating < starIndex) {
+        return (
+          <div key={starIndex} className="relative">
+            <Star className="text-[#b20000]" />
+            <div className="absolute top-0 left-0 w-1/2 h-full overflow-hidden">
+              <Star className="text-[#b20000] fill-[#b20000]" />
+            </div>
+          </div>
+        );
+      }
+      return <Star key={starIndex} className="text-[#b20000]" />;
+    });
 
   return (
     <div className="bg-white flex flex-row justify-center w-full">
@@ -148,118 +271,146 @@ export const PickleballPage = (): React.ReactElement => {
             </p>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <LoadingSpinner size="lg" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-12">
-              <p className="text-red-600 text-lg mb-4">{error}</p>
-              <Button
-                onClick={() => window.location.reload()}
-                className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-3"
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {content.leagueCards.map((card) => (
+              <Link
+                to={card.link}
+                key={card.title}
+                className="block transition-transform duration-300 hover:scale-105 hover:shadow-lg rounded-lg"
               >
-                Try Again
-              </Button>
+                <Card className="border-none overflow-hidden h-full rounded-lg">
+                  <CardContent className="p-0">
+                    <div className="relative">
+                      <img
+                        className="w-full h-[300px] object-cover rounded-t-lg"
+                        alt={card.title}
+                        src={card.image}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 h-[90px] flex items-center justify-center px-4">
+                        <h3 className="text-white font-bold text-lg text-center">{card.title}</h3>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="max-w-[1280px] mx-auto px-4 mb-16 md:mb-24">
+          <Card className="bg-[#b20000] rounded-lg">
+            <CardContent className="flex flex-col md:flex-row items-center p-2 md:p-3 gap-3">
+              <div className="px-4 py-2">
+                <BookOpen className="w-[40px] h-[40px] md:w-[50px] md:h-[60px] text-white" />
+              </div>
+              <div className="md:ml-3 flex-1 text-center md:text-left">
+                <h2 className="text-lg md:text-xl font-bold text-white">{content.standardsCard.title}</h2>
+              </div>
+              <div className="px-2 md:px-3">
+                <Link to={content.standardsCard.buttonLink}>
+                  <Button className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[12px] md:px-[20px] py-1.5 md:py-2 w-full md:w-auto">
+                    <span className="text-sm md:text-base text-[#b20000] hover:text-white">
+                      {content.standardsCard.buttonText}
+                    </span>
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="mt-[91px] grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28">
+            <div className="flex items-center justify-center">
+              <img
+                src={content.aboutSection.image}
+                alt={content.aboutSection.imageAlt}
+                className="rounded-lg w-[400px] h-[400px] object-cover object-center shadow-lg"
+              />
             </div>
-          ) : activeDays.length > 0 ? (
-            <div className="space-y-12">
-              {activeDays.map((dayName) => (
-                <div key={dayName}>
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">{dayName}</h3>
-                    <div className="w-16 h-1 bg-[#B20000] rounded" />
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {groupedLeagues[dayName]?.map((league) => (
-                      <Link
-                        key={league.id}
-                        to={`/leagues/${league.id}`}
-                        className="block transition-transform duration-300 hover:scale-105 hover:shadow-lg rounded-lg"
-                      >
-                        <Card className="border-none overflow-hidden h-full rounded-lg">
-                          <CardContent className="p-0">
-                            <div className="relative">
-                              <img
-                                className="w-full h-[300px] object-cover rounded-t-lg"
-                                alt={league.name}
-                                src={content.leagueCardImage}
-                              />
-                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-4">
-                                <h3 className="text-white font-bold text-lg text-center mb-2">
-                                  {league.name}
-                                </h3>
+            <div className="flex flex-col justify-center">
+              <h3 className="text-2xl md:text-3xl font-bold text-[#6F6F6F] mb-6">
+                {content.aboutSection.title}
+              </h3>
+              <ul className="space-y-3 text-[#6F6F6F] text-base md:text-lg mb-8">
+                {content.aboutSection.bullets.map((bullet, index) => (
+                  <li key={`${bullet}-${index}`} className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to={content.aboutSection.buttonLink} className="self-start">
+                <Button
+                  variant="outline"
+                  className="border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white rounded-[10px] px-6 py-3"
+                >
+                  {content.aboutSection.buttonText}
+                </Button>
+              </Link>
+            </div>
+          </div>
 
-                                <div className="space-y-1 text-sm text-white/90">
-                                  <div className="flex items-center justify-center">
-                                    <Calendar className="h-3 w-3 mr-1" />
-                                    <span>
-                                      {formatLeagueDates(
-                                        league.start_date,
-                                        league.end_date,
-                                        league.hide_day || false,
-                                      )}
-                                    </span>
-                                  </div>
+          <div className="mt-[95px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {content.skillLevels.map((level) => (
+              <div key={level.title} className="bg-gray-50 p-8 rounded-lg">
+                <div className="flex mb-4">{renderRatingStars(level.rating)}</div>
+                <h2 className="text-xl font-bold text-[#6F6F6F] mb-4">{level.title}</h2>
+                <ul className="space-y-3 text-[#6F6F6F]">
+                  {level.bullets.map((bullet, index) => (
+                    <li key={`${level.title}-${index}`} className="flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                                  <div className="flex items-center justify-center">
-                                    <MapPin className="h-3 w-3 mr-1" />
-                                    <div className="flex flex-wrap gap-1">
-                                      {(() => {
-                                        const gymLocations = getPrimaryLocation(league.gyms || []);
-                                        if (gymLocations.length === 0) {
-                                          return <span>TBD</span>;
-                                        }
-                                        return gymLocations.join(", ");
-                                      })()}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center justify-between mt-2">
-                                    <div className="flex flex-col items-start text-xs">
-                                      <div className="flex items-center">
-                                        <DollarSign className="h-3 w-3 mr-1" />
-                                        <span>
-                                          {league.cost !== null ? `$${league.cost}` : "Cost TBD"}
-                                        </span>
-                                      </div>
-                                      <span className="ml-4 text-[10px] uppercase text-white/70">
-                                        {league.team_registration === false ? "per player" : "per team"}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center">
-                                      <Users className="h-3 w-3 mr-1" />
-                                      <span
-                                        className={`text-xs py-0.5 px-1 rounded ${
-                                          league.spots_remaining === 0
-                                            ? "bg-red-600"
-                                            : league.spots_remaining <= 3
-                                            ? "bg-orange-600"
-                                            : "bg-green-600"
-                                        }`}
-                                      >
-                                        {getSpotsText(league.spots_remaining)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
+        <div className="bg-white pt-8 pb-24">
+          <div className="max-w-[1280px] mx-auto px-4">
+            <div className="flex justify-center">
+              <div className="flex flex-col md:flex-row items-center max-w-[800px] gap-6">
+                <img
+                  className="w-[120px] md:w-[153px] h-auto md:h-[53px] object-contain"
+                  alt={content.partner.logoAlt}
+                  src={content.partner.logo}
+                />
+                <div className="text-base md:text-lg text-center md:text-left">
+                  <span className="text-[#6f6f6f] leading-6 md:leading-7">{content.partner.text}</span>
+                  <Link
+                    to={content.partner.linkUrl}
+                    className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold"
+                  >
+                    {content.partner.linkText}
+                  </Link>
                 </div>
-              ))}
+              </div>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-[#6F6F6F] text-lg">{content.emptyState.title}</p>
-              <p className="text-[#6F6F6F]">{content.emptyState.description}</p>
-            </div>
-          )}
+          </div>
+        </div>
+
+        <div
+          className="w-full py-12 md:py-16"
+          style={{
+            background: content.cta.background,
+          }}
+        >
+          <div className="max-w-[1280px] mx-auto px-4 text-center text-white">
+            <h2 className="text-3xl font-bold mb-4">{content.cta.title}</h2>
+            <p className="text-xl mb-8 max-w-2xl mx-auto">{content.cta.subtitle}</p>
+            <Link to={content.cta.buttonLink}>
+              <Button
+                variant="outline"
+                className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5"
+              >
+                <span className="text-base md:text-lg text-[#b20000] hover:text-white">
+                  {content.cta.buttonText}
+                </span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
