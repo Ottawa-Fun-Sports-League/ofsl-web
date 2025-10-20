@@ -161,6 +161,7 @@ export function TeamsSection({
               (teamPaymentsByTeamId && (teamPaymentsByTeamId as any)[team.id]) ||
               leaguePayments.find((payment) => payment.team_id === team.id);
             const isCaptain = team.captain_id === currentUserId;
+            const isScheduleVisible = team.league?.schedule_visible !== false;
 
             // Get the league fee - prioritize team.league.cost, then fall back to teamPayment data
             const leagueFee =
@@ -223,11 +224,11 @@ export function TeamsSection({
             return (
               <div
                 key={team.id}
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-200"
+                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-200 relative"
               >
                 <div className="mb-4">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4">
-                    <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:gap-4 mb-4">
+                    <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-lg text-[#6F6F6F] mb-2">
                         {team.name}
                       </h4>
@@ -241,14 +242,18 @@ export function TeamsSection({
                               {team.league.name}
                             </Link>
                             <div className="flex flex-wrap items-center gap-2">
-                              <Link
-                                to={`/leagues/${team.league.id}?tab=schedule`}
-                                className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors font-medium"
-                              >
-                                View full schedule
-                                <ArrowUpRight className="h-3 w-3" />
-                              </Link>
-                              <span className="text-gray-300">•</span>
+                              {isScheduleVisible && (
+                                <>
+                                  <Link
+                                    to={`/leagues/${team.league.id}?tab=schedule`}
+                                    className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors font-medium"
+                                  >
+                                    View full schedule
+                                    <ArrowUpRight className="h-3 w-3" />
+                                  </Link>
+                                  <span className="text-gray-300">•</span>
+                                </>
+                              )}
                               <Link
                                 to={`/leagues/${team.league.id}?tab=standings`}
                                 className="text-xs text-gray-600 hover:text-gray-800 hover:underline transition-colors font-medium"
@@ -263,7 +268,7 @@ export function TeamsSection({
                           </p>
                         )}
                       </div>
-                      {team.league?.id && (
+                      {team.league?.id && isScheduleVisible && (
                         <div className="bg-gray-50 border border-gray-100 rounded-md p-4">
                           <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#6F6F6F]">
                             <div className="flex items-center gap-2">
@@ -317,11 +322,18 @@ export function TeamsSection({
                           </div>
                         </div>
                       )}
+                      {team.league?.id && !isScheduleVisible && (
+                        <div className="bg-gray-50 border border-gray-100 rounded-md p-4">
+                          <span className="text-sm text-gray-500 italic">
+                            Schedule is currently hidden by league administrators.
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-2 mt-3 sm:mt-0 sm:ml-4">
+                    <div className="mt-3 sm:mt-0 sm:absolute sm:top-6 sm:right-6 sm:flex sm:items-center sm:gap-2 sm:flex-wrap sm:justify-end text-left sm:text-right">
                       <span
-                        className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium ${
+                        className={`inline-flex items-center justify-center px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium ${
                           team.active
                             ? "bg-green-100 text-green-800"
                             : "bg-gray-100 text-gray-800"
@@ -329,9 +341,8 @@ export function TeamsSection({
                       >
                         {team.active ? "Active" : "Inactive"}
                       </span>
-
                       <span
-                        className={`flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium ${
+                        className={`inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium ${
                           isCaptain
                             ? "bg-blue-100 text-blue-800"
                             : "bg-purple-100 text-purple-800"
@@ -340,10 +351,9 @@ export function TeamsSection({
                         {isCaptain && <Crown className="h-3 w-3" />}
                         {isCaptain ? "Captain" : "Player"}
                       </span>
-
                       {team.skill?.name ? (
                         <button
-                          className="flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+                          className="inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
                           onClick={() => {
                             setEditSkillModal({
                               isOpen: true,
@@ -359,7 +369,7 @@ export function TeamsSection({
                         </button>
                       ) : (
                         <button
-                          className="flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors animate-pulse"
+                          className="inline-flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors animate-pulse"
                           onClick={() => {
                             setEditSkillModal({
                               isOpen: true,
@@ -374,12 +384,13 @@ export function TeamsSection({
                           <Edit2 className="h-3 w-3" />
                         </button>
                       )}
-
                       {teamPayment && isCaptain && (
-                        <PaymentStatusBadge
-                          status={teamPayment.status}
-                          size="sm"
-                        />
+                        <span className="inline-flex mt-2 sm:mt-0">
+                          <PaymentStatusBadge
+                            status={teamPayment.status}
+                            size="sm"
+                          />
+                        </span>
                       )}
                     </div>
                   </div>

@@ -53,6 +53,10 @@ export function useTeamsData(userId?: string) {
     teamsList.forEach((team) => {
       const leagueId = team.league?.id;
       if (!leagueId) return;
+      if (team.league?.schedule_visible === false) {
+        // Skip matchup fetches when the league has hidden its schedule
+        return;
+      }
       if (!leagueGroups.has(leagueId)) {
         leagueGroups.set(leagueId, []);
       }
