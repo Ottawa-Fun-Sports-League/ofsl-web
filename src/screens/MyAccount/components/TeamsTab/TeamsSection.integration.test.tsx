@@ -201,4 +201,44 @@ describe('TeamsSection - Payment Status Display', () => {
     expect(screen.getByText(/balance/i)).toBeInTheDocument();
     expect(screen.getByText(/226\.00/)).toBeInTheDocument(); // 200 * 1.13
   });
+
+  it('hides schedule details when league schedule visibility is false', () => {
+    const hiddenScheduleTeam: Team = {
+      ...baseTeam,
+      league: {
+        ...baseTeam.league!,
+        schedule_visible: false
+      },
+      currentMatchup: {
+        status: 'scheduled',
+        weekNumber: 3,
+        opponents: ['Rival Team'],
+        location: 'Main Gym',
+        timeSlot: '7:00 PM',
+        court: 'Court 1'
+      }
+    };
+
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <TeamsSection
+            teams={[hiddenScheduleTeam]}
+            currentUserId="user123"
+            leaguePayments={[basePayment]}
+            unregisteringPayment={null}
+            leavingTeam={null}
+            onUnregister={mockOnUnregister}
+            onLeaveTeam={mockOnLeaveTeam}
+            onManageTeammates={mockOnManageTeammates}
+          />
+        </ToastProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText(/View full schedule/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Location:/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Schedule is currently hidden by league administrators/i)).toBeInTheDocument();
+    expect(screen.getByText('Standings')).toBeInTheDocument();
+  });
 });
