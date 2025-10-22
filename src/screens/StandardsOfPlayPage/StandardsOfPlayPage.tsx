@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { HeroBanner } from "../../components/HeroBanner";
 
 export const StandardsOfPlayPage = (): React.ReactElement => {
   const [activeTab, setActiveTab] = useState<
+    | "womensElite"
+    | "men"
     | "coed"
     | "womenElite"
-    | "men"
     | "pickleball"
   >("coed");
   const scrollToId = (id: string): void => {
@@ -73,6 +74,28 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
           <div className="flex flex-nowrap overflow-x-auto scrollbar-thin border-b border-gray-200 mb-8">
             <div className="flex flex-grow">
               <div
+                onClick={() => setActiveTab("womensElite")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "womensElite" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Women&apos;s Elite</span>
+                {activeTab === "womensElite" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("men")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Men&apos;s Volleyball</span>
+                {activeTab === "men" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
                 onClick={() => setActiveTab("coed")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "coed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
@@ -91,17 +114,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               >
                 <span>Women&apos;s Volleyball</span>
                 {activeTab === "womenElite" && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-                )}
-              </div>
-              <div
-                onClick={() => setActiveTab("men")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
-              >
-                <span>Men's Volleyball</span>
-                {activeTab === "men" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
               </div>
@@ -212,45 +224,13 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             </div>
           */}
 
-          {activeTab === "womenElite" && (
+          {activeTab === "womensElite" && (
             <div className="border border-gray-200 rounded-md p-6">
-              {/* In-page navigation buttons */}
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => scrollToId("womens-elite")}
-                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
-                  >
-                    Women’s Elite
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollToId("womens-premier")}
-                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
-                  >
-                    Women’s Premier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollToId("womens-6x6")}
-                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
-                  >
-                    Women’s 6x6
-                  </button>
-                </div>
-              </div>
-
               <div className="space-y-8">
-                {/* Women’s Elite */}
-                <div id="womens-elite" className="scroll-mt-24 space-y-8">
                 <section>
                   <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women’s Elite Volleyball League</h3>
-                  <p className="text-lg text-[#6F6F6F]">
-                    The OFSL Women’s Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
-                  </p>
+                  <p className="text-lg text-[#6F6F6F]">The OFSL Women’s Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.</p>
                 </section>
-
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">League Information</h4>
                   <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Format</h5>
@@ -269,32 +249,22 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Balls provided by teams.</li>
                   </ul>
                 </section>
-
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Minimum Player Requirement</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>Teams must have at least 5 players to begin a match.</li>
-                    <li>
-                      If a team cannot field 5 players at the scheduled start time:
-                      <ul className="list-disc pl-6 space-y-1">
-                        <li>The first set is defaulted.</li>
-                        <li>Each additional set is defaulted every 10 minutes until 5 players are present.</li>
-                      </ul>
-                    </li>
-                    <li>
-                      When playing with 5 players:
-                      <ul className="list-disc pl-6 space-y-1">
-                        <li>Must always have 3 players in the front row.</li>
-                        <li>Must identify starting positions, including a ghost player position.</li>
-                        <li>When the ghost player’s rotation reaches service, the team loses that point.</li>
-                        <li>A libero cannot be used if a ghost player is in play.</li>
-                      </ul>
-                    </li>
+                    <li>If a team cannot field 5 players at the scheduled start time:</li>
+                    <li>The first set is defaulted.</li>
+                    <li>Each additional set is defaulted every 10 minutes until 5 players are present.</li>
+                    <li>When playing with 5 players:</li>
+                    <li>Must always have 3 players in the front row.</li>
+                    <li>Must identify starting positions, including a ghost player position.</li>
+                    <li>When the ghost player’s rotation reaches service, the team loses that point.</li>
+                    <li>A libero cannot be used if a ghost player is in play.</li>
                     <li>If a set begins with 5 players, it must finish with those 5 (except injury replacement by libero).</li>
                     <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
                   </ul>
                 </section>
-
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Team Registration</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
@@ -304,7 +274,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Captains must register subs on the website after each match (same evening).</li>
                   </ul>
                 </section>
-
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes &amp; Playoffs Eligibility</h4>
                   <p className="text-lg text-[#6F6F6F] font-medium">Regular season:</p>
@@ -322,7 +291,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   </ul>
                   <p className="text-lg text-[#6F6F6F]">Injury exception: If no bench subs are available, the libero may replace an injured player for the remainder of the set, but must take their position.</p>
                 </section>
-
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Jerseys &amp; Equipment</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
@@ -332,7 +300,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>OFSL will provide jerseys for the inaugural season. (Future seasons are not guaranteed.)</li>
                   </ul>
                 </section>
-
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Officials &amp; Set-Up</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
@@ -341,7 +308,6 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Referees are responsible for net height and proper set-up.</li>
                   </ul>
                 </section>
-
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Playoffs</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
@@ -349,15 +315,39 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Seeding is determined by overall standings, using the average of the last 18 weeks of regular-season play.</li>
                   </ul>
                 </section>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "womenElite" && (
+            <div className="border border-gray-200 rounded-md p-6">
+              {/* In-page navigation buttons */}
+              <div className="mb-6">
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => scrollToId("womens-premier")}
+                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
+                  >
+                    Women's Premier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToId("womens-6x6")}
+                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
+                  >
+                    Women's 6x6
+                  </button>
                 </div>
+              </div>
 
-                {/* Section break */}
-                <div className="h-px bg-gray-200 my-8" />
+              <div className="space-y-8">
+                {/* Womenâ€™s Elite */}
 
-                {/* Women’s Premier */}
+                {/* Womenâ€™s Premier */}
                 <div id="womens-premier" className="scroll-mt-24 space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women’s Premier Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women's Premier Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">
                     The OFSL Women's Premier League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
                   </p>
@@ -440,10 +430,10 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 {/* Section break */}
                 <div className="h-px bg-gray-200 my-8" />
 
-                {/* Women’s 6x6 */}
+                {/* Womenâ€™s 6x6 */}
                 <div id="womens-6x6" className="scroll-mt-24 space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women’s 6x6 Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women's 6x6 Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">The OFSL Women's 6x6  League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.</p>
                 </section>
 
@@ -649,7 +639,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                       <li>Men must jump before the 3m line to perform an attack</li>
                       <li>Males may not block females.</li>
                       <li>The net is of mixed height.</li>
-                      <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the “guy rules/position” guideline.</li>
+                      <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the â€œguy rules/positionâ€ guideline.</li>
                     </ul>
                   </section>
 
@@ -666,7 +656,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                     <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                       <li>Teams may play with 3 players if no substitute is available.</li>
-                      <li>Extra female players on the court must still follow the “guy rules/position” guideline.</li>
+                      <li>Extra female players on the court must still follow the â€œguy rules/positionâ€ guideline.</li>
                     </ul>
                   </section>
 
@@ -726,8 +716,8 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mt-2">
                     <li>Randomly assigned partners and opponents for each game</li>
                     <li>Ladder format</li>
-                    <li>“Fixed partner” days</li>
-                    <li>“Same gender” days</li>
+                    <li>â€œFixed partnerâ€ days</li>
+                    <li>â€œSame genderâ€ days</li>
                   </ul>
                   <p className="text-lg text-[#6F6F6F] mt-3">Note: OFSL will be using the existing badminton court lines, so the non-volley zone line will be a bit closer to the pickleball net than a standard pickleball court.</p>
                 </section>
@@ -771,9 +761,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiers &amp; Times</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 – 10:00 PM</li>
-                    <li>Tier 2: 6:00 – 8:00 PM</li>
-                    <li>Tier 3: 4:00 – 6:00 PM</li>
+                    <li>Tier 1: 8:00 â€“ 10:00 PM</li>
+                    <li>Tier 2: 6:00 â€“ 8:00 PM</li>
+                    <li>Tier 3: 4:00 â€“ 6:00 PM</li>
                   </ul>
                 </section>
 
@@ -827,7 +817,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiebreaker Rule</h4>
-                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24–25 / 25–24), teams play one additional point to determine which team advances.</p>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24â€“25 / 25â€“24), teams play one additional point to determine which team advances.</p>
                 </section>
 
                 <section>
@@ -867,7 +857,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Men must jump before the 3m line to perform an attack</li>
                     <li>Males may not block females.</li>
                     <li>The net is of mixed height.</li>
-                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the “male rules/position” guideline.</li>
+                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the â€œmale rules/positionâ€ guideline.</li>
                   </ul>
                 </section>
 
@@ -884,7 +874,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with 3 players if no substitute is available.</li>
-                    <li>Extra female players on the court must still follow the “guy rules/position” guideline.</li>
+                    <li>Extra female players on the court must still follow the â€œguy rules/positionâ€ guideline.</li>
                   </ul>
                 </section>
 
@@ -922,7 +912,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Males cannot hit beyond the 3m line (attack line).</li>
                     <li>Males cannot block females.</li>
                     <li>Net is mixed height.</li>
-                    <li>Minimum 2 female players on court. Additional females allowed, but extras must play under the “guys&apos; rules/position”.</li>
+                    <li>Minimum 2 female players on court. Additional females allowed, but extras must play under the â€œguys&apos; rules/positionâ€.</li>
                   </ul>
                 </section>
 
@@ -939,7 +929,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with only 3 players if no substitute is available.</li>
-                    <li>Extra female players on the court must still follow the “guy rules/position” guideline.</li>
+                    <li>Extra female players on the court must still follow the â€œguy rules/positionâ€ guideline.</li>
                   </ul>
                 </section>
 
@@ -979,7 +969,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Sunday Format</h4>
-                  <p className="text-lg text-[#6F6F6F]">See the “Sunday Mixed Volleyball” tab for detailed Sunday evening format and movement rules.</p>
+                  <p className="text-lg text-[#6F6F6F]">See the â€œSunday Mixed Volleyballâ€ tab for detailed Sunday evening format and movement rules.</p>
                 </section>
               </div>
             </div>
@@ -990,7 +980,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Monday Men's Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Men's Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">
                     The OFSL Monday Men's League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
                   </p>
@@ -1082,3 +1072,5 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     </div>
   );
 };
+
+
