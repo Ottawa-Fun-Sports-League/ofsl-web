@@ -289,11 +289,17 @@ export function Scorecard3Teams6Sets({ teamNames, onSubmit, isTopTier = false, p
               if (Number.isNaN(nLeft) || Number.isNaN(nRight) || nLeft === nRight) return false;
               return true;
             });
+            // Detect exact three-way tie of 2-2-2 set wins
+            const isThreeWayTwoWinsTie = (['A','B','C'] as TeamKey[]).every(k => stats[k].wins === 2);
             const sorted = [...order].sort((x, y) => {
               const a = stats[x];
               const b = stats[y];
               // Primary: set wins
               if (b.wins !== a.wins) return b.wins - a.wins;
+              // For standard 3-team (non-elite) 2-2-2 tie, use overall differential first
+              if (!eliteSummary && isThreeWayTwoWinsTie) {
+                if (b.diff !== a.diff) return b.diff - a.diff;
+              }
               // Tie-breaker: head-to-head differential between x and y only
               const hx = h2h[x][y];
               const hy = h2h[y][x];
