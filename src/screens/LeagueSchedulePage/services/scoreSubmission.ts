@@ -130,9 +130,15 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     C: stats.C.pf - stats.C.pa,
   };
   const teamKeys: TeamKey[] = ['A', 'B', 'C'];
+  // Detect exact 3-way tie scenario (2-2-2 set wins)
+  const isThreeWayTwoWinsTie = teamKeys.every(k => stats[k].setWins === 2);
   const sorted = [...teamKeys].sort((x, y) => {
     // Primary: total set wins (higher first)
     if (stats[y].setWins !== stats[x].setWins) return stats[y].setWins - stats[x].setWins;
+    // If 2-2-2 three-way tie, use overall differential before head-to-head
+    if (isThreeWayTwoWinsTie) {
+      if (diff[y] !== diff[x]) return diff[y] - diff[x];
+    }
     // Tie-breaker: head-to-head differential between tied teams only
     const hx = h2hDiff[x][y];
     const hy = h2hDiff[y][x];

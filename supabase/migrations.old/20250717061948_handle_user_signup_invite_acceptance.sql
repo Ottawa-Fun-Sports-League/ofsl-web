@@ -1,1 +1,0 @@
--- Handle user signup invite acceptance (placeholder)

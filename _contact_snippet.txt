@@ -1,0 +1,10 @@
+          <p className="text-lg text-[#6F6F6F] mt-8">
+            If you still have any questions or concerns please contact <a href="mailto:info@ofsl.ca" className="text-[#B20000] hover:underline">info@ofsl.ca</a>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+

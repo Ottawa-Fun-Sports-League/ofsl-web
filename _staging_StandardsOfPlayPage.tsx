@@ -1,20 +1,15 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { HeroBanner } from "../../components/HeroBanner";
 
 export const StandardsOfPlayPage = (): React.ReactElement => {
   const [activeTab, setActiveTab] = useState<
-    | "womensElite"
-    | "men"
     | "coed"
     | "womenElite"
-    | "pickleball"
+    | "men"
+    | "sundayMixed"
+    | "wednesday4x4"
+    | "rules4x4"
   >("coed");
-  const scrollToId = (id: string): void => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
   return (
     <div className="bg-white w-full">
       {/* Hero Banner */}
@@ -74,34 +69,12 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
           <div className="flex flex-nowrap overflow-x-auto scrollbar-thin border-b border-gray-200 mb-8">
             <div className="flex flex-grow">
               <div
-                onClick={() => setActiveTab("womensElite")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "womensElite" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
-              >
-                <span>Women&apos;s Elite</span>
-                {activeTab === "womensElite" && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-                )}
-              </div>
-              <div
-                onClick={() => setActiveTab("men")}
-                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
-                }`}
-              >
-                <span>Men&apos;s Volleyball</span>
-                {activeTab === "men" && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
-                )}
-              </div>
-              <div
                 onClick={() => setActiveTab("coed")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
                   activeTab === "coed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
                 }`}
               >
-                <span>Mixed Volleyball</span>
+                <span>Co-ed Volleyball</span>
                 {activeTab === "coed" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
@@ -112,26 +85,60 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   activeTab === "womenElite" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
                 }`}
               >
-                <span>Women&apos;s Volleyball</span>
+                <span>Women&apos;s Elite Volleyball</span>
                 {activeTab === "womenElite" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
               </div>
               <div
-                onClick={() => setActiveTab("pickleball")}
+                onClick={() => setActiveTab("men")}
                 className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
-                  activeTab === "pickleball" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                  activeTab === "men" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
                 }`}
               >
-                <span>Pickleball</span>
-                {activeTab === "pickleball" && (
+                <span>Men's Volleyball</span>
+                {activeTab === "men" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("wednesday4x4")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "wednesday4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Wednesday 4x4 Volleyball</span>
+                {activeTab === "wednesday4x4" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("sundayMixed")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "sundayMixed" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Sunday Mixed Volleyball</span>
+                {activeTab === "sundayMixed" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("rules4x4")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "rules4x4" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>4x4 Volleyball Rules</span>
+                {activeTab === "rules4x4" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
               </div>
             </div>
           </div>
 
-            {/*
+          {activeTab === "coed" && (
+            <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
                   <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Players&apos; responsibilities</h3>
@@ -222,25 +229,28 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 </section>
               </div>
             </div>
-          */}
+          )}
 
-          {activeTab === "womensElite" && (
+          {activeTab === "womenElite" && (
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women’s Elite Volleyball League</h3>
-                  <p className="text-lg text-[#6F6F6F]">The OFSL Women’s Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.</p>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">WomenG��s Elite Volleyball League</h3>
+                  <p className="text-lg text-[#6F6F6F]">
+                    The OFSL WomenG��s Elite Volleyball League is committed to advancing the performance and personal growth of volleyball athletes, where top athletes compete at the highest level. These teams showcase advanced technique, tactical awareness, and exceptional physical endurance in every match.
+                  </p>
                 </section>
+
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">League Information</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">League Information</h4>
                   <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Format</h5>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>The league will operate on a ladder system, cycling every 2 weeks.</li>
                     <li>Each tier will consist of four teams, except for tiers with 3 teams.</li>
                     <li>All matches are best-of-five sets.</li>
-                    <li>Sets 1–4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the Game will play to 25 (with a hard cap of 27).</li>
+                    <li>Sets 1G��4 are played to 25 points (hard cap at 25) for tiers in Public Schools. For facilities that are not in Public Schools, the game will play to 25 (with a hard cap of 27).</li>
                     <li>The 5th set is played to 15 points (hard cap) or time cap, whichever comes first.</li>
-                    <li>Playoffs: Sets 1–4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
+                    <li>Playoffs: Sets 1G��4 to 25 points (27-point hard cap); 5th set to 15 points (17-point hard cap).</li>
                     <li>Each match has a maximum of 15 minutes of warm-up and 90 minutes of play.</li>
                     <li>Total timeslot = 105 minutes.</li>
                     <li>Warm-up: 8 minutes team warm-up + Volleyball Canada format (5 minutes hitting, 1 minute serving).</li>
@@ -249,24 +259,20 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Balls provided by teams.</li>
                   </ul>
                 </section>
+
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Minimum Player Requirement</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Minimum Player Requirement</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>Teams must have at least 5 players to begin a match.</li>
-                    <li>If a team cannot field 5 players at the scheduled start time:</li>
-                    <li>The first set is defaulted.</li>
-                    <li>Each additional set is defaulted every 10 minutes until 5 players are present.</li>
-                    <li>When playing with 5 players:</li>
-                    <li>Must always have 3 players in the front row.</li>
-                    <li>Must identify starting positions, including a ghost player position.</li>
-                    <li>When the ghost player’s rotation reaches service, the team loses that point.</li>
-                    <li>A libero cannot be used if a ghost player is in play.</li>
+                    <li>If a team cannot field 5 players at the scheduled start time: the first set is defaulted; each additional set is defaulted every 10 minutes until 5 players are present.</li>
+                    <li>When playing with 5 players: must always have 3 players in the front row; must identify starting positions, including a ghost player position; when the ghost playerG��s rotation reaches service, the team loses that point; a libero cannot be used if a ghost player is in play.</li>
                     <li>If a set begins with 5 players, it must finish with those 5 (except injury replacement by libero).</li>
                     <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
                   </ul>
                 </section>
+
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Team Registration</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Team Registration</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>Teams must register a minimum of 6 players.</li>
                     <li>All players must complete registration and the waiver on the league website.</li>
@@ -274,8 +280,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Captains must register subs on the website after each match (same evening).</li>
                   </ul>
                 </section>
+
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes &amp; Playoffs Eligibility</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Substitutes &amp; Playoffs Eligibility</h4>
                   <p className="text-lg text-[#6F6F6F] font-medium">Regular season:</p>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2 mb-2">
                     <li>Players from other teams may sub during the regular season.</li>
@@ -288,28 +295,31 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Subs will be tracked via scoresheet.</li>
                     <li>Teams may use multiple subs in playoffs, provided they meet the 5-game requirement.</li>
                     <li>Teams may include a 7th player (sub) in playoffs only if they are playing with a libero for the entire match.</li>
+                    <li>Injury exception: If no bench subs are available, the libero may replace an injured player for the remainder of the set, but must take their position.</li>
                   </ul>
-                  <p className="text-lg text-[#6F6F6F]">Injury exception: If no bench subs are available, the libero may replace an injured player for the remainder of the set, but must take their position.</p>
                 </section>
+
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Jerseys &amp; Equipment</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Jerseys &amp; Equipment</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>All players must wear numbered jerseys.</li>
                     <li>Libero must wear a different colored jersey.</li>
-                    <li>Sub players should wear jerseys that are similar in color to the team’s.</li>
+                    <li>Sub players should wear jerseys that are similar in color to the teamG��s.</li>
                     <li>OFSL will provide jerseys for the inaugural season. (Future seasons are not guaranteed.)</li>
                   </ul>
                 </section>
+
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Officials &amp; Set-Up</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Officials &amp; Set-Up</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>Officials provided for every match.</li>
                     <li>Set-up and take-down is the responsibility of league supervisors and players, as assigned.</li>
                     <li>Referees are responsible for net height and proper set-up.</li>
                   </ul>
                 </section>
+
                 <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Playoffs</h4>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-3">Playoffs</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
                     <li>Playoffs will be held at the end of the season.</li>
                     <li>Seeding is determined by overall standings, using the average of the last 18 weeks of regular-season play.</li>
@@ -319,433 +329,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             </div>
           )}
 
-          {activeTab === "womenElite" && (
-            <div className="border border-gray-200 rounded-md p-6">
-              {/* In-page navigation buttons */}
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => scrollToId("womens-premier")}
-                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
-                  >
-                    Women's Premier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollToId("womens-6x6")}
-                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
-                  >
-                    Women's 6x6
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                {/* Womenâ€™s Elite */}
-
-                {/* Womenâ€™s Premier */}
-                <div id="womens-premier" className="scroll-mt-24 space-y-8">
-                <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women's Premier Volleyball League</h3>
-                  <p className="text-lg text-[#6F6F6F]">
-                    The OFSL Women's Premier League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
-                  </p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Format</h4>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">League Information</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>The league uses a tiered format.</li>
-                    <li>All matches are played as best-of-five sets.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Set scoring:</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>All sets are played to 21 points (hard cap at 21).</li>
-                    <li>The 5th set is played to 15 points (hard cap).</li>
-                  </ul>
-                  <p className="text-lg text-[#6F6F6F] mt-2">Match length: Each match is scheduled within its allotted timeslot. 90 minutes including warmup</p>
-                  <p className="text-lg text-[#6F6F6F]">Warm-up: Teams should warm up within their timeslot, using available court time efficiently. The official will whistle once the warm-up starts</p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Court Set-Up &amp; Equipment</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Players are responsible for setting up and taking down nets for their assigned court.</li>
-                    <li>Officials are responsible for checking net height and equipment where applicable.</li>
-                    <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Teams are expected to provide balls.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Officials</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Matches are officiated in some tiers (tiers assigned by the league).</li>
-                    <li>Tiers without officials will require teams to self-officiate in good faith.</li>
-                    <li>Any disputes should be brought to the league facilitator and reported to info@ofsl.ca</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Player Requirements</h4>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Libero-specific rules:</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>If a libero is being used, the official must be advised before the match begins.</li>
-                    <li>A libero cannot be used if a ghost player is in play.</li>
-                    <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
-                    <li>If a set begins with 5 players, it must finish with those 5 players (except for injury replacements by the libero).</li>
-                  </ul>
-                  <p className="text-lg text-[#6F6F6F] mt-2">Teams must start matches with a minimum of 5 players.</p>
-                  <p className="text-lg text-[#6F6F6F]">If fewer than 4 players are available at start time, the team will lose a point a minute until a 4th player arrives.</p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Team Registration</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Teams must register a minimum of 6 players on their roster. Teams will not be placed on the schedule until this criteria is met</li>
-                    <li>All players must be registered and have signed a waiver through the league website..</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Jerseys &amp; Equipment</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Teams are encouraged to wear matching jerseys with numbers. Otherwise, not required.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Playoffs</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Playoffs will be held at the end of the season.</li>
-                    <li>Seeding will be determined by overall standings within each tier.</li>
-                  </ul>
-                </section>
-                </div>
-
-                {/* Section break */}
-                <div className="h-px bg-gray-200 my-8" />
-
-                {/* Womenâ€™s 6x6 */}
-                <div id="womens-6x6" className="scroll-mt-24 space-y-8">
-                <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women's 6x6 Volleyball League</h3>
-                  <p className="text-lg text-[#6F6F6F]">The OFSL Women's 6x6  League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.</p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Format</h4>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">League Information</h4>
-                  <p className="text-lg text-[#6F6F6F]">The league uses a  tiered format.</p>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Set scoring:</h5>
-                  <p className="text-lg text-[#6F6F6F]">3  team tiers will play games using this format</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>A vs C</li>
-                    <li>A vs C</li>
-                    <li>A vs B</li>
-                    <li>A vs B</li>
-                    <li>B vs C</li>
-                    <li>B vs C</li>
-                  </ul>
-                  <p className="text-lg text-[#6F6F6F] mt-3">2  team tier  will play sets using this format</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>A vs B</li>
-                    <li>A vs B</li>
-                    <li>A vs B</li>
-                    <li>A vs B</li>
-                  </ul>
-                  <p className="text-lg text-[#6F6F6F] mt-3">All sets are played to 21 points (hard cap at 21).</p>
-                  <p className="text-lg text-[#6F6F6F]">Match length: Each match is scheduled within its allotted timeslot. 90 - 120 minutes</p>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Court Set-Up &amp; Equipment</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Team B is responsible for setting up for their assigned court.</li>
-                    <li>Team B &amp; C is responsible for taking down for their assigned court</li>
-                    <li>Players are responsible for checking net height and equipment where applicable.</li>
-                    <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Teams are expected to provide balls.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Officials</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Matches are officiated in some tiers (tiers assigned by the league).</li>
-                    <li>Tiers without officials will require teams to self-officiate in good faith.</li>
-                    <li>Any disputes should be brought to the league facilitator and reported to info@ofsl.ca</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Player Requirements</h4>
-                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Libero-specific rules:</h5>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>If a libero is being used, the official and  team captains  must be advised before the match begins.</li>
-                    <li>A libero cannot be used if a ghost player is in play.</li>
-                    <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
-                  </ul>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2 mt-2">
-                    <li>Teams must start matches with a minimum of 5 players.</li>
-                    <li>If fewer than 4 players are available at start time, the team will lose a point a minute until a 4th player arrives.</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Team Registration</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Teams must register a minimum of 6 players on their roster. Teams will not be placed on the schedule until this criteria is met</li>
-                    <li>All players must be registered and have signed a waiver through the league website..</li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Playoffs</h4>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                    <li>Playoffs will be held at the end of the season.</li>
-                    <li>Seeding will be determined by overall standings within each tier.</li>
-                  </ul>
-                </section>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "coed" && (
-            <div className="border border-gray-200 rounded-md p-6">
-              {/* In-page navigation buttons */}
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => scrollToId("mixed-6x6")}
-                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
-                  >
-                    Mixed 6x6
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollToId("mixed-4x4")}
-                    className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
-                  >
-                    Mixed 4x4
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                {/* Mixed 6x6 */}
-                <div id="mixed-6x6" className="scroll-mt-24 space-y-8">
-                  <section>
-                    <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Mixed 6x6 Rules / Standards of Play</h3>
-                    <p className="text-lg text-[#6F6F6F]">The OFSL Mixed  6x6  League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.</p>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Format</h4>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">League Information</h4>
-                    <p className="text-lg text-[#6F6F6F]">The league uses a  tiered format.</p>
-                  </section>
-
-                  <section>
-                    <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Set scoring:</h5>
-                    <p className="text-lg text-[#6F6F6F]">3  team tiers will play games using this format</p>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                      <li>A vs C</li>
-                      <li>A vs C</li>
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                      <li>B vs C</li>
-                      <li>B vs C</li>
-                    </ul>
-                    <p className="text-lg text-[#6F6F6F] mt-3">2  team tier  will play sets using this format</p>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                    </ul>
-                    <p className="text-lg text-[#6F6F6F] mt-3">All sets are played to 21 points (hard cap at 21).</p>
-                    <p className="text-lg text-[#6F6F6F]">Match length: Each match is scheduled within its allotted timeslot. 90 - 120 minutes</p>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Court Set-Up &amp; Equipment</h4>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                      <li>Players are responsible for the setup and takedown of the net and other necessary equipment</li>
-                      <li>Players are responsible for checking net height and equipment where applicable.</li>
-                      <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Teams are expected to provide balls.</li>
-                    </ul>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Officials</h4>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                      <li>Some tiers are officiated (tiers assigned by the league).</li>
-                      <li>Tiers without officials will require teams to self-officiate in good faith.</li>
-                      <li>Any disputes should be brought to the league facilitator and reported to info@ofsl.ca</li>
-                    </ul>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Player Requirements</h4>
-                    <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Libero-specific rules:</h5>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                      <li>If a libero is being used, the official and  team captains  must be advised before the match begins.</li>
-                      <li>A libero cannot be used if a ghost player is in play.</li>
-                      <li>If a player is injured during a set, the libero may replace them for the remainder of that set.</li>
-                      <li>Teams must start matches with a minimum of 5 players.</li>
-                      <li>If fewer than 4 players are available at start time, the team will lose a point a minute until a 4th player arrives.</li>
-                    </ul>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Team Registration</h4>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                      <li>Teams must register a minimum of 6 players on their roster. Teams will not be placed on the schedule until this criteria is met</li>
-                      <li>All players must be registered and have signed a waiver through the league website..</li>
-                    </ul>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Playoffs</h4>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-2">
-                      <li>Playoffs will be held at the end of the season.</li>
-                      <li>Seeding will be determined by overall standings within each tier.</li>
-                    </ul>
-                  </section>
-                </div>
-
-                {/* Section break */}
-                <div className="h-px bg-gray-200 my-8" />
-
-                {/* Mixed 4x4 */}
-                <div id="mixed-4x4" className="scroll-mt-24 space-y-8">
-                  <section>
-                    <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Mixed 4x4 Rules / Standards of Play</h3>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gender Rules</h4>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                      <li>A minimum of two females must be on the court at all times.</li>
-                      <li>Men must jump before the 3m line to perform an attack</li>
-                      <li>Males may not block females.</li>
-                      <li>The net is of mixed height.</li>
-                      <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the â€œguy rules/positionâ€ guideline.</li>
-                    </ul>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Gameplay Rules</h4>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                      <li>A block does not count as a touch.</li>
-                      <li>Open hand tips are allowed.</li>
-                      <li>On the first contact (except serve reception), a double-hit is allowed unless it is a lift; volleys are permitted.</li>
-                    </ul>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                      <li>Teams may play with 3 players if no substitute is available.</li>
-                      <li>Extra female players on the court must still follow the â€œguy rules/positionâ€ guideline.</li>
-                    </ul>
-                  </section>
-
-                  <section>
-                    <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Format</h4>
-                    <p className="text-lg text-[#6F6F6F]">When you have 3 teams in the Tier, games will be played in the following order: matches will be played to 21 (hard cap).</p>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                      <li>A vs C</li>
-                      <li>A vs C</li>
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                      <li>B vs C</li>
-                      <li>B vs C</li>
-                    </ul>
-                    <p className="text-lg text-[#6F6F6F] mt-3">For Tiers with 2 teams, 4 matches will be played to 21 (hard cap).</p>
-                    <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                      <li>A vs B</li>
-                    </ul>
-                  </section>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "pickleball" && (
-            <div className="border border-gray-200 rounded-md p-6">
-              <div className="space-y-8">
-                <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Pickleball Standards of Play</h3>
-                  <p className="text-lg text-[#6F6F6F]">OFSL&apos;s fall pickleball programs will use different formats for organizing matchups to keep things interesting each week, which will be the case for each fall program. OFSL asks you to review the skill definitions carefully to ensure you register for the appropriate program.</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mt-3">
-                    <li>Novice</li>
-                    <li>Strong Beginner</li>
-                    <li>Intermediate (low intermediate and high intermediate)</li>
-                  </ul>
-                </section>
-
-                <div className="h-px bg-gray-200" />
-
-                <section>
-                  <p className="text-lg text-[#6F6F6F]">The fall 2025 offerings will be held in a spacious gym with:</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mt-2">
-                    <li>4 pickleball courts (16 players playing simultaneously)</li>
-                    <li>quality hardwood floors</li>
-                    <li>good lighting</li>
-                    <li>high ceilings</li>
-                  </ul>
-                </section>
-
-                <div className="h-px bg-gray-200" />
-
-                <section>
-                  <p className="text-lg text-[#6F6F6F]">Different formats will be used to organize play to keep things interesting for players, including:</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mt-2">
-                    <li>Randomly assigned partners and opponents for each game</li>
-                    <li>Ladder format</li>
-                    <li>â€œFixed partnerâ€ days</li>
-                    <li>â€œSame genderâ€ days</li>
-                  </ul>
-                  <p className="text-lg text-[#6F6F6F] mt-3">Note: OFSL will be using the existing badminton court lines, so the non-volley zone line will be a bit closer to the pickleball net than a standard pickleball court.</p>
-                </section>
-
-                <div className="h-px bg-gray-200" />
-
-                <section>
-                  <p className="text-lg text-[#6F6F6F]">Players in OFSL pickleball programs should adhere to the spirit of the rules of pickleball, including:</p>
-                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mt-2">
-                    <li>The two bounce rule</li>
-                    <li>The non-volley zone rules</li>
-                    <li>The service rules</li>
-                    <li>Line calling etiquette</li>
-                  </ul>
-                </section>
-
-                <div className="h-px bg-gray-200" />
-
-                <section>
-                  <p className="text-lg text-[#6F6F6F]">A maximum of 20 players will be present on any given week. OFSL will use the Onix Indoor Fuse (orange) pickleball.</p>
-                  <p className="text-lg text-[#6F6F6F] mt-3">OFSL provides skill definitions to help players self-identify for the appropriate OFSL offering to ensure each league consists of, for the most part, similarly skilled players.</p>
-                  <p className="text-lg text-[#6F6F6F] mt-3">If space and time permits, the onsite coordinator may provide basic coaching and mentoring to help ensure players are reasonably aligned with the other participants.</p>
-                </section>
-              </div>
-            </div>
-          )}
-
-          {/* {activeTab === "sundayMixed" && (
+          {activeTab === "sundayMixed" && (
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
@@ -761,9 +345,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiers &amp; Times</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
-                    <li>Tier 1: 8:00 â€“ 10:00 PM</li>
-                    <li>Tier 2: 6:00 â€“ 8:00 PM</li>
-                    <li>Tier 3: 4:00 â€“ 6:00 PM</li>
+                    <li>Tier 1: 8:00 G�� 10:00 PM</li>
+                    <li>Tier 2: 6:00 G�� 8:00 PM</li>
+                    <li>Tier 3: 4:00 G�� 6:00 PM</li>
                   </ul>
                 </section>
 
@@ -817,7 +401,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Tiebreaker Rule</h4>
-                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24â€“25 / 25â€“24), teams play one additional point to determine which team advances.</p>
+                  <p className="text-lg text-[#6F6F6F]">If the match result is tied (e.g., 24G��25 / 25G��24), teams play one additional point to determine which team advances.</p>
                 </section>
 
                 <section>
@@ -842,8 +426,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             </div>
           )}
 
-          */}
-          {/* {activeTab === "wednesday4x4" && (
+          {activeTab === "wednesday4x4" && (
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
@@ -857,7 +440,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Men must jump before the 3m line to perform an attack</li>
                     <li>Males may not block females.</li>
                     <li>The net is of mixed height.</li>
-                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the â€œmale rules/positionâ€ guideline.</li>
+                    <li>A minimum of 2 female players is required. Extra female players are allowed, but must play under the Gǣmale rules/positionGǥ guideline.</li>
                   </ul>
                 </section>
 
@@ -874,7 +457,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with 3 players if no substitute is available.</li>
-                    <li>Extra female players on the court must still follow the â€œguy rules/positionâ€ guideline.</li>
+                    <li>Extra female players on the court must still follow the Gǣguy rules/positionGǥ guideline.</li>
                   </ul>
                 </section>
 
@@ -897,8 +480,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             </div>
           )}
 
-          */}
-          {/* {activeTab === "rules4x4" && (
+          {activeTab === "rules4x4" && (
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
@@ -912,7 +494,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Males cannot hit beyond the 3m line (attack line).</li>
                     <li>Males cannot block females.</li>
                     <li>Net is mixed height.</li>
-                    <li>Minimum 2 female players on court. Additional females allowed, but extras must play under the â€œguys&apos; rules/positionâ€.</li>
+                    <li>Minimum 2 female players on court. Additional females allowed, but extras must play under the Gǣguys&apos; rules/positionGǥ.</li>
                   </ul>
                 </section>
 
@@ -929,7 +511,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Substitutes</h4>
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
                     <li>Teams may play with only 3 players if no substitute is available.</li>
-                    <li>Extra female players on the court must still follow the â€œguy rules/positionâ€ guideline.</li>
+                    <li>Extra female players on the court must still follow the Gǣguy rules/positionGǥ guideline.</li>
                   </ul>
                 </section>
 
@@ -969,18 +551,17 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Sunday Format</h4>
-                  <p className="text-lg text-[#6F6F6F]">See the â€œSunday Mixed Volleyballâ€ tab for detailed Sunday evening format and movement rules.</p>
+                  <p className="text-lg text-[#6F6F6F]">See the GǣSunday Mixed VolleyballGǥ tab for detailed Sunday evening format and movement rules.</p>
                 </section>
               </div>
             </div>
           )}
 
-          */}
           {activeTab === "men" && (
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Men's Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Monday Men's Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">
                     The OFSL Monday Men's League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
                   </p>
@@ -1072,5 +653,3 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     </div>
   );
 };
-
-

@@ -1,1 +1,0 @@
--- Fix team invites trigger permissions (placeholder)

@@ -90,6 +90,9 @@ export function LeagueStandingsPage() {
   const [movementWeeks, setMovementWeeks] = useState<Set<number>>(new Set());
 
   const isEliteFormat = (scheduleFormat ?? '').includes('elite');
+  // Regular formats only: visual separator between tiers
+  const [topTierLineEnabled, setTopTierLineEnabled] = useState(false);
+  const [topTierLineAfter, setTopTierLineAfter] = useState<number>(0);
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({});
   // Edits: team_id -> { weekNumber -> rank }
   const [editedWeeklyRanks, setEditedWeeklyRanks] = useState<Record<number, Record<number, number | null>>>({});
@@ -304,8 +307,14 @@ export function LeagueStandingsPage() {
             .select('schedule_data')
             .eq('league_id', lid)
             .maybeSingle();
-          const reset = Number((sched as any)?.schedule_data?.standings_reset_week ?? 1);
+          const sd = (sched as any)?.schedule_data || {};
+          const reset = Number(sd?.standings_reset_week ?? 1);
           if (Number.isFinite(reset) && reset >= 1) setStandingsResetWeek(reset);
+          // Load Top Tier Line settings (non-elite only)
+          const enabled = Boolean(sd?.standings_top_tier_line_enabled);
+          const cutoff = Number(sd?.standings_top_tier_line_after ?? 0);
+          setTopTierLineEnabled(enabled);
+          if (Number.isFinite(cutoff) && cutoff > 0) setTopTierLineAfter(cutoff);
         } catch {}
       };
       void initialize();
@@ -832,6 +841,28 @@ export function LeagueStandingsPage() {
         alert('Standings saved but positions could not be recalculated. Please refresh the page.');
       }
 
+      // Persist Top Tier Line settings for regular formats
+      try {
+        if (!isEliteFormat && leagueId) {
+          const lid = parseInt(leagueId);
+          const { data: sched } = await supabase
+            .from('league_schedules')
+            .select('schedule_data')
+            .eq('league_id', lid)
+            .maybeSingle();
+          const current = (sched as any)?.schedule_data || {};
+          const updated = {
+            ...current,
+            standings_top_tier_line_enabled: Boolean(topTierLineEnabled),
+            standings_top_tier_line_after: Number(topTierLineAfter) || 0,
+          };
+          await supabase
+            .from('league_schedules')
+            .update({ schedule_data: updated })
+            .eq('league_id', lid);
+        }
+      } catch {}
+
       await loadStandings();
       
       setIsEditMode(false);
@@ -992,7 +1023,7 @@ export function LeagueStandingsPage() {
             )}
           </div>
         </div>
-
+        
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-2">
             {!isEditMode ? (
@@ -1024,7 +1055,7 @@ export function LeagueStandingsPage() {
             )}
           </div>
           
-          {!isEditMode && (
+          {!isEditMode ? (
             <Button
               onClick={() => setShowClearConfirm(true)}
               disabled={clearing || isWeek3Completed}
@@ -1039,12 +1070,46 @@ export function LeagueStandingsPage() {
               <Trash2 className="h-4 w-4" />
               {clearing ? 'Clearing...' : 'Clear Data'}
             </Button>
+          ) : (
+            !isEliteFormat ? (
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-[#6F6F6F]">
+                  <input
+                    type="checkbox"
+                    className="rounded"
+                    checked={topTierLineEnabled}
+                    onChange={(e) => {
+                      setTopTierLineEnabled(e.target.checked);
+                      setHasChanges(true);
+                    }}
+                  />
+                  Top tier line
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-[#6F6F6F]">After tier</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, standings.length - 1)}
+                    value={topTierLineAfter || ''}
+                    onChange={(e) => {
+                      const v = e.target.value === '' ? 0 : (parseInt(e.target.value) || 0);
+                      const clamped = v <= 0 ? 0 : Math.max(1, Math.min(standings.length - 1, v));
+                      setTopTierLineAfter(clamped);
+                      setHasChanges(true);
+                    }}
+                    disabled={!topTierLineEnabled}
+                    className="w-20 h-8 text-center text-sm"
+                  />
+                </div>
+              </div>
+            ) : null
           )}
         </div>
 
         <Card className="shadow-md overflow-hidden rounded-lg">
-          <CardContent className="p-0 overflow-hidden">
-            <div className="overflow-hidden">
+          <CardContent className="p-0 overflow-visible">
+            <div className="overflow-visible">
               {isEliteFormat ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-max table-auto">
@@ -1172,6 +1237,7 @@ export function LeagueStandingsPage() {
                       const isEdited = !!editedStandings[editKey];
 
                       return (
+                        <>
                         <tr
                           key={standing.id === 0 ? `team_${standing.team_id}` : standing.id}
                           className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${
@@ -1260,6 +1326,22 @@ export function LeagueStandingsPage() {
                             )}
                           </td>
                         </tr>
+                        {topTierLineEnabled && (index + 1) === Number(topTierLineAfter) && (
+                          <tr key={`divider-${standing.id === 0 ? `team_${standing.team_id}` : standing.id}`}>
+                            <td colSpan={6} className="p-0">
+                              <div className="relative py-2 overflow-visible">
+                                <img
+                                  src="/elite-badge.svg"
+                                  alt="Top tier"
+                                  className="absolute z-10 top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5"
+                                  style={{ left: 'calc(5% + 16px)' }}
+                                />
+                                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#B20000]"></div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </>
                       );
                     })}
                   </tbody>

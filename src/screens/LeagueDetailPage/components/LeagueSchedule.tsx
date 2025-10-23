@@ -256,23 +256,22 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
       const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
       const maxWeeks = regularSeasonWeeks + (leagueInfo.playoff_weeks || 0);
 
-      // If user is a captain/player (not admin/facilitator), restrict to current and next week
+      // Public restriction: allow any past week (back to week 1),
+      // but only up to current week + 1 going forward
       if (restrictToTwoWeeks) {
         const todayWeek = getCurrentWeek();
-        const minAllowed = Math.max(1, todayWeek);
         const maxAllowed = Math.min(maxWeeks, todayWeek + 1);
-        return weekNumber >= minAllowed && weekNumber <= maxAllowed;
+        return weekNumber >= 1 && weekNumber <= maxAllowed;
       }
 
       return weekNumber <= maxWeeks;
     }
 
-    // Fallback: allow navigation to reasonable number of weeks
+    // Fallback: allow any past week (>= 1), only current+1 forward
     if (restrictToTwoWeeks) {
       const todayWeek = getCurrentWeek();
-      const minAllowed = Math.max(1, todayWeek);
       const maxAllowed = todayWeek + 1;
-      return weekNumber >= minAllowed && weekNumber <= maxAllowed;
+      return weekNumber >= 1 && weekNumber <= maxAllowed;
     }
     return weekNumber <= 20;
   };
@@ -491,9 +490,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                         <h3 className="font-bold text-gray-400 text-xl leading-none m-0">
                           Tier {templateLabelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                           {tier.is_elite && (
-                            <span className="ml-2 inline-flex items-center align-middle px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
-                              Elite
-                            </span>
+                            <img
+                              src="/elite-badge.svg"
+                              alt="Top tier"
+                              className="ml-2 inline-block align-middle h-5 w-5"
+                            />
                           )}
                         </h3>
                       </div>
@@ -556,9 +557,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
                       <h3 className={`flex items-center font-bold text-[#6F6F6F] text-xl leading-none m-0 ${tier.no_games ? 'opacity-50' : ''}`}>
                         Tier {labelMap.get((tier.id ?? tier.tier_number) as number) || getTierDisplayLabel(tier.format, tier.tier_number)}
                         {tier.is_elite && (
-                          <span className="ml-2 inline-flex items-center align-middle px-2 py-0.5 text-xs font-semibold bg-[#B20000] text-white rounded-full">
-                            Elite
-                          </span>
+                          <img
+                            src="/elite-badge.svg"
+                            alt="Top tier"
+                            className="ml-2 inline-block align-middle h-5 w-5"
+                          />
                         )}
                         {(tier.is_completed || submittedTierNumbers.has(tier.tier_number)) && (
                           <span className="ml-2 inline-flex items-center align-middle px-2 py-1 text-xs bg-green-100 text-green-800 rounded">

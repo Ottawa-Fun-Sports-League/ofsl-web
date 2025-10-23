@@ -1,1 +1,0 @@
--- Allow users to view basic profile info (placeholder)
