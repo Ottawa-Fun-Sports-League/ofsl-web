@@ -21,7 +21,6 @@ export function AuthRedirectPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.info('🔀 Auth redirect handler loaded');
     const run = async () => {
       try {
         // Try to parse tokens from hash or query
@@ -32,13 +31,6 @@ export function AuthRedirectPage() {
         const code = queryParams.get('code') || hashParams['code'];
         const errorDescription = queryParams.get('error_description') || hashParams['error_description'];
         const tokenHash = queryParams.get('token_hash') || hashParams['token_hash'];
-
-        console.info('🔍 Auth redirect params:', {
-          targetPage: page,
-          hasAccessToken: Boolean(hashParams['access_token'] || queryParams.get('access_token')),
-          type: queryParams.get('type') || hashParams['type'] || null,
-          currentUrl: window.location.href,
-        });
 
         // 1) Newer flow: code param → exchange for session
         if (code) {

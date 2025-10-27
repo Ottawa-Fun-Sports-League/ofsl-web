@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
 import { Search, X, ChevronDown, ChevronUp } from 'lucide-react';
@@ -185,6 +185,14 @@ export function ImprovedFilters({
     return base.filter((team) => (team.name || `Team ${team.id}`).toLowerCase().includes(term));
   }, [teams, filters.leagueIds, teamSearch]);
 
+  const tierLabel = useCallback((value: string, fallbackLeagueId?: number, fallbackTier?: number) => {
+    const [leagueIdPart, tierNumberPart] = value.split(':');
+    const leagueId = fallbackLeagueId ?? Number(leagueIdPart);
+    const tierNumber = fallbackTier ?? Number(tierNumberPart);
+    const leagueName = leagueNameMap.get(leagueId) ?? `League ${leagueId}`;
+    return `${leagueName} • Tier ${tierNumber}`;
+  }, [leagueNameMap]);
+
   const visibleTiers = useMemo(() => {
     const base = filters.leagueIds.length === 0
       ? tierOptions
@@ -192,15 +200,7 @@ export function ImprovedFilters({
     if (!tierSearch.trim()) return base;
     const term = tierSearch.toLowerCase();
     return base.filter((option) => tierLabel(option.value, option.league_id, option.tier_number).toLowerCase().includes(term));
-  }, [tierOptions, filters.leagueIds, tierSearch, leagueNameMap]);
-
-  const tierLabel = (value: string, fallbackLeagueId?: number, fallbackTier?: number) => {
-    const [leagueIdPart, tierNumberPart] = value.split(':');
-    const leagueId = fallbackLeagueId ?? Number(leagueIdPart);
-    const tierNumber = fallbackTier ?? Number(tierNumberPart);
-    const leagueName = leagueNameMap.get(leagueId) ?? `League ${leagueId}`;
-    return `${leagueName} • Tier ${tierNumber}`;
-  };
+  }, [tierLabel, tierOptions, filters.leagueIds, tierSearch]);
 
   const handleClearFilters = () => {
     setLeagueSearch('');

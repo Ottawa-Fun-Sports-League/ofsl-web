@@ -254,6 +254,7 @@ export function useUsersData() {
     sortDirection,
     filters,
     showToast,
+    mapRowsToUsers,
   ]);
 
   // No longer need filterAndSortUsers since it's done server-side

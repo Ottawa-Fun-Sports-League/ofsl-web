@@ -228,7 +228,7 @@ export function GymLocationSelect({
               onClick={handleCustomSelect}
               className="w-full px-4 py-2 text-sm text-[#B20000] hover:bg-[#B20000]/10 transition-colors"
             >
-              Use "{searchTerm.trim()}" as custom location
+              Use &quot;{searchTerm.trim()}&quot; as custom location
             </button>
           )}
         </div>

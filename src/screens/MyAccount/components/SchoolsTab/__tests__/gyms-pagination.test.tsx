@@ -29,11 +29,17 @@ vi.mock('../../../../../lib/supabase', () => {
     facilitator_ids: [],
   }));
 
-  const createChain = (data: unknown[]) => {
-    const chain: any = {
+  type MockQueryChain = {
+    select: (columns: string) => MockQueryChain;
+    eq: (column: string, value: unknown) => MockQueryChain;
+    order: (column: string, options?: unknown) => Promise<{ data: unknown[]; error: null }>;
+  };
+
+  const createChain = (data: unknown[]): MockQueryChain => {
+    const chain: MockQueryChain = {
       select: vi.fn(() => chain),
       eq: vi.fn(() => chain),
-      order: vi.fn(() => Promise.resolve({ data, error: null }))
+      order: vi.fn(() => Promise.resolve({ data, error: null })),
     };
     return chain;
   };

@@ -10,6 +10,7 @@ type Gym = {
   address: string | null;
   instructions: string | null;
   locations: string[] | null;
+  active?: boolean | null;
   // Optional fields ignored by this page
   [key: string]: unknown;
 };
@@ -26,7 +27,8 @@ export const GymLocationsPage = (): React.ReactElement => {
         const { data, error } = await supabase
           .from("gyms")
           .select("id, gym, address, instructions, locations, active")
-          .order("gym");
+          .order("gym")
+          .returns<Gym[]>();
 
         if (error) {
           throw error;
@@ -34,7 +36,7 @@ export const GymLocationsPage = (): React.ReactElement => {
 
         // Only show active gyms if the column exists, else show all
         const activeGyms = Array.isArray(data)
-          ? (data as Gym[]).filter((g: any) => g.active !== false)
+          ? data.filter((gym) => gym.active !== false)
           : [];
 
         setGyms(activeGyms);

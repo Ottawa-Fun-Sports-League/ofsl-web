@@ -16,6 +16,17 @@ interface CancellationNotificationRequest {
   leagueName: string;
   isTeamRegistration: boolean;
   teamName?: string;
+  originalTeamName?: string;
+  preferredTeamName?: string;
+  displayTeamName?: string;
+  rosterCount?: number;
+  teamMemberNames?: string[];
+  teamIsWaitlisted?: boolean;
+  isWaitlisted?: boolean;
+  amountDue?: number | null;
+  amountPaid?: number | null;
+  paymentStatus?: string | null;
+  skillLevelName?: string | null;
   cancelledAt: string;
 }
 
@@ -109,6 +120,17 @@ serve(async (req: Request) => {
       leagueName,
       isTeamRegistration,
       teamName,
+      originalTeamName,
+      preferredTeamName,
+      displayTeamName,
+      rosterCount,
+      teamMemberNames,
+      teamIsWaitlisted,
+      isWaitlisted,
+      amountDue,
+      amountPaid,
+      paymentStatus,
+      skillLevelName,
       cancelledAt,
     }: CancellationNotificationRequest = await req.json();
 
@@ -150,6 +172,34 @@ serve(async (req: Request) => {
       timeZone: 'America/Toronto'
     });
 
+    const candidateTeamNames = [
+      preferredTeamName,
+      originalTeamName,
+      displayTeamName,
+      teamName,
+    ].filter((name): name is string => typeof name === "string" && name.trim().length > 0);
+    let finalTeamName = candidateTeamNames.length > 0 ? candidateTeamNames[0].trim() : "";
+    if (!finalTeamName && isTeamRegistration && teamName) {
+      finalTeamName = teamName.trim();
+    }
+    if (finalTeamName && /^waitlist\s*-\s*/i.test(finalTeamName)) {
+      const stripped = finalTeamName.replace(/^waitlist\s*-\s*/i, "").trim();
+      if (stripped.length > 0) {
+        finalTeamName = stripped;
+      }
+    }
+    const teamDisplayName = finalTeamName || teamName;
+
+    const rosterNames =
+      teamMemberNames?.filter((name) => typeof name === "string" && name.trim().length > 0) ?? [];
+    const effectiveRosterCount = typeof rosterCount === "number"
+      ? rosterCount
+      : rosterNames.length > 0
+        ? rosterNames.length
+        : undefined;
+
+    const normalizedPaymentStatus = paymentStatus ? paymentStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null;
+
     // Create user email content
     const userEmailContent = {
       to: [userEmail],
@@ -189,9 +239,17 @@ serve(async (req: Request) => {
                                   Hi ${userName},
                                 </p>
                                 <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
-                                  Your ${isTeamRegistration ? `team registration for <strong>${teamName}</strong> in` : 'individual registration for'} 
+                                  Your ${isTeamRegistration ? `team registration for <strong>${teamDisplayName ?? 'your team'}</strong> in` : 'individual registration for'} 
                                   the <strong style="color: #B20000;">${leagueName}</strong> league has been successfully cancelled.
                                 </p>
+                                ${isTeamRegistration && teamIsWaitlisted !== undefined ? `
+                                <p style="color: #2c3e50; font-size: 14px; line-height: 20px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
+                                  Waitlist Status: ${teamIsWaitlisted ? 'Waitlisted team' : 'Active team'} prior to cancellation.
+                                </p>` : ''}
+                                ${!isTeamRegistration && typeof isWaitlisted === 'boolean' ? `
+                                <p style="color: #2c3e50; font-size: 14px; line-height: 20px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
+                                  Waitlist Status: ${isWaitlisted ? 'Waitlisted registration' : 'Active registration'} prior to cancellation.
+                                </p>` : ''}
                               </td>
                             </tr>
                           </table>
@@ -202,18 +260,26 @@ serve(async (req: Request) => {
                       <tr>
                         <td style="padding-bottom: 30px;">
                           <h3 style="color: #2c3e50; font-size: 18px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">Cancellation Details</h3>
-                          <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                            <tr>
-                              <td style="color: #5a6c7d; font-size: 16px; line-height: 24px; font-family: Arial, sans-serif;">
-                                <strong>League:</strong> ${leagueName}<br>
-                                ${isTeamRegistration ? `<strong>Team:</strong> ${teamName}<br>` : ''}
-                                <strong>Registration Type:</strong> ${isTeamRegistration ? 'Team' : 'Individual'}<br>
-                                <strong>Cancelled On:</strong> ${cancellationDate}
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="color: #5a6c7d; font-size: 16px; line-height: 24px; font-family: Arial, sans-serif;">
+                                      <strong>League:</strong> ${leagueName}<br>
+                                      ${isTeamRegistration && teamDisplayName ? `<strong>Team:</strong> ${teamDisplayName}<br>` : ''}
+                                      <strong>Registration Type:</strong> ${isTeamRegistration ? 'Team' : 'Individual'}<br>
+                                      <strong>Cancelled On:</strong> ${cancellationDate}
+                                      ${skillLevelName ? `<br><strong>Skill Level:</strong> ${skillLevelName}` : ''}
+                                      ${effectiveRosterCount !== undefined && isTeamRegistration ? `<br><strong>Roster Size:</strong> ${effectiveRosterCount} player${effectiveRosterCount === 1 ? '' : 's'}` : ''}
+                                      ${!isTeamRegistration && typeof amountPaid === 'number' && typeof amountDue === 'number'
+                                        ? `<br><strong>Payments:</strong> $${amountPaid.toFixed(2)} paid / $${amountDue.toFixed(2)} due`
+                                        : ''}
+                                      ${!isTeamRegistration && normalizedPaymentStatus
+                                        ? `<br><strong>Payment Status:</strong> ${normalizedPaymentStatus}`
+                                        : ''}
+                                    </td>
+                                  </tr>
+                                </table>
                               </td>
                             </tr>
-                          </table>
-                        </td>
-                      </tr>
                       
                       <!-- Refund Notice -->
                       <tr>
@@ -361,7 +427,63 @@ serve(async (req: Request) => {
                                   <tr>
                                     <td style="padding: 8px 0;">
                                       <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Team Name:</strong>
-                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${teamName}</span>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${teamDisplayName ?? teamName}</span>
+                                    </td>
+                                  </tr>
+                                  ` : ''}
+                                  ${isTeamRegistration && typeof teamIsWaitlisted === 'boolean' ? `
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Waitlist Status:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${teamIsWaitlisted ? 'Waitlisted team' : 'Active team'}</span>
+                                    </td>
+                                  </tr>
+                                  ` : ''}
+                                  ${!isTeamRegistration && typeof isWaitlisted === 'boolean' ? `
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Waitlist Status:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${isWaitlisted ? 'Waitlisted registration' : 'Active registration'}</span>
+                                    </td>
+                                  </tr>
+                                  ` : ''}
+                                  ${skillLevelName ? `
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Skill Level:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${skillLevelName}</span>
+                                    </td>
+                                  </tr>
+                                  ` : ''}
+                                  ${typeof effectiveRosterCount === 'number' && isTeamRegistration ? `
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Roster Size:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${effectiveRosterCount} player${effectiveRosterCount === 1 ? '' : 's'}</span>
+                                    </td>
+                                  </tr>
+                                  ` : ''}
+                                  ${isTeamRegistration && rosterNames.length > 0 ? `
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Roster:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${rosterNames.join(', ')}</span>
+                                    </td>
+                                  </tr>
+                                  ` : ''}
+                                  ${!isTeamRegistration && typeof amountPaid === 'number' && typeof amountDue === 'number' ? `
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Payments:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">$${amountPaid.toFixed(2)} paid / $${amountDue.toFixed(2)} due</span>
+                                    </td>
+                                  </tr>
+                                  ` : ''}
+                                  ${!isTeamRegistration && normalizedPaymentStatus ? `
+                                  <tr>
+                                    <td style="padding: 8px 0;">
+                                      <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Payment Status:</strong>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${normalizedPaymentStatus}</span>
                                     </td>
                                   </tr>
                                   ` : ''}

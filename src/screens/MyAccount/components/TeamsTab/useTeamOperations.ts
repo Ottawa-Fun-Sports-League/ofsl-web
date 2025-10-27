@@ -16,6 +16,17 @@ interface ResultState {
   message: string;
 }
 
+interface IndividualPaymentDetails {
+  league_id: number;
+  user_id: string;
+  amount_due: number | null;
+  amount_paid: number | null;
+  status: string | null;
+  is_waitlisted: boolean | null;
+  skill_level_id: number | null;
+  skills?: { id: number; name: string | null } | Array<{ id: number; name: string | null }> | null;
+}
+
 export function useTeamOperations() {
   const [unregisteringPayment, setUnregisteringPayment] = useState<number | null>(null);
   const [confirmationState, setConfirmationState] = useState<ConfirmationState>({
@@ -82,9 +93,27 @@ export function useTeamOperations() {
         // Get payment details for league_id and user info
         const { data: payment } = await supabase
           .from('league_payments')
-          .select('league_id, user_id')
+          .select(`
+            league_id,
+            user_id,
+            amount_due,
+            amount_paid,
+            status,
+            is_waitlisted,
+            skill_level_id,
+            skills:skill_level_id (id, name)
+          `)
           .eq('id', paymentId)
-          .single();
+          .single<IndividualPaymentDetails>();
+        
+        let skillLevelName: string | null = null;
+        if (payment?.skills) {
+          if (Array.isArray(payment.skills)) {
+            skillLevelName = payment.skills[0]?.name ?? null;
+          } else {
+            skillLevelName = payment.skills.name ?? null;
+          }
+        }
         
         // Get user details for the notification
         let userDetails = null;
@@ -142,6 +171,11 @@ export function useTeamOperations() {
                     userPhone: userDetails.phone,
                     leagueName: leagueName,
                     isTeamRegistration: false,
+                    isWaitlisted: payment?.is_waitlisted ?? undefined,
+                    skillLevelName: skillLevelName ?? undefined,
+                    amountDue: payment?.amount_due ?? null,
+                    amountPaid: payment?.amount_paid ?? null,
+                    paymentStatus: payment?.status ?? null,
                     cancelledAt: new Date().toISOString(),
                   },
                 },

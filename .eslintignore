@@ -26,6 +26,9 @@ coverage/
 *.tmp
 .cache/
 
+# Temporary staging content in repo root
+/_*
+
 # Supabase
 supabase/functions/**/deno.json
 supabase/functions/**/deno.lock

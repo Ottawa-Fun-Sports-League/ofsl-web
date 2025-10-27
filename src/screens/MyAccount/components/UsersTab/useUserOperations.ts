@@ -54,10 +54,29 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
         return;
       }
 
-      const json = await res.json();
+      interface TeamRegistrationRow {
+        league_id: number;
+        league_name: string;
+        sport_name: string | null;
+        role: string | null;
+        team_id: number | null;
+      }
+
+      interface IndividualRegistrationRow {
+        league_id: number;
+        league_name: string;
+        sport_name: string | null;
+      }
+
+      interface AdminUserRegistrationsResponse {
+        team_registrations?: TeamRegistrationRow[] | null;
+        individual_registrations?: IndividualRegistrationRow[] | null;
+      }
+
+      const json = (await res.json()) as AdminUserRegistrationsResponse;
       const regs: UserRegistration[] = [];
-      const teams = (json?.team_registrations || []) as Array<any>;
-      const indiv = (json?.individual_registrations || []) as Array<any>;
+      const teams = json?.team_registrations ?? [];
+      const indiv = json?.individual_registrations ?? [];
 
       teams.forEach((t) => {
         regs.push({
@@ -66,7 +85,7 @@ export function useUserOperations(loadUsers: () => Promise<void>) {
           sport_name: t.sport_name || null,
           role: t.role === 'captain' ? 'captain' : 'player',
           registration_type: 'team',
-          team_id: t.team_id,
+          team_id: t.team_id ?? undefined,
           league_id: t.league_id,
         });
       });

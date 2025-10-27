@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { Button } from '../../../../../components/ui/button';
 import { Input } from '../../../../../components/ui/input';
@@ -21,15 +21,16 @@ interface ImprovedMobileFilterDrawerProps {
 }
 
 type FilterCategory = 'role' | 'sport' | 'status' | 'league' | 'team' | 'tier';
+type BooleanFilterKey = 'administrator' | 'facilitator' | 'activePlayer' | 'pendingUsers' | 'playersNotInLeague';
 
-interface FilterOption {
-  key: keyof UserFilters;
+interface FilterOption<T extends keyof UserFilters = BooleanFilterKey> {
+  key: T;
   label: string;
   category: FilterCategory;
   description?: string;
 }
 
-const FILTER_OPTIONS: FilterOption[] = [
+const FILTER_OPTIONS: FilterOption<BooleanFilterKey>[] = [
   // Role filters
   { key: 'administrator', label: 'Administrator', category: 'role' },
   { key: 'facilitator', label: 'Facilitator', category: 'role' },
@@ -208,6 +209,14 @@ export function ImprovedMobileFilterDrawer({
     return base.filter((team) => (team.name || `Team ${team.id}`).toLowerCase().includes(term));
   }, [teams, filters.leagueIds, teamSearch]);
 
+  const tierLabel = useCallback((value: string, fallbackLeagueId?: number, fallbackTier?: number) => {
+    const [leagueIdPart, tierNumberPart] = value.split(':');
+    const leagueId = fallbackLeagueId ?? Number(leagueIdPart);
+    const tierNumber = fallbackTier ?? Number(tierNumberPart);
+    const leagueName = leagueNameMap.get(leagueId) ?? `League ${leagueId}`;
+    return `${leagueName} • Tier ${tierNumber}`;
+  }, [leagueNameMap]);
+
   const visibleTiers = useMemo(() => {
     const base = filters.leagueIds.length === 0
       ? tierOptions
@@ -215,15 +224,7 @@ export function ImprovedMobileFilterDrawer({
     if (!tierSearch.trim()) return base;
     const term = tierSearch.toLowerCase();
     return base.filter((option) => tierLabel(option.value, option.league_id, option.tier_number).toLowerCase().includes(term));
-  }, [tierOptions, filters.leagueIds, tierSearch]);
-
-  const tierLabel = (value: string, fallbackLeagueId?: number, fallbackTier?: number) => {
-    const [leagueIdPart, tierNumberPart] = value.split(':');
-    const leagueId = fallbackLeagueId ?? Number(leagueIdPart);
-    const tierNumber = fallbackTier ?? Number(tierNumberPart);
-    const leagueName = leagueNameMap.get(leagueId) ?? `League ${leagueId}`;
-    return `${leagueName} • Tier ${tierNumber}`;
-  };
+  }, [tierLabel, tierOptions, filters.leagueIds, tierSearch]);
 
   const renderCategoryOptions = (category: FilterCategory) => {
     if (category === 'sport') {
@@ -373,7 +374,7 @@ export function ImprovedMobileFilterDrawer({
       >
         <input
           type="checkbox"
-          checked={Boolean(filters[option.key] as any)}
+          checked={filters[option.key]}
           onChange={() => handleFilterChange(option.key)}
           className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#B20000] focus:ring-[#B20000]"
         />

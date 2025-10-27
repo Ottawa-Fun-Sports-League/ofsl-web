@@ -322,14 +322,14 @@ export function ScorecardsFormatsTab() {
                         <li>Head-to-head result (if teams played each other)</li>
                         <li>Total set wins across both games</li>
                         <li>Total points differential</li>
-                        <li>Previous week's position (A {'>'} B {'>'} C {'>'} D {'>'} E {'>'} F)</li>
+                        <li>Previous week&rsquo;s position (A {'>'} B {'>'} C {'>'} D {'>'} E {'>'} F)</li>
                       </ol>
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="border rounded-md p-4 text-sm text-gray-700">
-                  This view will show the scorecard for "{selected.label}". Build-out will follow after the 3-team reference.
+                  This view will show the scorecard for &quot;{selected.label}&quot;. Build-out will follow after the 3-team reference.
                 </div>
               )}
             </div>
@@ -341,4 +341,3 @@ export function ScorecardsFormatsTab() {
     </div>
   );
 }
-

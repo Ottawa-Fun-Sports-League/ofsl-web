@@ -51,7 +51,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             <section>
               <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Two strike rule</h3>
               <p className="text-lg text-[#6F6F6F]">
-                OFSL will not tolerate abusive or aggressive behavior. The league's mission is to offer a safe environment that promotes sportsmanship, healthy competition and social interactions with all participants. If the OFSL committee receives a complaint about an individual and/or team displaying unsportsmanlike conduct such as verbal or physical abuse towards another player, an initial warning will be given. If a second offense is reported, that player/team will be banned from the league permanently. Note that no refund will be provided. OFSL recognizes that situations may get intense at times. If this occurs, captains will be asked to call a <strong>timeout immediately &amp; request a re-serve.</strong>
+                OFSL will not tolerate abusive or aggressive behavior. The league&rsquo;s mission is to offer a safe environment that promotes sportsmanship, healthy competition and social interactions with all participants. If the OFSL committee receives a complaint about an individual and/or team displaying unsportsmanlike conduct such as verbal or physical abuse towards another player, an initial warning will be given. If a second offense is reported, that player/team will be banned from the league permanently. Note that no refund will be provided. OFSL recognizes that situations may get intense at times. If this occurs, captains will be asked to call a <strong>timeout immediately &amp; request a re-serve.</strong>
               </p>
             </section>
             <section>
@@ -329,14 +329,14 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     onClick={() => scrollToId("womens-premier")}
                     className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
                   >
-                    Women's Premier
+                    Women&rsquo;s Premier
                   </button>
                   <button
                     type="button"
                     onClick={() => scrollToId("womens-6x6")}
                     className="px-4 py-2 rounded border border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white transition"
                   >
-                    Women's 6x6
+                    Women&rsquo;s 6x6
                   </button>
                 </div>
               </div>
@@ -347,9 +347,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 {/* Womenâ€™s Premier */}
                 <div id="womens-premier" className="scroll-mt-24 space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women's Premier Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women&rsquo;s Premier Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">
-                    The OFSL Women's Premier League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
+                    The OFSL Women&rsquo;s Premier League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
                   </p>
                 </section>
 
@@ -433,8 +433,8 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 {/* Womenâ€™s 6x6 */}
                 <div id="womens-6x6" className="scroll-mt-24 space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women's 6x6 Volleyball League</h3>
-                  <p className="text-lg text-[#6F6F6F]">The OFSL Women's 6x6  League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.</p>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Women&rsquo;s 6x6 Volleyball League</h3>
+                  <p className="text-lg text-[#6F6F6F]">The OFSL Women&rsquo;s 6x6  League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.</p>
                 </section>
 
                 <section>
@@ -969,7 +969,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
 
                 <section>
                   <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Sunday Format</h4>
-                  <p className="text-lg text-[#6F6F6F]">See the â€œSunday Mixed Volleyballâ€ tab for detailed Sunday evening format and movement rules.</p>
+                  <p className="text-lg text-[#6F6F6F]">See the &ldquo;Sunday Mixed Volleyball&rdquo; tab for detailed Sunday evening format and movement rules.</p>
                 </section>
               </div>
             </div>
@@ -980,9 +980,9 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Men's Volleyball League</h3>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Men&rsquo;s Volleyball League</h3>
                   <p className="text-lg text-[#6F6F6F]">
-                    The OFSL Monday Men's League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
+                    The OFSL Monday Men&rsquo;s League provides competitive play for athletes at multiple skill levels. The format emphasizes fast-paced matches, team accountability, and structured tiers to ensure balanced competition.
                   </p>
                 </section>
 
@@ -1072,5 +1072,3 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     </div>
   );
 };
-
-
