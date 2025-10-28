@@ -445,7 +445,7 @@ export function Scorecard4TeamsHeadToHead({ teamNames, onSubmit, isTopTier = fal
             // - Court 1 loser: Stay in same tier -> Court 2 C
             // - Court 2 winner: Stay in same tier -> Court 1 B
             // - Court 2 loser: Down one tier to A. If bottom tier, Stay -> A
-            let move: Record<TeamKey, string> = { A:'Stay', B:'Stay', C:'Stay', D:'Stay' };
+            const move: Record<TeamKey, string> = { A:'Stay', B:'Stay', C:'Stay', D:'Stay' };
             if (summary.game2Done && g1Outcome.c1.decided && g1Outcome.c2.decided) {
               const w1 = (g1Outcome.c1.winner === 'L') ? 'A' : 'B';
               const l1 = (g1Outcome.c1.loser  === 'L') ? 'A' : 'B';

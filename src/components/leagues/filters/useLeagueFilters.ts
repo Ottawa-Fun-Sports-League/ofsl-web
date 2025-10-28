@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { LeagueFilters, DEFAULT_FILTERS } from './types';
 
 type StorageType = 'session' | 'local';
@@ -13,7 +13,7 @@ export function useLeagueFilters(config: UseLeagueFiltersConfig = {}) {
   const { storageKey, storage = 'session', initialFilters = DEFAULT_FILTERS } = config;
   const storageKeyName = storageKey ?? null;
 
-  const getStorage = (): Storage | null => {
+  const getStorage = useCallback((): Storage | null => {
     if (!storageKeyName || typeof window === 'undefined') {
       return null;
     }
@@ -23,7 +23,7 @@ export function useLeagueFilters(config: UseLeagueFiltersConfig = {}) {
       console.error('Error accessing storage for league filters:', error);
       return null;
     }
-  };
+  }, [storage, storageKeyName]);
 
   const readStoredFilters = (): LeagueFilters => {
     const fallback = { ...initialFilters, skillLevels: [...initialFilters.skillLevels] };
@@ -78,7 +78,7 @@ export function useLeagueFilters(config: UseLeagueFiltersConfig = {}) {
     } catch (error) {
       console.error('Error saving league filters to storage:', error);
     }
-  }, [filters, storageKeyName, storage]);
+  }, [filters, getStorage, storageKeyName]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

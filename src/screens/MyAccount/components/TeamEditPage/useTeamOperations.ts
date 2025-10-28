@@ -133,6 +133,20 @@ export function useTeamOperations(
     
     try {
       setDeleting(true);
+      const rosterNames = teamMembers
+        .map((member) => member.name?.trim())
+        .filter((name): name is string => Boolean(name && name.length > 0));
+      const captainMember = teamMembers.find((member) => member.id === team.captain_id);
+      const waitlistPrefixMatch = /^waitlist\s*-/i.test(team.name);
+      let leagueName = team.leagues?.name;
+      if (!leagueName) {
+        const { data: leagueRow } = await supabase
+          .from('leagues')
+          .select('name')
+          .eq('id', team.league_id)
+          .maybeSingle();
+        leagueName = leagueRow?.name || 'Unknown League';
+      }
       
       if (team.roster && team.roster.length > 0) {
         for (const userId of team.roster) {
@@ -168,6 +182,30 @@ export function useTeamOperations(
         .eq('id', teamId);
         
       if (deleteError) throw deleteError;
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await supabase.functions.invoke("send-cancellation-notification", {
+            body: {
+              userId: team.captain_id,
+              userName: captainMember?.name || team.users?.name || "Team Captain",
+              userEmail: captainMember?.email || team.users?.email || "Unknown",
+              userPhone: captainMember?.phone,
+              leagueName,
+              isTeamRegistration: true,
+              teamName: team.name,
+              originalTeamName: team.name,
+              teamMemberNames: rosterNames,
+              rosterCount: teamMembers.length,
+              teamIsWaitlisted: waitlistPrefixMatch,
+              cancelledAt: new Date().toISOString(),
+            },
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending cancellation notification:', notificationError);
+      }
       
       showToast('Team deleted successfully', 'success');
       navigate('/my-account/teams');

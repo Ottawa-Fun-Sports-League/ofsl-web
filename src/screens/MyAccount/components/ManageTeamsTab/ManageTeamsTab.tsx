@@ -78,6 +78,19 @@ interface IndividualRegistration {
   skill_level_name?: string | null;
 }
 
+interface IndividualPaymentRow {
+  user_id: string;
+  league_id: number;
+  amount_due: number | null;
+  amount_paid: number | null;
+  status: string | null;
+  created_at: string | null;
+  skill_level_id: number | null;
+  skills: Array<{ id: number; name: string | null }> | null;
+  users: { id: string; name: string | null; email: string | null } | null;
+  leagues: { id: number; name: string | null; team_registration: boolean | null } | null;
+}
+
 export function ManageTeamsTab() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
@@ -297,27 +310,28 @@ export function ManageTeamsTab() {
           leagues:league_id(id, name, team_registration)
         `,
         )
-        .is("team_id", null);
+        .is("team_id", null)
+        .returns<IndividualPaymentRow[]>();
 
       if (indivError) {
         console.error("Error fetching individual registrations:", indivError);
       }
 
       const individuals: IndividualRegistration[] = (indivPayments || [])
-        .filter((p: any) => p.leagues && p.leagues.team_registration === false)
-        .map((p: any) => {
-          const skill = Array.isArray(p.skills) ? p.skills[0] : p.skills;
+        .filter((payment) => payment.leagues?.team_registration === false)
+        .map((payment) => {
+          const skill = Array.isArray(payment.skills) ? payment.skills[0] : null;
           return {
-            id: p.user_id,
-            name: p.users?.name || "Unknown",
-            email: p.users?.email || "Unknown",
-            league_id: p.league_id,
-            league_name: p.leagues?.name || "Unknown League",
-            created_at: p.created_at || new Date().toISOString(),
-            payment_status: p.status,
-            amount_due: p.amount_due,
-            amount_paid: p.amount_paid,
-            skill_level_id: p.skill_level_id,
+            id: payment.user_id,
+            name: payment.users?.name || "Unknown",
+            email: payment.users?.email || "Unknown",
+            league_id: payment.league_id,
+            league_name: payment.leagues?.name || "Unknown League",
+            created_at: payment.created_at || new Date().toISOString(),
+            payment_status: payment.status ?? undefined,
+            amount_due: payment.amount_due ?? undefined,
+            amount_paid: payment.amount_paid ?? undefined,
+            skill_level_id: payment.skill_level_id,
             skill_level_name: skill?.name || null,
           } as IndividualRegistration;
         });

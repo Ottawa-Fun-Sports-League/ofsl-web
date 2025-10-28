@@ -11,6 +11,10 @@ const corsHeaders = {
 interface TeamRegistrationNotification {
   teamId: number;
   teamName: string;
+  enteredTeamName?: string;
+  originalTeamName?: string;
+  preferredTeamName?: string;
+  displayTeamName?: string;
   captainName: string;
   captainEmail: string;
   captainPhone?: string;
@@ -158,6 +162,10 @@ serve(async (req: Request) => {
     const {
       teamId,
       teamName,
+      enteredTeamName,
+      originalTeamName,
+      preferredTeamName,
+      displayTeamName,
       captainName,
       captainEmail,
       captainPhone,
@@ -245,7 +253,27 @@ serve(async (req: Request) => {
     // Create the notification email content
     const skillLevelLabel = await resolveTeamSkillLevel(serviceClient, teamId);
 
-    const emailSubject = `New Team Registration: ${teamName} in ${leagueName}`;
+    const submittedTeamNameCandidates = [
+      preferredTeamName,
+      originalTeamName,
+      enteredTeamName,
+      displayTeamName,
+    ];
+    let finalTeamName =
+      submittedTeamNameCandidates.find((name) => typeof name === "string" && name.trim().length > 0)?.trim() ??
+      teamName;
+
+    if (
+      finalTeamName === teamName &&
+      /^waitlist\s*-\s*/i.test(teamName)
+    ) {
+      const strippedName = teamName.replace(/^waitlist\s*-\s*/i, "").trim();
+      if (strippedName.length > 0) {
+        finalTeamName = strippedName;
+      }
+    }
+
+    const emailSubject = `New Team Registration: ${finalTeamName} in ${leagueName}`;
     const registrationDate = new Date(registeredAt).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -305,7 +333,7 @@ serve(async (req: Request) => {
                                   <tr>
                                     <td style="padding: 8px 0;">
                                       <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Team Name:</strong>
-                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${teamName}</span>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${finalTeamName}</span>
                                     </td>
                                   </tr>
                                   <tr>

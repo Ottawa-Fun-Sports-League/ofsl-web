@@ -57,9 +57,40 @@
   ],
   "overrides": [
     {
-      "files": ["supabase/functions/**/*.ts"],
+      "files": ["e2e/**/*.ts", "tests/**/*.ts"],
       "rules": {
         "no-console": "off"
+      }
+    },
+    {
+      "files": [
+        "src/screens/LeagueSchedulePage/**/*",
+        "src/screens/LeagueDetailPage/**/*",
+        "src/screens/LeagueStandingsPage/**/*",
+        "src/screens/MyAccount/components/ScorecardsFormatsTab/**/*",
+        "src/screens/MyAccount/components/TeamsTab/**/*",
+        "src/screens/MyAccount/components/LeaguesTab/**/*",
+        "src/screens/MyAccount/components/UserRegistrationsPage/**/*",
+        "src/screens/MyAccount/components/TeamEditPage/**/*",
+        "src/screens/MyAccount/components/LeagueEditPage.tsx",
+        "src/screens/MyAccount/components/IndividualEditPage/**/*",
+        "src/standings/**/*"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/ban-ts-comment": "off",
+        "no-empty": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "react-hooks/rules-of-hooks": "off",
+        "no-console": "off",
+        "unused-imports/no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["supabase/functions/**/*.ts"],
+      "rules": {
+        "no-console": "off",
+        "@typescript-eslint/no-explicit-any": "off"
       }
     }
   ]

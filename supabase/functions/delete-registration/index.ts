@@ -81,7 +81,7 @@ serve(async (req: Request) => {
     // Get the payment record to find the team
     const { data: payment, error: paymentError } = await supabase
       .from("league_payments")
-      .select("team_id, user_id")
+      .select("team_id, user_id, amount_due, amount_paid, status, is_waitlisted")
       .eq("id", paymentId)
       .single();
 
@@ -109,7 +109,7 @@ serve(async (req: Request) => {
     // Get the team to find all members
     const { data: team, error: teamError } = await supabase
       .from("teams")
-      .select("id, name, roster, captain_id")
+      .select("id, name, roster, captain_id, active")
       .eq("id", payment.team_id)
       .single();
 
@@ -136,6 +136,7 @@ serve(async (req: Request) => {
     }
 
     const warnings: string[] = [];
+    const teamMemberNames: string[] = [];
     let membersProcessed = 0;
 
     // Process each team member
@@ -144,7 +145,7 @@ serve(async (req: Request) => {
         // Remove this team from each member's teams array
         const { data: userData, error: userFetchError } = await supabase
           .from("users")
-          .select("teams")
+          .select("teams, name")
           .eq("id", memberId)
           .single();
 
@@ -165,6 +166,9 @@ serve(async (req: Request) => {
             warnings.push(`Could not update teams for user ${memberId}: ${updateError.message}`);
           } else {
             membersProcessed++;
+            if (userData.name && !teamMemberNames.includes(userData.name)) {
+              teamMemberNames.push(userData.name);
+            }
           }
         }
       }
@@ -212,7 +216,13 @@ serve(async (req: Request) => {
         .single();
 
       if (captainData) {
+        if (captainData.name && !teamMemberNames.includes(captainData.name)) {
+          teamMemberNames.push(captainData.name);
+        }
+
         // Call the cancellation notification function
+        const teamIsWaitlisted = team.active === false || (typeof team.name === "string" && /^waitlist\s*-/i.test(team.name));
+
         const response = await fetch(`${supabaseUrl}/functions/v1/send-cancellation-notification`, {
           method: 'POST',
           headers: {
@@ -227,6 +237,14 @@ serve(async (req: Request) => {
             leagueName: leagueName,
             isTeamRegistration: true,
             teamName: team.name,
+            originalTeamName: team.name,
+            rosterCount: Array.isArray(team.roster) ? team.roster.length : undefined,
+            teamMemberNames,
+            teamIsWaitlisted,
+            amountDue: payment.amount_due ?? null,
+            amountPaid: payment.amount_paid ?? null,
+            paymentStatus: payment.status ?? null,
+            isWaitlisted: payment.is_waitlisted ?? undefined,
             cancelledAt: new Date().toISOString()
           })
         });

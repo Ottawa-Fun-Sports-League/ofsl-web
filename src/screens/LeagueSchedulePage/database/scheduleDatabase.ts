@@ -440,7 +440,7 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
   // Fetch next week's relevant tiers (current, +/- 1) to minimize updates
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
 
-  let { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRows, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)
@@ -503,7 +503,9 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
       if (insErr) handleDatabaseError(insErr);
       (inserted || []).forEach((row: any) => {
         rowsByTier.set(row.tier_number, row);
-        (nextWeekRows || (nextWeekRows = [])).push(row);
+        if (nextWeekRows) {
+          nextWeekRows.push(row);
+        }
       });
     }
   }
@@ -678,7 +680,7 @@ export async function applyFourTeamTierMovementNextWeek(params: {
 
   // Fetch next week target tiers
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
-  let { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRows, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)
@@ -711,7 +713,7 @@ export async function applyFourTeamTierMovementNextWeek(params: {
     if (inserts.length>0) {
       const { data: inserted, error: insErr } = await supabase.from('weekly_schedules').insert(inserts).select('*');
       if (insErr) handleDatabaseError(insErr);
-      (inserted||[]).forEach((row:any)=>{ rowsByTier.set(row.tier_number,row); (nextWeekRows||(nextWeekRows=[])).push(row); });
+      (inserted||[]).forEach((row:any)=>{ rowsByTier.set(row.tier_number,row); if (nextWeekRows) { nextWeekRows.push(row); } });
     }
   }
 
@@ -948,7 +950,7 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
   // Fetch/create next week rows for destination tiers
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
 
-  let { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRows, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)
@@ -1007,7 +1009,9 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
       if (insErr) handleDatabaseError(insErr);
       (inserted || []).forEach((row: any) => {
         rowsByTier.set(row.tier_number, row);
-        (nextWeekRows || (nextWeekRows = [])).push(row);
+        if (nextWeekRows) {
+          nextWeekRows.push(row);
+        }
       });
     }
   }
@@ -1099,7 +1103,7 @@ export async function applyEliteThreeTeamMovementNextWeek(params: {
   }
 
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
-  let { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRows, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)

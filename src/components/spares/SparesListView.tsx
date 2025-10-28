@@ -55,6 +55,18 @@ interface Sport {
   active: boolean;
 }
 
+interface TeamWithLeague {
+  id: number;
+  captain_id: string | null;
+  co_captains: string[] | null;
+  active: boolean | null;
+  leagues: {
+    sport_id: number | null;
+    end_date: string | null;
+    active: boolean | null;
+  } | null;
+}
+
 interface SparesListViewProps {
   sportFilter?: string; // Optional filter to show only specific sport
   className?: string;
@@ -128,13 +140,14 @@ export const SparesListView: React.FC<SparesListViewProps> = ({
             const { data: captainTeams, error: captainErr } = await supabase
               .from('teams')
               .select('id, captain_id, co_captains, active, leagues:league_id(sport_id, end_date, active)')
-              .eq('active', true);
+              .eq('active', true)
+              .returns<TeamWithLeague[]>();
 
             if (!captainErr && captainTeams) {
               canViewVolleyball = captainTeams.some(t => {
                 const isCaptain = t.captain_id === userProfile.id;
                 const isCoCap = Array.isArray(t.co_captains) && t.co_captains.includes(userProfile.id);
-                const league = (t as any).leagues;
+                const league = t.leagues;
                 const isVbLeague = league && league.sport_id === vb.id;
                 const leagueActive = league && (league.active === true || !league.end_date || new Date(league.end_date) >= new Date());
                 return (isCaptain || isCoCap) && isVbLeague && leagueActive;
