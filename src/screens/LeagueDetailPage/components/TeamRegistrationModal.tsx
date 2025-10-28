@@ -137,9 +137,9 @@ export function TeamRegistrationModal({
 
     // For team registrations (not individual), we need team name
     const isTeamRegistration = league?.team_registration !== false;
-    if (!isWaitlist && isTeamRegistration) {
+    if (isTeamRegistration) {
       if (!teamName.trim()) {
-        showToast("Please enter a team name", "error");
+        showToast(isWaitlist ? "Please enter a team name for your waitlist registration" : "Please enter a team name", "error");
         return;
       }
     }
@@ -313,9 +313,7 @@ Please select a skill level that meets these requirements.`
           display_order?: number;
           skill_level_id?: number;
         } = {
-          name: isWaitlist
-            ? `Waitlist - ${userProfile.name || "Team"}`
-            : teamName.trim(),
+          name: teamName.trim(),
           league_id: leagueId,
           captain_id: userProfile.id,
           roster: [userProfile.id], // Captain is automatically added to roster
@@ -366,9 +364,7 @@ Please select a skill level that meets these requirements.`
               body: {
                 email: user.email,
                 userName: userProfile.name || "Team Captain",
-                teamName: isWaitlist
-                  ? `Waitlist - ${userProfile.name || "Team"}`
-                  : isTeamRegistration ? teamName.trim() : userProfile.name || "Individual",
+                teamName: isTeamRegistration ? teamName.trim() : userProfile.name || "Individual",
                 leagueName: leagueName,
                 isWaitlist: isWaitlist,
                 depositAmount: league?.deposit_amount || null,
@@ -445,7 +441,7 @@ Please select a skill level that meets these requirements.`
           );
         }
         const isTeamRegistration = leagueData.team_registration !== false;
-        const displayName = isTeamRegistration ? teamName : userProfile.name || "Individual";
+        const displayName = isTeamRegistration ? teamName.trim() : userProfile.name || "Individual";
         setRegisteredTeamName(displayName);
         setShowSuccessModal(true);
         closeModal();
@@ -614,6 +610,21 @@ Please select a skill level that meets these requirements.`
                           </p>
                         </div>
                       </div>
+
+                      {league?.team_registration !== false && (
+                        <div className="mb-6">
+                          <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                            Team Name *
+                          </label>
+                          <Input
+                            value={teamName}
+                            onChange={(e) => setTeamName(e.target.value)}
+                            placeholder="Enter your team name"
+                            className="w-full"
+                            required
+                          />
+                        </div>
+                      )}
 
                       <div className="mb-6">
                         <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
