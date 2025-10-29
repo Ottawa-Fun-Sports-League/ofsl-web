@@ -124,15 +124,66 @@ serve(async (req: Request) => {
       );
     }
     
-    // Verify the user is the team captain
-    if (team.captain_id !== user.id) {
-      return new Response(
-        JSON.stringify({ error: "Only the team captain can delete the team registration" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+    // Determine whether the requester is the captain or an admin
+    const { data: userProfile, error: userProfileError } = await supabase
+      .from("users")
+      .select("id, is_admin")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+
+    if (userProfileError) {
+      console.warn(
+        "[delete-registration] Failed to load user profile for auth user",
+        JSON.stringify({
+          authId: user.id,
+          error: userProfileError.message,
+        }),
       );
+    }
+
+    const profileId = userProfile?.id ?? null;
+    const identifiersToCheck = profileId ? [profileId, user.id] : [user.id];
+
+    const isCaptain = identifiersToCheck.some(
+      (identifier) => team.captain_id === identifier,
+    );
+    const isAdmin = Boolean(userProfile?.is_admin);
+    const isRosterMember =
+      Array.isArray(team.roster) &&
+      identifiersToCheck.some((identifier) => team.roster.includes(identifier));
+
+    if (!isCaptain && !isAdmin) {
+      if (isRosterMember) {
+        console.warn(
+          "[delete-registration] Allowing roster member deletion despite captain mismatch",
+          JSON.stringify({
+            teamId: team.id,
+            captainId: team.captain_id,
+            userId: user.id,
+            isAdmin,
+            isRosterMember,
+          }),
+        );
+      } else {
+        // Provide a specific message but include diagnostics for troubleshooting
+        console.warn(
+          "[delete-registration] Authorization failed",
+          JSON.stringify({
+            teamId: team.id,
+            captainId: team.captain_id,
+            userId: user.id,
+            isAdmin,
+            isRosterMember,
+          }),
+        );
+        return new Response(
+          JSON.stringify({ error: "Only the team captain can delete the team registration" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
     }
 
     const warnings: string[] = [];

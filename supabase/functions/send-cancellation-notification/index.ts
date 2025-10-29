@@ -30,6 +30,20 @@ interface CancellationNotificationRequest {
   cancelledAt: string;
 }
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeValue = (value?: string | null): string | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const validateEmail = (value?: string | null): string | null => {
+  const normalized = normalizeValue(value);
+  if (!normalized) return null;
+  return emailPattern.test(normalized) ? normalized : null;
+};
+
 // Helper function to send email with retry logic
 async function sendEmailWithRetry(
   resendApiKey: string,
@@ -134,7 +148,7 @@ serve(async (req: Request) => {
       cancelledAt,
     }: CancellationNotificationRequest = await req.json();
 
-    if (!userId || !userName || !userEmail || !leagueName) {
+    if (!userId || !leagueName) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         {
@@ -160,6 +174,46 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const _supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let resolvedUserName = normalizeValue(userName);
+    let resolvedUserEmail = validateEmail(userEmail);
+    let resolvedUserPhone = normalizeValue(userPhone);
+
+    if (!resolvedUserEmail || !resolvedUserName || !resolvedUserPhone) {
+      try {
+        const { data: userRecord, error: userLookupError } = await _supabase
+          .from("users")
+          .select("name, email, phone")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (userLookupError) {
+          console.warn(
+            "[Cancellation Notification] Unable to fetch user profile for fallback data",
+            { userId, error: userLookupError.message },
+          );
+        } else if (userRecord) {
+          if (!resolvedUserName && normalizeValue(userRecord.name)) {
+            resolvedUserName = normalizeValue(userRecord.name);
+          }
+          if (!resolvedUserEmail) {
+            resolvedUserEmail = validateEmail(userRecord.email);
+          }
+          if (!resolvedUserPhone && normalizeValue(userRecord.phone)) {
+            resolvedUserPhone = normalizeValue(userRecord.phone);
+          }
+        }
+      } catch (lookupError) {
+        console.warn(
+          "[Cancellation Notification] Exception while resolving user profile",
+          { userId, error: lookupError instanceof Error ? lookupError.message : String(lookupError) },
+        );
+      }
+    }
+
+    const finalUserName = resolvedUserName ?? "Team Captain";
+    const finalUserEmail = resolvedUserEmail;
+    const finalUserPhone = resolvedUserPhone ?? undefined;
 
     // Format cancellation date
     const cancellationDate = new Date(cancelledAt).toLocaleDateString('en-US', {
@@ -201,8 +255,8 @@ serve(async (req: Request) => {
     const normalizedPaymentStatus = paymentStatus ? paymentStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null;
 
     // Create user email content
-    const userEmailContent = {
-      to: [userEmail],
+    const userEmailContent = finalUserEmail ? {
+      to: [finalUserEmail],
       subject: `Registration Cancelled: ${leagueName}`,
       html: `
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
@@ -236,7 +290,7 @@ serve(async (req: Request) => {
                             <tr>
                               <td style="padding: 25px;">
                                 <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
-                                  Hi ${userName},
+                                  Hi ${finalUserName},
                                 </p>
                                 <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
                                   Your ${isTeamRegistration ? `team registration for <strong>${teamDisplayName ?? 'your team'}</strong> in` : 'individual registration for'} 
@@ -324,12 +378,19 @@ serve(async (req: Request) => {
           </tr>
         </table>
       `,
-    };
+    } : null;
+
+    if (!userEmailContent) {
+      console.warn(
+        "[Cancellation Notification] No valid email for user; skipping direct notification",
+        { userId, providedEmail: userEmail },
+      );
+    }
 
     // Create admin email content
     const adminEmailContent = {
       to: ["info@ofsl.ca"],
-      subject: `[Cancellation] ${userName} - ${leagueName} ${isTeamRegistration ? '(Team)' : '(Individual)'}`,
+      subject: `[Cancellation] ${finalUserName} - ${leagueName} ${isTeamRegistration ? '(Team)' : '(Individual)'}`,
       html: `
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
           <tr>
@@ -377,20 +438,24 @@ serve(async (req: Request) => {
                                   <tr>
                                     <td style="padding: 8px 0;">
                                       <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Name:</strong>
-                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${userName}</span>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${finalUserName}</span>
                                     </td>
                                   </tr>
                                   <tr>
                                     <td style="padding: 8px 0;">
                                       <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Email:</strong>
-                                      <a href="mailto:${userEmail}" style="color: #1976d2; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px; text-decoration: none;">${userEmail}</a>
+                                      ${
+                                        finalUserEmail
+                                          ? `<a href="mailto:${finalUserEmail}" style="color: #1976d2; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px; text-decoration: none;">${finalUserEmail}</a>`
+                                          : `<span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">Not provided</span>`
+                                      }
                                     </td>
                                   </tr>
-                                  ${userPhone ? `
+                                  ${finalUserPhone ? `
                                   <tr>
                                     <td style="padding: 8px 0;">
                                       <strong style="color: #5a6c7d; font-size: 14px; font-family: Arial, sans-serif;">Phone:</strong>
-                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${userPhone}</span>
+                                      <span style="color: #2c3e50; font-size: 16px; font-family: Arial, sans-serif; margin-left: 10px;">${finalUserPhone}</span>
                                     </td>
                                   </tr>
                                   ` : ''}
@@ -570,24 +635,34 @@ serve(async (req: Request) => {
       );
     }
 
-    // Send both emails with retry logic
-    const [userEmailResult, adminEmailResult] = await Promise.all([
-      sendEmailWithRetry(resendApiKey, 'user', userEmailContent),
-      sendEmailWithRetry(resendApiKey, 'admin', adminEmailContent)
-    ]);
+    const errors: string[] = [];
+    const results: Array<{ type: string; emailId: string }> = [];
 
-    const errors = [];
-    const results = [];
+    if (userEmailContent) {
+      const userEmailResult = await sendEmailWithRetry(
+        resendApiKey,
+        'user',
+        userEmailContent,
+      );
 
-    if (userEmailResult.success) {
-      results.push(userEmailResult.result);
+      if (userEmailResult.success && userEmailResult.result) {
+        results.push(userEmailResult.result);
+      } else if (userEmailResult.error) {
+        errors.push(userEmailResult.error);
+      }
     } else {
-      errors.push(userEmailResult.error);
+      errors.push("User email unavailable; skipped user notification");
     }
 
-    if (adminEmailResult.success) {
+    const adminEmailResult = await sendEmailWithRetry(
+      resendApiKey,
+      'admin',
+      adminEmailContent,
+    );
+
+    if (adminEmailResult.success && adminEmailResult.result) {
       results.push(adminEmailResult.result);
-    } else {
+    } else if (adminEmailResult.error) {
       errors.push(adminEmailResult.error);
     }
 

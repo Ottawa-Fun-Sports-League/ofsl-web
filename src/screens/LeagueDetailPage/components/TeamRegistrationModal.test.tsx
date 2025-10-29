@@ -278,6 +278,7 @@ describe("TeamRegistrationModal", () => {
           body: expect.objectContaining({
             teamName: "Test Team No Deposit",
             leagueName: "Test League",
+            teamId: expect.any(Number),
             depositAmount: null,
             depositDate: null,
             isWaitlist: false,
@@ -397,6 +398,7 @@ describe("TeamRegistrationModal", () => {
           body: expect.objectContaining({
             teamName: "Test Team Only Amount",
             leagueName: "Test League",
+            teamId: expect.any(Number),
             depositAmount: 200,
             depositDate: null,
             isWaitlist: false,
@@ -516,6 +518,7 @@ describe("TeamRegistrationModal", () => {
           body: expect.objectContaining({
             teamName: "Test Team With Deposit",
             leagueName: "Test League",
+            teamId: expect.any(Number),
             depositAmount: 50,
             depositDate: "2025-01-20",
             isWaitlist: false,
@@ -711,6 +714,7 @@ describe("TeamRegistrationModal", () => {
           body: expect.objectContaining({
             teamName: "Beginner Buddies",
             leagueName: "Test League",
+            teamId: expect.any(Number),
             isWaitlist: false,
           }),
         }),

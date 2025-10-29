@@ -183,6 +183,8 @@ Please select a skill level that meets these requirements.`
     setLoading(true);
 
     try {
+      let createdTeamId: number | null = null;
+
       // Get league information for payment calculation
       const { data: leagueData, error: leagueError } = await supabase
         .from("leagues")
@@ -260,31 +262,28 @@ Please select a skill level that meets these requirements.`
         // Send notification to info@ofsl.ca for individual registration
         // Include waitlist status in the notification
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const notificationResponse = await supabase.functions.invoke(
-              "notify-individual-registration",
-              {
-                body: {
-                  userId: userProfile.id,
-                  userName: userProfile.name || "Unknown",
-                  userEmail: user?.email || userProfile.email || "Unknown",
-                  userPhone: userProfile.phone,
-                  leagueId: leagueId,
-                  leagueName: leagueName,
-                  registeredAt: new Date().toISOString(),
-                  amountPaid: 0, // Will be updated when payment is made
-                  paymentMethod: "Pending",
-                  isWaitlisted: isWaitlist, // Include waitlist status
-                  skillLevelName: selectedSkillName,
-                },
+          const notificationResponse = await supabase.functions.invoke(
+            "notify-individual-registration",
+            {
+              body: {
+                userId: userProfile.id,
+                userName: userProfile.name || "Unknown",
+                userEmail: user?.email || userProfile.email || "Unknown",
+                userPhone: userProfile.phone,
+                leagueId: leagueId,
+                leagueName: leagueName,
+                registeredAt: new Date().toISOString(),
+                amountPaid: 0, // Will be updated when payment is made
+                paymentMethod: "Pending",
+                isWaitlisted: isWaitlist, // Include waitlist status
+                skillLevelName: selectedSkillName,
               },
-            );
-            
-            if (notificationResponse.error) {
-              console.error("Failed to send individual registration notification:", notificationResponse.error);
-              // Don't throw - notification failure shouldn't block registration
-            }
+            },
+          );
+          
+          if (notificationResponse.error) {
+            console.error("Failed to send individual registration notification:", notificationResponse.error);
+            // Don't throw - notification failure shouldn't block registration
           }
         } catch (notificationError) {
           console.error("Error sending individual registration notification:", notificationError);
@@ -340,6 +339,8 @@ Please select a skill level that meets these requirements.`
           throw new Error(teamError.message || 'Failed to create team');
         }
 
+        createdTeamId = teamData.id;
+
         // Update user's team_ids array
         const currentTeamIds = userProfile.team_ids || [];
         const updatedTeamIds = [...currentTeamIds, teamData.id];
@@ -366,6 +367,7 @@ Please select a skill level that meets these requirements.`
                 userName: userProfile.name || "Team Captain",
                 teamName: isTeamRegistration ? teamName.trim() : userProfile.name || "Individual",
                 leagueName: leagueName,
+                teamId: isTeamRegistration ? createdTeamId : null,
                 isWaitlist: isWaitlist,
                 depositAmount: league?.deposit_amount || null,
                 depositDate: league?.deposit_date || null,
@@ -391,32 +393,17 @@ Please select a skill level that meets these requirements.`
 
       // Trigger notification processing for new team registrations (not waitlist)
       if (!isWaitlist) {
-        try {
-          // Get current session for authorization
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-
-          if (session) {
-            // Call the notification queue processor
-            fetch(
-              "https://api.ofsl.ca/functions/v1/process-notification-queue",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-              },
-            ).catch((error) => {
-              // Don't block the user flow for notification errors
-              console.error("Error triggering notification processing:", error);
-            });
-          }
-        } catch (error) {
-          // Don't block the user flow for notification errors
-          console.error("Error triggering notification processing:", error);
-        }
+        void supabase.functions
+          .invoke("process-notification-queue")
+          .then(({ error }) => {
+            if (error) {
+              console.error("Failed to process registration notification queue:", error);
+            }
+          })
+          .catch((error) => {
+            // Don't block the user flow for notification errors
+            console.error("Error triggering notification processing:", error);
+          });
       }
 
       // Payment record will be automatically created by database trigger for regular registrations

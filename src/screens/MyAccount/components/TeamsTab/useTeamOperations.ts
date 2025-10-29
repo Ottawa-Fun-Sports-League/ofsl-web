@@ -67,11 +67,34 @@ export function useTeamOperations() {
 
     const isIndividualRegistration = !payment.team_id;
 
+    let resolvedLeagueName = leagueName;
+    if (!resolvedLeagueName || resolvedLeagueName.trim().length === 0) {
+      if (payment.league_id) {
+        try {
+          const { data: leagueRecord } = await supabase
+            .from('leagues')
+            .select('name')
+            .eq('id', payment.league_id)
+            .maybeSingle();
+
+          if (leagueRecord?.name) {
+            resolvedLeagueName = leagueRecord.name;
+          }
+        } catch (lookupError) {
+          console.warn('Unable to resolve league name for unregister flow:', lookupError);
+        }
+      }
+    }
+
+    if (!resolvedLeagueName || resolvedLeagueName.trim().length === 0) {
+      resolvedLeagueName = 'Unknown League';
+    }
+
     // Store the payment info and show confirmation modal
     setConfirmationState({
       isOpen: true,
       paymentId,
-      leagueName,
+      leagueName: resolvedLeagueName,
       isIndividual: isIndividualRegistration,
       onSuccess,
     });
@@ -159,32 +182,29 @@ export function useTeamOperations() {
         // Send cancellation notification
         if (userDetails) {
           try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              const notificationResponse = await supabase.functions.invoke(
-                "send-cancellation-notification",
-                {
-                  body: {
-                    userId: userDetails.id,
-                    userName: userDetails.name || "Unknown",
-                    userEmail: userDetails.email || "Unknown",
-                    userPhone: userDetails.phone,
-                    leagueName: leagueName,
-                    isTeamRegistration: false,
-                    isWaitlisted: payment?.is_waitlisted ?? undefined,
-                    skillLevelName: skillLevelName ?? undefined,
-                    amountDue: payment?.amount_due ?? null,
-                    amountPaid: payment?.amount_paid ?? null,
-                    paymentStatus: payment?.status ?? null,
-                    cancelledAt: new Date().toISOString(),
-                  },
+            const notificationResponse = await supabase.functions.invoke(
+              "send-cancellation-notification",
+              {
+                body: {
+                  userId: userDetails.id,
+                  userName: userDetails.name || "Unknown",
+                  userEmail: userDetails.email || "Unknown",
+                  userPhone: userDetails.phone,
+                  leagueName: leagueName,
+                  isTeamRegistration: false,
+                  isWaitlisted: payment?.is_waitlisted ?? undefined,
+                  skillLevelName: skillLevelName ?? undefined,
+                  amountDue: payment?.amount_due ?? null,
+                  amountPaid: payment?.amount_paid ?? null,
+                  paymentStatus: payment?.status ?? null,
+                  cancelledAt: new Date().toISOString(),
                 },
-              );
-              
-              if (notificationResponse.error) {
-                console.error("Failed to send cancellation notification:", notificationResponse.error);
-                // Don't throw - notification failure shouldn't block cancellation
-              }
+              },
+            );
+            
+            if (notificationResponse.error) {
+              console.error("Failed to send cancellation notification:", notificationResponse.error);
+              // Don't throw - notification failure shouldn't block cancellation
             }
           } catch (notificationError) {
             console.error("Error sending cancellation notification:", notificationError);
@@ -215,35 +235,30 @@ export function useTeamOperations() {
 
       setUnregisteringPayment(paymentId);
       try {
-        // Get the session to authenticate with Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          throw new Error('No authentication session found');
-        }
-
         // Call the Edge Function
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const response = await fetch(`${supabaseUrl}/functions/v1/delete-registration`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            paymentId: paymentId,
-            leagueName: leagueName
-          }),
+        console.debug("[TeamsTab] Invoking delete-registration function", {
+          paymentId,
+          leagueName,
         });
+        const { data: deleteResult, error: deleteError } = await supabase.functions.invoke(
+          "delete-registration",
+          {
+            body: {
+              paymentId: Number(paymentId),
+              leagueName,
+            },
+          },
+        );
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to delete registration');
+        if (deleteError) {
+          console.error("delete-registration function error", deleteError);
+          throw new Error(deleteError.message || 'Failed to delete registration');
         }
+
+        const result = deleteResult ?? {};
 
         // Show success message with details
-        if (result.warnings && result.warnings.length > 0) {
+        if (Array.isArray(result.warnings) && result.warnings.length > 0) {
           setResultState({
             isOpen: true,
             type: 'warning',

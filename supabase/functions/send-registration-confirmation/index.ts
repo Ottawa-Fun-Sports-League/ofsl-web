@@ -30,11 +30,58 @@ interface RegistrationRequest {
   userName: string;
   teamName: string;
   leagueName: string;
+  teamId?: number | null;
   isWaitlist?: boolean;
   depositAmount?: number | null;
   depositDate?: string | null;
   isIndividualRegistration?: boolean;
   leagueSkillLevel?: string | null;
+}
+
+const formatAdminTimestamp = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    dateStyle: "full",
+    timeStyle: "short",
+  }).format(date);
+
+async function sendEmailThroughResend(
+  resendApiKey: string,
+  emailContent: { to: string[]; subject: string; html: string },
+  recipientType: "user" | "admin",
+) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from:
+        recipientType === "admin"
+          ? "OFSL System <noreply@ofsl.ca>"
+          : "OFSL <noreply@ofsl.ca>",
+      ...emailContent,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    // eslint-disable-next-line no-console
+    console.error(
+      `[send-registration-confirmation] ${recipientType} email failed:`,
+      errorText,
+    );
+    return { success: false as const, error: errorText };
+  }
+
+  const result = await response.json();
+  // eslint-disable-next-line no-console
+  console.log(
+    `[send-registration-confirmation] ${recipientType} email sent successfully:`,
+    result.id,
+  );
+  return { success: true as const, emailId: result.id };
 }
 
 serve(async (req: Request) => {
@@ -59,6 +106,7 @@ serve(async (req: Request) => {
       userName,
       teamName,
       leagueName,
+      teamId = null,
       isWaitlist = false,
       depositAmount = null,
       depositDate = null,
@@ -91,7 +139,7 @@ serve(async (req: Request) => {
     // Initialize Supabase client with service role for database operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const _supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the user is authenticated by checking their token
     const token = authHeader.replace("Bearer ", "");
@@ -123,6 +171,108 @@ serve(async (req: Request) => {
     const skillLevelLabel = leagueSkillLevel && leagueSkillLevel.trim().length > 0
       ? leagueSkillLevel.trim()
       : "Not specified";
+
+    const registrationDateTime = formatAdminTimestamp(new Date());
+    const registrationTypeLabel = isIndividualRegistration ? "Individual" : "Team";
+    const registrationStatusLabel = isWaitlist ? "Waitlist" : "Confirmed";
+    const depositDateFormatted = formatLocalDate(depositDate);
+    const adminEmailSubject = `${registrationStatusLabel === "Waitlist" ? "[Waitlist]" : "[Registration]"} ${registrationTypeLabel}: ${isIndividualRegistration ? userName : teamName} - ${leagueName}`;
+    const adminEmailContent = {
+      to: ["info@ofsl.ca"],
+      subject: adminEmailSubject,
+      html: `
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
+          <tr>
+            <td align="center" style="padding: 20px 0;">
+              <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff;">
+                <tr>
+                  <td align="center" style="background-color: #B20000; padding: 28px 20px;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-family: Arial, sans-serif;">
+                      ${registrationStatusLabel === "Waitlist" ? "New Waitlist Registration" : "New Registration Received"}
+                    </h1>
+                    <p style="color: #ffe3e3; margin: 6px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">
+                      ${registrationDateTime}
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 36px 30px;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td style="padding: 0 0 24px 0;">
+                          <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                            A ${registrationTypeLabel.toLowerCase()} registration has been completed in <strong>${leagueName}</strong>.
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+                            <tr>
+                              <td style="padding: 20px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-family: Arial, sans-serif; font-size: 14px; color: #2c3e50;">
+                                  <tr>
+                                    <td style="padding: 6px 0; width: 40%; color: #5a6c7d;"><strong>Registration Type:</strong></td>
+                                    <td style="padding: 6px 0;">${registrationTypeLabel}${teamId !== null ? ` (#${teamId})` : ""}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Status:</strong></td>
+                                    <td style="padding: 6px 0;">${registrationStatusLabel}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>League:</strong></td>
+                                    <td style="padding: 6px 0; font-weight: bold; color: #B20000;">${leagueName}</td>
+                                  </tr>
+                                  ${
+                                    isIndividualRegistration
+                                      ? `
+                                        <tr>
+                                          <td style="padding: 6px 0; color: #5a6c7d;"><strong>Participant:</strong></td>
+                                          <td style="padding: 6px 0;">${userName}</td>
+                                        </tr>
+                                      `
+                                      : `
+                                        <tr>
+                                          <td style="padding: 6px 0; color: #5a6c7d;"><strong>Team Name:</strong></td>
+                                          <td style="padding: 6px 0;">${teamName}</td>
+                                        </tr>
+                                        <tr>
+                                          <td style="padding: 6px 0; color: #5a6c7d;"><strong>Captain:</strong></td>
+                                          <td style="padding: 6px 0;">${userName}</td>
+                                        </tr>
+                                      `
+                                  }
+                                  <tr>
+                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Contact Email:</strong></td>
+                                    <td style="padding: 6px 0;"><a href="mailto:${email}" style="color: #1976d2; text-decoration: none;">${email}</a></td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Skill Level:</strong></td>
+                                    <td style="padding: 6px 0;">${skillLevelLabel}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Deposit:</strong></td>
+                                    <td style="padding: 6px 0;">${
+                                      depositAmount
+                                        ? `$${depositAmount.toFixed(2)}${depositDateFormatted ? ` due ${depositDateFormatted}` : ""}`
+                                        : "No deposit required"
+                                    }</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `,
+    };
 
     const emailContent = {
       to: [email],
@@ -370,25 +520,16 @@ serve(async (req: Request) => {
       );
     }
 
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "OFSL <noreply@ofsl.ca>",
-        ...emailContent,
-      }),
-    });
+    const adminResult = await sendEmailThroughResend(
+      resendApiKey,
+      adminEmailContent,
+      "admin",
+    );
 
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      // eslint-disable-next-line no-console
-      console.error("Resend API error:", errorText);
+    if (!adminResult.success) {
       return new Response(
         JSON.stringify({
-          error: "Failed to send registration confirmation email",
+          error: "Failed to send admin registration notification",
         }),
         {
           status: 500,
@@ -397,15 +538,50 @@ serve(async (req: Request) => {
       );
     }
 
-    const emailResult = await emailResponse.json();
-    // eslint-disable-next-line no-console
-    console.log("Email sent successfully:", emailResult);
+    const userResult = await sendEmailThroughResend(
+      resendApiKey,
+      emailContent,
+      "user",
+    );
+
+    if (!userResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Failed to send registration confirmation email",
+          adminEmailId: adminResult.emailId,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (teamId !== null) {
+      const { error: queueUpdateError } = await serviceClient
+        .from("team_registration_notifications")
+        .update({
+          sent: true,
+          sent_at: new Date().toISOString(),
+        })
+        .eq("team_id", teamId)
+        .eq("sent", false);
+
+      if (queueUpdateError) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[send-registration-confirmation] Failed to update notification queue:",
+          queueUpdateError,
+        );
+      }
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         message: "Registration confirmation email sent successfully",
-        emailId: emailResult.id,
+        emailId: userResult.emailId,
+        adminEmailId: adminResult.emailId,
       }),
       {
         status: 200,

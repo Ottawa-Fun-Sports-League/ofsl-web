@@ -184,25 +184,22 @@ export function useTeamOperations(
       if (deleteError) throw deleteError;
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await supabase.functions.invoke("send-cancellation-notification", {
-            body: {
-              userId: team.captain_id,
-              userName: captainMember?.name || team.users?.name || "Team Captain",
-              userEmail: captainMember?.email || team.users?.email || "Unknown",
-              userPhone: captainMember?.phone,
-              leagueName,
-              isTeamRegistration: true,
-              teamName: team.name,
-              originalTeamName: team.name,
-              teamMemberNames: rosterNames,
-              rosterCount: teamMembers.length,
-              teamIsWaitlisted: waitlistPrefixMatch,
-              cancelledAt: new Date().toISOString(),
-            },
-          });
-        }
+        await supabase.functions.invoke("send-cancellation-notification", {
+          body: {
+            userId: team.captain_id,
+            userName: captainMember?.name || team.users?.name || "Team Captain",
+            userEmail: captainMember?.email || team.users?.email || "Unknown",
+            userPhone: captainMember?.phone,
+            leagueName,
+            isTeamRegistration: true,
+            teamName: team.name,
+            originalTeamName: team.name,
+            teamMemberNames: rosterNames,
+            rosterCount: teamMembers.length,
+            teamIsWaitlisted: waitlistPrefixMatch,
+            cancelledAt: new Date().toISOString(),
+          },
+        });
       } catch (notificationError) {
         console.error('Error sending cancellation notification:', notificationError);
       }
