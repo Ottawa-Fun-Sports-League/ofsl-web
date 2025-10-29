@@ -66,6 +66,22 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                 Captains are responsible for bringing their own first aid kits.
               </p>
             </section>
+            <section>
+              <h3 className="text-2xl font-bold text-[#6F6F6F] mb-4">Ruleset</h3>
+              <p className="text-lg text-[#6F6F6F]">
+                OFSL follows
+                {" "}
+                <a
+                  href="https://volleyball.ca/uploads/Development/Referee/Rules/Rulebook_Files/Current_Year/2025-26_VC_Rulebook_EN_-_Final.pdf"
+                  className="text-[#b20000] underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Volleyball Canada&apos;s ruleset
+                </a>
+                .
+              </p>
+            </section>
           </div>
         </div>
 
@@ -582,6 +598,8 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                       <li>Players are responsible for the setup and takedown of the net and other necessary equipment</li>
                       <li>Players are responsible for checking net height and equipment where applicable.</li>
                       <li>Preferred game ball: Mikasa V200W (yellow &amp; blue). Teams are expected to provide balls.</li>
+                      <li>Teams A &amp; C are responsible for set up</li>
+                      <li>Teams B &amp; C are responsible for takedown</li>
                     </ul>
                   </section>
 

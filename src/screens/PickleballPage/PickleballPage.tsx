@@ -84,7 +84,7 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
   intro: {
     heading: "Find a Pickleball Program For You",
     description:
-      "OFSL's fall pickleball programs will use different formats for organizing matchups to keep things interesting each week, which will be the case for each fall program. OFSL asks you review the skill definitions carefully to ensure you register for the appropriate program.",
+      "OFSL's fall pickleball programs will use different formats for organizing matchups to keep things interesting each week, which will be the case for each fall program. OFSL asks you review the skill definitions carefully to ensure you register for the appropriate program. You can register as a fulltime player (every week), or as a drop in player (subject to availability).",
   },
   leagueCardImage: "/pickleball-card.jpg",
   emptyState: {
@@ -120,9 +120,10 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
     imageAlt: "Pickleball community",
     title: "About our pickleball programs",
     bullets: [
-      "Capacity: 4 courts with 16 players playing simultaneously.",
-      "Quality venue: hardwood floors, bright lighting, high ceilings.",
-      "Rotating formats: random partners/opponents, ladder play, fixed-partner and same-gender days.",
+      "Onix Indoor Fuse ball (orange colour)",
+      "Capacity: 4 courts with 16 players playing simultaneously.(maximum 20 players in attendance each week)",
+      "Quality venue: high quality hardwood floors, bright lighting, high ceilings.",
+      "Rotating formats: random partners/opponents, ladder play, and occasional fixedpartner and same-gender play periods.",
     ],
     buttonText: "Register now",
     buttonLink: "/leagues?sport=Pickleball",
@@ -131,13 +132,13 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
     {
       title: "Novice",
       bullets: [
-        "Understands all/some of the basic rules of pickleball but sometimes forgets them",
+        "May need help understanding of the basic rules and strategy of pickleball",
         "Can serve and return the ball with some success",
         "Can sustain a short rally",
+        "Can usually hit 'easy' (high, slow) ball into opponents' court",
         "Can usually hit ‘easy’ (high, slow) ball into opponents’ court",
         "Sometimes hesitates to move forward to the non-volley zone line (comfortable staying closer to the baseline)",
-        "Often makes a mistake early in the rally",
-        "Some difficulty hitting backhands",
+        
       ],
       rating: 1,
     },
@@ -149,7 +150,7 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
         "Can sustain longer rallies with ‘easy balls’ but has difficulty sustaining rally with lower, harder balls",
         "Comfortable moving forward to non-volley zone line and reaches that position in most rallies",
         "Sometimes makes a mistake early in the rally",
-        "Can hit backhands with some control and power",
+        "Can hit backhands with some control",
         "Can dink easy (slow) balls back and forth a few times",
         "Comfortable attempting the 3rd shot drop",
         "Can volley medium/high balls with some success",
@@ -161,7 +162,7 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
       title: "Low Intermediate",
       bullets: [
         "Can consistently serve and return the ball with some precision",
-        "Can sustain longer rallies with some fast and low balls",
+        "Can sustain longer rallies, including some fast and low balls",
         "Moves forward to the non-volley zone as soon as possible",
         "Uses backhand as confidently and as often as a forehand",
         "Can sustain a longer dink rally including some fast and low dinks",
@@ -174,13 +175,13 @@ export const DEFAULT_PICKLEBALL_CONTENT: PickleballPageContent = {
     {
       title: "High Intermediate",
       bullets: [
-        "Can consistently serve and return with power, depth, and precision",
+        "Can consistently serve and return with power, and depth",
         "Can sustain rallies with several low and fast balls",
         "Rarely makes a mistake early in the rally",
         "Strong groundstrokes on forehand and backhand side",
-        "Can sustain a dink rally with fast and low balls with spin (slice, topspin)",
-        "Consistently lands the 3rd shot drop into the opponents’ non-volley zone with it bouncing low to ground",
-        "Can volley ‘low’ balls into the opponents’ non-volley zone",
+        "Can sustain a dink rally with fast and low balls with spin (slice and/or topspin)",
+        "Consistently lands the 3rd shot drop into the opponents' non-volley zone with it bouncing low to ground",
+        "Can volley 'low' balls into the opponents' non-volley zone",
         "Can sustain a medium-fast volley exchange back and forth with an opponent",
       ],
       rating: 4,
@@ -212,7 +213,26 @@ export const PickleballPage = (): React.ReactElement => {
       "pickleball",
       DEFAULT_PICKLEBALL_CONTENT,
       controller.signal,
-    ).then((data) => setContent(data));
+    ).then((data) => {
+      const fixed = {
+        ...data,
+        skillLevels: (data.skillLevels ?? []).map((level) =>
+          level.title === "Novice"
+            ? {
+                ...level,
+                bullets: [
+                  "May need help understanding of the basic rules and strategy of pickleball",
+                  "Can serve and return the ball with some success",
+                  "Can sustain a short rally",
+                  "Can usually hit 'easy' (high, slow) ball into opponents' court",
+                  "Sometimes hesitates to move forward to the non-volley zone line (comfortable staying closer to the baseline)",
+                ],
+              }
+            : level,
+        ),
+      };
+      setContent(fixed);
+    });
 
     return () => controller.abort();
   }, []);
@@ -356,7 +376,7 @@ export const PickleballPage = (): React.ReactElement => {
                 <div className="flex mb-4">{renderRatingStars(level.rating)}</div>
                 <h2 className="text-xl font-bold text-[#6F6F6F] mb-4">{level.title}</h2>
                 <ul className="space-y-3 text-[#6F6F6F]">
-                  {level.bullets.map((bullet, index) => (
+                  {(level.title === "Novice" ? level.bullets.filter((b) => !b.includes("�")) : level.bullets).map((bullet, index) => (
                     <li key={`${level.title}-${index}`} className="flex items-start">
                       <span className="mr-2">•</span>
                       <span>{bullet}</span>
