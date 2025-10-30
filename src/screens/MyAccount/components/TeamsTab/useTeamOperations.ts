@@ -102,8 +102,10 @@ export function useTeamOperations() {
 
   const handleConfirmCancellation = async () => {
     const { paymentId, leagueName, isIndividual, onSuccess } = confirmationState;
-    
-    if (!paymentId || !onSuccess) return;
+
+    if (!paymentId || !onSuccess) {
+      return;
+    }
 
     // Close the modal
     setConfirmationState(prev => ({ ...prev, isOpen: false }));
@@ -114,7 +116,7 @@ export function useTeamOperations() {
       setUnregisteringPayment(paymentId);
       try {
         // Get payment details for league_id and user info
-        const { data: payment } = await supabase
+        const { data: payment, error: paymentFetchError } = await supabase
           .from('league_payments')
           .select(`
             league_id,
@@ -128,26 +130,39 @@ export function useTeamOperations() {
           `)
           .eq('id', paymentId)
           .single<IndividualPaymentDetails>();
-        
+
+        if (paymentFetchError) {
+          console.error('Error fetching payment details:', paymentFetchError);
+          throw new Error(`Failed to fetch payment details: ${paymentFetchError.message}`);
+        }
+
+        if (!payment) {
+          console.error('No payment data returned');
+          throw new Error('Payment not found');
+        }
+
         let skillLevelName: string | null = null;
-        if (payment?.skills) {
+        if (payment.skills) {
           if (Array.isArray(payment.skills)) {
             skillLevelName = payment.skills[0]?.name ?? null;
           } else {
             skillLevelName = payment.skills.name ?? null;
           }
         }
-        
+
         // Get user details for the notification
-        let userDetails = null;
-        if (payment) {
-          const { data: userData } = await supabase
-            .from('users')
-            .select('id, name, email, phone')
-            .eq('id', payment.user_id)
-            .single();
-          userDetails = userData;
+        const { data: userData, error: userFetchError } = await supabase
+          .from('users')
+          .select('id, name, email, phone')
+          .eq('id', payment.user_id)
+          .single();
+
+        if (userFetchError) {
+          console.error('Error fetching user details:', userFetchError);
+          // Don't throw - continue with cancellation even if we can't fetch user details
         }
+
+        const userDetails = userData;
 
         // Delete the payment record
         const { error: deletePaymentError } = await supabase
@@ -167,7 +182,7 @@ export function useTeamOperations() {
 
           if (!userFetchError && userData && userData.league_ids) {
             const updatedLeagueIds = userData.league_ids.filter((id: number) => id !== payment.league_id);
-            
+
             const { error: updateError } = await supabase
               .from('users')
               .update({ league_ids: updatedLeagueIds })
@@ -180,16 +195,24 @@ export function useTeamOperations() {
         }
 
         // Send cancellation notification
-        if (userDetails) {
-          try {
+        try {
+          // Get the current session to pass authorization header
+          const { data: { session } } = await supabase.auth.getSession();
+
+          if (!session) {
+            console.error('No active session found for cancellation notification');
+          } else {
             const notificationResponse = await supabase.functions.invoke(
-              "send-cancellation-notification",
+              'send-cancellation-notification',
               {
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                },
                 body: {
-                  userId: userDetails.id,
-                  userName: userDetails.name || "Unknown",
-                  userEmail: userDetails.email || "Unknown",
-                  userPhone: userDetails.phone,
+                  userId: userDetails?.id || payment.user_id,
+                  userName: userDetails?.name || 'Unknown',
+                  userEmail: userDetails?.email || '',
+                  userPhone: userDetails?.phone || '',
                   leagueName: leagueName,
                   isTeamRegistration: false,
                   isWaitlisted: payment?.is_waitlisted ?? undefined,
@@ -201,15 +224,15 @@ export function useTeamOperations() {
                 },
               },
             );
-            
+
             if (notificationResponse.error) {
-              console.error("Failed to send cancellation notification:", notificationResponse.error);
+              console.error('Failed to send cancellation notification:', notificationResponse.error);
               // Don't throw - notification failure shouldn't block cancellation
             }
-          } catch (notificationError) {
-            console.error("Error sending cancellation notification:", notificationError);
-            // Don't throw - notification failure shouldn't block cancellation
           }
+        } catch (notificationError) {
+          console.error('Exception while sending cancellation notification:', notificationError);
+          // Don't throw - notification failure shouldn't block cancellation
         }
 
         setResultState({
@@ -236,10 +259,6 @@ export function useTeamOperations() {
       setUnregisteringPayment(paymentId);
       try {
         // Call the Edge Function
-        console.debug("[TeamsTab] Invoking delete-registration function", {
-          paymentId,
-          leagueName,
-        });
         const { data: deleteResult, error: deleteError } = await supabase.functions.invoke(
           "delete-registration",
           {

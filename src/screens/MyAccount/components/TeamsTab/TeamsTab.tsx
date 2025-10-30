@@ -139,26 +139,58 @@ export function TeamsTab() {
   const handleConfirmLeaveIndividual = async () => {
     if (!leaveConfirmation || !userProfile?.id || !user) return;
     const { id: leagueId, name: leagueName } = leaveConfirmation;
-    
+
     setLeaveConfirmation(null);
-    
+
     try {
+      // First, fetch payment details before deletion for notification
+      const { data: paymentData, error: paymentFetchError } = await supabase
+        .from('league_payments')
+        .select(`
+          id,
+          amount_due,
+          amount_paid,
+          status,
+          is_waitlisted,
+          skill_level_id,
+          skills:skill_level_id (id, name)
+        `)
+        .eq('user_id', userProfile.id)
+        .eq('league_id', leagueId)
+        .is('team_id', null)
+        .maybeSingle();
+
+      if (paymentFetchError) {
+        console.error('Error fetching payment details:', paymentFetchError);
+      }
+
+      // Fetch user details for notification
+      const { data: userDetails, error: userFetchError } = await supabase
+        .from('user_details')
+        .select('name, email, phone')
+        .eq('user_id', userProfile.id)
+        .maybeSingle();
+
+      if (userFetchError) {
+        console.error('Error fetching user details:', userFetchError);
+      }
+
       // Check if user is in league_ids (active) or just in league_payments (waitlisted)
       const currentLeagueIds = userProfile.league_ids || [];
       const isInLeagueIds = currentLeagueIds.includes(leagueId);
-      
+
       // Only update league_ids if the user is currently in it (active registration)
       if (isInLeagueIds) {
         const updatedLeagueIds = currentLeagueIds.filter(id => id !== leagueId);
-        
+
         const { error } = await supabase
           .from('users')
           .update({ league_ids: updatedLeagueIds })
           .eq('id', userProfile.id);
-        
+
         if (error) throw error;
       }
-      
+
       // Delete any payment records for this individual registration (both active and waitlisted)
       await supabase
         .from('league_payments')
@@ -166,21 +198,71 @@ export function TeamsTab() {
         .eq('user_id', userProfile.id)
         .eq('league_id', leagueId)
         .is('team_id', null);
-      
+
+      // Send cancellation notification
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          console.error('No active session found for cancellation notification');
+        } else {
+          // Extract skill level name if available
+          let skillLevelName: string | null = null;
+          if (paymentData?.skills) {
+            if (Array.isArray(paymentData.skills)) {
+              skillLevelName = paymentData.skills[0]?.name ?? null;
+            } else {
+              skillLevelName = paymentData.skills.name ?? null;
+            }
+          }
+
+          const notificationResponse = await supabase.functions.invoke(
+            'send-cancellation-notification',
+            {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: {
+                userId: userProfile.id,
+                userName: userDetails?.name || userProfile.name || 'Unknown',
+                userEmail: userDetails?.email || userProfile.email || '',
+                userPhone: userDetails?.phone || '',
+                leagueName: leagueName,
+                isTeamRegistration: false,
+                isWaitlisted: paymentData?.is_waitlisted ?? undefined,
+                skillLevelName: skillLevelName ?? undefined,
+                amountDue: paymentData?.amount_due ?? null,
+                amountPaid: paymentData?.amount_paid ?? null,
+                paymentStatus: paymentData?.status ?? null,
+                cancelledAt: new Date().toISOString(),
+              },
+            },
+          );
+
+          if (notificationResponse.error) {
+            console.error('Failed to send cancellation notification:', notificationResponse.error);
+            // Don't throw - notification failure shouldn't block cancellation
+          }
+        }
+      } catch (notificationError) {
+        console.error('Exception while sending cancellation notification:', notificationError);
+        // Don't throw - notification failure shouldn't block cancellation
+      }
+
       // Refresh all relevant data
       await Promise.all([
         refetchIndividualLeagues(),
         refetchLeaguePayments(),
         refreshUserProfile()  // This will update the user profile with new league_ids
       ]);
-      
+
       setLeaveResultModal({
         isOpen: true,
         type: 'success',
         title: 'Registration Cancelled',
         message: `Successfully cancelled registration for ${leagueName}.`,
       });
-        
+
     } catch (error) {
       console.error('Error leaving individual league:', error);
       setLeaveResultModal({

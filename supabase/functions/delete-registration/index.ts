@@ -274,35 +274,36 @@ serve(async (req: Request) => {
         // Call the cancellation notification function
         const teamIsWaitlisted = team.active === false || (typeof team.name === "string" && /^waitlist\s*-/i.test(team.name));
 
-        const response = await fetch(`${supabaseUrl}/functions/v1/send-cancellation-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`
+        // Forward the user's JWT token (not the service key) to pass JWT verification
+        const { error: notificationError } = await supabase.functions.invoke(
+          "send-cancellation-notification",
+          {
+            headers: {
+              'Authorization': authHeader,
+            },
+            body: {
+              userId: captainData.id,
+              userName: captainData.name || "Team Captain",
+              userEmail: captainData.email || "Unknown",
+              userPhone: captainData.phone,
+              leagueName: leagueName,
+              isTeamRegistration: true,
+              teamName: team.name,
+              originalTeamName: team.name,
+              rosterCount: Array.isArray(team.roster) ? team.roster.length : undefined,
+              teamMemberNames,
+              teamIsWaitlisted,
+              amountDue: payment.amount_due ?? null,
+              amountPaid: payment.amount_paid ?? null,
+              paymentStatus: payment.status ?? null,
+              isWaitlisted: payment.is_waitlisted ?? undefined,
+              cancelledAt: new Date().toISOString(),
+            },
           },
-          body: JSON.stringify({
-            userId: captainData.id,
-            userName: captainData.name || "Team Captain",
-            userEmail: captainData.email || "Unknown",
-            userPhone: captainData.phone,
-            leagueName: leagueName,
-            isTeamRegistration: true,
-            teamName: team.name,
-            originalTeamName: team.name,
-            rosterCount: Array.isArray(team.roster) ? team.roster.length : undefined,
-            teamMemberNames,
-            teamIsWaitlisted,
-            amountDue: payment.amount_due ?? null,
-            amountPaid: payment.amount_paid ?? null,
-            paymentStatus: payment.status ?? null,
-            isWaitlisted: payment.is_waitlisted ?? undefined,
-            cancelledAt: new Date().toISOString()
-          })
-        });
+        );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Failed to send cancellation notification:", errorText);
+        if (notificationError) {
+          console.error("Failed to send cancellation notification:", notificationError);
           warnings.push("Cancellation notification could not be sent");
         }
       }

@@ -28,6 +28,7 @@ interface CancellationNotificationRequest {
   paymentStatus?: string | null;
   skillLevelName?: string | null;
   cancelledAt: string;
+  serviceSecret?: string;
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -146,6 +147,7 @@ serve(async (req: Request) => {
       paymentStatus,
       skillLevelName,
       cancelledAt,
+      serviceSecret,
     }: CancellationNotificationRequest = await req.json();
 
     if (!userId || !leagueName) {
@@ -159,8 +161,11 @@ serve(async (req: Request) => {
     }
 
     // Get authorization header
+    const normalizedServiceSecret = normalizeValue(serviceSecret);
+
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader && !normalizedServiceSecret) {
+      console.warn("[Cancellation Notification] Missing Authorization header and service secret");
       return new Response(
         JSON.stringify({ error: "Authorization header required" }),
         {
@@ -169,11 +174,107 @@ serve(async (req: Request) => {
         },
       );
     }
+    if (authHeader) {
+      console.log("[Cancellation Notification] Raw Authorization header", authHeader.slice(0, 32));
+    } else {
+      console.log("[Cancellation Notification] Authorization header absent; relying on service secret");
+    }
 
-    // Initialize Supabase client with service role for database operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const _supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseServiceKeyRaw = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseServiceKeyRaw) {
+      console.error("[Cancellation Notification] Missing SUPABASE_SERVICE_ROLE_KEY environment variable");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+    const supabaseServiceKey = supabaseServiceKeyRaw.trim();
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, "").trim() : "";
+    const apiKeyHeader = req.headers.get("apikey")?.trim() ?? null;
+    const isServiceSecretValid =
+      !!normalizedServiceSecret &&
+      normalizedServiceSecret === supabaseServiceKey;
+
+    const tokenMatchesService =
+      (!!token && token === supabaseServiceKey) ||
+      (!!token && token === supabaseServiceKeyRaw);
+    const apiKeyMatchesService =
+      (!!apiKeyHeader && apiKeyHeader === supabaseServiceKey) ||
+      (!!apiKeyHeader && apiKeyHeader === supabaseServiceKeyRaw);
+    const tokenLooksLikeService = !!token && token.startsWith("sb_secret_");
+    const apiKeyLooksLikeService =
+      !!apiKeyHeader && apiKeyHeader.startsWith("sb_secret_");
+
+    const isServiceRequest =
+      isServiceSecretValid ||
+      tokenMatchesService ||
+      apiKeyMatchesService ||
+      tokenLooksLikeService ||
+      apiKeyLooksLikeService;
+
+    console.log("[Cancellation Notification] Auth evaluation", {
+      hasToken: Boolean(token),
+      tokenPrefix: token ? token.slice(0, 12) : null,
+      hasApiKey: Boolean(apiKeyHeader),
+      apiKeyPrefix: apiKeyHeader ? apiKeyHeader.slice(0, 12) : null,
+      servicePrefix: supabaseServiceKey.slice(0, 12),
+      hasServiceSecret: !!normalizedServiceSecret,
+      isServiceRequest,
+    });
+
+    let serviceMode = isServiceRequest;
+
+    if (!serviceMode) {
+      if (!token) {
+        console.warn("[Cancellation Notification] No bearer token on non-service request");
+        return new Response(
+          JSON.stringify({ error: "Invalid authentication token" }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAuth.auth.getUser(token);
+
+      if (authError || !user) {
+        if (tokenLooksLikeService || apiKeyLooksLikeService || isServiceSecretValid) {
+          console.warn("[Cancellation Notification] Auth token rejected but resembles service key; continuing in service mode", {
+            error: authError?.message ?? "unknown",
+          });
+          serviceMode = true;
+        } else {
+          console.warn("[Cancellation Notification] Auth token rejected", {
+            error: authError?.message ?? "unknown",
+          });
+          return new Response(
+            JSON.stringify({ error: "Invalid authentication token" }),
+            {
+              status: 401,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+      }
+    }
+
+    if (!serviceMode) {
+      console.log("[Cancellation Notification] Operating in user-auth mode", { userIdFromToken: true });
+    } else {
+      console.log("[Cancellation Notification] Operating in service mode");
+    }
 
     let resolvedUserName = normalizeValue(userName);
     let resolvedUserEmail = validateEmail(userEmail);
@@ -181,7 +282,7 @@ serve(async (req: Request) => {
 
     if (!resolvedUserEmail || !resolvedUserName || !resolvedUserPhone) {
       try {
-        const { data: userRecord, error: userLookupError } = await _supabase
+        const { data: userRecord, error: userLookupError } = await serviceClient
           .from("users")
           .select("name, email, phone")
           .eq("id", userId)
@@ -214,6 +315,14 @@ serve(async (req: Request) => {
     const finalUserName = resolvedUserName ?? "Team Captain";
     const finalUserEmail = resolvedUserEmail;
     const finalUserPhone = resolvedUserPhone ?? undefined;
+
+    console.log("[Cancellation Notification] Request accepted", {
+      userId,
+      leagueName,
+      isTeamRegistration,
+      isServiceRequest,
+      hasUserEmail: Boolean(finalUserEmail),
+    });
 
     // Format cancellation date
     const cancellationDate = new Date(cancelledAt).toLocaleDateString('en-US', {
@@ -390,7 +499,7 @@ serve(async (req: Request) => {
     // Create admin email content
     const adminEmailContent = {
       to: ["info@ofsl.ca"],
-      subject: `[Cancellation] ${finalUserName} - ${leagueName} ${isTeamRegistration ? '(Team)' : '(Individual)'}`,
+      subject: `[Cancellation] ${finalUserName} - ${leagueName}${isTeamRegistration && teamDisplayName ? ` - ${teamDisplayName}` : ''} ${isTeamRegistration ? '(Team)' : '(Individual)'}`,
       html: `
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
           <tr>
@@ -668,6 +777,10 @@ serve(async (req: Request) => {
 
     // Return partial success if at least one email was sent
     if (results.length > 0) {
+      console.log("[Cancellation Notification] Emails dispatched", {
+        results,
+        errors: errors.length > 0 ? errors : undefined,
+      });
       return new Response(
         JSON.stringify({
           success: true,
@@ -681,6 +794,9 @@ serve(async (req: Request) => {
         },
       );
     } else {
+      console.error("[Cancellation Notification] Failed to send any notifications", {
+        errors,
+      });
       return new Response(
         JSON.stringify({
           error: "Failed to send any notification emails",

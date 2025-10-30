@@ -520,6 +520,7 @@ serve(async (req: Request) => {
       );
     }
 
+    // Send admin notification for all registrations
     const adminResult = await sendEmailThroughResend(
       resendApiKey,
       adminEmailContent,
@@ -527,16 +528,12 @@ serve(async (req: Request) => {
     );
 
     if (!adminResult.success) {
-      return new Response(
-        JSON.stringify({
-          error: "Failed to send admin registration notification",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      // eslint-disable-next-line no-console
+      console.error("Failed to send admin notification:", adminResult.error);
+      // Don't fail the request if admin notification fails - user notification is more important
     }
+
+    const adminEmailId = adminResult.success ? adminResult.emailId : undefined;
 
     const userResult = await sendEmailThroughResend(
       resendApiKey,
@@ -548,7 +545,7 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: "Failed to send registration confirmation email",
-          adminEmailId: adminResult.emailId,
+          adminEmailId,
         }),
         {
           status: 500,
@@ -581,7 +578,7 @@ serve(async (req: Request) => {
         success: true,
         message: "Registration confirmation email sent successfully",
         emailId: userResult.emailId,
-        adminEmailId: adminResult.emailId,
+        adminEmailId: adminEmailId,
       }),
       {
         status: 200,
