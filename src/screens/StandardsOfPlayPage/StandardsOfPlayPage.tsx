@@ -7,6 +7,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     | "men"
     | "coed"
     | "womenElite"
+    | "badminton"
     | "pickleball"
   >("coed");
   const scrollToId = (id: string): void => {
@@ -130,6 +131,17 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               >
                 <span>Women&apos;s Volleyball</span>
                 {activeTab === "womenElite" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("badminton")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "badminton" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Badminton</span>
+                {activeTab === "badminton" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
               </div>
@@ -330,6 +342,28 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Playoffs will be held at the end of the season.</li>
                     <li>Seeding is determined by overall standings, using the average of the last 18 weeks of regular-season play.</li>
                   </ul>
+                </section>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "badminton" && (
+            <div className="border border-gray-200 rounded-md p-6">
+              <div className="space-y-6">
+                <section>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">OFSL Badminton Court Etiquette</h3>
+                  <ol className="list-none pl-6 text-lg text-[#6F6F6F] space-y-2">
+                    <li>1) Competitive spirit is encouraged, but keep in mind we are all here for fun and exercise. Be respectful and encouraging of others on and off the courts.</li>
+                    <li>2) Line calls; You make the call when the bird lands on your side of the court (when you are closest). If you are not sure, you can ask your opponents, replay the rally, or award the point to your opponent.</li>
+                    <li>3) Players will not play consecutive games and are encouraged to play with different players; this will allow for various skilled players’ rotation.</li>
+                    <li>4) Please refrain from “coaching” while on the court: while it is commendable to help a less experienced player, on court coaching holds up the game. Do so on the sideline after the game, if invited to do so.</li>
+                    <li>5) Shake hands, fist pump or touch racquets with players on the other side after every game to thank them for the game.</li>
+                    <li>
+                      6) If a player is deemed to have acted inappropriately (such as using profanity directly at another player, acting aggressively towards other player(s), intentionally pushing, shoving or making physical contact or making comments to instigate an altercation with other player(s)), a warning will be given to that player and the matter taken up with the OFSL Committee. Depending on the severity of the infraction, the leadership of the event at the time of infraction shall have the discrepancy to ask the said player to leave the premises.
+                      <p className="mt-2">Upon a second complaint, this player may be asked to leave the premises. The OFSL Executive Committee will review the incidents in a timely fashion. Once a decision is reached, all parties involved will be notified by email of the decision made. If guilty of the infractions, the player will be banned from the league permanently and will not be reimbursed any fees paid.</p>
+                    </li>
+                  </ol>
+                  
                 </section>
               </div>
             </div>
@@ -734,8 +768,12 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mt-2">
                     <li>Randomly assigned partners and opponents for each game</li>
                     <li>Ladder format</li>
+                    {/*
                     <li>â€œFixed partnerâ€ days</li>
                     <li>â€œSame genderâ€ days</li>
+                    */}
+                    <li>“Fixed partner” days</li>
+                    <li>“Same gender” days</li>
                   </ul>
                   <p className="text-lg text-[#6F6F6F] mt-3">Note: OFSL will be using the existing badminton court lines, so the non-volley zone line will be a bit closer to the pickleball net than a standard pickleball court.</p>
                 </section>
