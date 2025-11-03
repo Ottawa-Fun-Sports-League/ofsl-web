@@ -223,12 +223,19 @@ export function Scorecard3TeamsElite9Sets({ teamNames, onSubmit, tierNumber, ini
 
         <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-[10px] relative">
           {(() => {
-            const { matchWins, matchLosses, getHeadToHeadDiff } = computeSummary();
+            const { matchWins, matchLosses, diff, getHeadToHeadDiff } = computeSummary();
             const order: TeamKey[] = ['A','B','C'];
             const sorted = [...order].sort((x,y)=> {
               if (matchWins[y] !== matchWins[x]) return matchWins[y]-matchWins[x];
               const tiedGroupSize = order.filter(t => matchWins[t] === matchWins[x]).length;
-              if (tiedGroupSize === 2) {
+              if (tiedGroupSize === 3) {
+                // 3-way tie: use overall differential
+                const dx = diff[x];
+                const dy = diff[y];
+                if (dy !== dx) return dy - dx;
+                // If still tied, fall back to A/B/C in preview; submission will use previous standings
+              } else if (tiedGroupSize === 2) {
+                // 2-way tie: use head-to-head differential
                 const h2h = getHeadToHeadDiff(x, y);
                 if (h2h !== 0) return h2h > 0 ? -1 : 1;
               }
