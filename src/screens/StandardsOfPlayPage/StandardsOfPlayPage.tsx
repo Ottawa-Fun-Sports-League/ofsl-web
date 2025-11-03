@@ -358,9 +358,12 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>3) Players will not play consecutive games and are encouraged to play with different players; this will allow for various skilled players’ rotation.</li>
                     <li>4) Please refrain from “coaching” while on the court: while it is commendable to help a less experienced player, on court coaching holds up the game. Do so on the sideline after the game, if invited to do so.</li>
                     <li>5) Shake hands, fist pump or touch racquets with players on the other side after every game to thank them for the game.</li>
-                    <li>6) If a player is deemed to have acted inappropriately (such as using profanity directly at another player, acting aggressively towards other player(s), intentionally pushing, shoving or making physical contact or making comments to instigate an altercation with other player(s)), a warning will be given to that player and the matter taken up with the OFSL Committee. Depending on the severity of the infraction, the leadership of the event at the time of infraction shall have the discrepancy to ask the said player to leave the premises.</li>
+                    <li>
+                      6) If a player is deemed to have acted inappropriately (such as using profanity directly at another player, acting aggressively towards other player(s), intentionally pushing, shoving or making physical contact or making comments to instigate an altercation with other player(s)), a warning will be given to that player and the matter taken up with the OFSL Committee. Depending on the severity of the infraction, the leadership of the event at the time of infraction shall have the discrepancy to ask the said player to leave the premises.
+                      <p className="mt-2">Upon a second complaint, this player may be asked to leave the premises. The OFSL Executive Committee will review the incidents in a timely fashion. Once a decision is reached, all parties involved will be notified by email of the decision made. If guilty of the infractions, the player will be banned from the league permanently and will not be reimbursed any fees paid.</p>
+                    </li>
                   </ol>
-                  <p className="text-lg text-[#6F6F6F] mt-3">Upon a second complaint, this player may be asked to leave the premises. The OFSL Executive Committee will review the incidents in a timely fashion. Once a decision is reached, all parties involved will be notified by email of the decision made. If guilty of the infractions, the player will be banned from the league permanently and will not be reimbursed any fees paid.</p>
+                  
                 </section>
               </div>
             </div>
