@@ -439,25 +439,6 @@ serve(async (req: Request) => {
       );
     }
 
-    if (teamId !== null) {
-      const { error: queueUpdateError } = await serviceClient
-        .from("team_registration_notifications")
-        .update({
-          sent: true,
-          sent_at: new Date().toISOString(),
-        })
-        .eq("team_id", teamId)
-        .eq("sent", false);
-
-      if (queueUpdateError) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[send-registration-confirmation] Failed to update notification queue:",
-          queueUpdateError,
-        );
-      }
-    }
-
     return new Response(
       JSON.stringify({
         success: true,
