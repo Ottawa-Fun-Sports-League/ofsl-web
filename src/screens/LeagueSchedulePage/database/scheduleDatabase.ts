@@ -437,6 +437,23 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
     }
   }
 
+  // Apply via SECURITY DEFINER RPC to avoid RLS issues for facilitators
+  try {
+    const rpcAssignments = assignments.map(a => ({ target_tier: a.targetTier, target_pos: a.targetPos, team_name: a.name }));
+    const { error: rpcErr } = await supabase.rpc('apply_next_week_assignments', {
+      p_league_id: leagueId,
+      p_current_week: currentWeek,
+      p_tier_number: tierNumber,
+      p_dest_week: destWeek,
+      p_assignments: rpcAssignments,
+      p_mark_completed: true,
+    });
+    if (rpcErr) handleDatabaseError(rpcErr);
+    return;
+  } catch (err) {
+    handleDatabaseError(err);
+  }
+
   // Fetch next week's relevant tiers (current, +/- 1) to minimize updates
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
 
@@ -676,6 +693,23 @@ export async function applyFourTeamTierMovementNextWeek(params: {
   if (teamNames[c2Loser]) {
     if (isBottomTier) assignments.push({ name: teamNames[c2Loser], targetTier: tierNumber, targetPos: 'D' });
     else assignments.push({ name: teamNames[c2Loser], targetTier: tierNumber + 1, targetPos: 'A' });
+  }
+
+  // Apply via SECURITY DEFINER RPC to avoid RLS issues for facilitators
+  try {
+    const rpcAssignments = assignments.map(a => ({ target_tier: a.targetTier, target_pos: a.targetPos, team_name: a.name }));
+    const { error: rpcErr } = await supabase.rpc('apply_next_week_assignments', {
+      p_league_id: leagueId,
+      p_current_week: currentWeek,
+      p_tier_number: tierNumber,
+      p_dest_week: destWeek,
+      p_assignments: rpcAssignments,
+      p_mark_completed: true,
+    });
+    if (rpcErr) handleDatabaseError(rpcErr);
+    return;
+  } catch (err) {
+    handleDatabaseError(err);
   }
 
   // Fetch next week target tiers
@@ -947,6 +981,23 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
     }
   }
 
+  // Apply via SECURITY DEFINER RPC to avoid RLS issues for facilitators
+  try {
+    const rpcAssignments = assignments.map(a => ({ target_tier: a.targetTier, target_pos: a.targetPos, team_name: a.name }));
+    const { error: rpcErr } = await supabase.rpc('apply_next_week_assignments', {
+      p_league_id: leagueId,
+      p_current_week: currentWeek,
+      p_tier_number: tierNumber,
+      p_dest_week: destWeek,
+      p_assignments: rpcAssignments,
+      p_mark_completed: true,
+    });
+    if (rpcErr) handleDatabaseError(rpcErr);
+    return;
+  } catch (err) {
+    handleDatabaseError(err);
+  }
+
   // Fetch/create next week rows for destination tiers
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
 
@@ -1100,6 +1151,23 @@ export async function applyEliteThreeTeamMovementNextWeek(params: {
       if (!isBottomTier) assignments.push({ name: teamNames[loser], targetTier: tierNumber + 1, targetPos: 'A' });
       else assignments.push({ name: teamNames[loser], targetTier: tierNumber, targetPos: 'C' });
     }
+  }
+
+  // Apply via SECURITY DEFINER RPC to avoid RLS issues for facilitators
+  try {
+    const rpcAssignments = assignments.map(a => ({ target_tier: a.targetTier, target_pos: a.targetPos, team_name: a.name }));
+    const { error: rpcErr } = await supabase.rpc('apply_next_week_assignments', {
+      p_league_id: leagueId,
+      p_current_week: currentWeek,
+      p_tier_number: tierNumber,
+      p_dest_week: destWeek,
+      p_assignments: rpcAssignments,
+      p_mark_completed: true,
+    });
+    if (rpcErr) handleDatabaseError(rpcErr);
+    return;
+  } catch (err) {
+    handleDatabaseError(err);
   }
 
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));

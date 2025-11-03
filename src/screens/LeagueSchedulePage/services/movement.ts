@@ -167,20 +167,6 @@ export async function applySixTeamMovementAfterStandings(params: {
     teamStats.map((stat) => teamNames[stat.team as keyof typeof teamNames]).filter((name): name is string => Boolean(name))
   );
 
-  for (const name of uniqueNames) {
-    for (const column of positionColumns) {
-      const { error: clearErr } = await supabase
-        .from('weekly_schedules')
-        .update({ [column]: null, updated_at: new Date().toISOString() })
-        .eq('league_id', leagueId)
-        .eq('week_number', destWeek)
-        .eq(column, name);
-      if (clearErr && (clearErr as any).code !== 'PGRST116') {
-        console.warn(`Error clearing team ${name} from ${column} in week ${destWeek}:`, clearErr);
-      }
-    }
-  }
-
   const movements = [
     { rank: 0, targetTier: isTopTier ? tierNumber : Math.max(1, tierNumber - 1), targetPosition: isTopTier ? 'A' : 'F' },
     { rank: 1, targetTier: tierNumber, targetPosition: 'B' },
@@ -190,46 +176,25 @@ export async function applySixTeamMovementAfterStandings(params: {
     { rank: 5, targetTier: isBottomTier ? tierNumber : tierNumber + 1, targetPosition: isBottomTier ? 'F' : 'A' },
   ] as const;
 
-  for (const movement of movements) {
-    const teamStat = teamStats[movement.rank];
-    if (!teamStat) continue;
+  const rpcAssignments = movements
+    .map((movement) => {
+      const teamStat = teamStats[movement.rank];
+      if (!teamStat) return null;
+      const name = teamNames[teamStat.team as keyof typeof teamNames];
+      if (!name) return null;
+      return { target_tier: movement.targetTier, target_pos: movement.targetPosition, team_name: name };
+    })
+    .filter((v): v is { target_tier: number; target_pos: string; team_name: string } => v !== null);
 
-    const teamName = teamNames[teamStat.team as keyof typeof teamNames];
-    if (!teamName) continue;
-
-    const { targetTier, targetPosition } = movement;
-    if (targetTier < 1) continue;
-
-    const { data: targetTierRow, error: findErr } = await supabase
-      .from('weekly_schedules')
-      .select('id')
-      .eq('league_id', leagueId)
-      .eq('week_number', destWeek)
-      .eq('tier_number', targetTier)
-      .maybeSingle();
-
-    if (findErr && (findErr as any).code !== 'PGRST116') {
-      console.warn(`Error locating tier ${targetTier} for week ${destWeek}:`, findErr);
-      continue;
-    }
-
-    if (!targetTierRow) {
-      console.warn(`Target tier ${targetTier} not found for week ${destWeek}; unable to place ${teamName}.`);
-      continue;
-    }
-
-    const updatePayload: Record<string, unknown> = {
-      [`team_${targetPosition.toLowerCase()}_name`]: teamName,
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error: updateErr } = await supabase
-      .from('weekly_schedules')
-      .update(updatePayload)
-      .eq('id', targetTierRow.id);
-
-    if (updateErr) {
-      console.warn(`Error updating ${teamName} into tier ${targetTier} slot ${targetPosition}:`, updateErr);
-    }
+  const { error: rpcErr } = await supabase.rpc('apply_next_week_assignments', {
+    p_league_id: leagueId,
+    p_current_week: weekNumber,
+    p_tier_number: tierNumber,
+    p_dest_week: destWeek,
+    p_assignments: rpcAssignments,
+    p_mark_completed: true,
+  });
+  if (rpcErr) {
+    console.warn('Failed to apply 6-team movement via RPC', rpcErr);
   }
 }

@@ -234,13 +234,13 @@ export async function submitThreeTeamScoresAndMove(params: SubmitThreeTeamParams
     if (upsertErr) throw upsertErr;
   }
 
-  // Mark weekly tier as completed
+  // Mark weekly tier as completed (best-effort; RPC ensures)
   {
     const { error } = await supabase
       .from('weekly_schedules')
       .update({ is_completed: true })
       .eq('id', tierId);
-    if (error) throw error;
+    if (error) { try { console.warn('Non-admin could not mark is_completed (will be set via RPC).'); } catch {} }
   }
 
   // Update standings with absolute totals (idempotent across weeks)
@@ -419,13 +419,13 @@ export async function submitTwoTeamScoresAndMove(params: SubmitTwoTeamParams): P
     if (upsertErr) throw upsertErr;
   }
 
-  // Mark weekly tier as completed
+  // Mark weekly tier as completed (best-effort; RPC ensures)
   {
     const { error } = await supabase
       .from('weekly_schedules')
       .update({ is_completed: true })
       .eq('id', tierId);
-    if (error) throw error;
+    if (error) { try { console.warn('Non-admin could not mark is_completed (will be set via RPC).'); } catch {} }
   }
 
   // Update standings with absolute totals (idempotent across weeks)
@@ -588,13 +588,13 @@ export async function submitTwoTeamBestOf5ScoresAndMove(params: SubmitTwoTeamPar
     if (upsertErr) throw upsertErr;
   }
 
-  // Mark weekly tier as completed
+  // Mark weekly tier as completed (best-effort; RPC ensures)
   {
     const { error } = await supabase
       .from('weekly_schedules')
       .update({ is_completed: true })
       .eq('id', tierId);
-    if (error) throw error;
+    if (error) { try { console.warn('Non-admin could not mark is_completed (will be set via RPC).'); } catch {} }
   }
 
   // Update standings deltas (robust mapping)
@@ -758,7 +758,7 @@ export async function submitTwoTeamEliteBestOf5ScoresAndMove(params: SubmitTwoTe
     if (upsertErr) throw upsertErr;
   }
 
-  await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId);
+  { const { error: _ignored } = await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId); }
 
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
@@ -835,7 +835,7 @@ export async function submitThreeTeamEliteSixScoresAndMove(params: SubmitThreeTe
     const { error: upErr } = await supabase.from('game_results').upsert(payload, { onConflict: 'league_id,week_number,tier_number,team_name', ignoreDuplicates: false });
     if (upErr) throw upErr;
   }
-  await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId);
+  { const { error: _ignored } = await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId); }
 
   const { data: teamsRows } = await supabase.from('teams').select('id, name').eq('league_id', leagueId).in('name', order.map(k=>teamNames[k]).filter(Boolean));
   const nameToId = new Map<string, number>(); (teamsRows||[]).forEach((t:any)=>nameToId.set(t.name,t.id));
@@ -1073,7 +1073,7 @@ export async function submitThreeTeamEliteNineScoresAndMove(params: SubmitThreeT
     const { error: upErr } = await supabase.from('game_results').upsert(payload, { onConflict: 'league_id,week_number,tier_number,team_name', ignoreDuplicates: false });
     if (upErr) throw upErr;
   }
-  await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId);
+  { const { error: _ignored } = await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId); }
 
   const { data: teamsRows } = await supabase.from('teams').select('id, name').eq('league_id', leagueId).in('name', order.map(k=>teamNames[k]).filter(Boolean));
   const nameToId = new Map<string, number>(); (teamsRows||[]).forEach((t:any)=>nameToId.set(t.name,t.id));
@@ -1390,11 +1390,14 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
     if (upsertErr) throw upsertErr;
   }
 
-  const { error: scheduleErr } = await supabase
-    .from('weekly_schedules')
-    .update({ is_completed: true })
-    .eq('id', tierId);
-  if (scheduleErr) throw scheduleErr;
+  // Mark weekly tier as completed (best-effort; RPC ensures)
+  {
+    const { error } = await supabase
+      .from('weekly_schedules')
+      .update({ is_completed: true })
+      .eq('id', tierId);
+    if (error) { try { console.warn('Non-admin could not mark is_completed (will be set via RPC).'); } catch {} }
+  }
 
   const { data: teamsRows, error: teamsErr } = await supabase
     .from('teams')
@@ -1541,7 +1544,7 @@ export async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTe
   }
 
   // Mark weekly tier completed
-  await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId);
+  { const { error: _ignored } = await supabase.from('weekly_schedules').update({ is_completed: true }).eq('id', tierId); }
 
   // Update standings
   const { data: teamsRows, error: teamsErr } = await supabase
