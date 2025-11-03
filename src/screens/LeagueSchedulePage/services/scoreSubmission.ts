@@ -1012,10 +1012,48 @@ export async function submitThreeTeamEliteNineScoresAndMove(params: SubmitThreeT
     if (pairWins.has(k2)) return -(pairWins.get(k2)!.diff);
     return 0;
   };
+  // Preload previous standings positions for tie-break fallback (before current week updates)
+  let prevPosition: Record<ABC, number | null> = { A: null, B: null, C: null };
+  try {
+    const { data: teamsRowsPre } = await supabase
+      .from('teams')
+      .select('id, name')
+      .eq('league_id', leagueId)
+      .in('name', order.map(k=>teamNames[k]).filter(Boolean));
+    const nameToIdPre = new Map<string, number>();
+    (teamsRowsPre||[]).forEach((t:any)=> nameToIdPre.set(t.name, t.id));
+    const ids = order
+      .map(k => nameToIdPre.get(teamNames[k] || ''))
+      .filter((v): v is number => typeof v === 'number');
+    if (ids.length > 0) {
+      const { data: standingsPre } = await supabase
+        .from('standings')
+        .select('team_id,current_position')
+        .eq('league_id', leagueId)
+        .in('team_id', ids as number[]);
+      const idToPos = new Map<number, number>();
+      (standingsPre||[]).forEach((r:any)=> { if (typeof r.current_position === 'number') idToPos.set(r.team_id, r.current_position); });
+      (order as ABC[]).forEach((k)=> {
+        const id = nameToIdPre.get(teamNames[k] || '');
+        prevPosition[k] = (typeof id === 'number' && idToPos.has(id)) ? (idToPos.get(id) as number) : null;
+      });
+    }
+  } catch {/* ignore tie-break preload errors */}
+
   const sorted = [...order].sort((x,y)=> {
     if (stats[y].matchWins !== stats[x].matchWins) return stats[y].matchWins - stats[x].matchWins;
     const size = tieGroupSize(stats[x].matchWins);
-    if (size === 2) {
+    if (size === 3) {
+      // 3-way tie: use overall differential first
+      const dx = diff[x];
+      const dy = diff[y];
+      if (dy !== dx) return dy - dx;
+      // If still tied, use previous standings position (lower is better)
+      const rx = (typeof prevPosition[x] === 'number') ? (prevPosition[x] as number) : Number.POSITIVE_INFINITY;
+      const ry = (typeof prevPosition[y] === 'number') ? (prevPosition[y] as number) : Number.POSITIVE_INFINITY;
+      if (rx !== ry) return rx - ry;
+    } else if (size === 2) {
+      // 2-way tie: use head-to-head differential
       const h2h = getH2H(x,y);
       if (h2h !== 0) return h2h > 0 ? -1 : 1;
     }
