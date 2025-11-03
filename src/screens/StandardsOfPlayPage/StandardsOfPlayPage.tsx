@@ -7,6 +7,7 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
     | "men"
     | "coed"
     | "womenElite"
+    | "badminton"
     | "pickleball"
   >("coed");
   const scrollToId = (id: string): void => {
@@ -130,6 +131,17 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
               >
                 <span>Women&apos;s Volleyball</span>
                 {activeTab === "womenElite" && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
+                )}
+              </div>
+              <div
+                onClick={() => setActiveTab("badminton")}
+                className={`px-6 py-3 text-center cursor-pointer relative transition-all ${
+                  activeTab === "badminton" ? "text-[#B20000] font-medium" : "text-[#6F6F6F] hover:text-[#B20000]"
+                }`}
+              >
+                <span>Badminton</span>
+                {activeTab === "badminton" && (
                   <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#B20000]"></div>
                 )}
               </div>
@@ -330,6 +342,17 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                     <li>Playoffs will be held at the end of the season.</li>
                     <li>Seeding is determined by overall standings, using the average of the last 18 weeks of regular-season play.</li>
                   </ul>
+                </section>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "badminton" && (
+            <div className="border border-gray-200 rounded-md p-6">
+              <div className="space-y-8">
+                <section>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Badminton Standards of Play</h3>
+                  <p className="text-lg text-[#6F6F6F]">Standards and details for OFSL Badminton will be posted here.</p>
                 </section>
               </div>
             </div>
