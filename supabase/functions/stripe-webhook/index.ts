@@ -257,6 +257,9 @@ async function processLeaguePayments(customerId: string, orderData: { id?: strin
           if (newStatus === 'paid' && payment.payment_type === 'individual') {
             // Send notification email for individual registration
             await sendIndividualRegistrationNotification(userId, payment.league_id, paymentAmount);
+          } else if (newStatus === 'paid' && payment.team_id) {
+            // Send notification email for team registration
+            await sendTeamRegistrationNotification(payment.team_id, paymentAmount);
           }
         }
       }
@@ -315,7 +318,7 @@ async function sendIndividualRegistrationNotification(userId: string, leagueId: 
 
     // Get service role key for auth
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+
     // Call the notification edge function
     const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/notify-individual-registration`, {
       method: 'POST',
@@ -334,6 +337,102 @@ async function sendIndividualRegistrationNotification(userId: string, leagueId: 
     }
   } catch (error) {
     console.error('Error sending individual registration notification:', error);
+  }
+}
+
+async function sendTeamRegistrationNotification(teamId: number, amountPaid: number) {
+  try {
+    // Get team information
+    const { data: teamData, error: teamError } = await supabase
+      .from('teams')
+      .select('name, captain_id, league_id')
+      .eq('id', teamId)
+      .single();
+
+    if (teamError || !teamData) {
+      console.error('Error fetching team data for notification:', teamError);
+      return;
+    }
+
+    if (!teamData.captain_id) {
+      console.error('Team has no captain_id set; cannot send notification');
+      return;
+    }
+
+    // Get captain (user) information
+    const { data: captainData, error: captainError } = await supabase
+      .from('users')
+      .select('first_name, last_name, name, email, phone')
+      .eq('id', teamData.captain_id)
+      .single();
+
+    if (captainError || !captainData) {
+      console.error('Error fetching captain data for notification:', captainError);
+      return;
+    }
+
+    // Get league information
+    const { data: leagueData, error: leagueError } = await supabase
+      .from('leagues')
+      .select('name')
+      .eq('id', teamData.league_id)
+      .single();
+
+    if (leagueError || !leagueData) {
+      console.error('Error fetching league data for notification:', leagueError);
+      return;
+    }
+
+    // Get roster count
+    const { count: rosterCount, error: rosterError } = await supabase
+      .from('team_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', teamId);
+
+    if (rosterError) {
+      console.error('Error fetching roster count for notification:', rosterError);
+    }
+
+    // Determine captain name
+    const captainName = captainData.name || `${captainData.first_name || ''} ${captainData.last_name || ''}`.trim() || 'Unknown';
+
+    // Prepare notification data
+    const notificationData = {
+      teamId: teamId,
+      teamName: teamData.name,
+      enteredTeamName: teamData.name,
+      originalTeamName: teamData.name,
+      preferredTeamName: null,
+      displayTeamName: teamData.name,
+      captainName: captainName,
+      captainEmail: captainData.email,
+      captainPhone: captainData.phone,
+      leagueName: leagueData.name,
+      registeredAt: new Date().toISOString(),
+      rosterCount: rosterCount || 0
+    };
+
+    // Get service role key for auth
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Call the notification edge function
+    const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/notify-team-registration`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`
+      },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to send team registration notification:', errorText);
+    } else {
+      console.info('Team registration notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Error sending team registration notification:', error);
   }
 }
 

@@ -172,107 +172,7 @@ serve(async (req: Request) => {
       ? leagueSkillLevel.trim()
       : "Not specified";
 
-    const registrationDateTime = formatAdminTimestamp(new Date());
-    const registrationTypeLabel = isIndividualRegistration ? "Individual" : "Team";
-    const registrationStatusLabel = isWaitlist ? "Waitlist" : "Confirmed";
     const depositDateFormatted = formatLocalDate(depositDate);
-    const adminEmailSubject = `${registrationStatusLabel === "Waitlist" ? "[Waitlist]" : "[Registration]"} ${registrationTypeLabel}: ${isIndividualRegistration ? userName : teamName} - ${leagueName}`;
-    const adminEmailContent = {
-      to: ["info@ofsl.ca"],
-      subject: adminEmailSubject,
-      html: `
-        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5;">
-          <tr>
-            <td align="center" style="padding: 20px 0;">
-              <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff;">
-                <tr>
-                  <td align="center" style="background-color: #B20000; padding: 28px 20px;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-family: Arial, sans-serif;">
-                      ${registrationStatusLabel === "Waitlist" ? "New Waitlist Registration" : "New Registration Received"}
-                    </h1>
-                    <p style="color: #ffe3e3; margin: 6px 0 0 0; font-size: 14px; font-family: Arial, sans-serif;">
-                      ${registrationDateTime}
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 36px 30px;">
-                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                      <tr>
-                        <td style="padding: 0 0 24px 0;">
-                          <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
-                            A ${registrationTypeLabel.toLowerCase()} registration has been completed in <strong>${leagueName}</strong>.
-                          </p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
-                            <tr>
-                              <td style="padding: 20px;">
-                                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-family: Arial, sans-serif; font-size: 14px; color: #2c3e50;">
-                                  <tr>
-                                    <td style="padding: 6px 0; width: 40%; color: #5a6c7d;"><strong>Registration Type:</strong></td>
-                                    <td style="padding: 6px 0;">${registrationTypeLabel}${teamId !== null ? ` (#${teamId})` : ""}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Status:</strong></td>
-                                    <td style="padding: 6px 0;">${registrationStatusLabel}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>League:</strong></td>
-                                    <td style="padding: 6px 0; font-weight: bold; color: #B20000;">${leagueName}</td>
-                                  </tr>
-                                  ${
-                                    isIndividualRegistration
-                                      ? `
-                                        <tr>
-                                          <td style="padding: 6px 0; color: #5a6c7d;"><strong>Participant:</strong></td>
-                                          <td style="padding: 6px 0;">${userName}</td>
-                                        </tr>
-                                      `
-                                      : `
-                                        <tr>
-                                          <td style="padding: 6px 0; color: #5a6c7d;"><strong>Team Name:</strong></td>
-                                          <td style="padding: 6px 0;">${teamName}</td>
-                                        </tr>
-                                        <tr>
-                                          <td style="padding: 6px 0; color: #5a6c7d;"><strong>Captain:</strong></td>
-                                          <td style="padding: 6px 0;">${userName}</td>
-                                        </tr>
-                                      `
-                                  }
-                                  <tr>
-                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Contact Email:</strong></td>
-                                    <td style="padding: 6px 0;"><a href="mailto:${email}" style="color: #1976d2; text-decoration: none;">${email}</a></td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Skill Level:</strong></td>
-                                    <td style="padding: 6px 0;">${skillLevelLabel}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="padding: 6px 0; color: #5a6c7d;"><strong>Deposit:</strong></td>
-                                    <td style="padding: 6px 0;">${
-                                      depositAmount
-                                        ? `$${depositAmount.toFixed(2)}${depositDateFormatted ? ` due ${depositDateFormatted}` : ""}`
-                                        : "No deposit required"
-                                    }</td>
-                                  </tr>
-                                </table>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      `,
-    };
 
     const emailContent = {
       to: [email],
@@ -520,21 +420,7 @@ serve(async (req: Request) => {
       );
     }
 
-    // Send admin notification for all registrations
-    const adminResult = await sendEmailThroughResend(
-      resendApiKey,
-      adminEmailContent,
-      "admin",
-    );
-
-    if (!adminResult.success) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to send admin notification:", adminResult.error);
-      // Don't fail the request if admin notification fails - user notification is more important
-    }
-
-    const adminEmailId = adminResult.success ? adminResult.emailId : undefined;
-
+    // Send user confirmation email
     const userResult = await sendEmailThroughResend(
       resendApiKey,
       emailContent,
@@ -545,7 +431,6 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: "Failed to send registration confirmation email",
-          adminEmailId,
         }),
         {
           status: 500,
@@ -578,7 +463,6 @@ serve(async (req: Request) => {
         success: true,
         message: "Registration confirmation email sent successfully",
         emailId: userResult.emailId,
-        adminEmailId: adminEmailId,
       }),
       {
         status: 200,
