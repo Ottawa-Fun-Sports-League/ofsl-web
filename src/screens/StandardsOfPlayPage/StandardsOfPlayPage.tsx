@@ -734,8 +734,12 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
                   <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1 mt-2">
                     <li>Randomly assigned partners and opponents for each game</li>
                     <li>Ladder format</li>
+                    {/*
                     <li>â€œFixed partnerâ€ days</li>
                     <li>â€œSame genderâ€ days</li>
+                    */}
+                    <li>“Fixed partner” days</li>
+                    <li>“Same gender” days</li>
                   </ul>
                   <p className="text-lg text-[#6F6F6F] mt-3">Note: OFSL will be using the existing badminton court lines, so the non-volley zone line will be a bit closer to the pickleball net than a standard pickleball court.</p>
                 </section>
