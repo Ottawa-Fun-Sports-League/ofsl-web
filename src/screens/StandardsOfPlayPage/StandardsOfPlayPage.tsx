@@ -351,8 +351,65 @@ export const StandardsOfPlayPage = (): React.ReactElement => {
             <div className="border border-gray-200 rounded-md p-6">
               <div className="space-y-8">
                 <section>
-                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">Badminton Standards of Play</h3>
-                  <p className="text-lg text-[#6F6F6F]">Standards and details for OFSL Badminton will be posted here.</p>
+                  <h3 className="text-2xl font-bold text-[#6F6F6F] mb-2">OFSL Badminton Court Etiquette</h3>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Court Etiquette</h4>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>
+                      Competitive spirit is encouraged, but remember we are all here
+                      for fun and exercise. Be respectful and encouraging of others
+                      on and off the courts.
+                    </li>
+                    <li>
+                      Line calls: Make the call when the bird lands on your side of
+                      the court (when you are closest). If you are not sure,
+                      you can ask your opponents, replay the rally, or award the
+                      point to your opponent.
+                    </li>
+                    <li>
+                      Rotation: Players will not play consecutive games and are
+                      encouraged to play with different players to support rotation
+                      across various skill levels.
+                    </li>
+                    <li>
+                      Coaching: Please refrain from “coaching” while on the court.
+                      While it is commendable to help a less experienced player,
+                      on‑court coaching holds up the game. Offer tips on the
+                      sideline after the game, if invited to do so.
+                    </li>
+                    <li>
+                      Sportsmanship: Shake hands, fist pump, or touch racquets with
+                      players on the other side after every game to thank them for
+                      the match.
+                    </li>
+                  </ul>
+                </section>
+
+                <div className="h-px bg-gray-200" />
+
+                <section>
+                  <h4 className="text-xl font-semibold text-[#6F6F6F] mb-2">Conduct &amp; Discipline</h4>
+                  <p className="text-lg text-[#6F6F6F]">
+                    If a player is deemed to have acted inappropriately, a warning
+                    will be issued and the matter will be brought to the OFSL
+                    Committee. Depending on the severity of the infraction, event
+                    leadership at the time has the discretion to ask the player to
+                    leave the premises.
+                  </p>
+                  <h5 className="text-lg font-medium text-[#6F6F6F] mb-2">Examples of inappropriate behavior include:</h5>
+                  <ul className="list-disc pl-6 text-lg text-[#6F6F6F] space-y-1">
+                    <li>Using profanity directed at another player</li>
+                    <li>Acting aggressively toward other player(s)</li>
+                    <li>Intentionally pushing, shoving, or making physical contact</li>
+                    <li>Making comments intended to instigate an altercation</li>
+                  </ul>
+                  <p className="text-lg text-[#6F6F6F] mt-3">
+                    Upon a second complaint, the player may be asked to leave the
+                    premises. The OFSL Executive Committee will review incidents in
+                    a timely fashion and will notify all parties by email once a
+                    decision is made. If found guilty of the infractions, the
+                    player will be permanently banned from the league and will not
+                    receive a refund of any fees paid.
+                  </p>
                 </section>
               </div>
             </div>
