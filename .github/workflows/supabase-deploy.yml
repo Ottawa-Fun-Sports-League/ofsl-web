@@ -1,0 +1,46 @@
+name: Supabase Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  SUPABASE_PROJECT_REF: aijuhalowwjbccyjrlgf
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Push database migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          supabase db push --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for dir in supabase/functions/*; do
+            if [ -d "$dir" ] && [ -f "$dir/index.ts" ]; then
+              name="$(basename "$dir")"
+              echo "Deploying $name"
+              supabase functions deploy "$name" --project-ref "$SUPABASE_PROJECT_REF"
+            else
+              name="$(basename "$dir")"
+              echo "Skipping $name (no index.ts entrypoint)" >&2
+            fi
+          done
