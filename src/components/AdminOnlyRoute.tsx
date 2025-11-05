@@ -24,11 +24,13 @@ export function AdminOnlyRoute({ children, fallback }: AdminOnlyRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  // If logged in but not admin, show coming soon page
-  if (!userProfile?.is_admin) {
+  const isPrivilegedUser = Boolean(userProfile?.is_admin || userProfile?.is_facilitator);
+
+  // If logged in but not admin/facilitator, show coming soon page
+  if (!isPrivilegedUser) {
     return fallback || <ComingSoonPage />;
   }
 
-  // Admin user - show the content
+  // Authorized user - show the content
   return <>{children}</>;
 }
