@@ -162,10 +162,10 @@ describe("TeamRegistrationModal", () => {
     expect(screen.getByText(/League's Full \(For Now!\)/)).toBeInTheDocument();
     expect(screen.getByText("Yes, join waitlist")).toBeInTheDocument();
 
-    // Team name input should not be present for waitlist
+    // Team name input should still be available for waitlist registrations
     expect(
-      screen.queryByPlaceholderText("Enter your team name"),
-    ).not.toBeInTheDocument();
+      screen.getByPlaceholderText("Enter your team name"),
+    ).toBeInTheDocument();
   });
 
   it("sends email confirmation without deposit info when league has no deposit", async () => {

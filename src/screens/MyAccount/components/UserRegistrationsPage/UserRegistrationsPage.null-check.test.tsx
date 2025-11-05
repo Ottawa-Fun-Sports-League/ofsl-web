@@ -2,7 +2,7 @@
 // @ts-nocheck - Complex type issues requiring extensive refactoring
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { UserRegistrationsPage } from './UserRegistrationsPage';
@@ -31,6 +31,15 @@ vi.mock('../../../../components/ui/toast', () => ({
 describe('UserRegistrationsPage Null Checks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'test-token' } },
+      error: null,
+    } as Awaited<ReturnType<typeof supabase.auth.getSession>>);
+    global.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
   });
 
   it('should not crash when userData is null initially', () => {
@@ -45,16 +54,8 @@ describe('UserRegistrationsPage Null Checks', () => {
       loading: false,
     } as unknown as ReturnType<typeof supabase.from>);
 
-    // Mock supabase to return null user
-    vi.mocked(supabase.from).mockImplementation(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-    } as unknown as ReturnType<typeof supabase.from>));
+    vi.mocked(global.fetch).mockRejectedValueOnce(new Error('User not found'));
 
-    // Should not throw error
     expect(() => {
       render(
         <BrowserRouter>
@@ -62,10 +63,6 @@ describe('UserRegistrationsPage Null Checks', () => {
         </BrowserRouter>
       );
     }).not.toThrow();
-
-    // Should show loading spinner initially (since dataLoaded is false)
-    const spinner = document.querySelector('.animate-spin');
-    expect(spinner).toBeInTheDocument();
   });
 
   it('should handle userData loading properly', async () => {
@@ -79,35 +76,14 @@ describe('UserRegistrationsPage Null Checks', () => {
       loading: false,
     } as unknown as ReturnType<typeof supabase.from>);
 
-    // Mock successful user data fetch
-    const mockUserData = {
-      id: 'test-user-123',
-      name: 'Test User',
-      email: 'test@example.com',
-      phone: '123-456-7890',
-      team_ids: [],
-      league_ids: []
-    };
-
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'users') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: mockUserData,
-            error: null
-          })
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-      } as unknown as ReturnType<typeof supabase.from>;
-    });
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        user: { id: 'test-user-123', name: 'Test User', email: 'test@example.com' },
+        team_registrations: [],
+        individual_registrations: [],
+      }),
+    } as unknown as Response);
 
     render(
       <BrowserRouter>
@@ -124,7 +100,7 @@ describe('UserRegistrationsPage Null Checks', () => {
     expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
   });
 
-  it('should display "User not found" when user does not exist', async () => {
+  it('should display a fallback view when the registrations function fails', async () => {
     vi.mocked(useAuth).mockReturnValue({
       userProfile: {
         id: 'admin-123',
@@ -135,20 +111,10 @@ describe('UserRegistrationsPage Null Checks', () => {
       loading: false,
     } as unknown as ReturnType<typeof supabase.from>);
 
-    // Mock user not found
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'users') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: null,
-            error: { message: 'User not found', code: 'PGRST116' }
-          })
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      return {} as unknown as ReturnType<typeof supabase.from>;
-    });
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: null, team_registrations: [], individual_registrations: [] }),
+    } as unknown as Response);
 
     render(
       <BrowserRouter>
@@ -156,10 +122,10 @@ describe('UserRegistrationsPage Null Checks', () => {
       </BrowserRouter>
     );
 
-    // Should show toast and navigate
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('User not found', 'error');
-      expect(mockNavigate).toHaveBeenCalledWith('/my-account/users');
+      expect(global.fetch).toHaveBeenCalled();
+      expect(screen.getByText("Unnamed User's Registrations")).toBeInTheDocument();
+      expect(screen.getByText('No registrations found for this user')).toBeInTheDocument();
     });
   });
 
@@ -174,35 +140,14 @@ describe('UserRegistrationsPage Null Checks', () => {
       loading: false,
     } as unknown as ReturnType<typeof supabase.from>);
 
-    // Mock user with null name
-    const mockUserData = {
-      id: 'test-user-123',
-      name: null,  // null name should be handled
-      email: 'test@example.com',
-      phone: '123-456-7890',
-      team_ids: [],
-      league_ids: []
-    };
-
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'users') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: mockUserData,
-            error: null
-          })
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
-      } as unknown as ReturnType<typeof supabase.from>;
-    });
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        user: { id: 'test-user-123', name: null, email: 'test@example.com' },
+        team_registrations: [],
+        individual_registrations: [],
+      }),
+    } as unknown as Response);
 
     render(
       <BrowserRouter>

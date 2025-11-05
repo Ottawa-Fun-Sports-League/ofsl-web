@@ -2,7 +2,7 @@
 // @ts-nocheck - Complex type issues requiring extensive refactoring
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -85,6 +85,13 @@ describe('LeagueEditPage Integration Tests', () => {
     publish_date: null,
   };
 
+  let mockGymsData: Array<{ id: number; gym: string; address: string; active: boolean; locations?: string[] }>;
+  let mockGameResultsData: Array<{ week_number: number }>;
+  let mockScheduleRow: { id: number } | null;
+  let mockLeagueUpdateResponse: { data: unknown; error: null };
+  let updateMock: Mock;
+  let updateEqMock: Mock;
+
   beforeEach(() => {
     vi.clearAllMocks();
     
@@ -119,15 +126,84 @@ describe('LeagueEditPage Integration Tests', () => {
       showToast: mockShowToast,
     });
 
-    // Mock Supabase queries
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      single: vi.fn().mockReturnThis(),
-    } as unknown as ReturnType<typeof supabase.from>);
+    mockGymsData = [
+      { id: 1, gym: 'Gym 1', address: 'Address 1', active: true, locations: ['Location 1'] },
+      { id: 2, gym: 'Gym 2', address: 'Address 2', active: true, locations: ['Location 2'] },
+    ];
+    mockGameResultsData = [];
+    mockScheduleRow = null;
+    mockLeagueUpdateResponse = { data: {}, error: null };
+    updateMock = vi.fn();
+    updateEqMock = vi.fn();
+
+    const fromMock = supabase.from as unknown as Mock;
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'gyms') {
+        const select = vi.fn().mockReturnThis();
+        const eq = vi.fn().mockReturnThis();
+        const order = vi.fn().mockImplementation(async () => ({
+          data: mockGymsData,
+          error: null,
+        }));
+        return {
+          select,
+          eq,
+          order,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      if (table === 'game_results') {
+        const select = vi.fn().mockReturnThis();
+        const eq = vi.fn().mockReturnThis();
+        const order = vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => ({
+            data: mockGameResultsData,
+            error: null,
+          })),
+        });
+        return {
+          select,
+          eq,
+          order,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      if (table === 'league_schedules') {
+        const select = vi.fn().mockReturnThis();
+        const eq = vi.fn().mockReturnThis();
+        const maybeSingle = vi.fn().mockImplementation(async () => ({
+          data: mockScheduleRow,
+          error: null,
+        }));
+        return {
+          select,
+          eq,
+          maybeSingle,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      if (table === 'leagues') {
+        updateEqMock = vi.fn().mockImplementation(async () => mockLeagueUpdateResponse);
+        updateMock = vi.fn().mockReturnValue({
+          eq: updateEqMock,
+        });
+
+        return {
+          update: updateMock,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        update: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+      } as unknown as ReturnType<typeof supabase.from>;
+    });
 
     // Mock league functions
     vi.mocked(fetchSports).mockResolvedValue([
@@ -145,18 +221,9 @@ describe('LeagueEditPage Integration Tests', () => {
 
     // Mock Stripe product
     vi.mocked(getStripeProductByLeagueId).mockResolvedValue(null);
-    
+
     // Mock updateStripeProductLeagueId
-    vi.mocked(updateStripeProductLeagueId).mockResolvedValue(undefined);
-    
-    vi.mocked(supabase).from = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      single: vi.fn().mockReturnThis(),
-    } as unknown as ReturnType<typeof supabase.from>);
+   vi.mocked(updateStripeProductLeagueId).mockResolvedValue(undefined);
   });
 
   const renderComponent = (leagueId = '1') => {
@@ -170,24 +237,6 @@ describe('LeagueEditPage Integration Tests', () => {
   };
 
   it('should load and display league data correctly', async () => {
-    // Mock gyms data
-    vi.mocked(supabase.from).mockImplementation((table) => {
-      if (table === 'gyms') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({
-            data: [
-              { id: 1, gym: 'Gym 1', address: 'Address 1', active: true },
-              { id: 2, gym: 'Gym 2', address: 'Address 2', active: true }
-            ],
-            error: null
-          }),
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      return {} as unknown as ReturnType<typeof supabase.from>;
-    });
-
     renderComponent();
 
     // Wait for data to load
@@ -206,24 +255,6 @@ describe('LeagueEditPage Integration Tests', () => {
   });
 
   it('should handle league update successfully', async () => {
-    // Mock successful update
-    vi.mocked(supabase.from).mockImplementation((table) => {
-      if (table === 'leagues') {
-        return {
-          update: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      if (table === 'gyms') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      return {} as unknown as ReturnType<typeof supabase.from>;
-    });
-
     renderComponent();
     const user = userEvent.setup();
 
@@ -245,23 +276,13 @@ describe('LeagueEditPage Integration Tests', () => {
     // Verify update was called
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith('League updated successfully!', 'success');
-      expect(mockNavigate).toHaveBeenCalledWith('/leagues/1');
+      expect(mockNavigate).toHaveBeenCalledWith('/my-account/leagues');
+      expect(updateMock).toHaveBeenCalled();
+      expect(updateEqMock).toHaveBeenCalledWith('id', '1');
     });
   });
 
   it('should verify copy button renders with proper type conversions', async () => {
-    // Mock gyms data
-    vi.mocked(supabase.from).mockImplementation((table) => {
-      if (table === 'gyms') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      return {} as unknown as ReturnType<typeof supabase.from>;
-    });
-
     renderComponent();
 
     // Wait for data to load
@@ -315,18 +336,7 @@ describe('LeagueEditPage Integration Tests', () => {
     // Mock league not found
     vi.mocked(fetchLeagueById).mockResolvedValue(null);
 
-    // Mock gyms data
-    vi.mocked(supabase.from).mockImplementation((table) => {
-      if (table === 'gyms') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        } as unknown as ReturnType<typeof supabase.from>;
-      }
-      return {} as unknown as ReturnType<typeof supabase.from>;
-    });
-
+    mockGymsData = [];
     renderComponent();
 
     await waitFor(() => {

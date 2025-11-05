@@ -81,7 +81,7 @@ describe('LeagueSchedule visibility overlay', () => {
     render(<LeagueSchedule leagueId="1" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Schedule coming soon')).toBeInTheDocument();
+      expect(screen.getByText('Working on it—Serving soon.')).toBeInTheDocument();
     });
   });
 
@@ -124,7 +124,7 @@ describe('LeagueSchedule visibility overlay', () => {
 
     // Wait for initial render/effects to settle
     await waitFor(() => {
-      expect(screen.queryByText('Schedule coming soon')).not.toBeInTheDocument();
+      expect(screen.queryByText('Working on it—Serving soon.')).not.toBeInTheDocument();
     });
   });
 });

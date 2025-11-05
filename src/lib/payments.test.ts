@@ -52,7 +52,7 @@ describe('payments', () => {
         notes: 'Test payment',
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
-        leagues: { name: 'Test League' },
+        leagues: { name: 'Test League', cost: 100, payment_due_date: null, early_bird_cost: null, early_bird_due_date: null },
         teams: { name: 'Test Team' }
       }];
 

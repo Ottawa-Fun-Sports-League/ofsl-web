@@ -194,8 +194,9 @@ describe('Individual Registration Notification', () => {
       );
     });
 
-    // Verify both functions were called
-    expect(mockInvoke).toHaveBeenCalledTimes(2);
+    const calls = mockInvoke.mock.calls;
+    expect(calls.filter(([fnName]) => fnName === 'send-registration-confirmation')).toHaveLength(1);
+    expect(calls.filter(([fnName]) => fnName === 'notify-individual-registration')).toHaveLength(1);
   });
 
   it('should not block registration if notification fails', async () => {

@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { LeagueSchedule } from './LeagueSchedule';
 import { supabase } from '../../../lib/supabase';
+import { fetchLeagueById } from '../../../lib/leagues';
+import type { League } from '../../../lib/leagues';
 import { vi, beforeEach, describe, it, expect } from 'vitest';
 
 // Mock Supabase
@@ -25,15 +27,43 @@ vi.mock('../../../lib/supabase', () => ({
   }
 }));
 
-describe('LeagueSchedule', () => {
-  const mockProps = {
-    mockSchedule: [],
-    leagueId: '1'
-  };
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    userProfile: { id: 'admin', is_admin: true },
+    loading: false,
+  }),
+}));
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+vi.mock('../../../lib/leagues', () => ({
+  fetchLeagueById: vi.fn().mockResolvedValue({
+    id: 1,
+    start_date: '2025-09-01',
+    end_date: '2025-12-01',
+    playoff_weeks: 0,
+    day_of_week: 3,
+    schedule_visible: true,
+  } as League),
+}));
+
+describe('LeagueSchedule', () => {
+const mockProps = {
+  mockSchedule: [],
+  leagueId: '1'
+};
+
+const mockedFetchLeagueById = vi.mocked(fetchLeagueById);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockedFetchLeagueById.mockResolvedValue({
+    id: 1,
+    start_date: '2099-01-01',
+    end_date: '2099-12-31',
+    playoff_weeks: 0,
+    day_of_week: 3,
+    schedule_visible: true,
+  } as League);
+});
 
   it('displays loading state initially', async () => {
     render(<LeagueSchedule {...mockProps} />);
@@ -87,17 +117,25 @@ describe('LeagueSchedule', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Tier 1')).toBeInTheDocument();
+      expect(screen.getByText('Test Location')).toBeInTheDocument();
+      expect(screen.getByText('7:00 PM - 8:30 PM')).toBeInTheDocument();
+      expect(screen.getByText('Court 1')).toBeInTheDocument();
+      expect(screen.getByText('Team A')).toBeInTheDocument();
+      expect(screen.getByText('Team B')).toBeInTheDocument();
+      expect(screen.getByText('Team C')).toBeInTheDocument();
     });
-
-    expect(screen.getByText('Test Location')).toBeInTheDocument();
-    expect(screen.getByText('7:00 PM - 8:30 PM')).toBeInTheDocument();
-    expect(screen.getByText('Court 1')).toBeInTheDocument();
-    expect(screen.getByText('Team A (1)')).toBeInTheDocument();
-    expect(screen.getByText('Team B (2)')).toBeInTheDocument();
-    expect(screen.getByText('Team C (3)')).toBeInTheDocument();
   });
 
   it('shows no schedule message when no data exists for week 1', async () => {
+    mockedFetchLeagueById.mockResolvedValueOnce({
+      id: 1,
+      start_date: '2099-01-01',
+      end_date: '2099-12-31',
+      playoff_weeks: 0,
+      day_of_week: 3,
+      schedule_visible: true,
+    } as League);
+
     const mockFromChain = {
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
@@ -127,6 +165,15 @@ describe('LeagueSchedule', () => {
   });
 
   it('shows future week message for weeks beyond current', async () => {
+    mockedFetchLeagueById.mockResolvedValueOnce({
+      id: 1,
+      start_date: '2024-01-01',
+      end_date: '2024-12-31',
+      playoff_weeks: 0,
+      day_of_week: 3,
+      schedule_visible: true,
+    } as League);
+
     const mockFromChain = {
       select: vi.fn(() => ({
         eq: vi.fn(() => ({

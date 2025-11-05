@@ -56,10 +56,11 @@ describe('PaymentStatusSection', () => {
 
     render(<PaymentStatusSection payment={payment} isCaptain={false} />);
 
-    // Check that simple section is displayed
+    // Non-captains should see the simplified warning message
     expect(screen.queryByText('Payment Status')).not.toBeInTheDocument();
-    expect(screen.getByText('Balance: $63.00')).toBeInTheDocument();
-    expect(screen.getByText(/Due in \d+ days?/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/hasn't been fully paid yet/i)
+    ).toBeInTheDocument();
   });
 
   it('renders enhanced view for overdue payment for captain', () => {

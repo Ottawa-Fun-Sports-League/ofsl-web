@@ -28,7 +28,7 @@ interface MockTurnstileProps {
 vi.mock('../../components/ui/turnstile', () => ({
   TurnstileWidget: vi.fn(({ onVerify }: MockTurnstileProps) => {
     // Auto-verify after mount
-    setTimeout(() => onVerify('test-turnstile-token'), 100);
+    Promise.resolve().then(() => onVerify('test-turnstile-token'));
     return <div data-testid="turnstile-widget">Turnstile Widget</div>;
   }),
   TurnstileHandle: {},

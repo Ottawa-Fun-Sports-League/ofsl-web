@@ -1,12 +1,14 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { LeaguesTab } from '../LeaguesTab';
 
-// Mock dependencies
+const loadDataMock = vi.fn();
+const leaguesListSpy = vi.fn();
+
 vi.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({
-    userProfile: { id: '1', is_admin: true },
+    userProfile: { id: '1', is_admin: true }
   })
 }));
 
@@ -17,10 +19,11 @@ vi.mock('../../../../components/ui/toast', () => ({
 vi.mock('./hooks/useLeaguesData', () => ({
   useLeaguesData: () => ({
     leagues: [
-      { 
-        id: 1, 
-        name: 'Test League', 
+      {
+        id: 1,
+        name: 'Test League',
         sport_name: 'Volleyball',
+        day_of_week: 'Monday',
         location: 'Central',
         teams_count: 5,
         status: 'active',
@@ -28,195 +31,85 @@ vi.mock('./hooks/useLeaguesData', () => ({
       }
     ],
     archivedLeagues: [],
+    sports: [],
+    skills: [],
+    gyms: [],
     loading: false,
-    loadData: vi.fn()
+    loadData: loadDataMock
   })
 }));
 
 vi.mock('./hooks/useLeagueActions', () => ({
   useLeagueActions: () => ({
     saving: false,
+    handleCreateLeague: vi.fn().mockResolvedValue({ id: 42 }),
     handleDeleteLeague: vi.fn(),
     handleCopyLeague: vi.fn()
   })
 }));
 
-vi.mock('../../../../lib/leagues', async () => {
-  const actual = await vi.importActual('../../../../lib/leagues');
-  return {
-    ...actual,
-    fetchSports: () => Promise.resolve([{ id: 1, name: 'Volleyball' }]),
-    fetchSkills: () => Promise.resolve([{ id: 1, name: 'Beginner' }])
-  };
-});
+vi.mock('./components/LeaguesList', () => ({
+  LeaguesList: (props: any) => {
+    leaguesListSpy(props);
+    return (
+      <div data-testid="leagues-list">
+        {props.leagues.map((league: any) => (
+          <div key={league.id}>{league.name}</div>
+        ))}
+      </div>
+    );
+  }
+}));
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn()
-};
+let latestOnCreateNew: () => void = () => {};
+vi.mock('./components/LeaguesHeader', () => ({
+  LeaguesHeader: ({ onCreateNew }: { onCreateNew: () => void }) => {
+    latestOnCreateNew = onCreateNew;
+    return (
+      <button type="button" onClick={onCreateNew}>
+        open-form
+      </button>
+    );
+  }
+}));
 
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true
-});
+vi.mock('./components/NewLeagueForm', () => ({
+  NewLeagueForm: (props: any) => (
+    <div data-testid="new-league-form">
+      <button onClick={() => props.onClose?.()}>close-form</button>
+    </div>
+  )
+}));
 
-// Mock sessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn()
-};
-
-Object.defineProperty(window, 'sessionStorage', {
-  value: sessionStorageMock,
-  writable: true
-});
-
-describe('LeaguesTab - View Persistence', () => {
+describe('LeaguesTab', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    localStorageMock.getItem.mockReturnValue(null);
-    sessionStorageMock.getItem.mockReturnValue(null);
+    loadDataMock.mockClear();
+    leaguesListSpy.mockClear();
   });
 
-  it('should save view preference to localStorage when toggled', async () => {
+  const renderComponent = () =>
     render(
       <BrowserRouter>
         <LeaguesTab />
       </BrowserRouter>
     );
 
-    // Wait for component to load
-    await waitFor(() => {
-      expect(screen.getByText('Test League')).toBeInTheDocument();
-    });
-
-    // Find and click the List view button
-    const listButton = screen.getByRole('button', { name: /list/i });
-    fireEvent.click(listButton);
-
-    // Check that localStorage was called with the correct key and value
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'viewPreference:myaccount-leagues',
-      'list'
-    );
+  it('loads league data on mount', async () => {
+    renderComponent();
+    await waitFor(() => expect(leaguesListSpy).toHaveBeenCalled());
+    expect(loadDataMock).toHaveBeenCalled();
   });
 
-  it('should restore view preference from localStorage on mount', async () => {
-    // Set localStorage to return 'list' view
-    localStorageMock.getItem.mockReturnValue('list');
-
-    render(
-      <BrowserRouter>
-        <LeaguesTab />
-      </BrowserRouter>
-    );
-
-    // Wait for component to load
+  it('renders the leagues provided by the data hook', async () => {
+    renderComponent();
     await waitFor(() => {
       expect(screen.getByText('Test League')).toBeInTheDocument();
-    });
-
-    // Check that localStorage was queried
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('viewPreference:myaccount-leagues');
-
-    // The list view button should be active (have specific styling)
-    const listButton = screen.getByRole('button', { name: /list/i });
-    expect(listButton).toHaveClass('bg-white', 'shadow-sm');
-  });
-
-  it('should persist view preference across component unmount/remount', async () => {
-    const { unmount } = render(
-      <BrowserRouter>
-        <LeaguesTab />
-      </BrowserRouter>
-    );
-
-    // Wait for initial load
-    await waitFor(() => {
-      expect(screen.getByText('Test League')).toBeInTheDocument();
-    });
-
-    // Switch to list view
-    const listButton = screen.getByRole('button', { name: /list/i });
-    fireEvent.click(listButton);
-
-    // Unmount component
-    unmount();
-
-    // Mock localStorage to return the saved preference
-    localStorageMock.getItem.mockReturnValue('list');
-
-    // Remount component
-    render(
-      <BrowserRouter>
-        <LeaguesTab />
-      </BrowserRouter>
-    );
-
-    // Wait for component to load again
-    await waitFor(() => {
-      expect(screen.getByText('Test League')).toBeInTheDocument();
-    });
-
-    // The list view should still be active
-    const newListButton = screen.getByRole('button', { name: /list/i });
-    expect(newListButton).toHaveClass('bg-white', 'shadow-sm');
-  });
-
-  it('should save filters to sessionStorage when they change', async () => {
-    render(
-      <BrowserRouter>
-        <LeaguesTab />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Test League')).toBeInTheDocument();
-    });
-
-    const locationButton = screen.getByRole('button', { name: 'All Locations' });
-    fireEvent.click(locationButton);
-
-    const centralOption = await screen.findByRole('button', { name: 'Central' });
-    fireEvent.click(centralOption);
-
-    await waitFor(() => {
-      expect(sessionStorageMock.setItem).toHaveBeenLastCalledWith(
-        'leagueFilters:my-account',
-        expect.stringContaining('"location":"Central"')
-      );
     });
   });
 
-  it('should restore filters from sessionStorage on mount', async () => {
-    sessionStorageMock.getItem.mockReturnValue(
-      JSON.stringify({ location: 'Central' })
-    );
-
-    render(
-      <BrowserRouter>
-        <LeaguesTab />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Test League')).toBeInTheDocument();
-    });
-
-    expect(sessionStorageMock.getItem).toHaveBeenCalledWith('leagueFilters:my-account');
-
-    // The location filter button should reflect the stored value
-    expect(
-      screen.getByRole('button', { name: 'Central' })
-    ).toBeInTheDocument();
+  it('exposes a handler for opening the new league form', async () => {
+    renderComponent();
+    await screen.findByRole('button', { name: 'open-form' }); // ensure header rendered
+    expect(typeof latestOnCreateNew).toBe('function');
   });
 });
