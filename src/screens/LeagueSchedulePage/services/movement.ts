@@ -4,6 +4,7 @@ import { applyFourTeamTierMovementNextWeek } from '../database/scheduleDatabase'
 import { getNextPlayableWeek } from '../database/scheduleDatabase';
 import { applyTwoTeamTierMovementNextWeek } from '../database/scheduleDatabase';
 import { applyEliteThreeTeamMovementNextWeek } from '../database/scheduleDatabase';
+import type { TeamPositionId } from '../types';
 
 type ABC = 'A' | 'B' | 'C';
 
@@ -158,14 +159,8 @@ export async function applySixTeamMovementAfterStandings(params: {
   const nextWeek = weekNumber + 1;
   const isBottomTier = pointsTierOffset === 0;
 
-  const positionColumns = ['team_a_name', 'team_b_name', 'team_c_name', 'team_d_name', 'team_e_name', 'team_f_name'] as const;
-
   // Determine destination week, skipping full no-games weeks to match other formats
   const destWeek = await getNextPlayableWeek(leagueId, nextWeek);
-
-  const uniqueNames = new Set(
-    teamStats.map((stat) => teamNames[stat.team as keyof typeof teamNames]).filter((name): name is string => Boolean(name))
-  );
 
   const movements = [
     { rank: 0, targetTier: isTopTier ? tierNumber : Math.max(1, tierNumber - 1), targetPosition: isTopTier ? 'A' : 'F' },
@@ -184,7 +179,7 @@ export async function applySixTeamMovementAfterStandings(params: {
       if (!name) return null;
       return { target_tier: movement.targetTier, target_pos: movement.targetPosition, team_name: name };
     })
-    .filter((v): v is { target_tier: number; target_pos: string; team_name: string } => v !== null);
+    .filter((v): v is { target_tier: number; target_pos: TeamPositionId; team_name: string } => v !== null);
 
   const { error: rpcErr } = await supabase.rpc('apply_next_week_assignments', {
     p_league_id: leagueId,

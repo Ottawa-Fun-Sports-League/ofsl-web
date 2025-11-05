@@ -144,6 +144,14 @@ export function TeamsTab() {
 
     try {
       // First, fetch payment details before deletion for notification
+      type PaymentWithSkills = {
+        amount_due: number | null;
+        amount_paid: number | null;
+        status: string | null;
+        is_waitlisted: boolean | null;
+        skills?: Array<{ id: number | null; name: string | null }> | { id: number | null; name: string | null } | null;
+      };
+
       const { data: paymentData, error: paymentFetchError } = await supabase
         .from('league_payments')
         .select(`
@@ -158,7 +166,7 @@ export function TeamsTab() {
         .eq('user_id', userProfile.id)
         .eq('league_id', leagueId)
         .is('team_id', null)
-        .maybeSingle();
+        .maybeSingle<PaymentWithSkills>();
 
       if (paymentFetchError) {
         console.error('Error fetching payment details:', paymentFetchError);
@@ -208,12 +216,13 @@ export function TeamsTab() {
         } else {
           // Extract skill level name if available
           let skillLevelName: string | null = null;
-          if (paymentData?.skills) {
-            if (Array.isArray(paymentData.skills)) {
-              skillLevelName = paymentData.skills[0]?.name ?? null;
-            } else {
-              skillLevelName = paymentData.skills.name ?? null;
-            }
+          const rawSkills = paymentData?.skills;
+          if (Array.isArray(rawSkills)) {
+            const firstSkill = rawSkills.find((skill): skill is { id: number | null; name: string | null } => Boolean(skill && typeof skill.name === 'string'));
+            skillLevelName = firstSkill?.name ?? null;
+          } else if (rawSkills && typeof rawSkills === 'object' && 'name' in rawSkills) {
+            const maybeSkill = rawSkills as { name: unknown };
+            skillLevelName = typeof maybeSkill.name === 'string' ? maybeSkill.name : null;
           }
 
           const notificationResponse = await supabase.functions.invoke(

@@ -30,20 +30,12 @@ interface RegistrationRequest {
   userName: string;
   teamName: string;
   leagueName: string;
-  teamId?: number | null;
   isWaitlist?: boolean;
   depositAmount?: number | null;
   depositDate?: string | null;
   isIndividualRegistration?: boolean;
   leagueSkillLevel?: string | null;
 }
-
-const formatAdminTimestamp = (date: Date) =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Toronto",
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(date);
 
 async function sendEmailThroughResend(
   resendApiKey: string,
@@ -106,7 +98,6 @@ serve(async (req: Request) => {
       userName,
       teamName,
       leagueName,
-      teamId = null,
       isWaitlist = false,
       depositAmount = null,
       depositDate = null,
@@ -138,8 +129,6 @@ serve(async (req: Request) => {
 
     // Initialize Supabase client with service role for database operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the user is authenticated by checking their token
     const token = authHeader.replace("Bearer ", "");
@@ -171,8 +160,6 @@ serve(async (req: Request) => {
     const skillLevelLabel = leagueSkillLevel && leagueSkillLevel.trim().length > 0
       ? leagueSkillLevel.trim()
       : "Not specified";
-
-    const depositDateFormatted = formatLocalDate(depositDate);
 
     const emailContent = {
       to: [email],

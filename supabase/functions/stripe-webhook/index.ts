@@ -340,7 +340,7 @@ async function sendIndividualRegistrationNotification(userId: string, leagueId: 
   }
 }
 
-async function sendTeamRegistrationNotification(teamId: number, amountPaid: number) {
+async function sendTeamRegistrationNotification(teamId: number, _amountPaid: number) {
   try {
     // Get team information
     const { data: teamData, error: teamError } = await supabase

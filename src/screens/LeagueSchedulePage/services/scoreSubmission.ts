@@ -1013,7 +1013,7 @@ export async function submitThreeTeamEliteNineScoresAndMove(params: SubmitThreeT
     return 0;
   };
   // Preload previous standings positions for tie-break fallback (before current week updates)
-  let prevPosition: Record<ABC, number | null> = { A: null, B: null, C: null };
+  const prevPosition: Record<ABC, number | null> = { A: null, B: null, C: null };
   try {
     const { data: teamsRowsPre } = await supabase
       .from('teams')
@@ -1599,7 +1599,6 @@ export async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTe
     game2,
   });
 }
-
 
 
 

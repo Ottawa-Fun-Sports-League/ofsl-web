@@ -448,16 +448,18 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
       p_assignments: rpcAssignments,
       p_mark_completed: true,
     });
-    if (rpcErr) handleDatabaseError(rpcErr);
-    return;
+    if (!rpcErr) {
+      return;
+    }
+    console.warn('Falling back to client-side three-team movement updates:', rpcErr);
   } catch (err) {
-    handleDatabaseError(err);
+    console.warn('Fallback to client-side three-team movement updates due to RPC failure:', err);
   }
 
   // Fetch next week's relevant tiers (current, +/- 1) to minimize updates
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
 
-  const { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRowsData, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)
@@ -465,8 +467,9 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
     .in('tier_number', tierNumbersToFetch as number[]);
   if (fetchErr) handleDatabaseError(fetchErr);
 
+  const nextWeekRows = nextWeekRowsData ?? [];
   const rowsByTier = new Map<number, any>();
-  (nextWeekRows || []).forEach((row: any) => rowsByTier.set(row.tier_number, row));
+  nextWeekRows.forEach((row: any) => rowsByTier.set(row.tier_number, row));
 
   // Ensure next week rows exist for all target tiers; create from current week's template if missing
   const missingTiers = assignments
@@ -520,16 +523,14 @@ export async function applyThreeTeamTierMovementNextWeek(params: {
       if (insErr) handleDatabaseError(insErr);
       (inserted || []).forEach((row: any) => {
         rowsByTier.set(row.tier_number, row);
-        if (nextWeekRows) {
-          nextWeekRows.push(row);
-        }
+        nextWeekRows.push(row);
       });
     }
   }
 
   // Clear any existing occurrences of these team names anywhere in next week to avoid duplicates
   // This ensures edits remove prior placements regardless of previous target tiers
-  const namesToPlace = new Set(assignments.map(a => a.name));
+  const namesToPlace = new Set<string>(assignments.map(a => a.name));
   const { data: allNextWeekRows, error: fetchAllErr } = await supabase
     .from('weekly_schedules')
     .select('id, tier_number, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
@@ -706,22 +707,25 @@ export async function applyFourTeamTierMovementNextWeek(params: {
       p_assignments: rpcAssignments,
       p_mark_completed: true,
     });
-    if (rpcErr) handleDatabaseError(rpcErr);
-    return;
+    if (!rpcErr) {
+      return;
+    }
+    console.warn('Falling back to client-side four-team movement updates:', rpcErr);
   } catch (err) {
-    handleDatabaseError(err);
+    console.warn('Fallback to client-side four-team movement updates due to RPC failure:', err);
   }
 
   // Fetch next week target tiers
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
-  const { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRowsData, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)
     .eq('week_number', destWeek)
     .in('tier_number', tierNumbersToFetch as number[]);
   if (fetchErr) handleDatabaseError(fetchErr);
-  const rowsByTier = new Map<number, any>(); (nextWeekRows||[]).forEach((row:any)=>rowsByTier.set(row.tier_number, row));
+  const nextWeekRows = nextWeekRowsData ?? [];
+  const rowsByTier = new Map<number, any>(); nextWeekRows.forEach((row:any)=>rowsByTier.set(row.tier_number, row));
 
   const missingTiers = assignments.map(a=>a.targetTier).filter(t=>!rowsByTier.has(t));
   if (missingTiers.length>0) {
@@ -747,12 +751,12 @@ export async function applyFourTeamTierMovementNextWeek(params: {
     if (inserts.length>0) {
       const { data: inserted, error: insErr } = await supabase.from('weekly_schedules').insert(inserts).select('*');
       if (insErr) handleDatabaseError(insErr);
-      (inserted||[]).forEach((row:any)=>{ rowsByTier.set(row.tier_number,row); if (nextWeekRows) { nextWeekRows.push(row); } });
+      (inserted||[]).forEach((row:any)=>{ rowsByTier.set(row.tier_number,row); nextWeekRows.push(row); });
     }
   }
 
   // Clear duplicates across next week rows
-  const namesToPlace = new Set(assignments.map(a=>a.name));
+  const namesToPlace = new Set<string>(assignments.map(a=>a.name));
   const { data: allNextWeekRows, error: fetchAllErr } = await supabase
     .from('weekly_schedules')
     .select('id, tier_number, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
@@ -992,25 +996,28 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
       p_assignments: rpcAssignments,
       p_mark_completed: true,
     });
-    if (rpcErr) handleDatabaseError(rpcErr);
-    return;
+    if (!rpcErr) {
+      return;
+    }
+    console.warn('Falling back to client-side partner/elite movement updates:', rpcErr);
   } catch (err) {
-    handleDatabaseError(err);
+    console.warn('Fallback to client-side partner/elite movement updates due to RPC failure:', err);
   }
 
   // Fetch/create next week rows for destination tiers
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
 
-  const { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRowsData, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)
     .eq('week_number', destWeek)
     .in('tier_number', tierNumbersToFetch as number[]);
   if (fetchErr) handleDatabaseError(fetchErr);
+  const nextWeekRows = nextWeekRowsData ?? [];
 
   const rowsByTier = new Map<number, any>();
-  (nextWeekRows || []).forEach((row: any) => rowsByTier.set(row.tier_number, row));
+  nextWeekRows.forEach((row: any) => rowsByTier.set(row.tier_number, row));
 
   const missingTiers = assignments.map(a => a.targetTier).filter(t => !rowsByTier.has(t));
   if (missingTiers.length > 0) {
@@ -1060,15 +1067,13 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
       if (insErr) handleDatabaseError(insErr);
       (inserted || []).forEach((row: any) => {
         rowsByTier.set(row.tier_number, row);
-        if (nextWeekRows) {
-          nextWeekRows.push(row);
-        }
+        nextWeekRows.push(row);
       });
     }
   }
 
   // Clear duplicates of these names across all next-week rows
-  const namesToPlace = new Set(assignments.map(a => a.name));
+  const namesToPlace = new Set<string>(assignments.map(a => a.name));
   const { data: allNextWeekRows, error: fetchAllErr } = await supabase
     .from('weekly_schedules')
     .select('id, tier_number, team_a_name, team_b_name, team_c_name, team_d_name, team_e_name, team_f_name')
@@ -1164,14 +1169,16 @@ export async function applyEliteThreeTeamMovementNextWeek(params: {
       p_assignments: rpcAssignments,
       p_mark_completed: true,
     });
-    if (rpcErr) handleDatabaseError(rpcErr);
-    return;
+    if (!rpcErr) {
+      return;
+    }
+    console.warn('Falling back to client-side elite three-team movement updates:', rpcErr);
   } catch (err) {
-    handleDatabaseError(err);
+    console.warn('Fallback to client-side elite three-team movement updates due to RPC failure:', err);
   }
 
   const tierNumbersToFetch = Array.from(new Set(assignments.map(a => a.targetTier).concat([tierNumber, tierNumber - 1, tierNumber + 1]).filter(n => n >= 1)));
-  const { data: nextWeekRows, error: fetchErr } = await supabase
+  const { data: nextWeekRowsData, error: fetchErr } = await supabase
     .from('weekly_schedules')
     .select('*')
     .eq('league_id', leagueId)
@@ -1180,7 +1187,8 @@ export async function applyEliteThreeTeamMovementNextWeek(params: {
   if (fetchErr) handleDatabaseError(fetchErr);
 
   const rowsByTier = new Map<number, any>();
-  (nextWeekRows || []).forEach((row: any) => rowsByTier.set(row.tier_number, row));
+  const nextWeekRows = nextWeekRowsData ?? [];
+  nextWeekRows.forEach((row: any) => rowsByTier.set(row.tier_number, row));
 
   const missingTiers = assignments.map(a => a.targetTier).filter(t => !rowsByTier.has(t));
   if (missingTiers.length > 0) {
@@ -1223,7 +1231,7 @@ export async function applyEliteThreeTeamMovementNextWeek(params: {
     }
   }
 
-  const allNames = Array.from(new Set(assignments.map(a => a.name)));
+  const allNames = Array.from(new Set<string>(assignments.map(a => a.name)));
   const positionColumns = ['team_a_name','team_b_name','team_c_name'];
   for (const name of allNames) {
     for (const col of positionColumns) {
