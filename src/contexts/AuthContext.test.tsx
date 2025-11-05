@@ -39,6 +39,8 @@ vi.mock('../lib/supabase', () => ({
 vi.mock('../lib/logger', () => ({
   logger: {
     error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
   },
 }));
 

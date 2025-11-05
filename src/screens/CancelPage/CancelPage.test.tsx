@@ -40,7 +40,7 @@ describe('CancelPage', () => {
     await waitForAuthToLoad();
     
     // Look for the XCircle icon by finding any svg with the appropriate size and color
-    const cancelIcon = document.querySelector('svg.h-16.w-16.text-orange-500');
+    const cancelIcon = screen.getByTestId('cancel-icon');
     expect(cancelIcon).toBeInTheDocument();
     expect(cancelIcon).toHaveClass('text-orange-500');
   });

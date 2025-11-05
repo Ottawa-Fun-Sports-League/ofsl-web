@@ -2,7 +2,7 @@
 // @ts-nocheck - Complex type issues requiring extensive refactoring
 // This file has been temporarily bypassed to achieve zero compilation errors
 // while maintaining functionality and test coverage.
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { UserRegistrationsPage } from './UserRegistrationsPage';
@@ -25,6 +25,15 @@ const mockShowToast = vi.fn();
 vi.mock('../../../../components/ui/toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
+
+const createFetchResponse = (payload: unknown, init?: Partial<Response>) => ({
+  ok: init?.ok ?? true,
+  status: init?.status ?? (init?.ok === false ? 500 : 200),
+  json: vi.fn().mockResolvedValue(payload),
+  text: vi.fn().mockResolvedValue(
+    typeof payload === 'string' ? payload : JSON.stringify(payload)
+  ),
+}) as unknown as Response;
 
 describe('UserRegistrationsPage', () => {
   const mockUserProfile = {
@@ -119,39 +128,82 @@ describe('UserRegistrationsPage', () => {
     }
   ];
 
-  const mockPayments = [
-    {
-      id: 1,
-      team_id: 1,
-      league_id: 10,
-      amount_due: 200,
-      amount_paid: 226,  // 200 * 1.13 = fully paid with tax
-      user_id: 'test-user-id'
+  const successApiResponse = {
+    user: {
+      id: mockUserData.id,
+      name: mockUserData.name,
+      email: mockUserData.email,
     },
-    {
-      id: 2,
-      team_id: 2,
-      league_id: 11,
-      amount_due: 150,
-      amount_paid: 84.75,  // 150 * 1.13 * 0.5 = deposit paid with tax
-      user_id: 'test-user-id'
-    },
-    {
-      id: 3,
-      team_id: null,
-      league_id: 3,
-      amount_due: 100,
-      amount_paid: 56.50,  // 100 * 1.13 * 0.5 = deposit paid with tax
-      user_id: 'test-user-id'
-    }
-  ];
+    team_registrations: [
+      {
+        team_id: mockTeams[0].id,
+        team_name: mockTeams[0].name,
+        league_id: mockTeams[0].league_id,
+        league_name: mockTeams[0].leagues.name,
+        sport_name: mockTeams[0].leagues.sports.name,
+        role: 'captain',
+        payment_status: 'fully_paid',
+        amount_owing: 0,
+        season: 'Fall 2025',
+      },
+      {
+        team_id: mockTeams[1].id,
+        team_name: mockTeams[1].name,
+        league_id: mockTeams[1].league_id,
+        league_name: mockTeams[1].leagues.name,
+        sport_name: mockTeams[1].leagues.sports.name,
+        role: 'co-captain',
+        payment_status: 'deposit_paid',
+        amount_owing: 75.25,
+        season: 'Fall 2025',
+      },
+      {
+        team_id: mockTeams[2].id,
+        team_name: mockTeams[2].name,
+        league_id: mockTeams[2].league_id,
+        league_name: mockTeams[2].leagues.name,
+        sport_name: mockTeams[2].leagues.sports.name,
+        role: 'player',
+        payment_status: 'not_paid',
+        amount_owing: 150,
+      },
+    ],
+    individual_registrations: [
+      {
+        league_id: mockIndividualLeagues[0].id,
+        league_name: mockIndividualLeagues[0].name,
+        sport_name: mockIndividualLeagues[0].sports.name,
+        payment_status: 'fully_paid',
+        amount_owing: 0,
+        season: 'Spring 2024',
+      },
+      {
+        league_id: mockIndividualLeagues[1].id,
+        league_name: mockIndividualLeagues[1].name,
+        sport_name: mockIndividualLeagues[1].sports.name,
+        payment_status: 'deposit_paid',
+        amount_owing: 40,
+        season: 'Summer 2024',
+      },
+    ],
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://supabase.test');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+
     vi.mocked(useAuth).mockReturnValue({
       userProfile: mockUserProfile,
     } as unknown as ReturnType<typeof supabase.from>);
+
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'test-token' } },
+      error: null,
+    } as Awaited<ReturnType<typeof supabase.auth.getSession>>);
+
+    global.fetch = vi.fn().mockResolvedValue(createFetchResponse(successApiResponse));
 
     // Setup supabase mocks
     vi.mocked(supabase.from).mockImplementation((table: string) => {
@@ -216,6 +268,10 @@ describe('UserRegistrationsPage', () => {
     });
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('should display user registrations for admin including all team roles', async () => {
     render(
       <BrowserRouter>
@@ -247,8 +303,8 @@ describe('UserRegistrationsPage', () => {
     expect(screen.getByText('Individual Badminton')).toBeInTheDocument();
 
     // Check payment statuses
-    expect(screen.getByText('Fully Paid')).toBeInTheDocument();
-    expect(screen.getByText('Deposit Paid')).toBeInTheDocument();
+    expect(screen.getAllByText('Fully Paid')).toHaveLength(2);
+    expect(screen.getAllByText('Deposit Paid')).toHaveLength(2);
 
     // Check role badges
     expect(screen.getByText('captain')).toBeInTheDocument();
@@ -271,6 +327,10 @@ describe('UserRegistrationsPage', () => {
   });
 
   it('should handle user not found', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      createFetchResponse('User not found', { ok: false, status: 404 })
+    );
+
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === 'users') {
         return {
@@ -293,7 +353,8 @@ describe('UserRegistrationsPage', () => {
     );
 
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('User not found', 'error');
+      expect(mockShowToast).toHaveBeenCalledWith('Failed to load user registrations', 'error');
+      expect(screen.getByText('User not found')).toBeInTheDocument();
     });
   });
 
@@ -317,6 +378,18 @@ describe('UserRegistrationsPage', () => {
   });
 
   it('should handle users with no registrations', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      createFetchResponse({
+        user: {
+          id: mockUserData.id,
+          name: mockUserData.name,
+          email: mockUserData.email,
+        },
+        team_registrations: [],
+        individual_registrations: [],
+      })
+    );
+
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === 'users') {
         return {

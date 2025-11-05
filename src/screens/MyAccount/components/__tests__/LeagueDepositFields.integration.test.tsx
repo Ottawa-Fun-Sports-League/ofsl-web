@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { LeagueEditPage } from '../LeagueEditPage';
@@ -90,27 +90,91 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('League Deposit Fields', () => {
+  let mockGymsData: Array<{ id: number; gym: string; address: string; active: boolean }>;
+  let mockGameResultsData: Array<{ week_number: number }>;
+  let mockScheduleRow: { id: number } | null;
+  let mockLeagueUpdateResponse: { data: unknown; error: null };
+  let updateMock: Mock;
+  let updateEqMock: Mock;
+
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock supabase responses
-    const selectMock = vi.fn().mockReturnThis();
-    const eqMock = vi.fn().mockReturnThis();
-    const orderMock = vi.fn().mockResolvedValue({
-      data: [{ id: 1, gym: 'Test Gym', address: '123 Test St', active: true }],
-      error: null,
-    });
-    const updateMock = vi.fn().mockReturnThis();
-    const updateEqMock = vi.fn().mockResolvedValue({ data: [], error: null });
+    mockGymsData = [{ id: 1, gym: 'Test Gym', address: '123 Test St', active: true }];
+    mockGameResultsData = [];
+    mockScheduleRow = null;
+    mockLeagueUpdateResponse = { data: [], error: null };
+    updateMock = vi.fn();
+    updateEqMock = vi.fn();
 
-    (supabase.from as ReturnType<typeof vi.fn>).mockImplementation(() => ({
-      select: selectMock,
-      eq: eqMock,
-      order: orderMock,
-      update: updateMock.mockReturnValue({
-        eq: updateEqMock,
-      }),
-    }));
+    const fromMock = supabase.from as unknown as Mock;
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'gyms') {
+        const select = vi.fn().mockReturnThis();
+        const eq = vi.fn().mockReturnThis();
+        const order = vi.fn().mockImplementation(async () => ({
+          data: mockGymsData,
+          error: null,
+        }));
+        return {
+          select,
+          eq,
+          order,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      if (table === 'game_results') {
+        const select = vi.fn().mockReturnThis();
+        const eq = vi.fn().mockReturnThis();
+        const order = vi.fn().mockReturnValue({
+          limit: vi.fn().mockImplementation(async () => ({
+            data: mockGameResultsData,
+            error: null,
+          })),
+        });
+        return {
+          select,
+          eq,
+          order,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      if (table === 'league_schedules') {
+        const select = vi.fn().mockReturnThis();
+        const eq = vi.fn().mockReturnThis();
+        const maybeSingle = vi.fn().mockImplementation(async () => ({
+          data: mockScheduleRow,
+          error: null,
+        }));
+        return {
+          select,
+          eq,
+          maybeSingle,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      if (table === 'leagues') {
+        updateEqMock = vi.fn().mockImplementation(async (_column: string, _value: unknown) => {
+          // preserve chaining signature (column, value)
+          return mockLeagueUpdateResponse;
+        });
+        updateMock = vi.fn().mockReturnValue({
+          eq: updateEqMock,
+        });
+        return {
+          update: updateMock,
+        } as unknown as ReturnType<typeof supabase.from>;
+      }
+
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        update: vi.fn().mockReturnThis(),
+      } as unknown as ReturnType<typeof supabase.from>;
+    });
   });
 
   it('should display deposit fields in the edit form', async () => {
@@ -188,27 +252,6 @@ describe('League Deposit Fields', () => {
   });
 
   it('should save deposit fields when updating league', async () => {
-    const updateMock = vi.fn().mockReturnThis();
-    const updateEqMock = vi.fn().mockResolvedValue({ data: [], error: null });
-
-    (supabase.from as ReturnType<typeof vi.fn>).mockImplementation((table) => {
-      if (table === 'leagues') {
-        return {
-          update: updateMock.mockReturnValue({
-            eq: updateEqMock,
-          }),
-        };
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: [{ id: 1, gym: 'Test Gym', active: true }],
-          error: null,
-        }),
-      };
-    });
-
     render(
       <BrowserRouter>
         <LeagueEditPage />
@@ -237,31 +280,11 @@ describe('League Deposit Fields', () => {
           deposit_date: '2025-02-15',
         })
       );
+      expect(updateEqMock).toHaveBeenCalledWith('id', '1');
     });
   });
 
   it('should save null deposit fields when cleared', async () => {
-    const updateMock = vi.fn().mockReturnThis();
-    const updateEqMock = vi.fn().mockResolvedValue({ data: [], error: null });
-
-    (supabase.from as ReturnType<typeof vi.fn>).mockImplementation((table) => {
-      if (table === 'leagues') {
-        return {
-          update: updateMock.mockReturnValue({
-            eq: updateEqMock,
-          }),
-        };
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: [{ id: 1, gym: 'Test Gym', active: true }],
-          error: null,
-        }),
-      };
-    });
-
     render(
       <BrowserRouter>
         <LeagueEditPage />
@@ -290,6 +313,7 @@ describe('League Deposit Fields', () => {
           deposit_date: null,
         })
       );
+      expect(updateEqMock).toHaveBeenCalledWith('id', '1');
     });
   });
 });

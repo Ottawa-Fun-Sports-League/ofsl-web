@@ -111,7 +111,7 @@ describe('LeagueStandings', () => {
     expect(screen.getByText('League Standings')).toBeInTheDocument();
 
     // Check note about standings
-    expect(screen.getByText(/Game records and standings will be available/)).toBeInTheDocument();
+    expect(screen.getByText(/Standings are updated weekly/)).toBeInTheDocument();
 
     // Check table headers
     expect(screen.getByText('#')).toBeInTheDocument();
@@ -139,11 +139,17 @@ describe('LeagueStandings', () => {
       refetch: vi.fn()
     });
 
-    render(<LeagueStandings leagueId="1" />);
+    const { container } = render(<LeagueStandings leagueId="1" />);
 
-    // All teams should show "-" for wins, losses, and points
-    const dashElements = screen.getAllByText('-');
-    expect(dashElements.length).toBe(9); // 3 teams × 3 columns (wins, losses, points)
+    const rows = Array.from(container.querySelectorAll('tbody tr'));
+    expect(rows.length).toBe(mockTeams.length);
+
+    rows.forEach((row) => {
+      const cells = Array.from(row.querySelectorAll('td'));
+      expect(cells[2].textContent).toBe('0'); // Wins
+      expect(cells[3].textContent).toBe('0'); // Losses
+      expect(cells[4].textContent).toBe('0'); // Points
+    });
   });
 
   it('applies correct styling to table rows', () => {

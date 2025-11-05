@@ -7,7 +7,7 @@ export function CancelPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
         <div className="mb-6">
-          <XCircle className="h-16 w-16 text-orange-500 mx-auto mb-4" />
+          <XCircle data-testid="cancel-icon" className="h-16 w-16 text-orange-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-[#6F6F6F] mb-2">Payment Cancelled</h1>
           <p className="text-[#6F6F6F]">
             Your payment was cancelled. No charges have been made to your account.

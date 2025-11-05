@@ -3,6 +3,10 @@ import { vi, afterEach } from 'vitest';
 import React from 'react';
 import './mocks/setup-supabase';
 
+// Provide default env vars expected by supabase client in tests/CI
+vi.stubEnv('VITE_SUPABASE_URL', 'https://supabase.test');
+vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
+
 // Global mock for toast components
 vi.mock('../components/ui/toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => React.createElement('div', { 'data-testid': 'toast-provider' }, children),

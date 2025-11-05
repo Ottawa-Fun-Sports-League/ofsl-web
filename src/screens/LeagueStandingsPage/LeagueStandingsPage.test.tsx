@@ -20,15 +20,22 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('../../contexts/AuthContext', () => ({
-  useAuth: () => ({
+const mockUseAuth = vi.hoisted(() =>
+  vi.fn(() => ({
     userProfile: { is_admin: true },
-  }),
+  }))
+);
+
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: mockUseAuth,
 }));
 
 describe('LeagueStandingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuth.mockImplementation(() => ({
+      userProfile: { is_admin: true },
+    }));
   });
 
   it('should render without crashing for admin users', () => {
@@ -43,11 +50,7 @@ describe('LeagueStandingsPage', () => {
   });
 
   it('should not render for non-admin users', () => {
-    vi.mocked(vi.fn()).mockImplementation(() => ({
-      useAuth: () => ({
-        userProfile: { is_admin: false },
-      }),
-    }));
+    mockUseAuth.mockImplementation(() => ({ userProfile: { is_admin: false } }));
 
     const { container } = render(
       <BrowserRouter>

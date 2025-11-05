@@ -29,31 +29,15 @@ vi.mock("@stripe/stripe-js", () => ({
 }));
 
 // Mock fetchLeagueById from lib/leagues
-vi.mock("../../lib/leagues", () => ({
-  fetchLeagueById: vi.fn(),
-  getDayName: vi.fn((day) => {
-    const days = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
-    return days[day] || "Unknown";
-  }),
-  formatLeagueDates: vi.fn((start, end) => {
-    // Format dates to match expected output: 3/1/2024 - 5/1/2024
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const formatDate = (date: Date) =>
-      `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
-  }),
-  getPrimaryLocation: vi.fn(() => ["Community Center"]),
-  getGymNamesByLocation: vi.fn(() => ["Main Gym"]),
-}));
+vi.mock("../../lib/leagues", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/leagues")>(
+    "../../lib/leagues",
+  );
+  return {
+    ...actual,
+    fetchLeagueById: vi.fn(),
+  };
+});
 
 // Import after mocking to avoid circular dependency
 import { fetchLeagueById } from "../../lib/leagues";
@@ -94,20 +78,27 @@ describe("LeagueDetailPage", () => {
     additional_info: null,
     league_type: "regular_season" as const,
     gender: "Mixed" as const,
-    start_date: "2024-03-01",
-    year: "2024",
-    end_date: "2024-05-01",
-    payment_due_date: "2024-02-15",
+    start_date: "2099-03-01",
+    year: "2099",
+    end_date: "2099-05-01",
+    payment_due_date: "2099-02-15",
     deposit_amount: 60,
-    deposit_date: "2024-02-01",
+    deposit_date: "2099-02-01",
     team_registration: true,
     cost: 120,
     max_teams: 12,
     active: true,
     hide_day: false,
     day_of_week: 3,
-    gyms: [],
-    gym_ids: [],
+    gyms: [
+      {
+        id: 1,
+        gym: "Main Gym",
+        address: "123 Community Ave",
+        locations: ["Community Center"],
+      },
+    ],
+    gym_ids: [1],
     skill_names: ["Recreational"],
     sport_name: "Volleyball",
     skill_name: "Recreational",
@@ -122,6 +113,9 @@ describe("LeagueDetailPage", () => {
     { id: 1, name: "Team A", active: true },
     { id: 2, name: "Team B", active: true },
     { id: 3, name: "Team C", active: false }, // Waitlisted
+  ];
+  const mockGyms = [
+    { id: 1, gym: "Main Gym", address: "123 Community Ave", active: true, locations: ["Community Center"] },
   ];
 
   beforeEach(() => {
@@ -206,7 +200,7 @@ describe("LeagueDetailPage", () => {
       if (table === "registrations") {
         return createMockQueryBuilder(mockTeams.map((team) => ({ id: team.id, teams: team })));
       } else if (table === "gyms") {
-        return createMockQueryBuilder([]);
+        return createMockQueryBuilder(mockGyms);
       } else if (table === "teams") {
         const teamsMock = createMockQueryBuilder([]);
         // Override single method for team registration
@@ -570,7 +564,7 @@ describe("LeagueDetailPage", () => {
       const dateText =
         seasonDatesSection?.querySelector("p:last-child")?.textContent;
       expect(dateText).toMatch(
-        /^\d{1,2}\/\d{1,2}\/\d{4} - \d{1,2}\/\d{1,2}\/\d{4}$/,
+        /^[A-Za-z]{3} \d{1,2}, \d{4} - [A-Za-z]{3} \d{1,2}, \d{4}$/,
       );
     });
   });
