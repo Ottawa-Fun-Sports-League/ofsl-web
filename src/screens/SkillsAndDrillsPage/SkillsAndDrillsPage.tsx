@@ -127,9 +127,9 @@ export const SkillsAndDrillsPage = (): React.ReactElement => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
             <div className="flex items-center justify-center">
               <img
-                src="/JamesBattiston_WEB.jpg"
+                src="/james battiston.png"
                 alt="James Battiston coaching"
-                className="rounded-lg w-full max-w-[400px] h-[400px] object-cover shadow-lg"
+                className="rounded-lg w-full max-w-[400px] h-[400px] object-cover"
               />
             </div>
 
