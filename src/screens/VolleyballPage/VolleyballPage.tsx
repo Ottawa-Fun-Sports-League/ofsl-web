@@ -246,15 +246,25 @@ export const VolleyballPage = (): React.ReactElement => {
   const [content, setContent] = useState<VolleyballPageContent>(DEFAULT_VOLLEYBALL_CONTENT);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isMounted = true;
 
-    fetchPageContent<VolleyballPageContent>(
-      "volleyball",
-      DEFAULT_VOLLEYBALL_CONTENT,
-      controller.signal,
-    ).then((data) => setContent(data));
+    fetchPageContent<VolleyballPageContent>("volleyball", DEFAULT_VOLLEYBALL_CONTENT)
+      .then((data) => {
+        if (!isMounted) return;
+        setContent(data);
+      })
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load volleyball page content", error);
+        if (!isMounted) return;
+        setContent(DEFAULT_VOLLEYBALL_CONTENT);
+      });
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const scheduleLink = user ? "/my-account/teams" : "/login?redirect=/my-account/teams";

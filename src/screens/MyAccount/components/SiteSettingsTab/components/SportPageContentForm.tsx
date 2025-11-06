@@ -75,16 +75,32 @@ export function SportPageContentForm({
   const [baseline, setBaseline] = useState<SportPageContent>(defaultContent);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isMounted = true;
 
-    fetchPageContent<SportPageContent>(pageSlug, defaultContent, controller.signal)
+    fetchPageContent<SportPageContent>(pageSlug, defaultContent)
       .then((data) => {
+        if (!isMounted) return;
         setContent(data);
         setBaseline(data);
       })
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error(`Failed to load ${pageSlug} page content`, error);
+        if (!isMounted) return;
+        setContent(defaultContent);
+        setBaseline(defaultContent);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+    };
   }, [defaultContent, pageSlug]);
 
   const isDirty = useMemo(

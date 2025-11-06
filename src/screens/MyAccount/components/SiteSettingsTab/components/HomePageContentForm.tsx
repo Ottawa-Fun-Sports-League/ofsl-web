@@ -6,6 +6,7 @@ import { fetchPageContent, savePageContent } from "../../../../../lib/pageConten
 import {
   DEFAULT_HOME_CONTENT,
   HomePageContent,
+  normalizeHomePageContent,
 } from "../../../../../screens/HomePage/HomePage";
 import { useAuth } from "../../../../../contexts/AuthContext";
 
@@ -43,20 +44,38 @@ export function HomePageContentForm() {
   const { userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [content, setContent] = useState<HomePageContent>(DEFAULT_HOME_CONTENT);
-  const [baseline, setBaseline] = useState<HomePageContent>(DEFAULT_HOME_CONTENT);
+  const [content, setContent] = useState<HomePageContent>(normalizeHomePageContent(DEFAULT_HOME_CONTENT));
+  const [baseline, setBaseline] = useState<HomePageContent>(normalizeHomePageContent(DEFAULT_HOME_CONTENT));
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isMounted = true;
 
-    fetchPageContent<HomePageContent>("home", DEFAULT_HOME_CONTENT, controller.signal)
+    fetchPageContent<HomePageContent>("home", DEFAULT_HOME_CONTENT)
       .then((data) => {
-        setContent(data);
-        setBaseline(data);
+        if (!isMounted) return;
+        const normalized = normalizeHomePageContent(data);
+        setContent(normalized);
+        setBaseline(normalized);
       })
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load home page content for settings", error);
+        if (!isMounted) return;
+        const fallback = normalizeHomePageContent(DEFAULT_HOME_CONTENT);
+        setContent(fallback);
+        setBaseline(fallback);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const isDirty = useMemo(() => {
@@ -100,7 +119,7 @@ export function HomePageContentForm() {
       <div className="px-6 py-5 border-b border-gray-200">
         <h2 className="text-2xl font-semibold text-[#6F6F6F]">Home Page Content</h2>
         <p className="mt-2 text-sm text-gray-500">
-          Update the hero, featured leagues, and supporting sections shown on the public home page.
+          Update the featured leagues and supporting sections shown on the public home page.
         </p>
       </div>
 
@@ -110,161 +129,6 @@ export function HomePageContentForm() {
         onReset={handleReset}
         className="px-6 py-6 space-y-6"
       >
-        <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-[#6F6F6F]">Hero Banner</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#6F6F6F]" htmlFor="home-hero-image">
-                Background Image URL
-              </label>
-              <Input
-                id="home-hero-image"
-                value={content.hero.image}
-                onChange={(event) =>
-                  setContent((prev) => ({
-                    ...prev,
-                    hero: { ...prev.hero, image: event.target.value },
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#6F6F6F]" htmlFor="home-hero-alt">
-                Background Image Alt Text
-              </label>
-              <Input
-                id="home-hero-alt"
-                value={content.hero.imageAlt}
-                onChange={(event) =>
-                  setContent((prev) => ({
-                    ...prev,
-                    hero: { ...prev.hero, imageAlt: event.target.value },
-                  }))
-                }
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label
-              className="block text-sm font-medium text-[#6F6F6F]"
-              htmlFor="home-hero-container-class"
-            >
-              Container Height Class
-            </label>
-            <Input
-              id="home-hero-container-class"
-              value={content.hero.containerClassName}
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  hero: { ...prev.hero, containerClassName: event.target.value },
-                }))
-              }
-            />
-          </div>
-          <Input
-            id="home-hero-title"
-            value={content.hero.title}
-            onChange={(event) =>
-              setContent((prev) => ({
-                ...prev,
-                hero: { ...prev.hero, title: event.target.value },
-              }))
-            }
-            placeholder="Hero heading"
-          />
-          <TextArea
-            id="home-hero-subtitle"
-            label="Hero Subtitle"
-            value={content.hero.subtitle}
-            onChange={(value) =>
-              setContent((prev) => ({
-                ...prev,
-                hero: { ...prev.hero, subtitle: value },
-              }))
-            }
-          />
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-[#6F6F6F]">Hero Buttons</h4>
-              <Button
-                type="button"
-                variant="outline"
-                className="text-sm"
-                onClick={() =>
-                  setContent((prev) => ({
-                    ...prev,
-                    hero: {
-                      ...prev.hero,
-                      buttons: [...prev.hero.buttons, { text: "New Button", link: "/" }],
-                    },
-                  }))
-                }
-              >
-                Add Button
-              </Button>
-            </div>
-            <div className="space-y-4">
-              {content.hero.buttons.map((button, index) => (
-                <div key={`${button.text}-${index}`} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#6F6F6F]">
-                      Button {index + 1}
-                    </span>
-                    {content.hero.buttons.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="text-xs text-red-600"
-                        onClick={() =>
-                          setContent((prev) => ({
-                            ...prev,
-                            hero: {
-                              ...prev.hero,
-                              buttons: prev.hero.buttons.filter((_, btnIndex) => btnIndex !== index),
-                            },
-                          }))
-                        }
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                  <Input
-                    value={button.text}
-                    placeholder="Button label"
-                    onChange={(event) =>
-                      setContent((prev) => {
-                        const buttons = [...prev.hero.buttons];
-                        buttons[index] = { ...buttons[index], text: event.target.value };
-                        return {
-                          ...prev,
-                          hero: { ...prev.hero, buttons },
-                        };
-                      })
-                    }
-                  />
-                  <Input
-                    value={button.link}
-                    placeholder="Button link"
-                    onChange={(event) =>
-                      setContent((prev) => {
-                        const buttons = [...prev.hero.buttons];
-                        buttons[index] = { ...buttons[index], link: event.target.value };
-                        return {
-                          ...prev,
-                          hero: { ...prev.hero, buttons },
-                        };
-                      })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Partner Highlight</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

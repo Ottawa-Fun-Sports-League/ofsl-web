@@ -95,15 +95,25 @@ export const BadmintonPage = (): React.ReactElement => {
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isMounted = true;
 
-    fetchPageContent<BadmintonPageContent>(
-      "badminton",
-      DEFAULT_BADMINTON_CONTENT,
-      controller.signal,
-    ).then((data) => setContent(data));
+    fetchPageContent<BadmintonPageContent>("badminton", DEFAULT_BADMINTON_CONTENT)
+      .then((data) => {
+        if (!isMounted) return;
+        setContent(data);
+      })
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load badminton page content", error);
+        if (!isMounted) return;
+        setContent(DEFAULT_BADMINTON_CONTENT);
+      });
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const groupedLeagues: GroupedLeagues = groupLeaguesByDay(leagues);
