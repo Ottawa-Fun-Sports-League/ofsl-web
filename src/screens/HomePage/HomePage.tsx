@@ -332,7 +332,10 @@ function normalizeHeroCarousel(hero: unknown): HeroCarouselContent {
     })
     .filter((slide): slide is HeroSlide => Boolean(slide));
 
-  const slides = normalizedSlides.length > 0 ? normalizedSlides : DEFAULT_HOME_CONTENT.hero.slides.map(cloneDefaultSlide);
+  const slides =
+    normalizedSlides.length > 0
+      ? normalizedSlides
+      : DEFAULT_HOME_CONTENT.hero.slides.map((_, index) => cloneDefaultSlide(index));
 
   return {
     containerClassName: resolvedContainerClassName,
@@ -773,9 +776,7 @@ export const HomePage = (): React.ReactElement => {
   return (
     <div className="bg-white w-full">
       {contentStatus === "loading" ? (
-        <div className={`${DEFAULT_HOME_CONTENT.hero.containerClassName} relative w-full overflow-hidden bg-gray-200`}>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent" />
-        </div>
+        <HeroCarousel hero={DEFAULT_HOME_CONTENT.hero} />
       ) : (
         <HeroCarousel hero={effectiveContent.hero} />
       )}

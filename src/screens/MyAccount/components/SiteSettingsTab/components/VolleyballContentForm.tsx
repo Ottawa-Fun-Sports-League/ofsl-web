@@ -3,6 +3,7 @@ import { Input } from "../../../../../components/ui/input";
 import { Button } from "../../../../../components/ui/button";
 import { useToast } from "../../../../../components/ui/toast";
 import { fetchPageContent, savePageContent } from "../../../../../lib/pageContent";
+import { uploadSiteContentAsset } from "../../../../../lib/siteContentStorage";
 import {
   DEFAULT_VOLLEYBALL_CONTENT,
   VolleyballPageContent,
@@ -45,6 +46,8 @@ export function VolleyballContentForm() {
   const [saving, setSaving] = useState(false);
   const [content, setContent] = useState<VolleyballPageContent>(DEFAULT_VOLLEYBALL_CONTENT);
   const [baseline, setBaseline] = useState<VolleyballPageContent>(DEFAULT_VOLLEYBALL_CONTENT);
+  const [heroImageUploading, setHeroImageUploading] = useState(false);
+  const heroImageInputId = "volleyball-hero-image-file";
 
   useEffect(() => {
     let isMounted = true;
@@ -111,6 +114,24 @@ export function VolleyballContentForm() {
 
   const handleReset = () => setContent(baseline);
 
+  const handleHeroImageUpload = async (file: File | null) => {
+    if (!file) return;
+    setHeroImageUploading(true);
+    try {
+      const publicUrl = await uploadSiteContentAsset(file, "volleyball/hero");
+      setContent((prev) => ({
+        ...prev,
+        hero: { ...prev.hero, image: publicUrl },
+      }));
+      showToast("Hero image updated.", "success");
+    } catch (error) {
+      console.error("Failed to upload volleyball hero image", error);
+      showToast("Failed to upload image. Please try again.", "error");
+    } finally {
+      setHeroImageUploading(false);
+    }
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
       <div className="px-6 py-5 border-b border-gray-200">
@@ -128,27 +149,83 @@ export function VolleyballContentForm() {
       >
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Hero Banner</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              value={content.hero.image}
-              placeholder="Background image URL"
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  hero: { ...prev.hero, image: event.target.value },
-                }))
-              }
-            />
-            <Input
-              value={content.hero.imageAlt}
-              placeholder="Image alt text"
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  hero: { ...prev.hero, imageAlt: event.target.value },
-                }))
-              }
-            />
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,280px)_1fr] gap-4">
+            <div className="space-y-3">
+              <input
+                id={heroImageInputId}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => handleHeroImageUpload(event.target.files?.[0] ?? null)}
+              />
+              <label
+                htmlFor={heroImageInputId}
+                className="group relative block aspect-[3/2] w-full cursor-pointer overflow-hidden rounded-md border border-gray-200 bg-gray-100 shadow-sm transition hover:shadow-md"
+              >
+                {content.hero.image ? (
+                  <>
+                    <img
+                      src={content.hero.image}
+                      alt={content.hero.imageAlt || "Hero preview"}
+                      className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                    />
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition group-hover:opacity-100">
+                      <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#6F6F6F]">
+                        Click to replace image
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-gray-400 transition group-hover:text-gray-600">
+                    <div className="text-sm font-medium">Upload hero image</div>
+                    <div className="text-[11px] uppercase tracking-wide">Click to select</div>
+                  </div>
+                )}
+              </label>
+              <Input
+                value={content.hero.image}
+                placeholder="Image URL (optional override)"
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    hero: { ...prev.hero, image: event.target.value },
+                  }))
+                }
+              />
+              {heroImageUploading ? (
+                <p className="text-xs text-[#B20000]">Uploading image…</p>
+              ) : null}
+              {heroImageUploading ? (
+                <p className="text-xs text-[#B20000]">Uploading image…</p>
+              ) : null}
+            </div>
+            <div className="space-y-3">
+              <Input
+                value={content.hero.imageAlt}
+                placeholder="Image alt text"
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    hero: { ...prev.hero, imageAlt: event.target.value },
+                  }))
+                }
+              />
+              {content.hero.image ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-xs text-[#B20000] border-[#B20000]"
+                  onClick={() =>
+                    setContent((prev) => ({
+                      ...prev,
+                      hero: { ...prev.hero, image: "" },
+                    }))
+                  }
+                >
+                  Clear image
+                </Button>
+              ) : null}
+            </div>
           </div>
           <Input
             value={content.hero.containerClassName}

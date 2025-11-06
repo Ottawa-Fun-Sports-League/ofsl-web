@@ -61,6 +61,8 @@ describe('HeroBanner', () => {
     );
 
     const overlay = screen.getByText('Test content').parentElement;
-    expect(overlay).toHaveClass('absolute', 'inset-0', 'bg-black', 'bg-opacity-50', 'flex', 'items-center', 'justify-center', 'p-4');
+    expect(overlay).toHaveClass('absolute', 'inset-0', 'flex', 'items-center', 'justify-center', 'p-4');
+    expect(overlay).toHaveClass('bg-gradient-to-t', 'from-black/70', 'via-black/40', 'to-transparent');
+    expect(overlay).toHaveClass('sm:bg-gradient-to-t', 'sm:from-black/80', 'sm:via-black/45', 'sm:to-transparent');
   });
 });
