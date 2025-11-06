@@ -1,11 +1,73 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { Link } from "react-router-dom";
 import { Users, Star, Trophy, Target } from "lucide-react";
+import { fetchPageContent } from "../../lib/pageContent";
+
+export interface SkillsAndDrillsPageContent {
+  hero: {
+    image: string;
+    imageAlt: string;
+    containerClassName: string;
+    title: string;
+    subtitle: string;
+  };
+  coach: {
+    image: string;
+    imageAlt: string;
+    name: string;
+    title: string;
+    description: string;
+  };
+}
+
+export const DEFAULT_SKILLS_CONTENT: SkillsAndDrillsPageContent = {
+  hero: {
+    image: "/AdobeStock_84066897.jpeg",
+    imageAlt: "Skills and drills training",
+    containerClassName: "h-[500px]",
+    title: "Skills & Drills",
+    subtitle:
+      "Elevate your volleyball skills with expert coaching from James Battiston, former professional player and Canadian Beach National Team member.",
+  },
+  coach: {
+    image: "/james_battiston.png",
+    imageAlt: "James Battiston coaching",
+    name: "James Battiston",
+    title: "Head Coach",
+    description:
+      "Former professional volleyball player and member of the Canadian Beach National Team. James has coached for several years with the Mavericks Volleyball Club as well as 15+ years at Madawaska Volleyball Camp. He brings a wealth of knowledge, experience and expert guidance that players of all levels from beginner to competitive can benefit from.",
+  },
+};
 
 export const SkillsAndDrillsPage = (): React.ReactElement => {
+  const [content, setContent] = useState<SkillsAndDrillsPageContent>(DEFAULT_SKILLS_CONTENT);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchPageContent<SkillsAndDrillsPageContent>(
+      "skills-and-drills",
+      DEFAULT_SKILLS_CONTENT,
+    )
+      .then((data) => {
+        if (!isMounted) return;
+        setContent(data);
+      })
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load skills and drills content", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Session types data
   const sessionTypes = [
     {
@@ -50,16 +112,13 @@ export const SkillsAndDrillsPage = (): React.ReactElement => {
   return (
     <div className="bg-white w-full">
       <HeroBanner
-        image="/AdobeStock_84066897.jpeg"
-        imageAlt="Skills and drills training"
-        containerClassName="h-[500px]"
+        image={content.hero.image}
+        imageAlt={content.hero.imageAlt}
+        containerClassName={content.hero.containerClassName}
       >
         <div className="text-center text-white">
-          <h1 className="text-5xl mb-4 font-heading">Skills & Drills</h1>
-          <p className="text-xl max-w-3xl mx-auto mb-8">
-            Elevate your volleyball skills with expert coaching from James Battiston, former
-            professional player and Canadian Beach National Team member.
-          </p>
+          <h1 className="text-5xl mb-4 font-heading">{content.hero.title}</h1>
+          <p className="text-xl max-w-3xl mx-auto mb-8">{content.hero.subtitle}</p>
         </div>
       </HeroBanner>
 
@@ -114,8 +173,8 @@ export const SkillsAndDrillsPage = (): React.ReactElement => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
             <div className="flex items-center justify-center">
               <img
-                src="/james_battiston.png"
-                alt="James Battiston coaching"
+                src={content.coach.image}
+                alt={content.coach.imageAlt}
                 className="rounded-lg w-full max-w-[400px] h-[400px] object-cover"
               />
             </div>
@@ -124,14 +183,9 @@ export const SkillsAndDrillsPage = (): React.ReactElement => {
               <h3 className="text-2xl md:text-3xl font-bold text-[#6F6F6F] mb-6">
                 Meet Your Coach
               </h3>
-              <h4 className="text-xl font-bold text-[#B20000] mb-4">James Battiston</h4>
-              <p className="text-[#6F6F6F]">
-                Former professional volleyball player and member of the Canadian Beach National
-                Team. James has coached for several years with the Mavericks Volleyball Club as well
-                as 15+ years at Madawaska Volleyball Camp. He brings a wealth of knowledge,
-                experience and expert guidance that players of all levels from beginner to
-                competitive can benefit from.
-              </p>
+              <h4 className="text-xl font-bold text-[#B20000] mb-2">{content.coach.name}</h4>
+              <p className="text-sm uppercase tracking-wide text-[#B20000] mb-4">{content.coach.title}</p>
+              <p className="text-[#6F6F6F]">{content.coach.description}</p>
             </div>
           </div>
         </div>

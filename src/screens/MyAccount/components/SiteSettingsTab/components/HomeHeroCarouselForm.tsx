@@ -10,7 +10,7 @@ import {
   normalizeHomePageContent,
 } from "../../../../../screens/HomePage/HomePage";
 import { fetchPageContent, savePageContent } from "../../../../../lib/pageContent";
-import { supabase } from "../../../../../lib/supabase";
+import { uploadSiteContentAsset } from "../../../../../lib/siteContentStorage";
 
 function TextArea({
   label,
@@ -41,7 +41,6 @@ function TextArea({
   );
 }
 
-const HERO_BUCKET = "site-content";
 const MIN_AUTOROTATE_SECONDS = 3;
 
 const createEmptySlide = (): HeroSlide => ({
@@ -51,36 +50,6 @@ const createEmptySlide = (): HeroSlide => ({
   subtitle: "",
   buttons: [{ text: "Learn More", link: "/leagues" }],
 });
-
-function slugifyFilename(input: string): string {
-  const base = input.split(".").slice(0, -1).join(".") || input;
-  return base
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
-
-async function uploadSlideImage(file: File): Promise<string> {
-  const extension = file.name.split(".").pop() ?? "jpg";
-  const filename = `${Date.now()}-${slugifyFilename(file.name) || "hero-slide"}.${extension}`;
-  const path = `home-hero/${filename}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(HERO_BUCKET)
-    .upload(path, file, { cacheControl: "3600", upsert: true });
-
-  if (uploadError) {
-    throw uploadError;
-  }
-
-  const { data } = supabase.storage.from(HERO_BUCKET).getPublicUrl(path);
-  if (!data?.publicUrl) {
-    throw new Error("Unable to resolve public URL for uploaded image.");
-  }
-
-  return data.publicUrl;
-}
 
 export function HomeHeroCarouselForm() {
   const { showToast } = useToast();
@@ -188,7 +157,7 @@ export function HomeHeroCarouselForm() {
 
     setUploadingSlideIndex(index);
     try {
-      const publicUrl = await uploadSlideImage(file);
+      const publicUrl = await uploadSiteContentAsset(file, "home-hero");
       updateHero((heroContent) => {
         const slides = heroContent.slides.map((slide, slideIndex) =>
           slideIndex === index ? { ...slide, image: publicUrl } : slide,
