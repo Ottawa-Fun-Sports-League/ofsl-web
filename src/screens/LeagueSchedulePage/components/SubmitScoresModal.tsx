@@ -74,7 +74,6 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
   useEffect(() => {
     const fetchMaxTier = async () => {
       if (!isOpen) {
-        console.log('Modal not open, skipping tier calculation');
         return;
       }
 
@@ -82,7 +81,6 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
         const leagueId = (weeklyTier as any).league_id as number | undefined;
         const week = (weeklyTier as any).week_number as number | undefined;
         if (!leagueId || !week) {
-          console.log('Missing leagueId or week, defaulting to 0 offset');
           setPointsOffset(0);
           setIsTopTier((weeklyTier.tier_number || 1) === 1);
           return;
@@ -98,14 +96,6 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
           throw error;
         }
 
-        console.log('Fetched tier data:', {
-          leagueId,
-          week,
-          tiersFound: data,
-          rawData: JSON.stringify(data),
-          dataLength: data?.length,
-          currentTier: weeklyTier.tier_number
-        });
         // Prefill existing scorecard if available
         try {
           const { data: existing } = await supabase
@@ -124,21 +114,16 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
         } catch {/* ignore */}
         // Find the maximum (bottom) tier number - ensure we handle nulls/undefined
         const rawTiers = (data || []).map(r => (r as any).tier_number);
-        console.log('Raw tier numbers extracted:', rawTiers);
 
-        const allTiers = rawTiers
-          .filter(t => typeof t === 'number' && t > 0) as number[];
-        console.log('Filtered tier numbers:', allTiers);
+        const allTiers = rawTiers.filter(t => typeof t === 'number' && t > 0) as number[];
 
         // Ensure we have at least the current tier in our list
         if (!allTiers.includes(weeklyTier.tier_number)) {
-          console.log('Adding current tier to list:', weeklyTier.tier_number);
           allTiers.push(weeklyTier.tier_number);
         }
 
         // If no tiers found or empty, fallback to using current tier as max
         const maxTier = allTiers.length > 0 ? Math.max(...allTiers) : (weeklyTier.tier_number || 1);
-        console.log('Max tier calculated:', maxTier, 'from tiers:', allTiers);
 
         // Calculate offset from bottom tier (higher tier number = lower tier position)
         // For example: if tiers are 1,2,3 and current is tier 2:
@@ -146,20 +131,6 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
         // tierBonus = 1 * 8 = 8 points
         const currentTierNum = weeklyTier.tier_number || 1;
         const offset = Math.max(0, (maxTier - currentTierNum));
-
-        console.log('FINAL Tier calculation:', {
-          currentTier: currentTierNum,
-          maxTier: maxTier,
-          allTiers: allTiers,
-          calculatedOffset: offset,
-          expectedBonus: offset * 8,
-          willSetPointsOffset: offset
-        });
-
-        // CRITICAL: Ensure we're actually setting the right value
-        if (offset !== pointsOffset) {
-          console.log(`UPDATING pointsOffset from ${pointsOffset} to ${offset}`);
-        }
 
         setPointsOffset(offset);
         setIsTopTier((weeklyTier.tier_number || 1) === 1);
@@ -724,13 +695,6 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
                     F: (submittedNames as any).F || (weeklyTier as any).team_f_name || '',
                   };
 
-                  console.log('About to submit 6-team scores with:', {
-                    tierNumber,
-                    pointsOffset,
-                    isTopTier,
-                    expectedBonus: pointsOffset * 8
-                  });
-
                   await submitSixTeamHeadToHeadScoresAndMove({
                     leagueId,
                     weekNumber,
@@ -803,4 +767,3 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     </Dialog>
   );
 }
-

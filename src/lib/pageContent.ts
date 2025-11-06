@@ -5,6 +5,14 @@ type PageContentRow = Database["public"]["Tables"]["page_content"]["Row"];
 
 const TABLE_NAME = "page_content";
 
+function isAbortError(error: unknown): boolean {
+  if (!error) return false;
+  if (typeof error === "object" && "name" in error) {
+    return (error as { name?: string }).name === "AbortError";
+  }
+  return false;
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -61,6 +69,13 @@ export async function fetchPageContent<TContent>(
     const { data, error } = await query.maybeSingle();
 
     if (error) {
+      const message = typeof error.message === "string" ? error.message : "";
+      if (String(error.code) === "20" || message.includes("AbortError")) {
+        const abortError = new Error(message || "Request aborted");
+        abortError.name = "AbortError";
+        throw abortError;
+      }
+
       console.error("Failed to load page content", { pageSlug, error });
       return defaults;
     }
@@ -71,6 +86,17 @@ export async function fetchPageContent<TContent>(
 
     return mergeContent(defaults, data.content);
   } catch (err) {
+    if (isAbortError(err)) {
+      throw err;
+    }
+
+    if (typeof err === "object" && err !== null && "code" in err) {
+      const code = String((err as { code?: unknown }).code ?? "");
+      if (code === "20") {
+        throw err;
+      }
+    }
+
     console.error("Unexpected error loading page content", { pageSlug, err });
     return defaults;
   }

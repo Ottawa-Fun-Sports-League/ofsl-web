@@ -47,20 +47,32 @@ export function VolleyballContentForm() {
   const [baseline, setBaseline] = useState<VolleyballPageContent>(DEFAULT_VOLLEYBALL_CONTENT);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isMounted = true;
 
-    fetchPageContent<VolleyballPageContent>(
-      "volleyball",
-      DEFAULT_VOLLEYBALL_CONTENT,
-      controller.signal,
-    )
+    fetchPageContent<VolleyballPageContent>("volleyball", DEFAULT_VOLLEYBALL_CONTENT)
       .then((data) => {
+        if (!isMounted) return;
         setContent(data);
         setBaseline(data);
       })
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load volleyball settings content", error);
+        if (!isMounted) return;
+        setContent(DEFAULT_VOLLEYBALL_CONTENT);
+        setBaseline(DEFAULT_VOLLEYBALL_CONTENT);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const isDirty = useMemo(

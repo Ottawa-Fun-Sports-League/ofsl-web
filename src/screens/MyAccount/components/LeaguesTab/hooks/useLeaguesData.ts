@@ -112,8 +112,6 @@ export function useLeaguesData() {
         }
         
         // Debug: Log schedule information
-        // console.log('Schedule IDs found:', Array.from(schedulesMap));
-        // console.log('Schedules data:', schedules);
         
         // Count teams per league
         teamCounts?.forEach(team => {

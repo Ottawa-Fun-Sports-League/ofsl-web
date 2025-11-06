@@ -4,21 +4,29 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { HeroBanner } from "../../components/HeroBanner";
 import { fetchPageContent } from "../../lib/pageContent";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface HeroButton {
   text: string;
   link: string;
 }
 
+export interface HeroSlide {
+  image: string;
+  imageAlt: string;
+  title: string;
+  subtitle: string;
+  buttons: HeroButton[];
+}
+
+export interface HeroCarouselContent {
+  containerClassName: string;
+  slides: HeroSlide[];
+  autoRotateSeconds?: number | null;
+}
+
 export interface HomePageContent {
-  hero: {
-    image: string;
-    imageAlt: string;
-    containerClassName: string;
-    title: string;
-    subtitle: string;
-    buttons: HeroButton[];
-  };
+  hero: HeroCarouselContent;
   partner: {
     logo: string;
     logoAlt: string;
@@ -68,11 +76,12 @@ export interface HomePageContent {
   };
 }
 
-export const DEFAULT_HOME_CONTENT: HomePageContent = {
-  hero: {
+const HERO_AUTOROTATE_DEFAULT_SECONDS = 8;
+
+const DEFAULT_HERO_SLIDES: HeroSlide[] = [
+  {
     image: "/mask-group.png",
     imageAlt: "Volleyball players",
-    containerClassName: "h-[450px] md:h-[604px]",
     title: "Welcome to OFSL!",
     subtitle:
       "Ottawa's leading adult volleyball and badminton league—where sportsmanship meets healthy competition from competitive to intermediate levels.",
@@ -81,6 +90,26 @@ export const DEFAULT_HOME_CONTENT: HomePageContent = {
       { text: "Register Now", link: "/leagues" },
       { text: "Tournaments", link: "/tournaments" },
     ],
+  },
+  {
+    image: "/group-2-1.png",
+    imageAlt: "Athletes practicing volleyball skills",
+    title: "Fuel Your Competitive Edge",
+    subtitle:
+      "Level up with our Skills & Drills programs led by former national team athletes and veteran coaches.",
+    buttons: [
+      { text: "Skills & Drills", link: "/skills-and-drills" },
+      { text: "Explore Leagues", link: "/leagues" },
+      { text: "Upcoming Events", link: "/tournaments" },
+    ],
+  },
+];
+
+export const DEFAULT_HOME_CONTENT: HomePageContent = {
+  hero: {
+    containerClassName: "h-[450px] md:h-[604px]",
+    slides: DEFAULT_HERO_SLIDES,
+    autoRotateSeconds: HERO_AUTOROTATE_DEFAULT_SECONDS,
   },
   partner: {
     logo: "/diabetes-canada-logo-svg-1.png",
@@ -183,6 +212,267 @@ export const DEFAULT_HOME_CONTENT: HomePageContent = {
   },
 };
 
+const HERO_MIN_AUTOROTATE_SECONDS = 3;
+
+type LegacyHeroContent = {
+  image?: unknown;
+  imageAlt?: unknown;
+  title?: unknown;
+  subtitle?: unknown;
+  buttons?: unknown;
+  containerClassName?: unknown;
+  autoRotateSeconds?: unknown;
+};
+
+type HeroLike = Partial<HeroCarouselContent> & LegacyHeroContent & Record<string, unknown>;
+
+function sanitizeHeroButtons(buttons: unknown): HeroButton[] {
+  if (!Array.isArray(buttons)) {
+    return [];
+  }
+
+  return buttons
+    .map((button) => {
+      if (!button || typeof button !== "object") {
+        return null;
+      }
+
+      const { text, link } = button as { text?: unknown; link?: unknown };
+      const safeText = typeof text === "string" ? text : "";
+      const safeLink = typeof link === "string" ? link : "";
+
+      return { text: safeText, link: safeLink };
+    })
+    .filter((button): button is HeroButton => button !== null);
+}
+
+function cloneDefaultSlide(index: number): HeroSlide {
+  const fallbackSlide = DEFAULT_HOME_CONTENT.hero.slides[index] ?? DEFAULT_HOME_CONTENT.hero.slides[0];
+  return {
+    image: fallbackSlide.image,
+    imageAlt: fallbackSlide.imageAlt,
+    title: fallbackSlide.title,
+    subtitle: fallbackSlide.subtitle,
+    buttons: fallbackSlide.buttons.map((button) => ({ ...button })),
+  };
+}
+
+function normalizeHeroCarousel(hero: unknown): HeroCarouselContent {
+  if (!hero || typeof hero !== "object") {
+    return {
+      ...DEFAULT_HOME_CONTENT.hero,
+      slides: DEFAULT_HOME_CONTENT.hero.slides.map((slide) => ({
+        ...slide,
+        buttons: slide.buttons.map((button) => ({ ...button })),
+      })),
+    };
+  }
+
+  const heroLike = hero as HeroLike;
+  const resolvedContainerClassName =
+    typeof heroLike.containerClassName === "string" && heroLike.containerClassName.trim().length > 0
+      ? heroLike.containerClassName
+      : DEFAULT_HOME_CONTENT.hero.containerClassName;
+
+  const resolvedAutoRotate =
+    typeof heroLike.autoRotateSeconds === "number" &&
+    Number.isFinite(heroLike.autoRotateSeconds) &&
+    heroLike.autoRotateSeconds >= HERO_MIN_AUTOROTATE_SECONDS
+      ? heroLike.autoRotateSeconds
+      : DEFAULT_HOME_CONTENT.hero.autoRotateSeconds ?? HERO_AUTOROTATE_DEFAULT_SECONDS;
+
+  let rawSlides: unknown = heroLike.slides;
+
+  if (!Array.isArray(rawSlides) || rawSlides.length === 0) {
+    rawSlides = [
+      {
+        image: heroLike.image,
+        imageAlt: heroLike.imageAlt,
+        title: heroLike.title,
+        subtitle: heroLike.subtitle,
+        buttons: heroLike.buttons,
+      },
+    ];
+  }
+
+  const normalizedSlides = (rawSlides as unknown[])
+    .map((slide, index) => {
+      if (!slide || typeof slide !== "object") {
+        return cloneDefaultSlide(index);
+      }
+
+      const slideRecord = slide as Record<string, unknown>;
+      const fallbackSlide = cloneDefaultSlide(index);
+
+      const resolvedImage =
+        typeof slideRecord.image === "string" && slideRecord.image.trim().length > 0
+          ? slideRecord.image
+          : fallbackSlide.image;
+      const resolvedImageAlt =
+        typeof slideRecord.imageAlt === "string" && slideRecord.imageAlt.trim().length > 0
+          ? slideRecord.imageAlt
+          : fallbackSlide.imageAlt;
+      const resolvedTitle =
+        typeof slideRecord.title === "string" && slideRecord.title.trim().length > 0
+          ? slideRecord.title
+          : fallbackSlide.title;
+      const resolvedSubtitle =
+        typeof slideRecord.subtitle === "string" && slideRecord.subtitle.trim().length > 0
+          ? slideRecord.subtitle
+          : fallbackSlide.subtitle;
+      const resolvedButtons = sanitizeHeroButtons(slideRecord.buttons ?? fallbackSlide.buttons);
+
+      return {
+        image: resolvedImage,
+        imageAlt: resolvedImageAlt,
+        title: resolvedTitle,
+        subtitle: resolvedSubtitle,
+        buttons: resolvedButtons,
+      };
+    })
+    .filter((slide): slide is HeroSlide => Boolean(slide));
+
+  const slides = normalizedSlides.length > 0 ? normalizedSlides : DEFAULT_HOME_CONTENT.hero.slides.map(cloneDefaultSlide);
+
+  return {
+    containerClassName: resolvedContainerClassName,
+    slides,
+    autoRotateSeconds: resolvedAutoRotate,
+  };
+}
+
+export function normalizeHomePageContent(content: HomePageContent): HomePageContent {
+  const safeContent = content ?? DEFAULT_HOME_CONTENT;
+  const heroInput = (safeContent as unknown as { hero?: unknown }).hero;
+  return {
+    ...safeContent,
+    hero: normalizeHeroCarousel(heroInput),
+  };
+}
+
+function HeroCarousel({ hero }: { hero: HeroCarouselContent }) {
+  const resolvedSlides =
+    hero.slides && hero.slides.length > 0 ? hero.slides : DEFAULT_HOME_CONTENT.hero.slides;
+  const containerClassName =
+    typeof hero.containerClassName === "string" && hero.containerClassName.trim().length > 0
+      ? hero.containerClassName
+      : DEFAULT_HOME_CONTENT.hero.containerClassName;
+  const autoRotateSeconds =
+    typeof hero.autoRotateSeconds === "number" &&
+    Number.isFinite(hero.autoRotateSeconds) &&
+    hero.autoRotateSeconds >= HERO_MIN_AUTOROTATE_SECONDS
+      ? hero.autoRotateSeconds
+      : DEFAULT_HOME_CONTENT.hero.autoRotateSeconds ?? HERO_AUTOROTATE_DEFAULT_SECONDS;
+  const autoRotateMs = Math.max(autoRotateSeconds, HERO_MIN_AUTOROTATE_SECONDS) * 1000;
+
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveSlideIndex(0);
+  }, [resolvedSlides.length]);
+
+  useEffect(() => {
+    if (resolvedSlides.length <= 1) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActiveSlideIndex((prev) => (prev + 1) % resolvedSlides.length);
+    }, autoRotateMs);
+
+    return () => window.clearInterval(intervalId);
+  }, [resolvedSlides.length, autoRotateMs]);
+
+  const stepSlide = (offset: number) => {
+    setActiveSlideIndex((prev) => {
+      const nextIndex = (prev + offset + resolvedSlides.length) % resolvedSlides.length;
+      return nextIndex;
+    });
+  };
+
+  return (
+    <div className={`relative w-full overflow-hidden ${containerClassName}`}>
+      {resolvedSlides.map((slide, index) => (
+        <div
+          key={`${slide.title}-${index}`}
+          className={`absolute inset-0 transition-opacity duration-700 ease-out ${
+            index === activeSlideIndex ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+        >
+          <HeroBanner
+            image={slide.image}
+            imageAlt={slide.imageAlt}
+            containerClassName="h-full"
+          >
+          <div className="text-center text-white max-w-[860px] px-4">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 font-heading font-bold">
+                {slide.title}
+              </h1>
+              <p className="text-base md:text-lg lg:text-xl">{slide.subtitle}</p>
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-6 md:mt-12 justify-center">
+                {slide.buttons
+                  .filter((button) => button.text.trim().length > 0 && button.link.trim().length > 0)
+                  .map((button) => (
+                    <Link key={`${button.text}-${button.link}`} to={button.link} className="w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
+                      >
+                        <span className="text-base md:text-lg text-white">{button.text}</span>
+                      </Button>
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          </HeroBanner>
+        </div>
+      ))}
+
+      {resolvedSlides.length > 1 ? (
+        <>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-8 left-0 w-32 bg-gradient-to-r from-black/35 via-black/10 to-transparent"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-8 right-0 w-32 bg-gradient-to-l from-black/35 via-black/10 to-transparent"
+          />
+          <button
+            type="button"
+            onClick={() => stepSlide(-1)}
+            className="absolute left-6 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white shadow-lg backdrop-blur transition hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90"
+            aria-label="Previous banner"
+          >
+            <ChevronLeft aria-hidden="true" className="h-6 w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={() => stepSlide(1)}
+            className="absolute right-6 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white shadow-lg backdrop-blur transition hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90"
+            aria-label="Next banner"
+          >
+            <ChevronRight aria-hidden="true" className="h-6 w-6" />
+          </button>
+          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-3">
+            {resolvedSlides.map((slide, index) => (
+              <button
+                key={`hero-dot-${slide.title}-${index}`}
+                type="button"
+                aria-label={`Go to banner ${index + 1}`}
+                onClick={() => setActiveSlideIndex(index)}
+                className={`h-3 w-3 rounded-full border border-white/70 transition-all ${
+                  index === activeSlideIndex ? "scale-110 bg-white" : "bg-white/30 hover:bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export const HomePage = (): React.ReactElement => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -192,35 +482,38 @@ export const HomePage = (): React.ReactElement => {
   const [scrollLeft, setScrollLeft] = useState(0);
   const [showLeftButton, setShowLeftButton] = useState(false);
   const [showRightButton, setShowRightButton] = useState(true);
-  const [content, setContent] = useState<HomePageContent>(DEFAULT_HOME_CONTENT);
+  const [content, setContent] = useState<HomePageContent | null>(null);
+  const [contentStatus, setContentStatus] = useState<"loading" | "ready" | "error">("loading");
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+
+  const effectiveContent = content ?? DEFAULT_HOME_CONTENT;
 
   const bannerItems = useMemo(() => {
     const items: Array<{ type: "partner" | "sponsor" }> = [];
 
     if (
-      content.sponsorBanner.logo ||
-      content.sponsorBanner.logoAlt ||
-      content.sponsorBanner.title ||
-      content.sponsorBanner.description ||
-      content.sponsorBanner.primaryLinkText ||
-      content.sponsorBanner.primaryLinkUrl
+      effectiveContent.sponsorBanner.logo ||
+      effectiveContent.sponsorBanner.logoAlt ||
+      effectiveContent.sponsorBanner.title ||
+      effectiveContent.sponsorBanner.description ||
+      effectiveContent.sponsorBanner.primaryLinkText ||
+      effectiveContent.sponsorBanner.primaryLinkUrl
     ) {
       items.push({ type: "sponsor" });
     }
 
     if (
-      content.partner.logo ||
-      content.partner.logoAlt ||
-      content.partner.text ||
-      content.partner.linkText ||
-      content.partner.linkUrl
+      effectiveContent.partner.logo ||
+      effectiveContent.partner.logoAlt ||
+      effectiveContent.partner.text ||
+      effectiveContent.partner.linkText ||
+      effectiveContent.partner.linkUrl
     ) {
       items.push({ type: "partner" });
     }
 
     return items;
-  }, [content.partner, content.sponsorBanner]);
+  }, [effectiveContent.partner, effectiveContent.sponsorBanner]);
 
   useEffect(() => {
     setActiveBannerIndex(0);
@@ -256,19 +549,19 @@ export const HomePage = (): React.ReactElement => {
         <div className="flex flex-col items-center gap-3 md:flex-row md:items-center md:gap-7 w-full">
             <img
               className="h-auto w-[150px] md:w-[180px] object-contain"
-              alt={content.partner.logoAlt}
-              src={content.partner.logo}
+              alt={effectiveContent.partner.logoAlt}
+              src={effectiveContent.partner.logo}
             />
             <div className="text-center md:text-left space-y-2 w-full">
               <p className="text-sm leading-6 text-[#6f6f6f] md:text-base md:leading-7">
-                {content.partner.text}
+                {effectiveContent.partner.text}
               </p>
-              {content.partner.linkUrl && content.partner.linkText ? (
+              {effectiveContent.partner.linkUrl && effectiveContent.partner.linkText ? (
                 <a
-                  href={content.partner.linkUrl}
+                  href={effectiveContent.partner.linkUrl}
                   className="mt-2 inline-block text-sm font-semibold text-[#b20000] underline md:text-base"
                 >
-                  {content.partner.linkText}
+                  {effectiveContent.partner.linkText}
                 </a>
               ) : null}
             </div>
@@ -281,33 +574,33 @@ export const HomePage = (): React.ReactElement => {
       <div className={`${baseClassName} ${animatedState}`}>
         <div className="flex flex-col items-center gap-3 md:flex-row md:items-center md:gap-7 w-full">
           <img
-            src={content.sponsorBanner.logo}
-            alt={content.sponsorBanner.logoAlt}
+            src={effectiveContent.sponsorBanner.logo}
+            alt={effectiveContent.sponsorBanner.logoAlt}
             className="h-auto w-[150px] md:w-[180px] object-contain"
           />
           <div className="flex-1 text-center md:text-left space-y-2">
             <p className="text-sm text-[#4B5563] md:text-base leading-6 md:leading-7">
-              {content.sponsorBanner.description}{" "}
-              {content.sponsorBanner.primaryLinkUrl && content.sponsorBanner.primaryLinkText ? (
+              {effectiveContent.sponsorBanner.description}{" "}
+              {effectiveContent.sponsorBanner.primaryLinkUrl && effectiveContent.sponsorBanner.primaryLinkText ? (
                 <a
-                  href={content.sponsorBanner.primaryLinkUrl}
+                  href={effectiveContent.sponsorBanner.primaryLinkUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="font-semibold text-[#B20000] underline"
                 >
-                  {content.sponsorBanner.primaryLinkText}
+                  {effectiveContent.sponsorBanner.primaryLinkText}
                 </a>
               ) : null}
-              {content.sponsorBanner.secondaryText ? (
+              {effectiveContent.sponsorBanner.secondaryText ? (
                 <span className="mt-1 block text-xs text-[#6F6F6F] md:text-sm">
-                  {content.sponsorBanner.secondaryText}{" "}
-                  {content.sponsorBanner.secondaryLinkUrl &&
-                  content.sponsorBanner.secondaryLinkText ? (
+                  {effectiveContent.sponsorBanner.secondaryText}{" "}
+                  {effectiveContent.sponsorBanner.secondaryLinkUrl &&
+                  effectiveContent.sponsorBanner.secondaryLinkText ? (
                     <a
-                      href={content.sponsorBanner.secondaryLinkUrl}
+                      href={effectiveContent.sponsorBanner.secondaryLinkUrl}
                       className="font-semibold text-[#B20000] underline"
                     >
-                      {content.sponsorBanner.secondaryLinkText}
+                      {effectiveContent.sponsorBanner.secondaryLinkText}
                     </a>
                   ) : null}
                 </span>
@@ -416,17 +709,27 @@ export const HomePage = (): React.ReactElement => {
   }, [isDragging]);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isMounted = true;
 
-    fetchPageContent<HomePageContent>("home", DEFAULT_HOME_CONTENT, controller.signal).then(
-      (data) => {
-        setContent(data);
-      },
-    );
+    fetchPageContent<HomePageContent>("home", DEFAULT_HOME_CONTENT)
+      .then((data) => {
+        if (!isMounted) return;
+        setContent(normalizeHomePageContent(data));
+        setContentStatus("ready");
+      })
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load home page content", error);
+        if (!isMounted) return;
+        setContent(normalizeHomePageContent(DEFAULT_HOME_CONTENT));
+        setContentStatus("error");
+      });
 
     return () => {
-      controller.abort();
-    };
+        isMounted = false;
+      };
   }, []);
 
   const scrollCarousel = (direction: "left" | "right") => {
@@ -469,35 +772,18 @@ export const HomePage = (): React.ReactElement => {
 
   return (
     <div className="bg-white w-full">
-      <HeroBanner
-        image={content.hero.image}
-        imageAlt={content.hero.imageAlt}
-        containerClassName={content.hero.containerClassName}
-      >
-        <div className="text-center text-white max-w-[860px] px-4">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 font-heading font-bold">
-            {content.hero.title}
-          </h1>
-          <p className="text-base md:text-lg lg:text-xl">{content.hero.subtitle}</p>
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-6 md:mt-12 justify-center">
-            {content.hero.buttons.map((button) => (
-              <Link key={button.text} to={button.link} className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-                >
-                  <span className="text-base md:text-lg text-white">{button.text}</span>
-                </Button>
-              </Link>
-            ))}
-          </div>
+      {contentStatus === "loading" ? (
+        <div className={`${DEFAULT_HOME_CONTENT.hero.containerClassName} relative w-full overflow-hidden bg-gray-200`}>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent" />
         </div>
-      </HeroBanner>
+      ) : (
+        <HeroCarousel hero={effectiveContent.hero} />
+      )}
 
       <div className="max-w-[1280px] mx-auto px-4">
-        <div className="pt-8 md:pt-12 pb-8 md:pb-12">
-          <div className="mx-auto flex max-w-[880px] flex-col items-center gap-5 px-4">
-            {bannerItems.length > 0 ? (
+      <div className="pt-8 md:pt-12 pb-8 md:pb-12">
+        <div className="mx-auto flex max-w-[880px] flex-col items-center gap-5 px-4">
+          {bannerItems.length > 0 ? (
               <>
                 <BannerCard
                   key={`banner-${bannerItems[activeBannerIndex]?.type ?? "partner"}-${activeBannerIndex}`}
@@ -527,7 +813,7 @@ export const HomePage = (): React.ReactElement => {
 
         <div className="text-center mb-16 md:mb-24">
           <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-            {content.leagueDescription}
+            {effectiveContent.leagueDescription}
           </p>
         </div>
       </div>
@@ -554,7 +840,7 @@ export const HomePage = (): React.ReactElement => {
                 WebkitOverflowScrolling: "touch",
               }}
             >
-              {content.popularLeagues.map((card, index) => (
+              {effectiveContent.popularLeagues.map((card, index) => (
                 <Link
                   key={`${card.title}-${index}`}
                   to={card.link}
@@ -638,25 +924,25 @@ export const HomePage = (): React.ReactElement => {
       <div className="max-w-[1280px] mx-auto px-4">
         <Card className="bg-[#b20000] rounded-lg mb-16 md:mb-24">
           <CardContent className="flex flex-col md:flex-row items-center p-6 md:p-8 gap-6">
-            {content.highlightCard.icon ? (
+            {effectiveContent.highlightCard.icon ? (
               <img
                 className="w-[60px] h-[60px] md:w-[86px] md:h-[86px] rounded-lg"
                 alt=""
-                src={content.highlightCard.icon}
+                src={effectiveContent.highlightCard.icon}
               />
             ) : null}
             <div className="md:ml-6 flex-1 text-center md:text-left">
               <h2 className="text-xl md:text-2xl font-bold text-white mb-3">
-                {content.highlightCard.title}
+                {effectiveContent.highlightCard.title}
               </h2>
               <p className="text-white text-base md:text-lg leading-6 md:leading-7">
-                {content.highlightCard.description}
+                {effectiveContent.highlightCard.description}
               </p>
             </div>
-            <Link to={content.highlightCard.buttonLink}>
+            <Link to={effectiveContent.highlightCard.buttonLink}>
               <Button className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5 w-full md:w-auto">
                 <span className="text-base md:text-lg text-[#b20000] hover:text-white">
-                  {content.highlightCard.buttonText}
+                  {effectiveContent.highlightCard.buttonText}
                 </span>
               </Button>
             </Link>
@@ -664,7 +950,7 @@ export const HomePage = (): React.ReactElement => {
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 mb-16 md:mb-24">
-          {content.featureSections.map((section) => (
+          {effectiveContent.featureSections.map((section) => (
             <div key={section.title} className="flex flex-col">
               <img
                 className="w-full h-[250px] sm:h-[300px] md:h-[438px] object-cover mb-6 md:mb-8 rounded-lg"
@@ -693,16 +979,16 @@ export const HomePage = (): React.ReactElement => {
       <div
         className="w-full py-12 md:py-16"
         style={{
-          background: content.cta.background,
+          background: effectiveContent.cta.background,
         }}
       >
         <div className="max-w-[1280px] mx-auto px-4 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">{content.cta.title}</h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">{content.cta.subtitle}</p>
-          <Link to={content.cta.buttonLink}>
+          <h2 className="text-3xl font-bold mb-4">{effectiveContent.cta.title}</h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto">{effectiveContent.cta.subtitle}</p>
+          <Link to={effectiveContent.cta.buttonLink}>
             <Button className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5">
               <span className="text-base md:text-lg text-[#b20000] hover:text-white">
-                {content.cta.buttonText}
+                {effectiveContent.cta.buttonText}
               </span>
             </Button>
           </Link>

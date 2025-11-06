@@ -70,6 +70,21 @@ describe('HomePage', () => {
     expect(learnMoreLinks.length).toBeGreaterThan(0);
   });
 
+  it('cycles through hero banner slides', () => {
+    vi.useFakeTimers();
+    render(<HomePage />);
+
+    expect(screen.getByText(/Welcome to OFSL!/i)).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(8000);
+    });
+
+    expect(screen.getByText(/Fuel Your Competitive Edge/i)).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
   it('displays league cards', async () => {
     render(<HomePage />);
     

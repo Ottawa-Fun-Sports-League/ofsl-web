@@ -15,6 +15,7 @@ import { SportPageContentForm } from "./components/SportPageContentForm";
 import { VolleyballContentForm } from "./components/VolleyballContentForm";
 import { DEFAULT_BADMINTON_CONTENT } from "../../../BadmintonPage/BadmintonPage";
 import { DEFAULT_PICKLEBALL_CONTENT } from "../../../PickleballPage/PickleballPage";
+import { HomeHeroCarouselForm } from "./components/HomeHeroCarouselForm";
 
 interface FormState {
   message: string;
@@ -36,7 +37,7 @@ export function SiteSettingsTab() {
   const [currentAnnouncement, setCurrentAnnouncement] = useState<SiteAnnouncement | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "announcement" | "home" | "badminton" | "pickleball" | "volleyball"
+    "announcement" | "home-hero" | "home" | "badminton" | "pickleball" | "volleyball"
   >("announcement");
 
   useEffect(() => {
@@ -244,6 +245,8 @@ export function SiteSettingsTab() {
     switch (activeTab) {
       case "announcement":
         return renderAnnouncementForm();
+      case "home-hero":
+        return <HomeHeroCarouselForm />;
       case "home":
         return <HomePageContentForm />;
       case "badminton":
@@ -276,6 +279,7 @@ export function SiteSettingsTab() {
     label: string;
   }> = [
     { id: "announcement", label: "Announcement" },
+    { id: "home-hero", label: "Home Hero Carousel" },
     { id: "home", label: "Home Page" },
     { id: "badminton", label: "Badminton" },
     { id: "volleyball", label: "Volleyball" },
@@ -310,6 +314,8 @@ export function SiteSettingsTab() {
                 switch (activeTab) {
                   case "announcement":
                     return "site-settings-form";
+                  case "home-hero":
+                    return "site-settings-form-home-hero";
                   case "home":
                     return "site-settings-form-home";
                   case "badminton":

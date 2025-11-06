@@ -1183,15 +1183,6 @@ export interface SubmitSixTeamParams {
 export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeamParams): Promise<void> {
   const { leagueId, weekNumber, tierNumber, tierId, teamNames, game1, game2, spares, pointsTierOffset, isTopTier } = params;
 
-  /* debug removed: 6-team submission params */
-  /* console.log('6-team submission params:', {
-    tierNumber,
-    pointsTierOffset,
-    isTopTier,
-    expectedBonus: pointsTierOffset * 5,
-    isBottomTier: pointsTierOffset === 0,
-  }); */
-
   type Totals = { setWins: number; setLosses: number; pf: number; pa: number };
   const totals: Record<SixTeamKey, Totals> = {
     A: { setWins: 0, setLosses: 0, pf: 0, pa: 0 },
@@ -1317,13 +1308,6 @@ export async function submitSixTeamHeadToHeadScoresAndMove(params: SubmitSixTeam
   teamStats.forEach((teamStat, rank) => {
     weeklyLeaguePoints[teamStat.team] = basePoints[rank] + tierBonus;
   });
-
-  /* debug removed: Points calculation (6-team H2H)
-  console.log('Points calculation (6-team H2H):', {
-    tierBonus,
-    weeklyLeaguePoints,
-    rankings: teamStats.map((ts, idx) => ({ rank: idx + 1, team: ts.team, name: teamNames[ts.team], points: weeklyLeaguePoints[ts.team] })),
-  }); */
 
   const movementSummary = teamStats.reduce<Record<number, string>>((acc, teamStat, idx) => {
     const place = idx + 1;
@@ -1599,8 +1583,6 @@ export async function submitFourTeamHeadToHeadScoresAndMove(params: SubmitFourTe
     game2,
   });
 }
-
-
 
 
 

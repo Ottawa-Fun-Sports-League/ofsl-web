@@ -207,34 +207,42 @@ export const PickleballPage = (): React.ReactElement => {
   const [content, setContent] = useState<PickleballPageContent>(DEFAULT_PICKLEBALL_CONTENT);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let isMounted = true;
 
-    fetchPageContent<PickleballPageContent>(
-      "pickleball",
-      DEFAULT_PICKLEBALL_CONTENT,
-      controller.signal,
-    ).then((data) => {
-      const fixed = {
-        ...data,
-        skillLevels: (data.skillLevels ?? []).map((level) =>
-          level.title === "Novice"
-            ? {
-                ...level,
-                bullets: [
-                  "May need help understanding of the basic rules and strategy of pickleball",
-                  "Can serve and return the ball with some success",
-                  "Can sustain a short rally",
-                  "Can usually hit 'easy' (high, slow) ball into opponents' court",
-                  "Sometimes hesitates to move forward to the non-volley zone line (comfortable staying closer to the baseline)",
-                ],
-              }
-            : level,
-        ),
-      };
-      setContent(fixed);
-    });
+    fetchPageContent<PickleballPageContent>("pickleball", DEFAULT_PICKLEBALL_CONTENT)
+      .then((data) => {
+        if (!isMounted) return;
+        const fixed = {
+          ...data,
+          skillLevels: (data.skillLevels ?? []).map((level) =>
+            level.title === "Novice"
+              ? {
+                  ...level,
+                  bullets: [
+                    "May need help understanding of the basic rules and strategy of pickleball",
+                    "Can serve and return the ball with some success",
+                    "Can sustain a short rally",
+                    "Can usually hit 'easy' (high, slow) ball into opponents' court",
+                    "Sometimes hesitates to move forward to the non-volley zone line (comfortable staying closer to the baseline)",
+                  ],
+                }
+              : level,
+          ),
+        };
+        setContent(fixed);
+      })
+      .catch((error) => {
+        if ((error as Error | undefined)?.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load pickleball page content", error);
+        if (!isMounted) return;
+        setContent(DEFAULT_PICKLEBALL_CONTENT);
+      });
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const renderRatingStars = (rating: number) =>

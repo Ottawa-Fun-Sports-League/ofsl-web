@@ -591,7 +591,6 @@ export function Scorecard6TeamsHeadToHead({
                 return a.prevPosition.localeCompare(b.prevPosition); // A > B > C > D > E > F
               });
 
-              console.log('6-team scorecard - sorted teamStats (Game 2 only):', teamStats);
             }
 
             // Movement logic by court outcomes (Game 2 only)
@@ -733,4 +732,3 @@ export function Scorecard6TeamsHeadToHead({
     </form>
   );
 }
-
