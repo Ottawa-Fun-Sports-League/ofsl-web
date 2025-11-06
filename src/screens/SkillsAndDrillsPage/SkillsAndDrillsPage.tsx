@@ -129,7 +129,7 @@ export const SkillsAndDrillsPage = (): React.ReactElement => {
               <img
                 src="/james battiston.png"
                 alt="James Battiston coaching"
-                className="rounded-lg w-full max-w-[400px] h-[400px] object-cover shadow-lg"
+                className="rounded-lg w-full max-w-[400px] h-[400px] object-cover"
               />
             </div>
 
