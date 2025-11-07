@@ -5,6 +5,7 @@ import { useToast } from "../../../../../components/ui/toast";
 import { fetchPageContent, savePageContent } from "../../../../../lib/pageContent";
 import { uploadSiteContentAsset } from "../../../../../lib/siteContentStorage";
 import { useAuth } from "../../../../../contexts/AuthContext";
+import { SiteSettingsImageUploadField } from "./SiteSettingsImageUploadField";
 
 interface SportPageContent {
   hero: {
@@ -383,13 +384,18 @@ export function SportPageContentForm({
 
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">League Cards</h3>
-          <Input
+          <SiteSettingsImageUploadField
+            id={`${pageSlug}-league-card-image-upload`}
             value={content.leagueCardImage}
+            uploadPath={`${pageSlug}/league-card-default`}
             placeholder="Default card image URL"
-            onChange={(event) =>
+            emptyStateLabel="Upload default card image"
+            previewAspectClass="aspect-[4/3]"
+            helperText="Each league card uses this image when no specific image is provided."
+            onChange={(value) =>
               setContent((prev) => ({
                 ...prev,
-                leagueCardImage: event.target.value,
+                leagueCardImage: value,
               }))
             }
           />
