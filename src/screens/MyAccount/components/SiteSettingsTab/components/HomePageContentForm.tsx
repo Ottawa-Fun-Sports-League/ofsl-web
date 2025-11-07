@@ -9,6 +9,7 @@ import {
   normalizeHomePageContent,
 } from "../../../../../screens/HomePage/HomePage";
 import { useAuth } from "../../../../../contexts/AuthContext";
+import { SiteSettingsImageUploadField } from "./SiteSettingsImageUploadField";
 
 function TextArea({
   label,
@@ -131,27 +132,33 @@ export function HomePageContentForm() {
       >
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Partner Highlight</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,320px)_1fr] gap-4">
+            <SiteSettingsImageUploadField
+              id="home-partner-logo-upload"
               value={content.partner.logo}
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  partner: { ...prev.partner, logo: event.target.value },
-                }))
-              }
+              uploadPath="home/partner"
               placeholder="Logo URL"
-            />
-            <Input
-              value={content.partner.logoAlt}
-              onChange={(event) =>
+              emptyStateLabel="Upload partner logo"
+              previewAspectClass="aspect-square"
+              onChange={(value) =>
                 setContent((prev) => ({
                   ...prev,
-                  partner: { ...prev.partner, logoAlt: event.target.value },
+                  partner: { ...prev.partner, logo: value },
                 }))
               }
-              placeholder="Logo alt text"
             />
+            <div className="space-y-3">
+              <Input
+                value={content.partner.logoAlt}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    partner: { ...prev.partner, logoAlt: event.target.value },
+                  }))
+                }
+                placeholder="Logo alt text"
+              />
+            </div>
           </div>
           <TextArea
             id="home-partner-text"
@@ -190,29 +197,34 @@ export function HomePageContentForm() {
 
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Sponsor Banner</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              id="home-sponsor-logo"
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,320px)_1fr] gap-4">
+            <SiteSettingsImageUploadField
+              id="home-sponsor-logo-upload"
               value={content.sponsorBanner.logo}
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  sponsorBanner: { ...prev.sponsorBanner, logo: event.target.value },
-                }))
-              }
+              uploadPath="home/sponsor-banner"
               placeholder="Logo URL"
-            />
-            <Input
-              id="home-sponsor-logo-alt"
-              value={content.sponsorBanner.logoAlt}
-              onChange={(event) =>
+              emptyStateLabel="Upload sponsor logo"
+              previewAspectClass="aspect-square"
+              onChange={(value) =>
                 setContent((prev) => ({
                   ...prev,
-                  sponsorBanner: { ...prev.sponsorBanner, logoAlt: event.target.value },
+                  sponsorBanner: { ...prev.sponsorBanner, logo: value },
                 }))
               }
-              placeholder="Logo alt text"
             />
+            <div className="space-y-3">
+              <Input
+                id="home-sponsor-logo-alt"
+                value={content.sponsorBanner.logoAlt}
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    sponsorBanner: { ...prev.sponsorBanner, logoAlt: event.target.value },
+                  }))
+                }
+                placeholder="Logo alt text"
+              />
+            </div>
           </div>
           <TextArea
             id="home-sponsor-description"
@@ -354,13 +366,17 @@ export function HomePageContentForm() {
                     })
                   }
                 />
-                <Input
+                <SiteSettingsImageUploadField
+                  id={`home-popular-league-image-${index}`}
                   value={card.image}
+                  uploadPath={`home/popular-leagues/${index}`}
                   placeholder="Image URL"
-                  onChange={(event) =>
+                  emptyStateLabel="Upload card image"
+                  previewAspectClass="aspect-[4/3]"
+                  onChange={(value) =>
                     setContent((prev) => {
                       const cards = [...prev.popularLeagues];
-                      cards[index] = { ...cards[index], image: event.target.value };
+                      cards[index] = { ...cards[index], image: value };
                       return { ...prev, popularLeagues: cards };
                     })
                   }
@@ -394,13 +410,17 @@ export function HomePageContentForm() {
 
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Highlights Card</h3>
-          <Input
+          <SiteSettingsImageUploadField
+            id="home-highlight-icon-upload"
             value={content.highlightCard.icon}
+            uploadPath="home/highlight-card"
             placeholder="Icon URL"
-            onChange={(event) =>
+            emptyStateLabel="Upload icon"
+            previewAspectClass="aspect-square"
+            onChange={(value) =>
               setContent((prev) => ({
                 ...prev,
-                highlightCard: { ...prev.highlightCard, icon: event.target.value },
+                highlightCard: { ...prev.highlightCard, icon: value },
               }))
             }
           />
@@ -455,13 +475,17 @@ export function HomePageContentForm() {
             {content.featureSections.map((section, index) => (
               <div key={`${section.title}-${index}`} className="border border-gray-200 rounded-lg p-4 space-y-3">
                 <div className="font-medium text-sm text-[#6F6F6F]">Section {index + 1}</div>
-                <Input
+                <SiteSettingsImageUploadField
+                  id={`home-feature-section-image-${index}`}
                   value={section.image}
+                  uploadPath={`home/feature-sections/${index}`}
                   placeholder="Image URL"
-                  onChange={(event) =>
+                  emptyStateLabel="Upload feature image"
+                  previewAspectClass="aspect-[4/3]"
+                  onChange={(value) =>
                     setContent((prev) => {
                       const featureSections = [...prev.featureSections];
-                      featureSections[index] = { ...featureSections[index], image: event.target.value };
+                      featureSections[index] = { ...featureSections[index], image: value };
                       return { ...prev, featureSections };
                     })
                   }

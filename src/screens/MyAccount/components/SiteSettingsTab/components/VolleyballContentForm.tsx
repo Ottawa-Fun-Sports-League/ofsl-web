@@ -9,6 +9,7 @@ import {
   VolleyballPageContent,
 } from "../../../../../screens/VolleyballPage/VolleyballPage";
 import { useAuth } from "../../../../../contexts/AuthContext";
+import { SiteSettingsImageUploadField } from "./SiteSettingsImageUploadField";
 
 function TextArea({
   id,
@@ -258,44 +259,56 @@ export function VolleyballContentForm() {
               }))
             }
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              value={content.hero.registerButton.text}
-              placeholder="Primary button text"
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  hero: {
-                    ...prev.hero,
-                    registerButton: { ...prev.hero.registerButton, text: event.target.value },
-                  },
-                }))
-              }
-            />
-            <Input
-              value={content.hero.registerButton.link}
-              placeholder="Primary button link"
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  hero: {
-                    ...prev.hero,
-                    registerButton: { ...prev.hero.registerButton, link: event.target.value },
-                  },
-                }))
-              }
-            />
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-[#6F6F6F]">Hero Buttons</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="text-sm font-medium text-[#6F6F6F]">Register Button</div>
+                <Input
+                  value={content.hero.registerButton.text}
+                  placeholder="Button text"
+                  onChange={(event) =>
+                    setContent((prev) => ({
+                      ...prev,
+                      hero: {
+                        ...prev.hero,
+                        registerButton: { ...prev.hero.registerButton, text: event.target.value },
+                      },
+                    }))
+                  }
+                />
+                <Input
+                  value={content.hero.registerButton.link}
+                  placeholder="Button link"
+                  onChange={(event) =>
+                    setContent((prev) => ({
+                      ...prev,
+                      hero: {
+                        ...prev.hero,
+                        registerButton: { ...prev.hero.registerButton, link: event.target.value },
+                      },
+                    }))
+                  }
+                />
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="text-sm font-medium text-[#6F6F6F]">Schedule Button</div>
+                <Input
+                  value={content.hero.scheduleButtonText}
+                  placeholder="Button text"
+                  onChange={(event) =>
+                    setContent((prev) => ({
+                      ...prev,
+                      hero: { ...prev.hero, scheduleButtonText: event.target.value },
+                    }))
+                  }
+                />
+                <p className="text-xs text-[#6F6F6F]">
+                  Link is determined automatically based on whether the viewer is logged in.
+                </p>
+              </div>
+            </div>
           </div>
-          <Input
-            value={content.hero.scheduleButtonText}
-            placeholder="Schedule button text"
-            onChange={(event) =>
-              setContent((prev) => ({
-                ...prev,
-                hero: { ...prev.hero, scheduleButtonText: event.target.value },
-              }))
-            }
-          />
         </section>
 
         <section className="space-y-4">
@@ -377,13 +390,17 @@ export function VolleyballContentForm() {
                     })
                   }
                 />
-                <Input
+                <SiteSettingsImageUploadField
+                  id={`volleyball-league-card-image-${index}`}
                   value={card.image}
+                  uploadPath={`volleyball/league-cards/${index}`}
                   placeholder="Image URL"
-                  onChange={(event) =>
+                  emptyStateLabel="Upload card image"
+                  previewAspectClass="aspect-[4/3]"
+                  onChange={(value) =>
                     setContent((prev) => {
                       const cards = [...prev.leagueCards];
-                      cards[index] = { ...cards[index], image: event.target.value };
+                      cards[index] = { ...cards[index], image: value };
                       return { ...prev, leagueCards: cards };
                     })
                   }
@@ -442,27 +459,33 @@ export function VolleyballContentForm() {
 
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">About Section</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,320px)_1fr] gap-4">
+            <SiteSettingsImageUploadField
+              id="volleyball-about-image-upload"
               value={content.aboutSection.image}
+              uploadPath="volleyball/about-section"
               placeholder="Image URL"
-              onChange={(event) =>
+              emptyStateLabel="Upload about image"
+              previewAspectClass="aspect-[4/3]"
+              onChange={(value) =>
                 setContent((prev) => ({
                   ...prev,
-                  aboutSection: { ...prev.aboutSection, image: event.target.value },
+                  aboutSection: { ...prev.aboutSection, image: value },
                 }))
               }
             />
-            <Input
-              value={content.aboutSection.imageAlt}
-              placeholder="Image alt text"
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  aboutSection: { ...prev.aboutSection, imageAlt: event.target.value },
-                }))
-              }
-            />
+            <div className="space-y-3">
+              <Input
+                value={content.aboutSection.imageAlt}
+                placeholder="Image alt text"
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    aboutSection: { ...prev.aboutSection, imageAlt: event.target.value },
+                  }))
+                }
+              />
+            </div>
           </div>
           <Input
             value={content.aboutSection.title}
@@ -658,27 +681,33 @@ export function VolleyballContentForm() {
 
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-[#6F6F6F]">Partner Highlight</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,320px)_1fr] gap-4">
+            <SiteSettingsImageUploadField
+              id="volleyball-partner-logo-upload"
               value={content.partner.logo}
+              uploadPath="volleyball/partner-logo"
               placeholder="Logo URL"
-              onChange={(event) =>
+              emptyStateLabel="Upload partner logo"
+              previewAspectClass="aspect-square"
+              onChange={(value) =>
                 setContent((prev) => ({
                   ...prev,
-                  partner: { ...prev.partner, logo: event.target.value },
+                  partner: { ...prev.partner, logo: value },
                 }))
               }
             />
-            <Input
-              value={content.partner.logoAlt}
-              placeholder="Logo alt text"
-              onChange={(event) =>
-                setContent((prev) => ({
-                  ...prev,
-                  partner: { ...prev.partner, logoAlt: event.target.value },
-                }))
-              }
-            />
+            <div className="space-y-3">
+              <Input
+                value={content.partner.logoAlt}
+                placeholder="Logo alt text"
+                onChange={(event) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    partner: { ...prev.partner, logoAlt: event.target.value },
+                  }))
+                }
+              />
+            </div>
           </div>
           <TextArea
             id="volleyball-partner-text"
