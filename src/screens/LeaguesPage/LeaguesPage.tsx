@@ -35,7 +35,7 @@ import {
 } from "../../components/leagues/LeagueCard";
 import { logger } from "../../lib/logger";
 import { getSportIcon } from "../LeagueDetailPage/utils/leagueUtils";
-import { LeagueFilters, useLeagueFilters, filterLeagues, DEFAULT_FILTER_OPTIONS } from "../../components/leagues/filters";
+import { LeagueFilters, useLeagueFilters, filterLeagues, DEFAULT_FILTER_OPTIONS, DEFAULT_FILTERS } from "../../components/leagues/filters";
 import { useAuth } from "../../contexts/AuthContext";
 
 // Customize filter options for this page
@@ -45,7 +45,7 @@ const filterOptions = {
 };
 
 export const LeaguesPage = (): React.ReactElement => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { userProfile } = useAuth();
   const isAdmin = userProfile?.is_admin === true;
   
@@ -91,16 +91,63 @@ export const LeaguesPage = (): React.ReactElement => {
     const locationParam = searchParams.get('location');
     const typeParam = searchParams.get('type');
 
-    setFilters(prev => ({
-      ...prev,
-      ...(sportParam && { sport: sportParam }),
-      ...(dayParam && { day: dayParam }),
-      ...(levelParam && { skillLevels: [levelParam] }),
-      ...(genderParam && { gender: genderParam }),
-      ...(locationParam && { location: locationParam }),
-      ...(typeParam && { type: typeParam })
-    }));
-  }, [searchParams, sports, setFilters]);
+    const updates: Partial<LeagueFilters> = {};
+    let hasUpdates = false;
+
+    const assign = <K extends keyof LeagueFilters>(key: K, value: LeagueFilters[K]) => {
+      updates[key] = value;
+      hasUpdates = true;
+    };
+
+    if (sportParam) assign('sport', sportParam);
+    if (dayParam) assign('day', dayParam);
+    if (genderParam) assign('gender', genderParam);
+    if (locationParam) assign('location', locationParam);
+    if (typeParam) assign('type', typeParam);
+
+    if (levelParam !== null) {
+      const parsedLevels = levelParam
+        ? levelParam.split(',').map(level => level.trim()).filter(Boolean)
+        : [];
+      assign('skillLevels', parsedLevels);
+    }
+
+    if (hasUpdates) {
+      setFilters(prev => ({
+        ...prev,
+        ...updates,
+      }));
+    }
+  }, [searchParams, setFilters]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    const filterKeys = ['sport', 'day', 'gender', 'location', 'type', 'level'];
+    filterKeys.forEach((key) => nextParams.delete(key));
+
+    const setParamIfNeeded = (key: string, value: string, defaultValue: string) => {
+      if (value && value !== defaultValue) {
+        nextParams.set(key, value);
+      }
+    };
+
+    setParamIfNeeded('sport', filters.sport, DEFAULT_FILTERS.sport);
+    setParamIfNeeded('day', filters.day, DEFAULT_FILTERS.day);
+    setParamIfNeeded('gender', filters.gender, DEFAULT_FILTERS.gender);
+    setParamIfNeeded('location', filters.location, DEFAULT_FILTERS.location);
+    setParamIfNeeded('type', filters.type, DEFAULT_FILTERS.type);
+
+    if (filters.skillLevels.length > 0) {
+      nextParams.set('level', filters.skillLevels.join(','));
+    }
+
+    const nextString = nextParams.toString();
+    const currentString = searchParams.toString();
+
+    if (nextString !== currentString) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [filters, searchParams, setSearchParams]);
 
   const loadStripeProducts = async () => {
     try {

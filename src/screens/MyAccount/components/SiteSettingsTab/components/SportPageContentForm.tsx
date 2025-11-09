@@ -304,7 +304,7 @@ export function SportPageContentForm({
             </div>
             <div className="space-y-4">
               {content.hero.buttons.map((button, index) => (
-                <div key={`${button.text}-${index}`} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div key={`hero-button-${index}`} className="border border-gray-200 rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-[#6F6F6F]">
                       Button {index + 1}
