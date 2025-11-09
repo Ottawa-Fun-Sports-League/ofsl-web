@@ -47,6 +47,14 @@ export function Footer() {
                   Pickleball
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/tournaments"
+                  className="footer-link hover:text-[#ffeae5]"
+                >
+                  Tournaments
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -235,4 +243,3 @@ export function Footer() {
     </footer>
   );
 }
-

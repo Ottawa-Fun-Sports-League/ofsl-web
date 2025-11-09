@@ -191,6 +191,14 @@ export function Header({ isCompact = false }: HeaderProps) {
               </NavigationMenuItem>
               <NavigationMenuItem className="flex items-center">
                 <Link
+                  to="/tournaments"
+                  className={getLinkClasses("/tournaments")}
+                >
+                  Tournaments
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem className="flex items-center">
+                <Link
                   to="/skills-and-drills"
                   className={getLinkClasses("/skills-and-drills")}
                 >
@@ -332,6 +340,13 @@ export function Header({ isCompact = false }: HeaderProps) {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Pickleball
+              </Link>
+              <Link
+                to="/tournaments"
+                className={getMobileLinkClasses("/tournaments")}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Tournaments
               </Link>
               <Link
                 to="/skills-and-drills"

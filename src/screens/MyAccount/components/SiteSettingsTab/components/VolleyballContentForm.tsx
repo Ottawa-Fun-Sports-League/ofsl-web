@@ -7,6 +7,8 @@ import { uploadSiteContentAsset } from "../../../../../lib/siteContentStorage";
 import {
   DEFAULT_VOLLEYBALL_CONTENT,
   VolleyballPageContent,
+  VolleyballPageContentResponse,
+  normalizeVolleyballContent,
 } from "../../../../../screens/VolleyballPage/VolleyballPage";
 import { useAuth } from "../../../../../contexts/AuthContext";
 import { SiteSettingsImageUploadField } from "./SiteSettingsImageUploadField";
@@ -53,11 +55,12 @@ export function VolleyballContentForm() {
   useEffect(() => {
     let isMounted = true;
 
-    fetchPageContent<VolleyballPageContent>("volleyball", DEFAULT_VOLLEYBALL_CONTENT)
+    fetchPageContent<VolleyballPageContentResponse>("volleyball", DEFAULT_VOLLEYBALL_CONTENT)
       .then((data) => {
         if (!isMounted) return;
-        setContent(data);
-        setBaseline(data);
+        const normalized = normalizeVolleyballContent(data);
+        setContent(normalized);
+        setBaseline(normalized);
       })
       .catch((error) => {
         if ((error as Error | undefined)?.name === "AbortError") {
@@ -196,9 +199,6 @@ export function VolleyballContentForm() {
               {heroImageUploading ? (
                 <p className="text-xs text-[#B20000]">Uploading image…</p>
               ) : null}
-              {heroImageUploading ? (
-                <p className="text-xs text-[#B20000]">Uploading image…</p>
-              ) : null}
             </div>
             <div className="space-y-3">
               <Input
@@ -260,53 +260,73 @@ export function VolleyballContentForm() {
             }
           />
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-[#6F6F6F]">Hero Buttons</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-                <div className="text-sm font-medium text-[#6F6F6F]">Register Button</div>
-                <Input
-                  value={content.hero.registerButton.text}
-                  placeholder="Button text"
-                  onChange={(event) =>
-                    setContent((prev) => ({
-                      ...prev,
-                      hero: {
-                        ...prev.hero,
-                        registerButton: { ...prev.hero.registerButton, text: event.target.value },
-                      },
-                    }))
-                  }
-                />
-                <Input
-                  value={content.hero.registerButton.link}
-                  placeholder="Button link"
-                  onChange={(event) =>
-                    setContent((prev) => ({
-                      ...prev,
-                      hero: {
-                        ...prev.hero,
-                        registerButton: { ...prev.hero.registerButton, link: event.target.value },
-                      },
-                    }))
-                  }
-                />
-              </div>
-              <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-                <div className="text-sm font-medium text-[#6F6F6F]">Schedule Button</div>
-                <Input
-                  value={content.hero.scheduleButtonText}
-                  placeholder="Button text"
-                  onChange={(event) =>
-                    setContent((prev) => ({
-                      ...prev,
-                      hero: { ...prev.hero, scheduleButtonText: event.target.value },
-                    }))
-                  }
-                />
-                <p className="text-xs text-[#6F6F6F]">
-                  Link is determined automatically based on whether the viewer is logged in.
-                </p>
-              </div>
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-[#6F6F6F]">Hero Buttons</h4>
+              <Button
+                type="button"
+                variant="outline"
+                className="text-sm"
+                onClick={() =>
+                  setContent((prev) => ({
+                    ...prev,
+                    hero: {
+                      ...prev.hero,
+                      buttons: [...prev.hero.buttons, { text: "New Button", link: "/" }],
+                    },
+                  }))
+                }
+              >
+                Add Button
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {content.hero.buttons.map((button, index) => (
+                <div key={`${button.text}-${index}`} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-[#6F6F6F]">Button {index + 1}</span>
+                    {content.hero.buttons.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="text-xs text-red-600"
+                        onClick={() =>
+                          setContent((prev) => ({
+                            ...prev,
+                            hero: {
+                              ...prev.hero,
+                              buttons: prev.hero.buttons.filter((_, buttonIndex) => buttonIndex !== index),
+                            },
+                          }))
+                        }
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    value={button.text}
+                    placeholder="Button label"
+                    onChange={(event) =>
+                      setContent((prev) => {
+                        const buttons = [...prev.hero.buttons];
+                        buttons[index] = { ...buttons[index], text: event.target.value };
+                        return { ...prev, hero: { ...prev.hero, buttons } };
+                      })
+                    }
+                  />
+                  <Input
+                    value={button.link}
+                    placeholder="Button link"
+                    onChange={(event) =>
+                      setContent((prev) => {
+                        const buttons = [...prev.hero.buttons];
+                        buttons[index] = { ...buttons[index], link: event.target.value };
+                        return { ...prev, hero: { ...prev.hero, buttons } };
+                      })
+                    }
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </section>

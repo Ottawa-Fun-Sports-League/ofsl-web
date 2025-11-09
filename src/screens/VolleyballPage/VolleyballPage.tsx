@@ -26,8 +26,7 @@ export interface VolleyballPageContent {
     containerClassName: string;
     title: string;
     subtitle: string;
-    registerButton: HeroButton;
-    scheduleButtonText: string;
+    buttons: HeroButton[];
   };
   intro: {
     heading: string;
@@ -74,6 +73,62 @@ export interface VolleyballPageContent {
   };
 }
 
+export type VolleyballPageContentResponse = Omit<VolleyballPageContent, "hero"> & {
+  hero: {
+    image: string;
+    imageAlt: string;
+    containerClassName: string;
+    title: string;
+    subtitle: string;
+    buttons?: HeroButton[];
+    registerButton?: HeroButton;
+    scheduleButtonText?: string;
+  };
+};
+
+const DEFAULT_REGISTER_BUTTON: HeroButton = {
+  text: "Register Now",
+  link: "/leagues?sport=Volleyball",
+};
+
+const DEFAULT_SCHEDULE_BUTTON: HeroButton = {
+  text: "Schedule & Standings",
+  link: "/my-account/teams",
+};
+
+export const normalizeVolleyballContent = (
+  data: VolleyballPageContentResponse,
+): VolleyballPageContent => {
+  const registerButton =
+    data.hero.registerButton && data.hero.registerButton.text
+      ? data.hero.registerButton
+      : DEFAULT_REGISTER_BUTTON;
+
+  const scheduleButton =
+    data.hero.scheduleButtonText && data.hero.scheduleButtonText.trim().length > 0
+      ? { text: data.hero.scheduleButtonText, link: DEFAULT_SCHEDULE_BUTTON.link }
+      : undefined;
+
+  const buttons =
+    data.hero.buttons && data.hero.buttons.length > 0
+      ? data.hero.buttons
+      : [registerButton, scheduleButton].filter(
+          (button): button is HeroButton => Boolean(button),
+        );
+
+  return {
+    ...data,
+    hero: {
+      image: data.hero.image,
+      imageAlt: data.hero.imageAlt,
+      containerClassName: data.hero.containerClassName,
+      title: data.hero.title,
+      subtitle: data.hero.subtitle,
+      buttons: buttons.length > 0 ? buttons : [DEFAULT_REGISTER_BUTTON],
+    },
+  };
+};
+
 export const DEFAULT_VOLLEYBALL_CONTENT: VolleyballPageContent = {
   hero: {
     image: "/adult-open-play-1920x963.jpg",
@@ -82,11 +137,7 @@ export const DEFAULT_VOLLEYBALL_CONTENT: VolleyballPageContent = {
     title: "Volleyball Leagues",
     subtitle:
       "OFSL's volleyball leagues are organized to provide participants with a structured environment that encourages sportsmanship, physical activity and healthy competition.",
-    registerButton: {
-      text: "Register Now",
-      link: "/leagues?sport=Volleyball",
-    },
-    scheduleButtonText: "Schedule & Standings",
+    buttons: [DEFAULT_REGISTER_BUTTON, DEFAULT_SCHEDULE_BUTTON],
   },
   intro: {
     heading: "Find a league for you",
@@ -248,10 +299,10 @@ export const VolleyballPage = (): React.ReactElement => {
   useEffect(() => {
     let isMounted = true;
 
-    fetchPageContent<VolleyballPageContent>("volleyball", DEFAULT_VOLLEYBALL_CONTENT)
+    fetchPageContent<VolleyballPageContentResponse>("volleyball", DEFAULT_VOLLEYBALL_CONTENT)
       .then((data) => {
         if (!isMounted) return;
-        setContent(data);
+        setContent(normalizeVolleyballContent(data));
       })
       .catch((error) => {
         if ((error as Error | undefined)?.name === "AbortError") {
@@ -267,7 +318,12 @@ export const VolleyballPage = (): React.ReactElement => {
     };
   }, []);
 
-  const scheduleLink = user ? "/my-account/teams" : "/login?redirect=/my-account/teams";
+  const resolveHeroLink = (link: string) => {
+    if (!user && link.startsWith("/my-account")) {
+      return `/login?redirect=${link}`;
+    }
+    return link;
+  };
 
   return (
     <div className="bg-white flex flex-row justify-center w-full">
@@ -280,28 +336,24 @@ export const VolleyballPage = (): React.ReactElement => {
           <div className="text-center text-white">
             <h1 className="text-5xl mb-4 font-heading">{content.hero.title}</h1>
             <p className="text-xl max-w-2xl mx-auto mb-8">{content.hero.subtitle}</p>
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-              <Link to={content.hero.registerButton.link} className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-                >
-                  <span className="text-base md:text-lg text-white">
-                    {content.hero.registerButton.text}
-                  </span>
-                </Button>
-              </Link>
-              <Link to={scheduleLink} className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
-                >
-                  <span className="text-base md:text-lg text-white">
-                    {content.hero.scheduleButtonText}
-                  </span>
-                </Button>
-              </Link>
-            </div>
+            {content.hero.buttons.length > 0 ? (
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+                {content.hero.buttons.map((button) => (
+                  <Link
+                    key={`${button.text}-${button.link}`}
+                    to={resolveHeroLink(button.link)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
+                    >
+                      <span className="text-base md:text-lg text-white">{button.text}</span>
+                    </Button>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </div>
         </HeroBanner>
 
