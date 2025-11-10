@@ -162,13 +162,22 @@ export async function applySixTeamMovementAfterStandings(params: {
   // Determine destination week, skipping full no-games weeks to match other formats
   const destWeek = await getNextPlayableWeek(leagueId, nextWeek);
 
+  // Rank mapping is based on Game 2 court outcomes in this order:
+  // 0: C1 Winner, 1: C1 Loser, 2: C2 Winner, 3: C2 Loser, 4: C3 Winner, 5: C3 Loser
+  // Target positions must match the scorecard weekly summary logic:
+  //   C1W -> up (or stay A if top tier)
+  //   C1L -> same tier -> C
+  //   C2W -> same tier -> B
+  //   C2L -> same tier -> E
+  //   C3W -> same tier -> D
+  //   C3L -> down (or stay F if bottom tier)
   const movements = [
-    { rank: 0, targetTier: isTopTier ? tierNumber : Math.max(1, tierNumber - 1), targetPosition: isTopTier ? 'A' : 'F' },
-    { rank: 1, targetTier: tierNumber, targetPosition: 'B' },
-    { rank: 2, targetTier: tierNumber, targetPosition: 'C' },
-    { rank: 3, targetTier: tierNumber, targetPosition: 'D' },
-    { rank: 4, targetTier: tierNumber, targetPosition: 'E' },
-    { rank: 5, targetTier: isBottomTier ? tierNumber : tierNumber + 1, targetPosition: isBottomTier ? 'F' : 'A' },
+    { rank: 0, targetTier: isTopTier ? tierNumber : Math.max(1, tierNumber - 1), targetPosition: isTopTier ? 'A' : 'F' }, // C1W
+    { rank: 1, targetTier: tierNumber, targetPosition: 'C' }, // C1L
+    { rank: 2, targetTier: tierNumber, targetPosition: 'B' }, // C2W
+    { rank: 3, targetTier: tierNumber, targetPosition: 'E' }, // C2L
+    { rank: 4, targetTier: tierNumber, targetPosition: 'D' }, // C3W
+    { rank: 5, targetTier: isBottomTier ? tierNumber : tierNumber + 1, targetPosition: isBottomTier ? 'F' : 'A' }, // C3L
   ] as const;
 
   const rpcAssignments = movements
