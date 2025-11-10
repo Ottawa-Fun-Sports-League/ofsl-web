@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "../../components/ui/button";
 import { Users } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import { 
+import {
   fetchLeagues,
   fetchSports,
   fetchSkills,
@@ -35,7 +35,14 @@ import {
 } from "../../components/leagues/LeagueCard";
 import { logger } from "../../lib/logger";
 import { getSportIcon } from "../LeagueDetailPage/utils/leagueUtils";
-import { LeagueFilters, useLeagueFilters, filterLeagues, DEFAULT_FILTER_OPTIONS, DEFAULT_FILTERS } from "../../components/leagues/filters";
+import {
+  LeagueFilters,
+  useLeagueFilters,
+  filterLeagues,
+  DEFAULT_FILTER_OPTIONS,
+  DEFAULT_FILTERS,
+} from "../../components/leagues/filters";
+import type { LeagueFilters as LeagueFiltersState } from "../../components/leagues/filters/types";
 import { useAuth } from "../../contexts/AuthContext";
 
 // Customize filter options for this page
@@ -91,10 +98,10 @@ export const LeaguesPage = (): React.ReactElement => {
     const locationParam = searchParams.get('location');
     const typeParam = searchParams.get('type');
 
-    const updates: Partial<LeagueFilters> = {};
+    const updates: Partial<LeagueFiltersState> = {};
     let hasUpdates = false;
 
-    const assign = <K extends keyof LeagueFilters>(key: K, value: LeagueFilters[K]) => {
+    const assign = <K extends keyof LeagueFiltersState>(key: K, value: LeagueFiltersState[K]) => {
       updates[key] = value;
       hasUpdates = true;
     };

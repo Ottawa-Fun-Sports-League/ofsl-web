@@ -323,7 +323,7 @@ ${safeMessage}
 
     // Prepare email data for Resend
     const emailData = {
-      from: "OFSL Contact Form <noreply@ofsl.ca>",
+      from: "OFSL Contact Form <info@ofsl.ca>",
       to: ["info@ofsl.ca"],
       reply_to: requestData.email, // Use raw email for reply-to
       subject: `[Contact Form] ${safeSubject}`,

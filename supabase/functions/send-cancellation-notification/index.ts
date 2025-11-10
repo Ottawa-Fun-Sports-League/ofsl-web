@@ -71,7 +71,7 @@ async function sendEmailWithRetry(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: emailType === 'user' ? "OFSL <noreply@ofsl.ca>" : "OFSL System <noreply@ofsl.ca>",
+          from: emailType === 'user' ? "OFSL <info@ofsl.ca>" : "OFSL System <info@ofsl.ca>",
           ...emailContent,
         }),
       });

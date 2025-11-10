@@ -70,6 +70,15 @@ export function Header({ isCompact = false }: HeaderProps) {
       ),
     },
     {
+      label: "Registrations",
+      path: "/my-account/registrations",
+      icon: (
+        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M5 3H19C20.1 3 21 3.9 21 5V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3M5 5V19H19V5H5M7 7H17V9H7V7M7 11H15V13H7V11M7 15H13V17H7V15Z" />
+        </svg>
+      ),
+    },
+    {
       label: "Site Settings",
       path: "/my-account/site-settings",
       icon: (

@@ -39,6 +39,7 @@ import {
   LeagueNewPage,
   UserRegistrationsPage,
   SiteSettingsTab,
+  RegistrationsTab,
 } from "./screens/MyAccount";
 import { LeagueTeamsPage } from "./screens/LeagueTeamsPage";
 import { LeagueSchedulePage } from "./screens/LeagueSchedulePage";
@@ -251,6 +252,14 @@ export function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <ManageTeamsTab />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="registrations"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <RegistrationsTab />
                   </ProtectedRoute>
                 }
               />

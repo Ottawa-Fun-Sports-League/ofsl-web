@@ -1,0 +1,1 @@
+export { RegistrationsTab } from "./RegistrationsTab";

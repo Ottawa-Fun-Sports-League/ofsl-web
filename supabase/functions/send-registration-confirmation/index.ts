@@ -51,8 +51,8 @@ async function sendEmailThroughResend(
     body: JSON.stringify({
       from:
         recipientType === "admin"
-          ? "OFSL System <noreply@ofsl.ca>"
-          : "OFSL <noreply@ofsl.ca>",
+          ? "OFSL System <info@ofsl.ca>"
+          : "OFSL <info@ofsl.ca>",
       ...emailContent,
     }),
   });

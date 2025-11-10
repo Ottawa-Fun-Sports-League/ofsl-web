@@ -476,7 +476,7 @@ serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "OFSL System <noreply@ofsl.ca>",
+        from: "OFSL System <info@ofsl.ca>",
         ...emailContent,
       }),
     });

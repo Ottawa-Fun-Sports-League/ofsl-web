@@ -75,7 +75,7 @@ serve(async (req) => {
     `
 
     const emailData = {
-      from: 'OFSL <noreply@ofsl.ca>',
+      from: 'OFSL <info@ofsl.ca>',
       to: ['info@ofsl.ca'],
       reply_to: email,
       subject: `Contact Form: ${subject}`,
