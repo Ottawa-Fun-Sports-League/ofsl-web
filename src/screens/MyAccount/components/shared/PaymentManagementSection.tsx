@@ -15,7 +15,7 @@ interface LeaguePayment {
   amount_due: number;
   amount_paid: number;
   status: 'pending' | 'partial' | 'paid' | 'overdue';
-  due_date: string;
+  due_date: string | null;
   payment_method: string | null;
   user_id: string;
   team_id: number | null;
@@ -507,7 +507,9 @@ export function PaymentManagementSection({
                 <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>Due: {new Date(payment.due_date).toLocaleDateString()}</span>
+                    <span>
+                      Due: {payment.due_date ? new Date(payment.due_date).toLocaleDateString() : 'TBD'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-4 w-4" />

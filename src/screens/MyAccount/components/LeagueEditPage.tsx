@@ -92,7 +92,7 @@ export function LeagueEditPage() {
     max_teams: number;
     gym_ids: number[];
     hide_day?: boolean;
-    payment_due_date: string;
+    payment_due_date: string | null;
     payment_window_hours: number | null;
     deposit_amount: number | null;
     deposit_date: string;
@@ -143,7 +143,7 @@ export function LeagueEditPage() {
         payment_window_hours: nextIsRelative
           ? prev.payment_window_hours ?? PAYMENT_WINDOW_OPTIONS[0]
           : null,
-        payment_due_date: nextIsRelative ? "" : prev.payment_due_date,
+        payment_due_date: nextIsRelative ? null : (prev.payment_due_date ?? ""),
         early_bird_cost: nextIsRelative ? null : prev.early_bird_cost,
         early_bird_due_date: nextIsRelative ? null : prev.early_bird_due_date,
         deposit_amount: nextIsRelative ? null : prev.deposit_amount,
@@ -300,27 +300,22 @@ export function LeagueEditPage() {
         ? parseInt(editLeague.day_of_week.toString())
         : null;
 
-    try {
-      const paymentDueDateValue = usesRelativePayment
-        ? null
-        : editLeague.payment_due_date || null;
-      const paymentWindowHoursValue = usesRelativePayment
-        ? editLeague.payment_window_hours
+    const paymentDueDateValue = usesRelativePayment
+      ? null
+      : editLeague.payment_due_date || null;
+    const paymentWindowHoursValue = usesRelativePayment
+      ? editLeague.payment_window_hours
+      : null;
+    const earlyBirdCostValue = usesRelativePayment ? null : editLeague.early_bird_cost ?? null;
+    const earlyBirdDueDateValue = usesRelativePayment ? null : editLeague.early_bird_due_date || null;
+    const depositAmountValue = usesRelativePayment ? null : editLeague.deposit_amount;
+    const depositDateValue = usesRelativePayment
+      ? null
+      : depositAmountValue
+        ? editLeague.deposit_date || null
         : null;
-      const earlyBirdCostValue = usesRelativePayment
-        ? null
-        : editLeague.early_bird_cost ?? null;
-      const earlyBirdDueDateValue = usesRelativePayment
-        ? null
-        : editLeague.early_bird_due_date || null;
-      const depositAmountValue = usesRelativePayment
-        ? null
-        : editLeague.deposit_amount;
-      const depositDateValue = usesRelativePayment
-        ? null
-        : depositAmountValue
-          ? editLeague.deposit_date || null
-          : null;
+
+    try {
 
       setSaving(true);
 
@@ -972,14 +967,14 @@ export function LeagueEditPage() {
                       <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                         Payment Due Date
                       </label>
-                      <Input
-                        type="date"
-                        value={editLeague.payment_due_date}
-                        onChange={(e) =>
-                          setEditLeague({
-                            ...editLeague,
-                            payment_due_date: e.target.value,
-                          })
+                  <Input
+                    type="date"
+                    value={editLeague.payment_due_date ?? ""}
+                    onChange={(e) =>
+                      setEditLeague({
+                        ...editLeague,
+                        payment_due_date: e.target.value,
+                      })
                         }
                         className="w-full"
                         required={!usesRelativePayment}

@@ -80,7 +80,7 @@ export function NewLeagueForm({
         payment_window_hours: nextIsRelative
           ? prev.payment_window_hours ?? PAYMENT_WINDOW_OPTIONS[0]
           : null,
-        payment_due_date: nextIsRelative ? "" : prev.payment_due_date,
+        payment_due_date: nextIsRelative ? null : (prev.payment_due_date ?? ""),
         early_bird_cost: nextIsRelative ? null : prev.early_bird_cost,
         early_bird_due_date: nextIsRelative ? "" : prev.early_bird_due_date || "",
       };
@@ -98,7 +98,7 @@ export function NewLeagueForm({
     const leagueToSubmit = {
       ...newLeague,
       day_of_week: dayOfWeek,
-      payment_due_date: usesRelativePayment ? null : newLeague.payment_due_date,
+      payment_due_date: usesRelativePayment ? null : newLeague.payment_due_date || null,
       payment_window_hours: usesRelativePayment ? newLeague.payment_window_hours : null,
       early_bird_cost: usesRelativePayment ? null : newLeague.early_bird_cost,
       early_bird_due_date: usesRelativePayment ? null : newLeague.early_bird_due_date,
@@ -533,13 +533,13 @@ export function NewLeagueForm({
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                     Payment Due Date
                   </label>
-                  <Input
-                    type="date"
-                    value={newLeague.payment_due_date}
-                    onChange={(e) =>
-                      setNewLeague({
-                        ...newLeague,
-                        payment_due_date: e.target.value,
+                <Input
+                  type="date"
+                  value={newLeague.payment_due_date ?? ""}
+                  onChange={(e) =>
+                    setNewLeague({
+                      ...newLeague,
+                      payment_due_date: e.target.value,
                       })
                     }
                     className="w-full"
