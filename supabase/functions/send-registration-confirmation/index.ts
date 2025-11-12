@@ -4,8 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, x-client-info, apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
 };
 
 // Helper function for consistent date formatting
@@ -70,10 +69,7 @@ async function sendEmailThroughResend(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from:
-        recipientType === "admin"
-          ? "OFSL System <info@ofsl.ca>"
-          : "OFSL <info@ofsl.ca>",
+      from: recipientType === "admin" ? "OFSL System <info@ofsl.ca>" : "OFSL <info@ofsl.ca>",
       ...emailContent,
     }),
   });
@@ -81,10 +77,7 @@ async function sendEmailThroughResend(
   if (!response.ok) {
     const errorText = await response.text();
     // eslint-disable-next-line no-console
-    console.error(
-      `[send-registration-confirmation] ${recipientType} email failed:`,
-      errorText,
-    );
+    console.error(`[send-registration-confirmation] ${recipientType} email failed:`, errorText);
     return { success: false as const, error: errorText };
   }
 
@@ -129,25 +122,19 @@ serve(async (req: Request) => {
     }: RegistrationRequest = await req.json();
 
     if (!email || !userName || !teamName || !leagueName) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Authorization header required" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Authorization header required" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Initialize Supabase client with service role for database operations
@@ -166,13 +153,10 @@ serve(async (req: Request) => {
     } = await supabaseAuth.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid authentication token" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Invalid authentication token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Create the registration confirmation email content
@@ -180,9 +164,10 @@ serve(async (req: Request) => {
       ? `Waitlist Confirmation: ${isIndividualRegistration ? userName : teamName} in ${leagueName}`
       : `Registration Confirmation: ${isIndividualRegistration ? userName : teamName} in ${leagueName}`;
 
-    const skillLevelLabel = leagueSkillLevel && leagueSkillLevel.trim().length > 0
-      ? leagueSkillLevel.trim()
-      : "Not specified";
+    const skillLevelLabel =
+      leagueSkillLevel && leagueSkillLevel.trim().length > 0
+        ? leagueSkillLevel.trim()
+        : "Not specified";
     const paymentWindowLabel = usesRelativePayment
       ? formatPaymentWindowLabel(paymentWindowHours)
       : null;
@@ -289,7 +274,7 @@ serve(async (req: Request) => {
                                   <tr>
                                     <td>
                                       <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
-                                        Please complete your payment within <strong>${paymentWindowLabel}</strong> of registering. This keeps your spot secure while we finalize the schedule.
+                                        Please complete your <strong>non-refundable</strong> payment within <strong>${paymentWindowLabel}</strong> of registering. This keeps your spot secure while we finalize the schedule.
                                       </p>
                                       <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
                                         The exact deadline is shown on your My Account page (<strong>My Leagues</strong>) and in this confirmation email.
@@ -393,13 +378,15 @@ serve(async (req: Request) => {
                           <strong style="color: #5a6c7d;">Skill Level:</strong>
                           <span style="margin-left: 6px;">${skillLevelLabel}</span>
                         </p>
-                        ${!isWaitlist && usesRelativePayment && paymentWindowHours
-                          ? `
+                        ${
+                          !isWaitlist && usesRelativePayment && paymentWindowHours
+                            ? `
                         <p style="color: #2c3e50; font-size: 15px; line-height: 22px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
                           You have <strong>${hoursLabel(paymentWindowHours)}</strong> from now to complete your payment and keep this spot locked in.
                         </p>
                         `
-                          : ''}
+                            : ""
+                        }
                       </td>
                     </tr>
                   </table>
@@ -475,21 +462,14 @@ serve(async (req: Request) => {
     if (!resendApiKey) {
       // eslint-disable-next-line no-console
       console.error("RESEND_API_KEY not found");
-      return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Email service not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Send user confirmation email
-    const userResult = await sendEmailThroughResend(
-      resendApiKey,
-      emailContent,
-      "user",
-    );
+    const userResult = await sendEmailThroughResend(resendApiKey, emailContent, "user");
 
     if (!userResult.success) {
       return new Response(
