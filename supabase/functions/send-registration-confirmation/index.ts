@@ -25,17 +25,23 @@ function formatLocalDate(dateStr: string | null): string {
   });
 }
 
+const hoursLabel = (hours: number): string => `${hours} ${hours === 1 ? "hour" : "hours"}`;
+
 function formatPaymentWindowLabel(hours: number | null | undefined): string | null {
   if (!hours || hours <= 0) return null;
+
   if (hours % 24 === 0) {
     const days = hours / 24;
     if (days >= 7 && days % 7 === 0) {
       const weeks = days / 7;
-      return weeks === 1 ? "1 week" : `${weeks} weeks`;
+      const weekLabel = weeks === 1 ? "1 week" : `${weeks} weeks`;
+      return `${weekLabel} (${hoursLabel(hours)})`;
     }
-    return days === 1 ? "1 day" : `${days} days`;
+    const dayLabel = days === 1 ? "1 day" : `${days} days`;
+    return `${dayLabel} (${hoursLabel(hours)})`;
   }
-  return hours === 1 ? "1 hour" : `${hours} hours`;
+
+  return hoursLabel(hours);
 }
 
 interface RegistrationRequest {
@@ -323,7 +329,7 @@ serve(async (req: Request) => {
         : paymentWindowLabel
           ? `
                                 1. Your registration has been received<br>
-                                2. Complete your payment within <strong>${paymentWindowLabel}</strong> of registering<br>
+                                2. Complete your payment within <strong>${paymentWindowLabel}</strong><br>
                                 3. Watch your My Account page for the exact deadline and payment status<br>
                                 4. Get ready for an amazing season!
       `
@@ -381,17 +387,24 @@ serve(async (req: Request) => {
                                         : `Thank you for registering your team <strong style="color: #B20000;">${teamName}</strong> for <strong style="color: #B20000;">${leagueName}</strong>!`
                                   }
                                 </p>
-                                <p style="color: #2c3e50; font-size: 15px; line-height: 22px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
-                                  <strong style="color: #5a6c7d;">League:</strong>
-                                  <span style="margin-left: 6px;">${leagueName}</span><br>
-                                  <strong style="color: #5a6c7d;">Skill Level:</strong>
-                                  <span style="margin-left: 6px;">${skillLevelLabel}</span>
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
+                        <p style="color: #2c3e50; font-size: 15px; line-height: 22px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
+                          <strong style="color: #5a6c7d;">League:</strong>
+                          <span style="margin-left: 6px;">${leagueName}</span><br>
+                          <strong style="color: #5a6c7d;">Skill Level:</strong>
+                          <span style="margin-left: 6px;">${skillLevelLabel}</span>
+                        </p>
+                        ${!isWaitlist && usesRelativePayment && paymentWindowHours
+                          ? `
+                        <p style="color: #2c3e50; font-size: 15px; line-height: 22px; margin: 15px 0 0 0; font-family: Arial, sans-serif;">
+                          You have <strong>${hoursLabel(paymentWindowHours)}</strong> from now to complete your payment and keep this spot locked in.
+                        </p>
+                        `
+                          : ''}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
                       
                       <!-- Important Notice -->
                       ${importantNoticeBlock}
