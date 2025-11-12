@@ -352,6 +352,31 @@ CREATE TABLE IF NOT EXISTS team_registration_notifications (
     CONSTRAINT team_registration_notifications_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS team_waitlist_notifications (
+    id BIGSERIAL PRIMARY KEY,
+    payment_id BIGINT NOT NULL REFERENCES league_payments(id) ON DELETE CASCADE,
+    team_id BIGINT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    league_id BIGINT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT,
+    user_name TEXT,
+    team_name TEXT,
+    league_name TEXT,
+    payment_window_hours INTEGER,
+    registration_timestamp TIMESTAMP WITH TIME ZONE,
+    reason TEXT DEFAULT 'payment_window_expired',
+    sent BOOLEAN DEFAULT false,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_waitlist_notifications_payment
+  ON team_waitlist_notifications(payment_id);
+
+CREATE INDEX IF NOT EXISTS idx_team_waitlist_notifications_unsent
+  ON team_waitlist_notifications(sent, created_at)
+  WHERE sent = false;
+
 -- Attendance table (references users, seasons)
 CREATE TABLE IF NOT EXISTS attendance (
     id BIGINT NOT NULL DEFAULT nextval('attendance_id_seq'::regclass),
@@ -598,19 +623,20 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   league_record RECORD;
-  team_created_at TIMESTAMPTZ;
+  team_record RECORD;
+  user_record RECORD;
   reference_timestamp TIMESTAMPTZ := COALESCE(NEW.created_at, NOW());
   waitlist_deadline TIMESTAMPTZ;
   should_waitlist BOOLEAN := false;
 BEGIN
-  SELECT payment_due_date, payment_window_hours
+  SELECT payment_due_date, payment_window_hours, name
   INTO league_record
   FROM leagues
   WHERE id = NEW.league_id;
 
   IF NEW.team_id IS NOT NULL THEN
-    SELECT created_at INTO team_created_at FROM teams WHERE id = NEW.team_id;
-    reference_timestamp := COALESCE(team_created_at, NEW.created_at, reference_timestamp);
+    SELECT created_at, name INTO team_record FROM teams WHERE id = NEW.team_id;
+    reference_timestamp := COALESCE(team_record.created_at, NEW.created_at, reference_timestamp);
   END IF;
 
   IF NEW.due_date IS NULL THEN
@@ -653,6 +679,38 @@ BEGIN
         WHERE id = NEW.team_id
           AND COALESCE(active, true) = true;
       END IF;
+
+      SELECT id::uuid AS user_id, email, name INTO user_record
+      FROM users
+      WHERE id = NEW.user_id::uuid;
+
+      INSERT INTO team_waitlist_notifications (
+        payment_id,
+        team_id,
+        league_id,
+        user_id,
+        email,
+        user_name,
+        team_name,
+        league_name,
+        payment_window_hours,
+        registration_timestamp,
+        reason
+      )
+      VALUES (
+        NEW.id,
+        NEW.team_id,
+        NEW.league_id,
+        COALESCE(user_record.user_id, NEW.user_id::uuid),
+        user_record.email,
+        COALESCE(user_record.name, 'Team Captain'),
+        COALESCE(team_record.name, 'Team'),
+        league_record.name,
+        league_record.payment_window_hours,
+        reference_timestamp,
+        'payment_window_expired'
+      )
+      ON CONFLICT (payment_id) DO NOTHING;
     END IF;
   END IF;
   
@@ -949,6 +1007,7 @@ ALTER TABLE stripe_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stripe_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_registration_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_waitlist_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE waiver_acceptances ENABLE ROW LEVEL SECURITY;
@@ -1081,6 +1140,7 @@ COMMENT ON TABLE stripe_orders IS 'Stripe payment orders';
 COMMENT ON TABLE stripe_products IS 'Stripe products for league payments';
 COMMENT ON TABLE stripe_subscriptions IS 'Stripe subscription information';
 COMMENT ON TABLE team_registration_notifications IS 'Queue for team registration email notifications';
+COMMENT ON TABLE team_waitlist_notifications IS 'Queue for notifying captains when teams are auto-waitlisted for non-payment';
 
 -- =============================================
 -- FINAL NOTES
