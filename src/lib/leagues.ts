@@ -7,7 +7,7 @@ export interface League {
   description: string | null;
   additional_info: string | null;
   location: string | null;
-  league_type: "regular_season" | "tournament" | "skills_drills" | null;
+  league_type: "regular_season" | "tournament" | "skills_drills" | "single_session" | null;
   gender: "Mixed" | "Female" | "Male" | null;
   sport_id: number | null;
   skill_id: number | null;
@@ -26,6 +26,7 @@ export interface League {
   // When false, public schedule tab shows an overlay
   schedule_visible?: boolean | null;
   payment_due_date: string | null;
+  payment_window_hours?: number | null;
   deposit_amount: number | null;
   deposit_date: string | null;
   team_registration: boolean | null;

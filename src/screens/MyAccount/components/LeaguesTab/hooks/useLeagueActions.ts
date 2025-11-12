@@ -34,7 +34,8 @@ export function useLeagueActions({ loadData, showToast }: UseLeagueActionsProps)
           early_bird_due_date: newLeague.early_bird_due_date,
           max_teams: newLeague.max_teams,
           gym_ids: newLeague.gym_ids,
-          payment_due_date: newLeague.payment_due_date,
+          payment_due_date: newLeague.payment_due_date || null,
+          payment_window_hours: newLeague.payment_window_hours ?? null,
           is_draft: newLeague.is_draft ?? true,
           publish_date: newLeague.publish_date,
           active: true
@@ -108,6 +109,7 @@ export function useLeagueActions({ loadData, showToast }: UseLeagueActionsProps)
           max_teams: originalLeague.max_teams,
           gym_ids: originalLeague.gym_ids,
           payment_due_date: originalLeague.payment_due_date,
+          payment_window_hours: (originalLeague as any).payment_window_hours ?? null,
           is_draft: true,
           publish_date: null,
           active: true

@@ -28,6 +28,6 @@ export const DEFAULT_FILTER_OPTIONS: FilterOptions = {
   location: ["All Locations", "East", "West", "Central"],
   skillLevels: [],
   day: ["All Days", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-  type: ["All Types", "Regular Season", "Tournament", "Skills and Drills"],
+  type: ["All Types", "Regular Season", "Tournament", "Skills and Drills", "Single Session"],
   gender: ["All Genders", "Mixed", "Female", "Male"]
 };

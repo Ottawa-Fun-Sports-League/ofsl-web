@@ -8,10 +8,11 @@ export interface LeaguePayment {
   amount_paid: number;
   league_cost?: number;
   status: 'pending' | 'partial' | 'paid' | 'overdue';
-  due_date: string;
+  due_date: string | null;
   payment_method: string | null;
   skill_level_id?: number | null;
   skill_name?: string | null;
+  created_at?: string | null;
 }
 
 export interface TeamMatchup {
@@ -31,6 +32,7 @@ export interface TeamMatchup {
 export interface Team {
   id: number;
   name: string;
+  created_at?: string;
   league?: {
     id: number;
     name: string;
@@ -42,6 +44,9 @@ export interface Team {
     playoff_weeks?: number | null;
     schedule_visible?: boolean | null;
     gym_ids?: number[];
+    league_type?: string | null;
+    payment_window_hours?: number | null;
+    payment_due_date?: string | null;
     gyms?: Array<{
       id?: number;
       gym: string | null;
@@ -61,6 +66,8 @@ export interface Team {
     id: number;
     amount_due: number;
     amount_paid: number;
+    due_date?: string | null;
+    created_at?: string | null;
   };
   currentMatchup?: TeamMatchup;
 }

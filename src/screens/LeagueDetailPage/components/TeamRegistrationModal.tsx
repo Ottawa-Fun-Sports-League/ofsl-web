@@ -12,6 +12,10 @@ import {
   getPrimaryLocation,
   type League,
 } from "../../../lib/leagues";
+import {
+  formatPaymentWindowDuration,
+  usesRelativePaymentWindow,
+} from "../../../lib/paymentWindows";
 import { isProfileComplete } from "../../../lib/profileUtils";
 import { formatLocalDate } from "../../../lib/dateUtils";
 import { RegistrationSuccessModal } from "./RegistrationSuccessModal";
@@ -57,6 +61,11 @@ export function TeamRegistrationModal({
   const baseAmount = league?.cost || 0;
   const hstAmount = baseAmount * 0.13;
   const totalAmount = baseAmount + hstAmount;
+  const paymentWindowHours = league?.payment_window_hours ?? null;
+  const usesRelativePayment = usesRelativePaymentWindow(league?.league_type ?? null);
+  const paymentWindowLabel = paymentWindowHours
+    ? formatPaymentWindowDuration(paymentWindowHours)
+    : null;
 
   const allowedSkillIds = useMemo(() => {
     const multiSkillIds = league?.skill_ids ?? [];
@@ -373,6 +382,8 @@ Please select a skill level that meets these requirements.`
                 depositDate: league?.deposit_date || null,
                 isIndividualRegistration: !isTeamRegistration,
                 leagueSkillLevel: selectedSkillName,
+                paymentWindowHours: paymentWindowHours,
+                usesRelativePayment: usesRelativePayment,
               },
             },
           );
@@ -712,7 +723,10 @@ Please select a skill level that meets these requirements.`
                         )}
                       </div>
 
-                      {league && league.deposit_amount && league.deposit_date ? (
+                      {league &&
+                      !usesRelativePayment &&
+                      league.deposit_amount &&
+                      league.deposit_date ? (
                         <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-start gap-3">
                           <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                           <div>
@@ -734,12 +748,34 @@ Please select a skill level that meets these requirements.`
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <p className="text-sm text-blue-800">
                           {league?.team_registration !== false ? (
+                            usesRelativePayment ? (
+                              <>
+                                <strong>Note:</strong> You&apos;ll be added as the team
+                                captain and first player. Payment must be completed within{" "}
+                                <span className="font-semibold">
+                                  {paymentWindowLabel ?? "the required window"}
+                                </span>{" "}
+                                of registering. The exact deadline will appear on your
+                                &ldquo;My Leagues&rdquo; page and in the confirmation email.
+                              </>
+                            ) : (
+                              <>
+                                <strong>Note:</strong> You will be automatically added
+                                as the team captain and first player. After
+                                registration, you can add more players to your team
+                                from the &ldquo;My Leagues&rdquo; page. Registration
+                                fees will be tracked and due within 30 days.
+                              </>
+                            )
+                          ) : usesRelativePayment ? (
                             <>
-                              <strong>Note:</strong> You will be automatically added
-                              as the team captain and first player. After
-                              registration, you can add more players to your team
-                              from the &ldquo;My Leagues&rdquo; page. Registration
-                              fees will be tracked and due within 30 days.
+                              <strong>Note:</strong> This is an individual registration.
+                              Payment must be completed within{" "}
+                              <span className="font-semibold">
+                                {paymentWindowLabel ?? "the required window"}
+                              </span>{" "}
+                              of registering. Watch your inbox and the My Account page for the
+                              exact deadline.
                             </>
                           ) : (
                             <>
@@ -785,6 +821,7 @@ Please select a skill level that meets these requirements.`
         leagueCost={league?.cost || null}
         depositAmount={league?.deposit_amount || null}
         depositDate={league?.deposit_date || null}
+        paymentWindowHours={usesRelativePayment ? paymentWindowHours : null}
       />
     </>
   );

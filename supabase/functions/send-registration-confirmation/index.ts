@@ -25,6 +25,19 @@ function formatLocalDate(dateStr: string | null): string {
   });
 }
 
+function formatPaymentWindowLabel(hours: number | null | undefined): string | null {
+  if (!hours || hours <= 0) return null;
+  if (hours % 24 === 0) {
+    const days = hours / 24;
+    if (days >= 7 && days % 7 === 0) {
+      const weeks = days / 7;
+      return weeks === 1 ? "1 week" : `${weeks} weeks`;
+    }
+    return days === 1 ? "1 day" : `${days} days`;
+  }
+  return hours === 1 ? "1 hour" : `${hours} hours`;
+}
+
 interface RegistrationRequest {
   email: string;
   userName: string;
@@ -35,6 +48,8 @@ interface RegistrationRequest {
   depositDate?: string | null;
   isIndividualRegistration?: boolean;
   leagueSkillLevel?: string | null;
+  paymentWindowHours?: number | null;
+  usesRelativePayment?: boolean;
 }
 
 async function sendEmailThroughResend(
@@ -103,6 +118,8 @@ serve(async (req: Request) => {
       depositDate = null,
       isIndividualRegistration = false,
       leagueSkillLevel = null,
+      paymentWindowHours = null,
+      usesRelativePayment = false,
     }: RegistrationRequest = await req.json();
 
     if (!email || !userName || !teamName || !leagueName) {
@@ -160,6 +177,161 @@ serve(async (req: Request) => {
     const skillLevelLabel = leagueSkillLevel && leagueSkillLevel.trim().length > 0
       ? leagueSkillLevel.trim()
       : "Not specified";
+    const paymentWindowLabel = usesRelativePayment
+      ? formatPaymentWindowLabel(paymentWindowHours)
+      : null;
+
+    const waitlistNotice = `
+                      <tr>
+                        <td style="padding-bottom: 30px;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fff8e1; border: 1px solid #ffe082;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="font-family: Arial, sans-serif;">
+                                      <h3 style="color: #f57f17; font-size: 18px; margin: 0 0 15px 0;">
+                                        ⏳ You're on the Waitlist
+                                      </h3>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
+                                        The league is currently full, but don't worry! Sometimes people change their plans and spots open up. We'll keep you posted if a space becomes available.
+                                      </p>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                        <strong>No payment is required at this time.</strong> If a spot opens up, we'll contact you with payment instructions.
+                                      </p>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+    `;
+
+    const depositNotice = `
+                      <tr>
+                        <td style="padding-bottom: 30px;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fff5f5; border: 1px solid #ffe0e0;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="font-family: Arial, sans-serif;">
+                                      <h3 style="color: #B20000; font-size: 18px; margin: 0 0 15px 0;">
+                                        ⚠️ Important: Secure Your Spot
+                                      </h3>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
+                                        In order to secure your spot, please provide a <strong>non-refundable deposit of $${depositAmount?.toFixed(2)}</strong> by e-transfer by <strong>${formatLocalDate(depositDate)}</strong> to the following email address:
+                                      </p>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                      <table cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border: 2px solid #B20000;">
+                                        <tr>
+                                          <td style="padding: 20px 40px;">
+                                            <p style="color: #B20000; font-size: 18px; font-weight: bold; margin: 0; font-family: Arial, sans-serif;">
+                                              ofslpayments@gmail.com
+                                            </p>
+                                            <p style="color: #5a6c7d; font-size: 14px; margin: 10px 0 0 0; font-family: Arial, sans-serif;">
+                                              Please indicate ${isIndividualRegistration ? `your name "<strong>${userName}</strong>"` : `your team name "<strong>${teamName}</strong>"`} on the e-transfer
+                                            </p>
+                                          </td>
+                                        </tr>
+                                      </table>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td>
+                                      <p style="color: #7f8c8d; font-size: 14px; line-height: 21px; margin: 15px 0 0 0; font-style: italic; font-family: Arial, sans-serif;">
+                                        Note: After the allotted time, we will unfortunately be unable to hold your spot.
+                                      </p>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+    `;
+
+    const paymentWindowNotice = paymentWindowLabel
+      ? `
+                      <tr>
+                        <td style="padding-bottom: 30px;">
+                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #e8f4ff; border: 1px solid #b3d7ff;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                  <tr>
+                                    <td style="font-family: Arial, sans-serif;">
+                                      <h3 style="color: #0b5ed7; font-size: 18px; margin: 0 0 15px 0;">
+                                        ⏱ Payment Window
+                                      </h3>
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
+                                        Please complete your payment within <strong>${paymentWindowLabel}</strong> of registering. This keeps your spot secure while we finalize the schedule.
+                                      </p>
+                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
+                                        The exact deadline is shown on your My Account page (<strong>My Leagues</strong>) and in this confirmation email.
+                                      </p>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+      `
+      : "";
+
+    const importantNoticeBlock = isWaitlist
+      ? waitlistNotice
+      : depositAmount && depositDate
+        ? depositNotice
+        : paymentWindowNotice;
+
+    const nextStepsContent = isWaitlist
+      ? `
+                                1. <strong>Sit tight!</strong> We'll monitor the league for any openings<br>
+                                2. If a spot becomes available, we'll contact you immediately<br>
+                                3. You'll have 24 hours to confirm and provide payment<br>
+                                4. Keep an eye on your email for updates!
+      `
+      : depositAmount && depositDate
+        ? `
+                                1. Send your $${depositAmount.toFixed(2)} deposit via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
+                                2. Include ${isIndividualRegistration ? `your name "<strong>${userName}</strong>"` : `your team name "<strong>${teamName}</strong>"`} in the e-transfer message<br>
+                                3. Ensure payment is sent by <strong>${formatLocalDate(depositDate)}</strong><br>
+                                4. You'll receive a confirmation once we process your payment<br>
+                                5. Get ready for an amazing season!
+      `
+        : paymentWindowLabel
+          ? `
+                                1. Your registration has been received<br>
+                                2. Complete your payment within <strong>${paymentWindowLabel}</strong> of registering<br>
+                                3. Watch your My Account page for the exact deadline and payment status<br>
+                                4. Get ready for an amazing season!
+      `
+          : `
+                                1. Your registration has been received<br>
+                                2. We'll be in touch with more information about the league<br>
+                                3. Get ready for an amazing season!
+      `;
 
     const emailContent = {
       to: [email],
@@ -222,94 +394,7 @@ serve(async (req: Request) => {
                       </tr>
                       
                       <!-- Important Notice -->
-                      ${
-                        isWaitlist ||
-                        (!isWaitlist && depositAmount && depositDate)
-                          ? `
-                      <tr>
-                        <td style="padding-bottom: 30px;">
-                          ${
-                            isWaitlist
-                              ? `
-                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fff8e1; border: 1px solid #ffe082;">
-                            <tr>
-                              <td style="padding: 25px;">
-                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                  <tr>
-                                    <td style="font-family: Arial, sans-serif;">
-                                      <h3 style="color: #f57f17; font-size: 18px; margin: 0 0 15px 0;">
-                                        ⏳ You're on the Waitlist
-                                      </h3>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td>
-                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
-                                        The league is currently full, but don't worry! Sometimes people change their plans and spots open up. We'll keep you posted if a space becomes available.
-                                      </p>
-                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0; font-family: Arial, sans-serif;">
-                                        <strong>No payment is required at this time.</strong> If a spot opens up, we'll contact you with payment instructions.
-                                      </p>
-                                    </td>
-                                  </tr>
-                                </table>
-                              </td>
-                            </tr>
-                          </table>
-                          `
-                              : `
-                          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fff5f5; border: 1px solid #ffe0e0;">
-                            <tr>
-                              <td style="padding: 25px;">
-                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                  <tr>
-                                    <td style="font-family: Arial, sans-serif;">
-                                      <h3 style="color: #B20000; font-size: 18px; margin: 0 0 15px 0;">
-                                        ⚠️ Important: Secure Your Spot
-                                      </h3>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td>
-                                      <p style="color: #2c3e50; font-size: 16px; line-height: 24px; margin: 0 0 15px 0; font-family: Arial, sans-serif;">
-                                        In order to secure your spot, please provide a <strong>non-refundable deposit of $${depositAmount.toFixed(2)}</strong> by e-transfer by <strong>${formatLocalDate(depositDate)}</strong> to the following email address:
-                                      </p>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td align="center" style="padding: 20px 0;">
-                                      <table cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border: 2px solid #B20000;">
-                                        <tr>
-                                          <td style="padding: 20px 40px;">
-                                            <p style="color: #B20000; font-size: 18px; font-weight: bold; margin: 0; font-family: Arial, sans-serif;">
-                                              ofslpayments@gmail.com
-                                            </p>
-                                            <p style="color: #5a6c7d; font-size: 14px; margin: 10px 0 0 0; font-family: Arial, sans-serif;">
-                                              Please indicate ${isIndividualRegistration ? `your name <strong>"${userName}"</strong>` : `your team name <strong>"${teamName}"</strong>`} on the e-transfer
-                                            </p>
-                                          </td>
-                                        </tr>
-                                      </table>
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <td>
-                                      <p style="color: #7f8c8d; font-size: 14px; line-height: 21px; margin: 15px 0 0 0; font-style: italic; font-family: Arial, sans-serif;">
-                                        Note: After the allotted time, we will unfortunately be unable to hold your spot.
-                                      </p>
-                                    </td>
-                                  </tr>
-                                </table>
-                              </td>
-                            </tr>
-                          </table>
-                          `
-                          }
-                        </td>
-                      </tr>
-                      `
-                          : ""
-                      }
+                      ${importantNoticeBlock}
                       
                       <!-- Next Steps -->
                       <tr>
@@ -318,28 +403,7 @@ serve(async (req: Request) => {
                           <table cellpadding="0" cellspacing="0" border="0" width="100%">
                             <tr>
                               <td style="color: #5a6c7d; font-size: 16px; line-height: 28px; font-family: Arial, sans-serif; padding-left: 20px;">
-                                ${
-                                  isWaitlist
-                                    ? `
-                                1. <strong>Sit tight!</strong> We'll monitor the league for any openings<br>
-                                2. If a spot becomes available, we'll contact you immediately<br>
-                                3. You'll have 24 hours to confirm and provide payment<br>
-                                4. Keep an eye on your email for updates!
-                                `
-                                    : depositAmount && depositDate
-                                      ? `
-                                1. Send your $${depositAmount.toFixed(2)} deposit via e-transfer to <strong>ofslpayments@gmail.com</strong><br>
-                                2. Include ${isIndividualRegistration ? `your name "<strong>${userName}</strong>"` : `your team name "<strong>${teamName}</strong>"`} in the e-transfer message<br>
-                                3. Ensure payment is sent by <strong>${formatLocalDate(depositDate)}</strong><br>
-                                4. You'll receive a confirmation once we process your payment<br>
-                                5. Get ready for an amazing season!
-                                `
-                                      : `
-                                1. Your registration has been received<br>
-                                2. We'll be in touch with more information about the league<br>
-                                3. Get ready for an amazing season!
-                                `
-                                }
+                                ${nextStepsContent}
                               </td>
                             </tr>
                           </table>

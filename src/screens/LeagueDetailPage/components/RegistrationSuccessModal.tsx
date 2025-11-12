@@ -1,6 +1,7 @@
 import { Button } from '../../../components/ui/button';
 import { CheckCircle, X } from 'lucide-react';
 import { formatLocalDate } from '../../../lib/dateUtils';
+import { formatPaymentWindowDuration } from '../../../lib/paymentWindows';
 
 interface RegistrationSuccessModalProps {
   showModal: boolean;
@@ -10,6 +11,7 @@ interface RegistrationSuccessModalProps {
   leagueCost: number | null;
   depositAmount?: number | null;
   depositDate?: string | null;
+  paymentWindowHours?: number | null;
 }
 
 export function RegistrationSuccessModal({
@@ -19,7 +21,8 @@ export function RegistrationSuccessModal({
   leagueName,
   leagueCost,
   depositAmount,
-  depositDate
+  depositDate,
+  paymentWindowHours
 }: RegistrationSuccessModalProps) {
   if (!showModal) return null;
 
@@ -27,6 +30,9 @@ export function RegistrationSuccessModal({
   const baseAmount = leagueCost || 0;
   const hstAmount = baseAmount * 0.13;
   const totalAmount = baseAmount + hstAmount;
+  const paymentWindowLabel = paymentWindowHours
+    ? formatPaymentWindowDuration(paymentWindowHours)
+    : null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -67,6 +73,21 @@ export function RegistrationSuccessModal({
                   Full payment of ${totalAmount.toFixed(2)} (${baseAmount.toFixed(2)} + ${hstAmount.toFixed(2)} HST) will be due before the season starts.
                 </p>
               )}
+            </div>
+          )}
+          
+          {!depositAmount && paymentWindowLabel && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="text-blue-800 font-medium mb-2">Payment Window</h3>
+              <p className="text-blue-800 text-sm mb-2">
+                Please complete your payment within{" "}
+                <span className="font-semibold">{paymentWindowLabel}</span> of registering to
+                secure your spot. The exact deadline now appears on your &ldquo;My Leagues&rdquo; page
+                and in the confirmation email we just sent.
+              </p>
+              <p className="text-blue-700 text-xs">
+                We&apos;ll keep you updated if anything changes.
+              </p>
             </div>
           )}
           
