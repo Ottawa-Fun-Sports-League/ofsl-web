@@ -17,6 +17,7 @@ import { DEFAULT_BADMINTON_CONTENT } from "../../../BadmintonPage/BadmintonPage"
 import { DEFAULT_PICKLEBALL_CONTENT } from "../../../PickleballPage/PickleballPage";
 import { HomeHeroCarouselForm } from "./components/HomeHeroCarouselForm";
 import { SkillsAndDrillsContentForm } from "./components/SkillsAndDrillsContentForm";
+import { TournamentsContentForm } from "./components/TournamentsContentForm";
 
 interface FormState {
   message: string;
@@ -38,7 +39,14 @@ export function SiteSettingsTab() {
   const [currentAnnouncement, setCurrentAnnouncement] = useState<SiteAnnouncement | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "announcement" | "home-hero" | "home" | "badminton" | "pickleball" | "volleyball" | "skills"
+    | "announcement"
+    | "home-hero"
+    | "home"
+    | "badminton"
+    | "pickleball"
+    | "volleyball"
+    | "skills"
+    | "tournaments"
   >("announcement");
 
   useEffect(() => {
@@ -272,6 +280,8 @@ export function SiteSettingsTab() {
         return <VolleyballContentForm />;
       case "skills":
         return <SkillsAndDrillsContentForm />;
+      case "tournaments":
+        return <TournamentsContentForm />;
       default:
         return null;
     }
@@ -288,6 +298,7 @@ export function SiteSettingsTab() {
     { id: "volleyball", label: "Volleyball" },
     { id: "pickleball", label: "Pickleball" },
     { id: "skills", label: "Skills & Drills" },
+    { id: "tournaments", label: "Tournaments" },
   ];
 
   return (
@@ -330,6 +341,8 @@ export function SiteSettingsTab() {
                     return "site-settings-form-volleyball";
                   case "skills":
                     return "site-settings-form-skills";
+                  case "tournaments":
+                    return "site-settings-form-tournaments";
                   default:
                     return null;
                 }

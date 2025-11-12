@@ -1,33 +1,166 @@
-import React from "react";
-import { Button } from "../../components/ui/button";
-import { HeroBanner } from "../../components/HeroBanner";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Users, Trophy, Clock } from "lucide-react";
+import { Award, Calendar, Clock, Flag, Shield, Star, Trophy, Users } from "lucide-react";
+
+import { HeroBanner } from "../../components/HeroBanner";
+import { Button } from "../../components/ui/button";
+import { fetchPageContent } from "../../lib/pageContent";
+import { logger } from "../../lib/logger";
+
+type FeatureIcon =
+  | "trophy"
+  | "calendar"
+  | "users"
+  | "clock"
+  | "star"
+  | "award"
+  | "flag"
+  | "shield";
+
+export interface TournamentsPageContent {
+  hero: {
+    image: string;
+    imageAlt: string;
+    title: string;
+    subtitle: string;
+    ctaText: string;
+    ctaLink: string;
+  };
+  intro: string;
+  features: Array<{
+    icon: FeatureIcon;
+    title: string;
+    description: string;
+  }>;
+  about: {
+    image: string;
+    imageAlt: string;
+    title: string;
+    paragraphs: string[];
+    bullets: string[];
+    buttonText: string;
+    buttonLink: string;
+  };
+  callout: {
+    title: string;
+    description: string;
+    buttonText: string;
+    buttonLink: string;
+  };
+}
+
+export const DEFAULT_TOURNAMENTS_CONTENT: TournamentsPageContent = {
+  hero: {
+    image: "/AdobeStock_81167068.jpeg",
+    imageAlt: "Volleyball tournament",
+    title: "Tournaments",
+    subtitle:
+      "OFSL's volleyball tournaments are designed to offer players a fun, competitive, and well-organized experience that promotes teamwork, sportsmanship, and a positive atmosphere.",
+    ctaText: "View Tournaments",
+    ctaLink: "/leagues?type=Tournament",
+  },
+  intro:
+    "Our tournaments are thoughtfully organized to accommodate Competitive, Advanced, and Intermediate divisions, ensuring there is a place for every team to compete. With events scheduled across multiple locations, we maximize participation and provide teams plenty of access to play.",
+  features: [
+    {
+      icon: "trophy",
+      title: "Multiple Skill Levels",
+      description: "Competitive, Advanced, and Intermediate divisions",
+    },
+    {
+      icon: "calendar",
+      title: "Saturday Events",
+      description: "All tournaments are scheduled on Saturdays",
+    },
+    {
+      icon: "users",
+      title: "Multiple Locations",
+      description: "Events across different venues to maximize participation",
+    },
+    {
+      icon: "clock",
+      title: "Competitive Balance",
+      description: "Neck and neck competition throughout the day",
+    },
+  ],
+  about: {
+    image: "/AdobeStock_81167068.jpeg",
+    imageAlt: "Tournament players",
+    title: "About our tournaments",
+    paragraphs: [
+      "Our tournaments offer Competitive, Advanced, and Intermediate divisions to meet every team's needs.",
+      "Events are played on Saturdays with matches scheduled throughout the day to keep the energy high.",
+    ],
+    bullets: [
+      "Some events take place across multiple locations to accommodate more teams",
+      "Teams can expect well-run schedules and competitive matchups",
+      "Limited sign-ups ensure high quality play",
+    ],
+    buttonText: "View Tournaments",
+    buttonLink: "/leagues?type=Tournament",
+  },
+  callout: {
+    title: "Ready to compete?",
+    description:
+      "Whether you're looking for a well-run event with friends or a chance to test your skills, our tournaments deliver a memorable experience.",
+    buttonText: "View Tournaments",
+    buttonLink: "/leagues?type=Tournament",
+  },
+};
+
+const featureIconComponents: Record<FeatureIcon, React.ComponentType<{ className?: string }>> = {
+  trophy: Trophy,
+  calendar: Calendar,
+  users: Users,
+  clock: Clock,
+  star: Star,
+  award: Award,
+  flag: Flag,
+  shield: Shield,
+};
 
 export const TournamentsPage = (): React.ReactElement => {
+  const [content, setContent] = useState<TournamentsPageContent>(DEFAULT_TOURNAMENTS_CONTENT);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchPageContent<TournamentsPageContent>("tournaments", DEFAULT_TOURNAMENTS_CONTENT)
+      .then((data) => {
+        if (!isMounted) return;
+        setContent(data);
+      })
+      .catch((error) => {
+        logger.error("Failed to load tournaments content", error as Error);
+        if (isMounted) {
+          setContent(DEFAULT_TOURNAMENTS_CONTENT);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="bg-white flex flex-row justify-center w-full">
       <div className="bg-white w-full relative">
         <HeroBanner
-          image="/AdobeStock_81167068.jpeg"
-          imageAlt="Volleyball tournament"
+          image={content.hero.image}
+          imageAlt={content.hero.imageAlt}
           containerClassName="h-[500px]"
         >
           <div className="text-center text-white">
-            <h1 className="text-5xl mb-4 font-heading">Tournaments</h1>
-            <p className="text-xl max-w-2xl mx-auto mb-8">
-              OFSL&apos;s volleyball tournaments are designed to offer players a
-              fun, competitive, and well-organized experience that promotes
-              teamwork, sportsmanship, and a positive atmosphere.
-            </p>
+            <h1 className="text-5xl mb-4 font-heading">{content.hero.title}</h1>
+            <p className="text-xl max-w-2xl mx-auto mb-8">{content.hero.subtitle}</p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
-              <Link to="/leagues?type=Tournament" className="w-full sm:w-auto">
+              <Link to={content.hero.ctaLink} className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   className="w-full sm:w-auto bg-[#0d0d0d42] text-white border border-white rounded-[10px] px-[15px] md:px-[25px] py-2.5"
                 >
                   <span className="text-base md:text-lg text-white">
-                    View Tournaments
+                    {content.hero.ctaText}
                   </span>
                 </Button>
               </Link>
@@ -35,186 +168,78 @@ export const TournamentsPage = (): React.ReactElement => {
           </div>
         </HeroBanner>
 
-        {/* Tournament Types Section */}
         <div className="max-w-[1280px] mx-auto px-4 pt-16 md:pt-24 pb-8 md:pb-12">
           <h2 className="text-3xl font-bold text-center mb-16">
             Find a tournament for you
           </h2>
 
-          {/* About tournaments text */}
           <div className="text-center mb-12">
             <p className="max-w-[1080px] mx-auto font-normal text-[#6f6f6f] text-base md:text-lg leading-6 md:leading-7">
-              Our tournaments are thoughtfully organized to accommodate a
-              variety of skill levels, including Competitive, Advanced, and
-              Intermediate divisions, ensuring there&apos;s a place for every
-              team to compete. With events sometimes scheduled across multiple
-              locations, we aim to maximize participation and provide teams with
-              greater access to play.
+              {content.intro}
             </p>
           </div>
 
-          {/* Tournament Features Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-            <div className="text-center">
-              <div className="bg-gray-50 p-8 rounded-lg">
-                <Trophy className="w-12 h-12 text-[#B20000] mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-[#6F6F6F] mb-3">
-                  Multiple Skill Levels
-                </h3>
-                <p className="text-[#6F6F6F]">
-                  Competitive, Advanced, and Intermediate divisions
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-gray-50 p-8 rounded-lg">
-                <Calendar className="w-12 h-12 text-[#B20000] mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-[#6F6F6F] mb-3">
-                  Saturday Events
-                </h3>
-                <p className="text-[#6F6F6F]">
-                  All tournaments are scheduled on Saturdays
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-gray-50 p-8 rounded-lg">
-                <Users className="w-12 h-12 text-[#B20000] mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-[#6F6F6F] mb-3">
-                  Multiple Locations
-                </h3>
-                <p className="text-[#6F6F6F]">
-                  Events across different venues to maximize participation
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-gray-50 p-8 rounded-lg">
-                <Clock className="w-12 h-12 text-[#B20000] mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-[#6F6F6F] mb-3">
-                  Competitive Balance
-                </h3>
-                <p className="text-[#6F6F6F]">
-                  Neck and neck competition throughout the day
-                </p>
-              </div>
-            </div>
+            {content.features.map((feature) => {
+              const Icon = featureIconComponents[feature.icon] ?? Trophy;
+              return (
+                <div key={feature.title} className="text-center">
+                  <div className="bg-gray-50 p-8 rounded-lg h-full">
+                    <Icon className="w-12 h-12 text-[#B20000] mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-[#6F6F6F] mb-3">
+                      {feature.title}
+                    </h3>
+                    <p className="text-[#6F6F6F]">{feature.description}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* About our tournaments section with 2 columns */}
-        <div className="max-w-[1280px] mx-auto px-4 mb-16 md:mb-24">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28">
-            {/* First column with image */}
-            <div className="flex items-center justify-center">
+        <div className="max-w-[1280px] mx-auto px-4 pb-16 md:pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <div>
               <img
-                src="/AdobeStock_564734754.jpeg"
-                alt="Tournament Players"
-                className="rounded-lg w-full max-w-[400px] h-[400px] object-cover shadow-lg"
+                className="w-full rounded-2xl"
+                alt={content.about.imageAlt}
+                src={content.about.image}
               />
             </div>
-
-            {/* Second column with text and button */}
-            <div className="flex flex-col justify-center">
-              <h3 className="text-2xl md:text-3xl font-bold text-[#6F6F6F] mb-6">
-                About our tournaments
+            <div>
+              <h3 className="text-3xl font-bold text-[#6F6F6F] mb-6">
+                {content.about.title}
               </h3>
-              <ul className="space-y-3 text-[#6F6F6F] text-base md:text-lg mb-8">
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>
-                    Our tournaments offer Competitive, Advanced, and
-                    Intermediate skill levels
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>Tournaments are played on Saturdays</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>
-                    Sign-ups for tournaments are limited to the size of the
-                    location
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>
-                    Some tournaments take place over two different locations,
-                    formatted by division
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>
-                    Teams can expect a tournament that&apos;s neck and neck,
-                    ensuring competitive play throughout the day
-                  </span>
-                </li>
+              {content.about.paragraphs.map((paragraph, index) => (
+                <p key={index} className="text-[#6F6F6F] text-base md:text-lg leading-6 md:leading-7 mb-4">
+                  {paragraph}
+                </p>
+              ))}
+              <ul className="list-disc list-inside text-[#6F6F6F] mb-6 space-y-2">
+                {content.about.bullets.map((bullet, index) => (
+                  <li key={index}>{bullet}</li>
+                ))}
               </ul>
-              <Link to="/leagues?type=Tournament" className="self-start">
-                <Button
-                  variant="outline"
-                  className="border-[#B20000] text-[#B20000] hover:bg-[#B20000] hover:text-white rounded-[10px] px-6 py-3"
-                >
-                  View Tournaments
+              <Link to={content.about.buttonLink} className="inline-block">
+                <Button className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-[25px] py-2.5">
+                  {content.about.buttonText}
                 </Button>
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Diabetes Canada partnership section */}
-        <div className="bg-white pt-8 pb-24">
-          <div className="max-w-[1280px] mx-auto px-4">
-            <div className="flex justify-center">
-              <div className="flex flex-col md:flex-row items-center max-w-[800px] gap-6">
-                <img
-                  className="w-[120px] md:w-[153px] h-auto md:h-[53px] object-contain"
-                  alt="Diabetes Canada logo"
-                  src="/diabetes-canada-logo-svg-1.png"
-                />
-                <div className="text-base md:text-lg text-center md:text-left">
-                  <span className="text-[#6f6f6f] leading-6 md:leading-7">
-                    Proudly partnering with Diabetes Canada to promote healthier
-                    lifestyles through sport and community wellness.
-                  </span>
-                  <Link
-                    to="/about-us#diabetes-canada-section"
-                    className="text-base md:text-lg text-[#b20000] underline ml-2 font-bold"
-                  >
-                    Learn more
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Ready to Play CTA */}
-        <div
-          className="w-full py-12 md:py-16"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(178,0,0,1) 0%, rgba(120,18,18,1) 100%)",
-          }}
-        >
-          <div className="max-w-[1280px] mx-auto px-4 text-center text-white">
-            <h2 className="text-3xl font-bold mb-4">Ready to compete?</h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Whether you&apos;re striving for high-level competition or simply
-              looking to enjoy a well-run event with friends, our tournaments
-              offer a dynamic and inclusive experience for all.
+        <div className="bg-[#FDF4F4] py-16">
+          <div className="max-w-[1280px] mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold text-[#6F6F6F] mb-4">
+              {content.callout.title}
+            </h2>
+            <p className="text-[#6F6F6F] text-base md:text-lg leading-6 md:leading-7 mb-6 max-w-3xl mx-auto">
+              {content.callout.description}
             </p>
-            <Link to="/leagues?type=Tournament">
-              <Button className="bg-white hover:bg-[#0d0d0d42] text-[#b20000] hover:text-white rounded-[10px] border border-white px-[15px] md:px-[25px] py-2.5">
-                <span className="text-base md:text-lg text-[#b20000] hover:text-white">
-                  View Tournaments
-                </span>
+            <Link to={content.callout.buttonLink}>
+              <Button className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-[25px] py-2.5">
+                {content.callout.buttonText}
               </Button>
             </Link>
           </div>
@@ -224,3 +249,4 @@ export const TournamentsPage = (): React.ReactElement => {
   );
 };
 
+export type { FeatureIcon };
