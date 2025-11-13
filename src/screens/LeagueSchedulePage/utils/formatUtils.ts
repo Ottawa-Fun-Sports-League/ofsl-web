@@ -91,7 +91,6 @@ export const GAME_FORMATS: readonly GameFormat[] = [
 // Formats temporarily disabled from selection across the app
 export const DISABLED_FORMATS: readonly GameFormatId[] = [
   '2-teams-best-of-3',
-  '3-teams-elite-9-sets',
 ] as const;
 
 export function isFormatDisabled(formatId: string): boolean {

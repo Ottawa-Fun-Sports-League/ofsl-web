@@ -58,11 +58,11 @@ export function AddPlayoffWeeksModal({
         throw new Error('League must have start and end dates before adding playoff weeks');
       }
 
-      // Calculate regular season weeks
+      // Calculate regular season weeks (inclusive of the end week)
       const start = new Date(leagueData.start_date + 'T00:00:00');
       const end = new Date(leagueData.end_date + 'T00:00:00');
       const diffTime = Math.abs(end.getTime() - start.getTime());
-      const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+      const regularSeasonWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
 
       // Update league with playoff weeks count
       const { error: updateError } = await supabase
@@ -176,6 +176,16 @@ export function AddPlayoffWeeksModal({
           console.error('Failed to update playoff flags:', updateError);
         }
 
+        // Ensure no regular-season weeks are marked as playoffs (cleanup from prior off-by-one)
+        const { error: clearErr } = await supabase
+          .from('weekly_schedules')
+          .update({ is_playoff: false })
+          .eq('league_id', parseInt(leagueId))
+          .lte('week_number', regularSeasonWeeks);
+        if (clearErr) {
+          console.warn('Failed to clear playoff flags on regular-season weeks:', clearErr);
+        }
+
       } else if (playoffWeeks < currentPlayoffWeeks) {
         // DECREASING playoff weeks - only remove the excess weeks
         
@@ -187,6 +197,16 @@ export function AddPlayoffWeeksModal({
 
         if (deleteError && !deleteError.message.includes('No rows found')) {
           throw new Error(`Failed to remove excess playoff weeks: ${deleteError.message}`);
+        }
+
+        // Also clear any leftover playoff flags on regular-season weeks
+        const { error: clearErr } = await supabase
+          .from('weekly_schedules')
+          .update({ is_playoff: false })
+          .eq('league_id', parseInt(leagueId))
+          .lte('week_number', regularSeasonWeeks);
+        if (clearErr) {
+          console.warn('Failed to clear playoff flags on regular-season weeks:', clearErr);
         }
       }
       // If playoffWeeks === currentPlayoffWeeks, do nothing (no change)

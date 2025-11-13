@@ -61,7 +61,8 @@ export function calculateCurrentWeekToDisplay(
   if (leagueEndDate) {
     const endDate = new Date(leagueEndDate + 'T00:00:00');
     const totalDiffTime = endDate.getTime() - startDate.getTime();
-    const totalWeeks = Math.ceil(totalDiffTime / (1000 * 60 * 60 * 24 * 7));
+    // Inclusive week count: include the start week when end lands on a later matching week
+    const totalWeeks = Math.floor(totalDiffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
     
     // Don't go beyond the total weeks
     if (currentWeek > totalWeeks) {

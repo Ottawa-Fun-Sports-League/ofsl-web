@@ -253,7 +253,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
       const start = new Date(leagueInfo.start_date + "T00:00:00");
       const end = new Date(leagueInfo.end_date + "T00:00:00");
       const diffTime = Math.abs(end.getTime() - start.getTime());
-      const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+      // Inclusive: include the start week when end lands on a later matching week
+      const regularSeasonWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
       const maxWeeks = regularSeasonWeeks + (leagueInfo.playoff_weeks || 0);
 
       // Public restriction: allow any past week (back to week 1),
@@ -282,7 +283,8 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
     const start = new Date(leagueInfo.start_date + "T00:00:00");
     const end = new Date(leagueInfo.end_date + "T00:00:00");
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+    // Inclusive: include the start week when end lands on a later matching week
+    const regularSeasonWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
 
     return weekNumber > regularSeasonWeeks;
   };

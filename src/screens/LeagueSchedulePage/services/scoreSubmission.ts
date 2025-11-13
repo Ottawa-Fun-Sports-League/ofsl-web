@@ -852,17 +852,26 @@ export async function submitThreeTeamEliteSixScoresAndMove(params: SubmitThreeTe
   await supabase.rpc('recalculate_standings_positions', { p_league_id: leagueId });
   await applyEliteThreeTeamMovementAfterStandings({ leagueId, weekNumber, tierNumber, isTopTier, isBottomTier: pointsTierOffset === 0, teamNames, sortedKeys: sorted as any });
 
-  // Safety fallback for elite 3-team respecting odd/even cross-tier rules
+  // Safety fallback for elite 3-team respecting movement-week cross-tier rules
   try {
     const destWeek = weekNumber + 1;
-    const isOdd = (weekNumber % 2) === 1;
+    // Determine if this week is marked as a movement week; default to intra-tier if not
+    let isMovementWeek = false;
+    try {
+      const { data: mwRows } = await supabase
+        .from('weekly_schedules')
+        .select('movement_week')
+        .eq('league_id', leagueId)
+        .eq('week_number', weekNumber);
+      isMovementWeek = Array.isArray(mwRows) && (mwRows as any[]).some((r:any)=>!!r.movement_week);
+    } catch {/* ignore */}
     const winner = sorted[0] as 'A'|'B'|'C';
     const neutral = sorted[1] as 'A'|'B'|'C';
     const loser = sorted[2] as 'A'|'B'|'C';
 
     type Assignment = { tier: number; pos: 'A'|'B'|'C'; name: string | null };
     const assignments: Assignment[] = [];
-    if (isOdd) {
+    if (!isMovementWeek) {
       assignments.push({ tier: tierNumber, pos: 'A', name: teamNames[winner] || null });
       assignments.push({ tier: tierNumber, pos: 'B', name: teamNames[neutral] || null });
       assignments.push({ tier: tierNumber, pos: 'C', name: teamNames[loser] || null });
@@ -877,7 +886,7 @@ export async function submitThreeTeamEliteSixScoresAndMove(params: SubmitThreeTe
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const env: any = (import.meta as any)?.env;
       if (env?.VITE_DEBUG_MOVEMENT) {
-        console.info('[Elite3-6 fallback]', `W${weekNumber}->W${destWeek} T${tierNumber}`, assignments);
+        console.info('[Elite3-6 fallback]', `W${weekNumber}->W${destWeek} T${tierNumber}`, { isMovementWeek, assignments });
       }
     } catch {/* ignore */}
 
@@ -1090,17 +1099,25 @@ export async function submitThreeTeamEliteNineScoresAndMove(params: SubmitThreeT
   await supabase.rpc('recalculate_standings_positions', { p_league_id: leagueId });
   await applyEliteThreeTeamMovementAfterStandings({ leagueId, weekNumber, tierNumber, isTopTier, isBottomTier: pointsTierOffset === 0, teamNames, sortedKeys: sorted as any });
 
-  // Safety fallback for elite 3-team (9 sets) respecting odd/even cross-tier rules
+  // Safety fallback for elite 3-team (9 sets) respecting movement-week cross-tier rules
   try {
     const destWeek = weekNumber + 1;
-    const isOdd = (weekNumber % 2) === 1;
+    let isMovementWeek = false;
+    try {
+      const { data: mwRows } = await supabase
+        .from('weekly_schedules')
+        .select('movement_week')
+        .eq('league_id', leagueId)
+        .eq('week_number', weekNumber);
+      isMovementWeek = Array.isArray(mwRows) && (mwRows as any[]).some((r:any)=>!!r.movement_week);
+    } catch {/* ignore */}
     const winner = sorted[0] as 'A'|'B'|'C';
     const neutral = sorted[1] as 'A'|'B'|'C';
     const loser = sorted[2] as 'A'|'B'|'C';
 
     type Assignment = { tier: number; pos: 'A'|'B'|'C'; name: string | null };
     const assignments: Assignment[] = [];
-    if (isOdd) {
+    if (!isMovementWeek) {
       assignments.push({ tier: tierNumber, pos: 'A', name: teamNames[winner] || null });
       assignments.push({ tier: tierNumber, pos: 'B', name: teamNames[neutral] || null });
       assignments.push({ tier: tierNumber, pos: 'C', name: teamNames[loser] || null });
@@ -1114,7 +1131,7 @@ export async function submitThreeTeamEliteNineScoresAndMove(params: SubmitThreeT
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const env: any = (import.meta as any)?.env;
       if (env?.VITE_DEBUG_MOVEMENT) {
-        console.info('[Elite3-9 fallback]', `W${weekNumber}->W${destWeek} T${tierNumber}`, assignments);
+        console.info('[Elite3-9 fallback]', `W${weekNumber}->W${destWeek} T${tierNumber}`, { isMovementWeek, assignments });
       }
     } catch {/* ignore */}
 
