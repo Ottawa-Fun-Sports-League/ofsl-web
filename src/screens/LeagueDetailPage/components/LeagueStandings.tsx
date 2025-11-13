@@ -1,6 +1,6 @@
 import { Card, CardContent } from "../../../components/ui/card";
 import { useLeagueStandings } from "../hooks/useLeagueStandings";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { computeInitialSeedRankingMap, computePrevWeekNameRanksFromNextWeekSchedule } from "../../LeagueSchedulePage/utils/rankingUtils";
 import { useEliteStandings } from "../../../standings/useEliteStandings";
@@ -19,9 +19,32 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const [standingsResetWeek, setStandingsResetWeek] = useState<number>(1);
   const [noGameWeeks, setNoGameWeeks] = useState<Set<number>>(new Set());
   const [movementWeeks, setMovementWeeks] = useState<Set<number>>(new Set());
+  const [playoffWeeks, setPlayoffWeeks] = useState<Set<number>>(new Set());
   // Regular formats only: public divider controls
   const [topTierLineEnabled, setTopTierLineEnabled] = useState(false);
   const [topTierLineAfter, setTopTierLineAfter] = useState<number>(0);
+
+  // Horizontal scroll sync (elite table)
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const bottomScrollRef = useRef<HTMLDivElement | null>(null);
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const [scrollWidth, setScrollWidth] = useState<number>(0);
+  useEffect(() => {
+    const update = () => {
+      const w = tableRef.current?.scrollWidth || 0;
+      setScrollWidth(w);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (tableRef.current) ro.observe(tableRef.current);
+    window.addEventListener('resize', update);
+    return () => { try { ro.disconnect(); } catch {} window.removeEventListener('resize', update); };
+  }, [regularSeasonWeeks, weeklyRanks]);
+  const syncScroll = (from: 'top' | 'bot') => {
+    const a = from === 'top' ? topScrollRef.current : bottomScrollRef.current;
+    const b = from === 'top' ? bottomScrollRef.current : topScrollRef.current;
+    if (a && b && Math.abs(b.scrollLeft - a.scrollLeft) > 1) b.scrollLeft = a.scrollLeft;
+  };
 
   // Shared elite standings (single source of truth for elite formats)
   const elite = useEliteStandings(leagueId);
@@ -33,10 +56,52 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
         setSeedRanks(elite.seedRanksByTeamId);
       }
       if (elite.maxWeek && elite.maxWeek > 0) {
-        setRegularSeasonWeeks(elite.maxWeek);
+        // Never shrink columns: keep the greater of current and elite-reported max
+        setRegularSeasonWeeks(prev => Math.max(prev, elite.maxWeek));
       }
     }
   }, [elite.isElite, elite.seedRanksByTeamId, elite.maxWeek]);
+
+  // Ensure elite standings show columns up to inclusive end week
+  useEffect(() => {
+    const adjustEliteWeeks = async () => {
+      if (!leagueId) return;
+      if (!elite.isElite) return;
+      try {
+        const lid = parseInt(leagueId);
+        const { data: leagueRow } = await supabase
+          .from('leagues')
+          .select('start_date,end_date,playoff_weeks')
+          .eq('id', lid)
+          .maybeSingle();
+        const startS = (leagueRow as any)?.start_date as string | undefined;
+        const endS = (leagueRow as any)?.end_date as string | undefined;
+        const playoffWeeks = Number((leagueRow as any)?.playoff_weeks ?? 0) || 0;
+        if (startS && endS) {
+          const start = new Date(startS + 'T00:00:00');
+          const end = new Date(endS + 'T00:00:00');
+          const diffTime = Math.abs(end.getTime() - start.getTime());
+          const inclusiveWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
+          // Also consider any weeks actually present in weekly_schedules (e.g., playoff weeks added beyond end_date)
+          let rowMax = 0;
+          try {
+            const { data: weeks } = await supabase
+              .from('weekly_schedules')
+              .select('week_number')
+              .eq('league_id', lid);
+            rowMax = Array.isArray(weeks) && weeks.length > 0
+              ? (weeks as any[]).reduce((m, r) => Math.max(m, Number((r as any).week_number || 0)), 0)
+              : 0;
+          } catch { /* ignore */ }
+          const target = Math.max(inclusiveWeeks + playoffWeeks, elite.maxWeek || 0, rowMax);
+          if (Number.isFinite(target) && target > 0) {
+            setRegularSeasonWeeks(target);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    adjustEliteWeeks();
+  }, [leagueId, elite.isElite, elite.maxWeek]);
 
   // Legacy weekly backfill is intentionally disabled (admin parity handled elsewhere)
   useEffect(() => {
@@ -44,37 +109,67 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     if (!elite.isElite) return;
   }, [leagueId, elite.isElite]);
 
-  // Load weeks marked as no-games and movement-week for elite formats (to style columns)
+  // Load weeks marked as no-games, movement-week, and playoffs for elite formats (to style columns)
   useEffect(() => {
     const run = async () => {
       if (!leagueId) return;
       if (!elite.isElite) return;
       const lid = parseInt(leagueId);
       try {
-        const { data } = await supabase
+        const [{ data }, { data: leagueRow }] = await Promise.all([
+          supabase
           .from('weekly_schedules')
-          .select('week_number, no_games, movement_week')
-          .eq('league_id', lid);
-        const weeks = new Map<number, { total: number; noGames: number; anyMovement: boolean }>();
+          .select('week_number, no_games, movement_week, is_playoff')
+          .eq('league_id', lid),
+          supabase
+            .from('leagues')
+            .select('start_date,end_date,playoff_weeks')
+            .eq('id', lid)
+            .maybeSingle(),
+        ]);
+        const weeks = new Map<number, { total: number; noGames: number; anyMovement: boolean; anyPlayoff: boolean }>();
         (data || []).forEach((row: any) => {
           const w = Number(row.week_number || 0);
-          if (!weeks.has(w)) weeks.set(w, { total: 0, noGames: 0, anyMovement: false });
+          if (!weeks.has(w)) weeks.set(w, { total: 0, noGames: 0, anyMovement: false, anyPlayoff: false });
           const agg = weeks.get(w)!;
           agg.total += 1;
           if (row.no_games) agg.noGames += 1;
           if (row.movement_week) agg.anyMovement = true;
+          if (row.is_playoff) agg.anyPlayoff = true;
         });
         const noSet = new Set<number>();
         const mvSet = new Set<number>();
+        const poSetFromDb = new Set<number>();
         weeks.forEach((agg, w) => {
           if (agg.total > 0 && agg.noGames === agg.total) noSet.add(w);
           if (agg.anyMovement) mvSet.add(w);
+          if (agg.anyPlayoff) poSetFromDb.add(w);
         });
+        // Compute playoff range from league start/end + playoff_weeks to avoid off-by-one
+        const poSet = new Set<number>();
+        try {
+          const startS = (leagueRow as any)?.start_date as string | undefined;
+          const endS = (leagueRow as any)?.end_date as string | undefined;
+          const pWeeks = Number((leagueRow as any)?.playoff_weeks ?? 0) || 0;
+          if (startS && endS && pWeeks > 0) {
+            const start = new Date(startS + 'T00:00:00');
+            const end = new Date(endS + 'T00:00:00');
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const inclusiveWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
+            const startWeek = inclusiveWeeks + 1;
+            const endWeek = inclusiveWeeks + pWeeks;
+            for (let w = startWeek; w <= endWeek; w++) poSet.add(w);
+            // Also include any DB-flagged playoff weeks, but never weeks within the regular season
+            poSetFromDb.forEach((w) => { if (w >= startWeek) poSet.add(w); });
+          }
+        } catch { /* ignore */ }
         setNoGameWeeks(noSet);
         setMovementWeeks(mvSet);
+        setPlayoffWeeks(poSet);
       } catch {
         setNoGameWeeks(new Set());
         setMovementWeeks(new Set());
+        setPlayoffWeeks(new Set());
       }
     };
     run();
@@ -269,7 +364,8 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
 
         if (!weeksErr && Array.isArray(weekRows) && weekRows.length > 0) {
           const maxWeek = weekRows.reduce((max, r: any) => Math.max(max, r.week_number || 0), 0);
-          setRegularSeasonWeeks(maxWeek);
+          // Do not shrink columns; only ever increase to reflect new weeks (incl. playoffs)
+          setRegularSeasonWeeks(prev => Math.max(prev, maxWeek));
           try {
             const { data: nextWeekTiers } = await supabase
               .from('weekly_schedules')
@@ -438,15 +534,48 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       {/* Standings table */}
       <Card className="shadow-md overflow-hidden rounded-lg">
         <CardContent className="p-0 overflow-visible">
-          <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch', overflowX: 'visible' }}>
+          {(() => {
+            return (
+              <>
+                <div
+                  ref={topScrollRef}
+                  className="overflow-x-auto border-b"
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' }}
+                  onScroll={() => syncScroll('top')}
+                >
+                  <div style={{ width: scrollWidth, height: 1 }} />
+                </div>
+                <div
+                  ref={bottomScrollRef}
+                  className="overflow-x-auto"
+                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' }}
+                  onScroll={() => syncScroll('bot')}
+                >
+                  {/* table rendered below with ref to measure width */}
+          
             {isEliteFormat ? (
-              <table className="w-full min-w-max table-auto">
+              <table ref={tableRef} className="w-full min-w-max table-auto">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg" rowSpan={2}>
-                      Ranking
+                    <th
+                      className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg sticky left-0 z-20 bg-gray-50 w-16"
+                      rowSpan={2}
+                      style={{ left: 0 }}
+                    >
+                      Rank
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]" rowSpan={2}>
+                    <th
+                      className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] sticky z-20 bg-gray-50 w-20"
+                      rowSpan={2}
+                      style={{ left: 64 }}
+                    >
+                      Avg.
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] sticky z-20 bg-gray-50 w-64"
+                      rowSpan={2}
+                      style={{ left: 144 }}
+                    >
                       Team
                     </th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]" colSpan={weeklyColumns.length}>
@@ -455,11 +584,17 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                     
                   </tr>
                   <tr>
-                    {weeklyColumns.map(week => (
-                      <th key={`week-${week}`} className={`px-2 py-2 text-center text-sm font-medium ${week < standingsResetWeek || noGameWeeks.has(week) ? 'text-gray-300' : 'text-[#6F6F6F]'} ${movementWeeks.has(week) ? 'bg-yellow-50' : ''}`}>
-                        {week}
-                      </th>
-                    ))}
+                    {weeklyColumns.map(week => {
+                      const bg = playoffWeeks.has(week)
+                        ? 'bg-red-50'
+                        : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
+                      const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
+                      return (
+                        <th key={`week-${week}`} className={`px-2 py-2 text-center text-sm font-medium ${text} ${bg}`}>
+                          {week}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -480,17 +615,37 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                       <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""} ${
                         topTierLineEnabled && index === Number(topTierLineAfter) ? 'border-t-2 border-[#B20000]' : ''
                       }`}>
-                        <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{avg ? avg.toFixed(2) : (standingsResetWeek <= 1 ? (seedRanks[team.id] ?? '-') : '-')}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
+                        <td
+                          className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] sticky left-0 z-10 bg-inherit w-16 ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}
+                          style={{ left: 0 }}
+                        >
+                          {index + 1}
+                        </td>
+                        <td
+                          className="px-4 py-3 text-sm font-medium text-[#6F6F6F] sticky z-10 bg-inherit w-20"
+                          style={{ left: 64 }}
+                        >
+                          {typeof avg === 'number' ? avg.toFixed(2) : '-'}
+                        </td>
+                        <td
+                          className="px-4 py-3 text-sm font-semibold text-[#6F6F6F] sticky z-10 bg-inherit w-64"
+                          style={{ left: 144 }}
+                        >
+                          {team.name}
+                        </td>
                         {weeklyColumns.map(week => {
-                          const val = weeklyRanks[team.id]?.[week];
-                          const show = weeksWithData.has(week);
-                          return (
-                            <td key={`week-${team.id}-${week}`} className={`px-4 py-3 text-center text-sm ${week < standingsResetWeek || noGameWeeks.has(week) ? 'text-gray-300' : 'text-[#6F6F6F]'} ${movementWeeks.has(week) ? 'bg-yellow-50' : ''}`}>
-                              {show ? (typeof val === 'number' ? val : '-') : '-'}
-                            </td>
-                          );
-                        })}
+                           const val = weeklyRanks[team.id]?.[week];
+                           const show = weeksWithData.has(week);
+                           const bg = playoffWeeks.has(week)
+                             ? 'bg-red-50'
+                             : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
+                           const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
+                           return (
+                             <td key={`week-${team.id}-${week}`} className={`px-4 py-3 text-center text-sm ${text} ${bg}`}>
+                               {show ? (typeof val === 'number' ? val : '-') : '-'}
+                             </td>
+                           );
+                         })}
                         
                       </tr>
                       {topTierLineEnabled && (index + 1) === Number(topTierLineAfter) && (
@@ -527,7 +682,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                 </colgroup>
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">#</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">Rank</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F]">Team</th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Wins</th>
                     <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]">Losses</th>
@@ -574,6 +729,9 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
               </table>
             )}
           </div>
+            </>
+          );
+        })()}
         </CardContent>
       </Card>
     </div>
