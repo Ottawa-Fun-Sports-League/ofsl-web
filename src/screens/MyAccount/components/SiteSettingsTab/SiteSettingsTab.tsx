@@ -18,6 +18,7 @@ import { DEFAULT_PICKLEBALL_CONTENT } from "../../../PickleballPage/PickleballPa
 import { HomeHeroCarouselForm } from "./components/HomeHeroCarouselForm";
 import { SkillsAndDrillsContentForm } from "./components/SkillsAndDrillsContentForm";
 import { TournamentsContentForm } from "./components/TournamentsContentForm";
+import { AboutUsContentForm } from "./components/AboutUsContentForm";
 
 interface FormState {
   message: string;
@@ -47,6 +48,7 @@ export function SiteSettingsTab() {
     | "volleyball"
     | "skills"
     | "tournaments"
+    | "about"
   >("announcement");
 
   useEffect(() => {
@@ -282,6 +284,8 @@ export function SiteSettingsTab() {
         return <SkillsAndDrillsContentForm />;
       case "tournaments":
         return <TournamentsContentForm />;
+      case "about":
+        return <AboutUsContentForm />;
       default:
         return null;
     }
@@ -299,6 +303,7 @@ export function SiteSettingsTab() {
     { id: "pickleball", label: "Pickleball" },
     { id: "skills", label: "Skills & Drills" },
     { id: "tournaments", label: "Tournaments" },
+    { id: "about", label: "About Us" },
   ];
 
   return (
@@ -343,6 +348,8 @@ export function SiteSettingsTab() {
                     return "site-settings-form-skills";
                   case "tournaments":
                     return "site-settings-form-tournaments";
+                  case "about":
+                    return "site-settings-form-about";
                   default:
                     return null;
                 }
