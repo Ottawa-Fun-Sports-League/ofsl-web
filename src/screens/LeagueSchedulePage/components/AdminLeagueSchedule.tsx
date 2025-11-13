@@ -149,6 +149,16 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
   const [savingMovementWeek, setSavingMovementWeek] = useState(false);
   const [savingScheduleVisibility, setSavingScheduleVisibility] = useState(false);
   
+  // Whether this week uses any Elite formats (controls Movement Week toggle visibility)
+  const isEliteWeek = (() => {
+    const eliteSet = new Set<string>([
+      '2-teams-elite',
+      '3-teams-elite-6-sets',
+      '3-teams-elite-9-sets',
+    ]);
+    return weeklyTiers.some(t => eliteSet.has(String(t.format || '').toLowerCase()));
+  })();
+  
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
@@ -777,7 +787,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
       const start = new Date(leagueInfo.start_date + "T00:00:00");
       const end = new Date(leagueInfo.end_date + "T00:00:00");
       const diffTime = Math.abs(end.getTime() - start.getTime());
-      const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+      // Inclusive: include the start week when end lands on a later matching week
+      const regularSeasonWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
       const maxWeeks = regularSeasonWeeks + leagueInfo.playoff_weeks;
       return weekNumber <= maxWeeks;
     }
@@ -791,7 +802,8 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
     const start = new Date(leagueInfo.start_date + "T00:00:00");
     const end = new Date(leagueInfo.end_date + "T00:00:00");
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    const regularSeasonWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+    // Inclusive: include the start week when end lands on a later matching week
+    const regularSeasonWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7)) + 1;
 
     return weekNumber > regularSeasonWeeks;
   };
@@ -1683,7 +1695,7 @@ export function AdminLeagueSchedule({ leagueId, leagueName }: AdminLeagueSchedul
             {savingNoGames && <span className="text-xs text-gray-500">(Saving...)</span>}
           </label>
 
-            {isEditScheduleMode && (
+            {isEditScheduleMode && isEliteWeek && (
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"

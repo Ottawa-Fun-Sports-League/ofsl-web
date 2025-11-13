@@ -895,17 +895,27 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
       else if (prevIsEliteTwo) { partnerTier = tierNumber - 1; isB = true; }
     }
     const isOdd = (currentWeek % 2) === 1;
+    // Determine if this is a movement week (cross-pair shuffle); otherwise default to within-pair
+    let isMovementWeek = false;
+    try {
+      const { data: mwRows } = await supabase
+        .from('weekly_schedules')
+        .select('movement_week')
+        .eq('league_id', leagueId)
+        .eq('week_number', currentWeek);
+      isMovementWeek = Array.isArray(mwRows) && mwRows.some((r: any) => !!(r as any).movement_week);
+    } catch { /* ignore */ }
 
     // Optional debug
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const env: any = (import.meta as any)?.env;
       if (env?.VITE_DEBUG_MOVEMENT) {
-        console.info('[Elite2 detect]', { currentWeek, tierNumber, currentFormat, aboveFormat, belowFormat, isA, isB, isOdd, partnerTier });
+        console.info('[Elite2 detect]', { currentWeek, tierNumber, currentFormat, aboveFormat, belowFormat, isA, isB, isOdd, isMovementWeek, partnerTier });
       }
     } catch {/* ignore */}
 
-    if (isOdd) {
+    if (!isMovementWeek) {
       // Within-pair shuffle (odd weeks)
       if (isA) {
         if (teamNames[winnerKey]) assignments.push({ name: teamNames[winnerKey], targetTier: tierNumber, targetPos: 'A' });
@@ -924,7 +934,7 @@ export async function applyTwoTeamTierMovementNextWeek(params: {
         if (teamNames[loserKey]) assignments.push({ name: teamNames[loserKey], targetTier: isBottomTier ? tierNumber : tierNumber + 1, targetPos: isBottomTier ? 'B' : lowest });
       }
     } else {
-      // Cross-pair shuffle (even weeks)
+      // Cross-pair shuffle (movement week)
       if (isA) {
         // Winner 2A -> up to previous tier (which is partner of above pair) position B
         if (teamNames[winnerKey]) {
@@ -1133,8 +1143,16 @@ export async function applyEliteThreeTeamMovementNextWeek(params: {
   if (!leagueId || !nextWeek || !tierNumber) return;
 
   const destWeek = await getNextPlayableWeek(leagueId, nextWeek);
-
-  const isOdd = (currentWeek % 2) === 1;
+  // Movement weeks are explicitly flagged on the schedule; default behavior is intra-tier
+  let isMovementWeek = false;
+  try {
+    const { data: mwRows } = await supabase
+      .from('weekly_schedules')
+      .select('movement_week')
+      .eq('league_id', leagueId)
+      .eq('week_number', currentWeek);
+    isMovementWeek = Array.isArray(mwRows) && mwRows.some((r: any) => !!(r as any).movement_week);
+  } catch { /* ignore */ }
   const winner = sortedKeys[0];
   const neutral = sortedKeys[1];
   const loser = sortedKeys[2];
@@ -1142,7 +1160,7 @@ export async function applyEliteThreeTeamMovementNextWeek(params: {
   type Pos = TeamPositionId;
   const assignments: Array<{ name: string; targetTier: number; targetPos: Pos }> = [];
 
-  if (isOdd) {
+  if (!isMovementWeek) {
     if (teamNames[winner]) assignments.push({ name: teamNames[winner], targetTier: tierNumber, targetPos: 'A' });
     if (teamNames[neutral]) assignments.push({ name: teamNames[neutral], targetTier: tierNumber, targetPos: 'B' });
     if (teamNames[loser]) assignments.push({ name: teamNames[loser], targetTier: tierNumber, targetPos: 'C' });
