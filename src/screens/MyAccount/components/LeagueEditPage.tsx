@@ -25,6 +25,12 @@ import { useLeagueActions } from "./LeaguesTab/hooks/useLeagueActions";
 import { GymMultiSelect } from "./LeaguesTab/components/GymMultiSelect";
 import { DraftPublishControls } from "../../../components/leagues/DraftPublishControls";
 import { cn } from "../../../lib/utils";
+import {
+  PAYMENT_WINDOW_OPTIONS,
+  formatPaymentWindowDuration,
+  formatPaymentWindowOptionLabel,
+  usesRelativePaymentWindow,
+} from "../../../lib/paymentWindows";
 
 // Using imported League type from lib/leagues.ts
 
@@ -70,7 +76,7 @@ export function LeagueEditPage() {
   const [editLeague, setEditLeague] = useState<{
     name: string;
     description: string;
-    league_type: "regular_season" | "tournament" | "skills_drills" | null;
+    league_type: "regular_season" | "tournament" | "skills_drills" | "single_session" | null;
     gender: "Mixed" | "Female" | "Male" | null;
     location: string;
     sport_id: number | null;
@@ -86,7 +92,8 @@ export function LeagueEditPage() {
     max_teams: number;
     gym_ids: number[];
     hide_day?: boolean;
-    payment_due_date: string;
+    payment_due_date: string | null;
+    payment_window_hours: number | null;
     deposit_amount: number | null;
     deposit_date: string;
     team_registration: boolean;
@@ -111,6 +118,7 @@ export function LeagueEditPage() {
     max_teams: 20,
     gym_ids: [],
     payment_due_date: "2025-08-21",
+    payment_window_hours: null,
     deposit_amount: null,
     deposit_date: "",
     team_registration: true,
@@ -122,6 +130,27 @@ export function LeagueEditPage() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
   );
+  const usesRelativePayment = usesRelativePaymentWindow(editLeague.league_type);
+
+  const handleLeagueTypeChange = (
+    value: "regular_season" | "tournament" | "skills_drills" | "single_session",
+  ) => {
+    setEditLeague((prev) => {
+      const nextIsRelative = usesRelativePaymentWindow(value);
+      return {
+        ...prev,
+        league_type: value,
+        payment_window_hours: nextIsRelative
+          ? prev.payment_window_hours ?? PAYMENT_WINDOW_OPTIONS[0]
+          : null,
+        payment_due_date: nextIsRelative ? null : (prev.payment_due_date ?? ""),
+        early_bird_cost: nextIsRelative ? null : prev.early_bird_cost,
+        early_bird_due_date: nextIsRelative ? null : prev.early_bird_due_date,
+        deposit_amount: nextIsRelative ? null : prev.deposit_amount,
+        deposit_date: nextIsRelative ? "" : prev.deposit_date,
+      };
+    });
+  };
 
   const { handleCopyLeague, saving: copyingSaving } = useLeagueActions({
     loadData: async () => {}, // We'll navigate away after copy, so no need to reload
@@ -224,6 +253,7 @@ export function LeagueEditPage() {
           hide_day: leagueData.hide_day || false,
           gym_ids: leagueData.gym_ids || [],
           payment_due_date: leagueData.payment_due_date || "2025-08-21",
+          payment_window_hours: leagueData.payment_window_hours ?? null,
           deposit_amount: leagueData.deposit_amount,
           deposit_date: leagueData.deposit_date || "",
           team_registration: leagueData.team_registration !== false,
@@ -270,7 +300,23 @@ export function LeagueEditPage() {
         ? parseInt(editLeague.day_of_week.toString())
         : null;
 
+    const paymentDueDateValue = usesRelativePayment
+      ? null
+      : editLeague.payment_due_date || null;
+    const paymentWindowHoursValue = usesRelativePayment
+      ? editLeague.payment_window_hours
+      : null;
+    const earlyBirdCostValue = usesRelativePayment ? null : editLeague.early_bird_cost ?? null;
+    const earlyBirdDueDateValue = usesRelativePayment ? null : editLeague.early_bird_due_date || null;
+    const depositAmountValue = usesRelativePayment ? null : editLeague.deposit_amount;
+    const depositDateValue = usesRelativePayment
+      ? null
+      : depositAmountValue
+        ? editLeague.deposit_date || null
+        : null;
+
     try {
+
       setSaving(true);
 
       const { error } = await supabase
@@ -289,13 +335,14 @@ export function LeagueEditPage() {
           end_date: editLeague.end_date,
           hide_day: editLeague.hide_day,
           cost: editLeague.cost,
-          early_bird_cost: editLeague.early_bird_cost ?? null,
-          early_bird_due_date: editLeague.early_bird_due_date || null,
+          early_bird_cost: earlyBirdCostValue,
+          early_bird_due_date: earlyBirdDueDateValue,
           max_teams: editLeague.max_teams,
           gym_ids: editLeague.gym_ids,
-          payment_due_date: editLeague.payment_due_date,
-          deposit_amount: editLeague.deposit_amount,
-          deposit_date: editLeague.deposit_date || null,
+          payment_due_date: paymentDueDateValue,
+          payment_window_hours: paymentWindowHoursValue,
+          deposit_amount: depositAmountValue,
+          deposit_date: depositDateValue,
           team_registration: editLeague.team_registration,
           is_draft: editLeague.is_draft,
           publish_date: editLeague.publish_date,
@@ -344,9 +391,10 @@ export function LeagueEditPage() {
         cost: editLeague.cost,
         max_teams: editLeague.max_teams,
         gym_ids: editLeague.gym_ids,
-        payment_due_date: editLeague.payment_due_date,
-        deposit_amount: editLeague.deposit_amount,
-        deposit_date: editLeague.deposit_date || null,
+        payment_due_date: paymentDueDateValue,
+        payment_window_hours: paymentWindowHoursValue,
+        deposit_amount: depositAmountValue,
+        deposit_date: depositDateValue,
         team_registration: editLeague.team_registration,
         is_draft: editLeague.is_draft,
         publish_date: editLeague.publish_date,
@@ -420,6 +468,9 @@ export function LeagueEditPage() {
     !editLeague.start_date ||
     !editLeague.end_date ||
     editLeague.cost === null ||
+    (usesRelativePayment
+      ? !editLeague.payment_window_hours
+      : !editLeague.payment_due_date) ||
     !editLeague.max_teams;
 
   const hasUnsavedChanges =
@@ -586,15 +637,7 @@ export function LeagueEditPage() {
                         name="league_type"
                         value="regular_season"
                         checked={editLeague.league_type === "regular_season"}
-                        onChange={(e) =>
-                          setEditLeague({
-                            ...editLeague,
-                            league_type: e.target.value as
-                              | "regular_season"
-                              | "tournament"
-                              | "skills_drills",
-                          })
-                        }
+                        onChange={() => handleLeagueTypeChange("regular_season")}
                         className="mr-2"
                       />
                       <span className="text-sm">Regular Season</span>
@@ -605,15 +648,7 @@ export function LeagueEditPage() {
                         name="league_type"
                         value="tournament"
                         checked={editLeague.league_type === "tournament"}
-                        onChange={(e) =>
-                          setEditLeague({
-                            ...editLeague,
-                            league_type: e.target.value as
-                              | "regular_season"
-                              | "tournament"
-                              | "skills_drills",
-                          })
-                        }
+                        onChange={() => handleLeagueTypeChange("tournament")}
                         className="mr-2"
                       />
                       <span className="text-sm">Tournament</span>
@@ -624,18 +659,21 @@ export function LeagueEditPage() {
                         name="league_type"
                         value="skills_drills"
                         checked={editLeague.league_type === "skills_drills"}
-                        onChange={(e) =>
-                          setEditLeague({
-                            ...editLeague,
-                            league_type: e.target.value as
-                              | "regular_season"
-                              | "tournament"
-                              | "skills_drills",
-                          })
-                        }
+                        onChange={() => handleLeagueTypeChange("skills_drills")}
                         className="mr-2"
                       />
                       <span className="text-sm">Skills and Drills</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="league_type"
+                        value="single_session"
+                        checked={editLeague.league_type === "single_session"}
+                        onChange={() => handleLeagueTypeChange("single_session")}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Single Session</span>
                     </label>
                   </div>
                 </div>
@@ -865,7 +903,7 @@ export function LeagueEditPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                     Cost ($)
@@ -888,108 +926,153 @@ export function LeagueEditPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                    Payment Due Date
-                  </label>
+                  {usesRelativePayment ? (
+                    <>
+                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                        Payment Window
+                      </label>
+                      <select
+                        value={
+                          editLeague.payment_window_hours ??
+                          PAYMENT_WINDOW_OPTIONS[0]
+                        }
+                        onChange={(e) =>
+                          setEditLeague((prev) => ({
+                            ...prev,
+                            payment_window_hours: parseInt(e.target.value, 10),
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                      >
+                        {PAYMENT_WINDOW_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {formatPaymentWindowOptionLabel(option)}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Registrants will have{" "}
+                        <span className="font-semibold text-[#B20000]">
+                          {formatPaymentWindowDuration(
+                            editLeague.payment_window_hours ??
+                              PAYMENT_WINDOW_OPTIONS[0],
+                          )}
+                        </span>{" "}
+                        from registration to pay. Traditional due dates, early bird
+                        pricing, and deposit timelines are disabled.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                        Payment Due Date
+                      </label>
                   <Input
                     type="date"
-                    value={editLeague.payment_due_date}
+                    value={editLeague.payment_due_date ?? ""}
                     onChange={(e) =>
                       setEditLeague({
                         ...editLeague,
                         payment_due_date: e.target.value,
                       })
-                    }
-                    className="w-full"
-                    required
-                  />
+                        }
+                        className="w-full"
+                        required={!usesRelativePayment}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                    Early Bird Cost ($)
-                  </label>
-                  <Input
-                    type="number"
-                    value={editLeague.early_bird_cost ?? ""}
-                    onChange={(e) =>
-                      setEditLeague({
-                        ...editLeague,
-                        early_bird_cost: e.target.value !== ''
-                          ? parseFloat(e.target.value)
-                          : null,
-                      })
-                    }
-                    placeholder="Optional"
-                    className="w-full"
-                  />
-                </div>
+              {!usesRelativePayment && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                        Early Bird Cost ($)
+                      </label>
+                      <Input
+                        type="number"
+                        value={editLeague.early_bird_cost ?? ""}
+                        onChange={(e) =>
+                          setEditLeague({
+                            ...editLeague,
+                            early_bird_cost:
+                              e.target.value !== ""
+                                ? parseFloat(e.target.value)
+                                : null,
+                          })
+                        }
+                        placeholder="Optional"
+                        className="w-full"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                    Early Bird Due Date
-                  </label>
-                  <Input
-                    type="date"
-                    value={editLeague.early_bird_due_date || ''}
-                    onChange={(e) =>
-                      setEditLeague({
-                        ...editLeague,
-                        early_bird_due_date: e.target.value || null,
-                      })
-                    }
-                    className="w-full"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                        Early Bird Due Date
+                      </label>
+                      <Input
+                        type="date"
+                        value={editLeague.early_bird_due_date || ""}
+                        onChange={(e) =>
+                          setEditLeague({
+                            ...editLeague,
+                            early_bird_due_date: e.target.value || null,
+                          })
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                    Deposit Amount ($)
-                  </label>
-                  <Input
-                    type="number"
-                    value={editLeague.deposit_amount || ""}
-                    onChange={(e) =>
-                      setEditLeague({
-                        ...editLeague,
-                        deposit_amount: e.target.value
-                          ? parseFloat(e.target.value)
-                          : null,
-                      })
-                    }
-                    placeholder="0.00 (optional)"
-                    className="w-full"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Leave empty if no deposit is required
-                  </p>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                        Deposit Amount ($)
+                      </label>
+                      <Input
+                        type="number"
+                        value={editLeague.deposit_amount || ""}
+                        onChange={(e) =>
+                          setEditLeague({
+                            ...editLeague,
+                            deposit_amount: e.target.value
+                              ? parseFloat(e.target.value)
+                              : null,
+                          })
+                        }
+                        placeholder="0.00 (optional)"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Leave empty if no deposit is required
+                      </p>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                    Deposit Due Date
-                  </label>
-                  <Input
-                    type="date"
-                    value={editLeague.deposit_date}
-                    onChange={(e) =>
-                      setEditLeague({
-                        ...editLeague,
-                        deposit_date: e.target.value,
-                      })
-                    }
-                    className="w-full"
-                    disabled={!editLeague.deposit_amount}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Required if deposit amount is set
-                  </p>
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                        Deposit Due Date
+                      </label>
+                      <Input
+                        type="date"
+                        value={editLeague.deposit_date}
+                        onChange={(e) =>
+                          setEditLeague({
+                            ...editLeague,
+                            deposit_date: e.target.value,
+                          })
+                        }
+                        className="w-full"
+                        disabled={!editLeague.deposit_amount}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Required if deposit amount is set
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-[#6F6F6F] mb-2">

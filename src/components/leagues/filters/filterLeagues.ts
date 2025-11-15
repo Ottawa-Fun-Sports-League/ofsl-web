@@ -56,6 +56,7 @@ export function filterLeagues<T extends FilterableLeague>(
         case 'regular_season': return 'Regular Season';
         case 'tournament': return 'Tournament';
         case 'skills_drills': return 'Skills and Drills';
+        case 'single_session': return 'Single Session';
         default: return 'Regular Season';
       }
     };

@@ -326,6 +326,8 @@ export function useTeamsData(userId?: string) {
             playoff_weeks,
             schedule_visible,
             payment_due_date,
+            payment_window_hours,
+            league_type,
             gym_ids
           ),
           skill:skills(id, name)
@@ -382,7 +384,7 @@ export function useTeamsData(userId?: string) {
         try {
           const { data: teamPays } = await supabase
             .from('league_payments')
-            .select('id, team_id, amount_due, amount_paid, status, due_date, league_id')
+            .select('id, team_id, amount_due, amount_paid, status, due_date, created_at, league_id')
             .in('team_id', teamIds);
 
           const byTeam: Record<number, LeaguePayment> = {};
@@ -402,7 +404,8 @@ export function useTeamsData(userId?: string) {
                 amount_paid,
                 league_cost: amount_due,
                 status: p.status || (amount_paid >= amount_due ? 'paid' : amount_paid > 0 ? 'partial' : 'pending'),
-                due_date: p.due_date || '',
+                due_date: p.due_date || null,
+                created_at: p.created_at || null,
                 payment_method: null,
                 skill_level_id: null,
                 skill_name: null,
@@ -417,6 +420,7 @@ export function useTeamsData(userId?: string) {
                 league_cost: newDue,
                 amount_paid: newPaid,
                 status: newPaid >= newDue ? 'paid' : newPaid > 0 ? 'partial' : 'pending',
+                created_at: existing.created_at || p.created_at || null,
               };
             }
           });
@@ -454,6 +458,7 @@ export function useTeamsData(userId?: string) {
           id,
           league_id,
           is_waitlisted,
+          created_at,
           leagues!inner(
             id,
             name,
@@ -462,6 +467,8 @@ export function useTeamsData(userId?: string) {
             sport_id,
             start_date,
             payment_due_date,
+            payment_window_hours,
+            league_type,
             gym_ids
           )
         `)
@@ -569,10 +576,11 @@ export function useTeamsData(userId?: string) {
           amount_paid: payment.amount_paid || 0,
           league_cost: effectiveAmountDue,
           status: payment.status || 'pending',
-          due_date: payment.due_date || '',
+          due_date: payment.due_date || null,
           payment_method: payment.payment_method,
           skill_level_id: payment.skill_level_id,
-          skill_name: payment.skills?.name || null
+          skill_name: payment.skills?.name || null,
+          created_at: payment.created_at || null,
         };
       });
       

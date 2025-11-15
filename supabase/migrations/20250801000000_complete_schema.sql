@@ -173,10 +173,11 @@ CREATE TABLE IF NOT EXISTS leagues (
     league_type TEXT,
     gender TEXT,
     payment_due_date DATE,
+    payment_window_hours INTEGER,
     CONSTRAINT leagues_pkey PRIMARY KEY (id),
     CONSTRAINT leagues_day_of_week_check CHECK (((day_of_week >= 0) AND (day_of_week <= 6))),
     CONSTRAINT leagues_gender_check CHECK ((gender = ANY (ARRAY['Mixed'::text, 'Female'::text, 'Male'::text]))),
-    CONSTRAINT leagues_league_type_check CHECK ((league_type = ANY (ARRAY['regular_season'::text, 'tournament'::text, 'skills_drills'::text]))),
+    CONSTRAINT leagues_league_type_check CHECK ((league_type = ANY (ARRAY['regular_season'::text, 'tournament'::text, 'skills_drills'::text, 'single_session'::text]))),
     CONSTRAINT leagues_skill_id_fkey FOREIGN KEY (skill_id) REFERENCES skills(id) ON UPDATE NO ACTION ON DELETE NO ACTION,
     CONSTRAINT leagues_sport_id_fkey FOREIGN KEY (sport_id) REFERENCES sports(id) ON UPDATE NO ACTION ON DELETE NO ACTION
 );
@@ -350,6 +351,31 @@ CREATE TABLE IF NOT EXISTS team_registration_notifications (
     CONSTRAINT team_registration_notifications_pkey PRIMARY KEY (id),
     CONSTRAINT team_registration_notifications_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS team_waitlist_notifications (
+    id BIGSERIAL PRIMARY KEY,
+    payment_id BIGINT NOT NULL REFERENCES league_payments(id) ON DELETE CASCADE,
+    team_id BIGINT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    league_id BIGINT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT,
+    user_name TEXT,
+    team_name TEXT,
+    league_name TEXT,
+    payment_window_hours INTEGER,
+    registration_timestamp TIMESTAMP WITH TIME ZONE,
+    reason TEXT DEFAULT 'payment_window_expired',
+    sent BOOLEAN DEFAULT false,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_waitlist_notifications_payment
+  ON team_waitlist_notifications(payment_id);
+
+CREATE INDEX IF NOT EXISTS idx_team_waitlist_notifications_unsent
+  ON team_waitlist_notifications(sent, created_at)
+  WHERE sent = false;
 
 -- Attendance table (references users, seasons)
 CREATE TABLE IF NOT EXISTS attendance (
@@ -595,8 +621,44 @@ CREATE OR REPLACE FUNCTION update_payment_status()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
+DECLARE
+  league_record RECORD;
+  team_record RECORD;
+  user_record RECORD;
+  reference_timestamp TIMESTAMPTZ := COALESCE(NEW.created_at, NOW());
+  waitlist_deadline TIMESTAMPTZ;
+  should_waitlist BOOLEAN := false;
 BEGIN
-  -- Update the payment status based on amounts
+  SELECT payment_due_date, payment_window_hours, name
+  INTO league_record
+  FROM leagues
+  WHERE id = NEW.league_id;
+
+  IF NEW.team_id IS NOT NULL THEN
+    SELECT created_at, name INTO team_record FROM teams WHERE id = NEW.team_id;
+    reference_timestamp := COALESCE(team_record.created_at, NEW.created_at, reference_timestamp);
+  END IF;
+
+  IF NEW.due_date IS NULL THEN
+    IF league_record.payment_window_hours IS NOT NULL THEN
+      waitlist_deadline := reference_timestamp + (league_record.payment_window_hours || ' hours')::interval;
+      NEW.due_date := waitlist_deadline::date;
+    ELSIF league_record.payment_due_date IS NOT NULL THEN
+      NEW.due_date := league_record.payment_due_date;
+    ELSE
+      NEW.due_date := (CURRENT_DATE + INTERVAL '30 days')::date;
+    END IF;
+  ELSIF league_record.payment_window_hours IS NOT NULL AND waitlist_deadline IS NULL THEN
+    waitlist_deadline := reference_timestamp + (league_record.payment_window_hours || ' hours')::interval;
+  END IF;
+
+  IF league_record.payment_window_hours IS NOT NULL
+     AND NEW.team_id IS NOT NULL
+     AND waitlist_deadline IS NOT NULL
+     AND waitlist_deadline <= NOW() THEN
+    should_waitlist := true;
+  END IF;
+
   IF NEW.amount_paid >= NEW.amount_due THEN
     NEW.status = 'paid';
   ELSIF NEW.amount_paid > 0 THEN
@@ -606,10 +668,53 @@ BEGIN
   ELSE
     NEW.status = 'pending';
   END IF;
+
+  IF should_waitlist AND (NEW.amount_paid < COALESCE(NEW.amount_due, 0)) THEN
+    NEW.status := 'overdue';
+    IF NEW.is_waitlisted IS DISTINCT FROM TRUE THEN
+      NEW.is_waitlisted := true;
+      IF NEW.team_id IS NOT NULL THEN
+        UPDATE teams
+        SET active = false
+        WHERE id = NEW.team_id
+          AND COALESCE(active, true) = true;
+      END IF;
+
+      SELECT id AS user_id, email, name INTO user_record
+      FROM users
+      WHERE id = NEW.user_id;
+
+      INSERT INTO team_waitlist_notifications (
+        payment_id,
+        team_id,
+        league_id,
+        user_id,
+        email,
+        user_name,
+        team_name,
+        league_name,
+        payment_window_hours,
+        registration_timestamp,
+        reason
+      )
+      VALUES (
+        NEW.id,
+        NEW.team_id,
+        NEW.league_id,
+        COALESCE(user_record.user_id, NEW.user_id),
+        user_record.email,
+        COALESCE(user_record.name, 'Team Captain'),
+        COALESCE(team_record.name, 'Team'),
+        league_record.name,
+        league_record.payment_window_hours,
+        reference_timestamp,
+        'payment_window_expired'
+      )
+      ON CONFLICT (payment_id) DO NOTHING;
+    END IF;
+  END IF;
   
-  -- Update the updated_at timestamp
   NEW.updated_at = now();
-  
   RETURN NEW;
 END;
 $$;
@@ -620,12 +725,24 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  -- When payment_due_date is updated in leagues table, update all related payment records
-  IF OLD.payment_due_date IS DISTINCT FROM NEW.payment_due_date THEN
-    UPDATE league_payments
-    SET due_date = NEW.payment_due_date
-    WHERE league_id = NEW.id
-    AND status != 'paid'; -- Only update unpaid payments
+  -- When payment configuration changes on leagues table, update all related payment records
+  IF (OLD.payment_due_date IS DISTINCT FROM NEW.payment_due_date)
+     OR (OLD.payment_window_hours IS DISTINCT FROM NEW.payment_window_hours) THEN
+    UPDATE league_payments lp
+    SET due_date = CASE
+      WHEN NEW.payment_window_hours IS NOT NULL THEN (
+        (
+          COALESCE(
+            (SELECT t.created_at FROM teams t WHERE t.id = lp.team_id),
+            lp.created_at,
+            NOW()
+          ) + (NEW.payment_window_hours || ' hours')::interval
+        )::date
+      )
+      ELSE NEW.payment_due_date
+    END
+    WHERE lp.league_id = NEW.id
+      AND lp.status != 'paid'; -- Only update unpaid payments
   END IF;
   
   RETURN NEW;
@@ -640,7 +757,6 @@ AS $$
 BEGIN
   -- When a new team is created, create a league payment record for the captain
   IF TG_OP = 'INSERT' AND NEW.captain_id IS NOT NULL AND NEW.league_id IS NOT NULL THEN
-    -- Get the league cost and payment due date
     INSERT INTO league_payments (
       user_id,
       team_id,
@@ -654,7 +770,12 @@ BEGIN
       NEW.id,
       NEW.league_id,
       COALESCE(l.cost, 0.00),
-      COALESCE(l.payment_due_date, CURRENT_DATE + INTERVAL '30 days'), -- Use league's payment_due_date or default to 30 days
+      CASE
+        WHEN l.payment_window_hours IS NOT NULL THEN (
+          COALESCE(NEW.created_at, NOW()) + (l.payment_window_hours || ' hours')::interval
+        )::date
+        ELSE COALESCE(l.payment_due_date, (CURRENT_DATE + INTERVAL '30 days')::date)
+      END,
       'pending'
     FROM leagues l
     WHERE l.id = NEW.league_id
@@ -886,6 +1007,7 @@ ALTER TABLE stripe_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stripe_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_registration_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_waitlist_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE waiver_acceptances ENABLE ROW LEVEL SECURITY;
@@ -1018,6 +1140,7 @@ COMMENT ON TABLE stripe_orders IS 'Stripe payment orders';
 COMMENT ON TABLE stripe_products IS 'Stripe products for league payments';
 COMMENT ON TABLE stripe_subscriptions IS 'Stripe subscription information';
 COMMENT ON TABLE team_registration_notifications IS 'Queue for team registration email notifications';
+COMMENT ON TABLE team_waitlist_notifications IS 'Queue for notifying captains when teams are auto-waitlisted for non-payment';
 
 -- =============================================
 -- FINAL NOTES

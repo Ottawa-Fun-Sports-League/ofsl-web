@@ -49,7 +49,7 @@ export function LeagueNewPage() {
   const [newLeague, setNewLeague] = useState<{
     name: string;
     description: string;
-    league_type: "regular_season" | "tournament" | "skills_drills" | null;
+  league_type: "regular_season" | "tournament" | "skills_drills" | "single_session" | null;
     gender: "Mixed" | "Female" | "Male" | null;
     location: string;
     sport_id: number | null;
@@ -334,7 +334,8 @@ export function LeagueNewPage() {
                             league_type: e.target.value as
                               | "regular_season"
                               | "tournament"
-                              | "skills_drills",
+                              | "skills_drills"
+                              | "single_session",
                           })
                         }
                         className="mr-2"
@@ -353,7 +354,8 @@ export function LeagueNewPage() {
                             league_type: e.target.value as
                               | "regular_season"
                               | "tournament"
-                              | "skills_drills",
+                              | "skills_drills"
+                              | "single_session",
                           })
                         }
                         className="mr-2"
@@ -372,12 +374,33 @@ export function LeagueNewPage() {
                             league_type: e.target.value as
                               | "regular_season"
                               | "tournament"
-                              | "skills_drills",
+                              | "skills_drills"
+                              | "single_session",
                           })
                         }
                         className="mr-2"
                       />
                       <span className="text-sm">Skills and Drills</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="league_type"
+                        value="single_session"
+                        checked={newLeague.league_type === "single_session"}
+                        onChange={(e) =>
+                          setNewLeague({
+                            ...newLeague,
+                            league_type: e.target.value as
+                              | "regular_season"
+                              | "tournament"
+                              | "skills_drills"
+                              | "single_session",
+                          })
+                        }
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Single Session</span>
                     </label>
                   </div>
                 </div>

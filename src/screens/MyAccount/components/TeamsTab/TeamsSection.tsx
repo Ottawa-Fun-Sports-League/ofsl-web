@@ -415,11 +415,14 @@ export function TeamsSection({
                               amount_paid: teamPayment.amount_paid,
                               status: teamPayment.status,
                               due_date: teamPayment.due_date,
+                              created_at: teamPayment.created_at,
                             }
                           : undefined
                       }
                       leagueCost={leagueFee}
                       leagueDueDate={team.league?.payment_due_date || null}
+                      paymentWindowHours={team.league?.payment_window_hours ?? null}
+                      registrationTimestamp={teamPayment?.created_at || team.created_at || null}
                       isCaptain={isCaptain}
                     />
                   )}
@@ -702,11 +705,14 @@ export function TeamsSection({
                               amount_paid: leaguePayment.amount_paid,
                               status: leaguePayment.status,
                               due_date: leaguePayment.due_date,
+                              created_at: leaguePayment.created_at,
                             }
                           : undefined
                       }
                       leagueCost={leagueFee}
                       leagueDueDate={league.payment_due_date || null}
+                      paymentWindowHours={league.payment_window_hours ?? null}
+                      registrationTimestamp={leaguePayment?.created_at || league.created_at || null}
                       isCaptain={true}
                     />
                   )}

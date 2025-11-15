@@ -8,6 +8,12 @@ import { StripeProductSelector } from "./StripeProductSelector";
 import { GymMultiSelect } from "./GymMultiSelect";
 import { NewLeague, Sport, Skill, Gym } from "../types";
 import { DraftPublishControls } from "../../../../../components/leagues/DraftPublishControls";
+import {
+  PAYMENT_WINDOW_OPTIONS,
+  formatPaymentWindowOptionLabel,
+  formatPaymentWindowDuration,
+  usesRelativePaymentWindow,
+} from "../../../../../lib/paymentWindows";
 
 interface NewLeagueFormProps {
   sports: Sport[];
@@ -45,7 +51,8 @@ export function NewLeagueForm({
     max_teams: 20,
     gym_ids: [],
     hide_day: false,
-    payment_due_date: "2025-08-21",
+    payment_due_date: "",
+    payment_window_hours: null,
     team_registration: true,
     is_draft: true,
     publish_date: null,
@@ -54,6 +61,31 @@ export function NewLeagueForm({
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
   );
+  const usesRelativePayment = usesRelativePaymentWindow(newLeague.league_type);
+  const paymentWindowLabel = newLeague.payment_window_hours
+    ? formatPaymentWindowDuration(newLeague.payment_window_hours)
+    : null;
+  const handleLeagueTypeChange = (
+    value:
+      | "regular_season"
+      | "tournament"
+      | "skills_drills"
+      | "single_session",
+  ) => {
+    setNewLeague((prev) => {
+      const nextIsRelative = usesRelativePaymentWindow(value);
+      return {
+        ...prev,
+        league_type: value,
+        payment_window_hours: nextIsRelative
+          ? prev.payment_window_hours ?? PAYMENT_WINDOW_OPTIONS[0]
+          : null,
+        payment_due_date: nextIsRelative ? null : (prev.payment_due_date ?? ""),
+        early_bird_cost: nextIsRelative ? null : prev.early_bird_cost,
+        early_bird_due_date: nextIsRelative ? "" : prev.early_bird_due_date || "",
+      };
+    });
+  };
 
   const handleSubmit = async () => {
     // Convert day_of_week from string to number
@@ -66,6 +98,10 @@ export function NewLeagueForm({
     const leagueToSubmit = {
       ...newLeague,
       day_of_week: dayOfWeek,
+      payment_due_date: usesRelativePayment ? null : newLeague.payment_due_date || null,
+      payment_window_hours: usesRelativePayment ? newLeague.payment_window_hours : null,
+      early_bird_cost: usesRelativePayment ? null : newLeague.early_bird_cost,
+      early_bird_due_date: usesRelativePayment ? null : newLeague.early_bird_due_date,
     };
 
     // Pass the selected product ID to the parent component
@@ -90,7 +126,8 @@ export function NewLeagueForm({
       max_teams: 20,
       gym_ids: [],
       hide_day: false,
-      payment_due_date: "2025-08-21",
+      payment_due_date: "",
+      payment_window_hours: null,
       team_registration: true,
       is_draft: true,
       publish_date: null,
@@ -158,15 +195,7 @@ export function NewLeagueForm({
                     name="league_type"
                     value="regular_season"
                     checked={newLeague.league_type === "regular_season"}
-                    onChange={(e) =>
-                      setNewLeague({
-                        ...newLeague,
-                        league_type: e.target.value as
-                          | "regular_season"
-                          | "tournament"
-                          | "skills_drills",
-                      })
-                    }
+                    onChange={() => handleLeagueTypeChange("regular_season")}
                     className="mr-2"
                   />
                   <span className="text-sm">Regular Season</span>
@@ -177,15 +206,7 @@ export function NewLeagueForm({
                     name="league_type"
                     value="tournament"
                     checked={newLeague.league_type === "tournament"}
-                    onChange={(e) =>
-                      setNewLeague({
-                        ...newLeague,
-                        league_type: e.target.value as
-                          | "regular_season"
-                          | "tournament"
-                          | "skills_drills",
-                      })
-                    }
+                    onChange={() => handleLeagueTypeChange("tournament")}
                     className="mr-2"
                   />
                   <span className="text-sm">Tournament</span>
@@ -196,19 +217,22 @@ export function NewLeagueForm({
                     name="league_type"
                     value="skills_drills"
                     checked={newLeague.league_type === "skills_drills"}
-                    onChange={(e) =>
-                      setNewLeague({
-                        ...newLeague,
-                        league_type: e.target.value as
-                          | "regular_season"
-                          | "tournament"
-                          | "skills_drills",
-                      })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Skills and Drills</span>
-                </label>
+                    onChange={() => handleLeagueTypeChange("skills_drills")}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Skills and Drills</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="league_type"
+                    value="single_session"
+                    checked={newLeague.league_type === "single_session"}
+                    onChange={() => handleLeagueTypeChange("single_session")}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Single Session</span>
+                    </label>
               </div>
             </div>
 
@@ -452,7 +476,7 @@ export function NewLeagueForm({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
                 Cost ($)
@@ -473,61 +497,99 @@ export function NewLeagueForm({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                Payment Due Date
-              </label>
-              <Input
-                type="date"
-                value={newLeague.payment_due_date}
-                onChange={(e) =>
-                  setNewLeague({
-                    ...newLeague,
-                    payment_due_date: e.target.value,
-                  })
-                }
-                className="w-full"
-                required
-              />
+              {usesRelativePayment ? (
+                <>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                    Payment Window
+                  </label>
+                  <select
+                    value={newLeague.payment_window_hours ?? PAYMENT_WINDOW_OPTIONS[0]}
+                    onChange={(e) =>
+                      setNewLeague((prev) => ({
+                        ...prev,
+                        payment_window_hours: parseInt(e.target.value, 10),
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
+                  >
+                    {PAYMENT_WINDOW_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {formatPaymentWindowOptionLabel(option)}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Players will have{" "}
+                    <span className="font-semibold text-[#B20000]">
+                      {paymentWindowLabel ?? "the selected window"}
+                    </span>{" "}
+                    after registration to complete payment. Traditional due dates,
+                    early bird pricing, and deposit timelines are hidden for these
+                    program types.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                    Payment Due Date
+                  </label>
+                <Input
+                  type="date"
+                  value={newLeague.payment_due_date ?? ""}
+                  onChange={(e) =>
+                    setNewLeague({
+                      ...newLeague,
+                      payment_due_date: e.target.value,
+                      })
+                    }
+                    className="w-full"
+                    required
+                  />
+                </>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                Early Bird Cost ($)
-              </label>
-              <Input
-                type="number"
-                value={newLeague.early_bird_cost ?? ""}
-                onChange={(e) =>
-                  setNewLeague({
-                    ...newLeague,
-                    early_bird_cost: e.target.value !== '' ? parseFloat(e.target.value) : null,
-                  })
-                }
-                placeholder="Optional"
-                className="w-full"
-              />
-            </div>
+          {!usesRelativePayment && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                  Early Bird Cost ($)
+                </label>
+                <Input
+                  type="number"
+                  value={newLeague.early_bird_cost ?? ""}
+                  onChange={(e) =>
+                    setNewLeague({
+                      ...newLeague,
+                      early_bird_cost:
+                        e.target.value !== "" ? parseFloat(e.target.value) : null,
+                    })
+                  }
+                  placeholder="Optional"
+                  className="w-full"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                Early Bird Due Date
-              </label>
-              <Input
-                type="date"
-                value={newLeague.early_bird_due_date || ''}
-                onChange={(e) =>
-                  setNewLeague({
-                    ...newLeague,
-                    early_bird_due_date: e.target.value || null,
-                  })
-                }
-                placeholder="Optional"
-                className="w-full"
-              />
+              <div>
+                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
+                  Early Bird Due Date
+                </label>
+                <Input
+                  type="date"
+                  value={newLeague.early_bird_due_date || ""}
+                  onChange={(e) =>
+                    setNewLeague({
+                      ...newLeague,
+                      early_bird_due_date: e.target.value || null,
+                    })
+                  }
+                  placeholder="Optional"
+                  className="w-full"
+                />
+              </div>
             </div>
-          </div>
+          )}
           
           <div>
             <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
@@ -595,6 +657,8 @@ export function NewLeagueForm({
               !newLeague.start_date ||
               !newLeague.end_date ||
               newLeague.cost === null ||
+              (usesRelativePayment && !newLeague.payment_window_hours) ||
+              (!usesRelativePayment && !newLeague.payment_due_date) ||
               !newLeague.max_teams
             }
             className="bg-[#B20000] hover:bg-[#8A0000] text-white rounded-[10px] px-6 py-2"

@@ -31,7 +31,7 @@ import {
 } from "../UsersTab/utils/sendBulkEmail";
 import type { BulkEmailRecipient } from "../UsersTab/types";
 
-type ProgramType = "regular_season" | "tournament" | "skills_drills" | null;
+type ProgramType = "regular_season" | "tournament" | "skills_drills" | "single_session" | null;
 type RegistrationMode = "team" | "individual";
 
 interface RegistrationRow {
@@ -87,6 +87,7 @@ const programTypeLabels: Record<Exclude<ProgramType, null>, string> = {
   regular_season: "League",
   tournament: "Tournament",
   skills_drills: "Skills & Drills",
+  single_session: "Single Session",
 };
 
 const programTypeBadgeClasses: Record<Exclude<ProgramType, null>, string> = {
@@ -96,6 +97,8 @@ const programTypeBadgeClasses: Record<Exclude<ProgramType, null>, string> = {
     "bg-purple-600/10 text-purple-800 border-purple-200 hover:bg-purple-600/20",
   skills_drills:
     "bg-amber-500/15 text-amber-900 border-amber-300 hover:bg-amber-500/25",
+  single_session:
+    "bg-teal-600/10 text-teal-900 border-teal-200 hover:bg-teal-600/20",
 };
 
 const modeBadgeClasses: Record<RegistrationMode, string> = {

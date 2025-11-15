@@ -15,6 +15,8 @@ type ExtendedTeam = Team & {
       day_of_week: number | null;
       cost: number | null;
       location: string | null;
+      payment_due_date?: string | null;
+      payment_window_hours?: number | null;
       sports?: {
         name: string;
       } | null;
@@ -83,6 +85,9 @@ export function TeamCard({
       <PaymentStatusSection 
         payment={team.payment}
         leagueCost={team.league?.cost}
+        leagueDueDate={team.league?.payment_due_date || null}
+        paymentWindowHours={team.league?.payment_window_hours ?? null}
+        registrationTimestamp={team.created_at ?? team.payment?.created_at ?? null}
         isCaptain={isCaptain}
       />
       
