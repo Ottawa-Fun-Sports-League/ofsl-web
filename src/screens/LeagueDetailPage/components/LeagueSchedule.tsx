@@ -385,7 +385,22 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
   };
   return (
     <div>
-      <h2 className="text-2xl font-bold text-[#6F6F6F] mb-6">League Schedule</h2>
+      <div className="mb-3">
+        <h2 className="text-2xl font-bold text-[#6F6F6F] mb-1">League Schedule</h2>
+        <div className="min-h-[1.25rem] mb-2">
+          {weekNoGames ? (
+            <span className="inline-flex items-center px-2 py-1 text-[10px] sm:text-xs font-semibold bg-[#B20000] text-white rounded-full">
+              No games this week
+            </span>
+          ) : (
+            (currentWeek > 1 && week1TierStructure.length > 0) ? (
+              <span className="text-[11px] sm:text-xs text-gray-500 italic">
+                Schedule updated each week based on previous week&apos;s results
+              </span>
+            ) : null
+          )}
+        </div>
+      </div>
       <div className="relative">
         {/* Overlay when schedule is hidden from public - show banner at top */}
         {isScheduleVisible ? null : (
@@ -397,11 +412,11 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
         )}
 
         {/* Content container that we blur and disable when hidden */}
-        <div className={`${isScheduleVisible ? '' : 'pointer-events-none blur-[5px]'} pt-10`}>
+        <div className={`${isScheduleVisible ? '' : 'pointer-events-none blur-[5px]'} ${isScheduleVisible ? 'pt-0' : 'pt-10'}`}>
         {/* Week header with limited navigation */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center justify-between gap-4 w-full">
-          <div className="flex items-center gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex items-start justify-between gap-3 w-full">
+          <div className="flex items-start gap-3 flex-wrap">
             {/* Navigation buttons grouped together */}
             <div className="flex items-center gap-1">
               <button
@@ -424,22 +439,22 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
 
             {/* Week and date */}
             <div className="text-left">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-medium text-[#6F6F6F]">
                   Week {currentWeek} - {getWeekDate(currentWeek)}
                 </p>
                 {isPlayoffWeek(currentWeek) && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-50 text-[#B20000] rounded-full border border-red-200">
+                  <span className="inline-flex items-center px-2 py-1 text-[10px] sm:text-xs font-medium bg-red-50 text-[#B20000] rounded-full border border-red-200 whitespace-normal leading-tight max-w-[10rem]">
                     Playoffs
                   </span>
                 )}
                 {currentWeek <= 2 && !isPlayoffWeek(currentWeek) && (
-                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
+                  <span className="inline-flex items-center px-2 py-0.5 text-[10px] sm:text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300 whitespace-normal leading-tight max-w-[10rem]">
                     Seeding week
                   </span>
                 )}
                 {movementWeek && (
-                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
+                  <span className="inline-flex items-center px-2 py-0.5 text-[10px] sm:text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300 whitespace-normal leading-tight max-w-[10rem]">
                     Movement Week
                   </span>
                 )}
@@ -447,21 +462,7 @@ export function LeagueSchedule({ leagueId }: LeagueScheduleProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Previous week results message */}
-            {currentWeek > 1 && week1TierStructure.length > 0 && !weekNoGames && (
-              <div className="text-xs text-gray-500 italic">
-                Schedule updated each week based on previous week&apos;s results
-              </div>
-            )}
-
-            {/* No games message */}
-            {weekNoGames && (
-              <div className="px-2 py-1 rounded-full text-xs font-semibold bg-[#B20000] text-white">
-                No games this week
-              </div>
-            )}
-          </div>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 sm:shrink max-w-full sm:max-w-none" />
         </div>
       </div>
 

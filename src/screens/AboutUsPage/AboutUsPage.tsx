@@ -332,9 +332,9 @@ export const AboutUsPage = (): React.ReactElement => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20 md:mb-28">
           <div>
             <img
-              src="/group-2.png"
+              src="/OFSL wed league winner 2025.png"
               alt="OFSL Community"
-              className="w-full h-[350px] object-cover rounded-lg"
+              className="w-full h-[350px] object-cover object-top rounded-lg"
             />
           </div>
           <div className="flex flex-col justify-center">

@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '../../../components/ui/dialog';
-import { getTierDisplayLabel, buildWeekTierLabels } from '../utils/formatUtils';
+import { getTierDisplayLabel, buildWeekTierLabels, getFormatLabel } from '../utils/formatUtils';
 import type { WeeklyScheduleTier } from '../types';
 import { Scorecard3Teams6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3Teams6Sets';
 import { Scorecard3TeamsElite6Sets } from '../../MyAccount/components/ScorecardsFormatsTab/components/Scorecard3TeamsElite6Sets';
@@ -171,7 +171,12 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="submit-scores-description">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <div className="flex items-start justify-between max-w-xl">
+            <DialogTitle className="pr-3">{title}</DialogTitle>
+            <span className="inline-flex items-center px-2 py-0.5 text-[10px] sm:text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300 whitespace-normal leading-tight max-w-[12rem]">
+              {getFormatLabel(String(weeklyTier.format || ''))}
+            </span>
+          </div>
         </DialogHeader>
         <DialogDescription id="submit-scores-description" className="sr-only">
           Submit scores for the selected tier and week.
