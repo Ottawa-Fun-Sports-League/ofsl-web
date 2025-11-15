@@ -132,6 +132,18 @@ export function LeagueEditPage() {
   );
   const usesRelativePayment = usesRelativePaymentWindow(editLeague.league_type);
 
+  useEffect(() => {
+    if (!editLeague.start_date) return;
+
+    setEditLeague((prev) => {
+      if (!prev.start_date) return prev;
+      if (!prev.end_date || prev.end_date < prev.start_date) {
+        return { ...prev, end_date: prev.start_date };
+      }
+      return prev;
+    });
+  }, [editLeague.start_date]);
+
   const handleLeagueTypeChange = (
     value: "regular_season" | "tournament" | "skills_drills" | "single_session",
   ) => {
@@ -844,10 +856,10 @@ export function LeagueEditPage() {
                     type="date"
                     value={editLeague.start_date}
                     onChange={(e) =>
-                      setEditLeague({
-                        ...editLeague,
+                      setEditLeague((prev) => ({
+                        ...prev,
                         start_date: e.target.value,
-                      })
+                      }))
                     }
                     className="w-full"
                     required
@@ -867,9 +879,17 @@ export function LeagueEditPage() {
                   <Input
                     type="date"
                     value={editLeague.end_date}
-                    onChange={(e) =>
-                      setEditLeague({ ...editLeague, end_date: e.target.value })
-                    }
+                    min={editLeague.start_date || undefined}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setEditLeague((prev) => ({
+                        ...prev,
+                        end_date:
+                          prev.start_date && value && value < prev.start_date
+                            ? prev.start_date
+                            : value,
+                      }));
+                    }}
                     className="w-full"
                     required
                   />

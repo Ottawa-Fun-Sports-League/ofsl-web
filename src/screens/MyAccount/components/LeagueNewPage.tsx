@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { updateStripeProductLeagueId } from "../../../lib/stripe";
 import { Button } from "../../../components/ui/button";
@@ -12,6 +12,12 @@ import { ArrowLeft, Save, X } from "lucide-react";
 import { RichTextEditor } from "../../../components/ui/rich-text-editor";
 import { StripeProductSelector } from "./LeaguesTab/components/StripeProductSelector";
 import { DraftPublishControls } from "../../../components/leagues/DraftPublishControls";
+import { GymMultiSelect } from "./LeaguesTab/components/GymMultiSelect";
+import type { Gym as BaseGym } from "./LeaguesTab/types";
+import {
+  useSyncedDateRange,
+  type DateRangeUpdate,
+} from "../../../hooks/useSyncedDateRange";
 
 interface Sport {
   id: number;
@@ -23,16 +29,11 @@ interface Skill {
   name: string;
 }
 
-interface Gym {
-  id: number;
+interface Gym extends BaseGym {
   created_at: string;
-  gym: string;
-  address: string;
-  instructions: string | null;
   active: boolean;
   available_days: number[];
   available_sports: number[];
-  locations: string[];
 }
 
 export function LeagueNewPage() {
@@ -88,6 +89,24 @@ export function LeagueNewPage() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
   );
+  const handleDatesChange = useCallback(
+    ({ startDate, endDate }: DateRangeUpdate) =>
+      setNewLeague((prev) => ({
+        ...prev,
+        start_date: startDate,
+        end_date: endDate,
+      })),
+    [],
+  );
+  const {
+    handleStartDateChange,
+    handleEndDateChange,
+    endDateMin,
+  } = useSyncedDateRange({
+    startDate: newLeague.start_date,
+    endDate: newLeague.end_date,
+    onDatesChange: handleDatesChange,
+  });
 
   useEffect(() => {
     if (!userProfile?.is_admin) {
@@ -525,9 +544,7 @@ export function LeagueNewPage() {
                   <Input
                     type="date"
                     value={newLeague.start_date}
-                    onChange={(e) =>
-                      setNewLeague({ ...newLeague, start_date: e.target.value })
-                    }
+                    onChange={(e) => handleStartDateChange(e.target.value)}
                     className="w-full"
                     required
                   />
@@ -540,9 +557,8 @@ export function LeagueNewPage() {
                   <Input
                     type="date"
                     value={newLeague.end_date}
-                    onChange={(e) =>
-                      setNewLeague({ ...newLeague, end_date: e.target.value })
-                    }
+                    min={endDateMin}
+                    onChange={(e) => handleEndDateChange(e.target.value)}
                     className="w-full"
                     required
                   />
@@ -626,36 +642,18 @@ export function LeagueNewPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#6F6F6F] mb-2">
-                  Gyms
-                </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                  {gyms.map((gym) => (
-                    <label key={gym.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={newLeague.gym_ids.includes(gym.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewLeague({
-                              ...newLeague,
-                              gym_ids: [...newLeague.gym_ids, gym.id],
-                            });
-                          } else {
-                            setNewLeague({
-                              ...newLeague,
-                              gym_ids: newLeague.gym_ids.filter(
-                                (id) => id !== gym.id,
-                              ),
-                            });
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">{gym.gym}</span>
-                    </label>
-                  ))}
-                </div>
+                <GymMultiSelect
+                  gyms={gyms}
+                  selectedIds={newLeague.gym_ids}
+                  onChange={(ids) =>
+                    setNewLeague((prev) => ({
+                      ...prev,
+                      gym_ids: ids,
+                    }))
+                  }
+                  label="Gyms"
+                  helperText="Select the facilities tied to this league."
+                />
               </div>
 
               <div>
