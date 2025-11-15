@@ -357,7 +357,7 @@ CREATE TABLE IF NOT EXISTS team_waitlist_notifications (
     payment_id BIGINT NOT NULL REFERENCES league_payments(id) ON DELETE CASCADE,
     team_id BIGINT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     league_id BIGINT NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     email TEXT,
     user_name TEXT,
     team_name TEXT,
@@ -680,9 +680,9 @@ BEGIN
           AND COALESCE(active, true) = true;
       END IF;
 
-      SELECT id::uuid AS user_id, email, name INTO user_record
+      SELECT id AS user_id, email, name INTO user_record
       FROM users
-      WHERE id = NEW.user_id::uuid;
+      WHERE id = NEW.user_id;
 
       INSERT INTO team_waitlist_notifications (
         payment_id,
@@ -701,7 +701,7 @@ BEGIN
         NEW.id,
         NEW.team_id,
         NEW.league_id,
-        COALESCE(user_record.user_id, NEW.user_id::uuid),
+        COALESCE(user_record.user_id, NEW.user_id),
         user_record.email,
         COALESCE(user_record.name, 'Team Captain'),
         COALESCE(team_record.name, 'Team'),
