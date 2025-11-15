@@ -192,7 +192,7 @@ export const DEFAULT_VOLLEYBALL_CONTENT: VolleyballPageContent = {
     buttonLink: "/standards-of-play",
   },
   aboutSection: {
-    image: "/group-2.png",
+    image: "/OFSL wed league winner 2025.png",
     imageAlt: "OFSL Community",
     title: "About our volleyball leagues",
     bullets: [

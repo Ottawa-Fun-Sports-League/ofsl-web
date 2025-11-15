@@ -15,6 +15,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        nav: '1150px',
+      },
       fontFamily: {
         "m3-body-large": "var(--m3-body-large-font-family)",
         "m3-title-large": "var(--m3-title-large-font-family)",

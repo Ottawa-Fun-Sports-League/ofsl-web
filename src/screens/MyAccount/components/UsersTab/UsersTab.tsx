@@ -426,9 +426,9 @@ export function UsersTab() {
 
   return (
     <div className="w-full">
-      {/* Container with negative margins to extend beyond normal page bounds */}
-      <div className="2xl:-mx-32 xl:-mx-24 lg:-mx-16 md:-mx-8 space-y-6">
-        <div className="px-4 md:px-6 lg:px-8">
+      {/* Constrain within page container (remove negative margins) */}
+      <div className="space-y-6">
+        <div className="px-0 md:px-0 lg:px-0">
           <UsersHeader
             userCount={pagination.totalItems}
             onOpenMobileFilter={() => setShowMobileFilterDrawer(true)}
