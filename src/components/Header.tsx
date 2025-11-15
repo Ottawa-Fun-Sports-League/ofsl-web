@@ -163,7 +163,7 @@ export function Header({ isCompact = false }: HeaderProps) {
         </Link>
 
         {/* Mobile menu button */}
-        <div className="lg:hidden">
+        <div className="nav:hidden">
           <button
             className="text-white"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -174,7 +174,7 @@ export function Header({ isCompact = false }: HeaderProps) {
         </div>
 
         {/* Desktop Navigation - Moved to the right */}
-        <div className="hidden lg:flex items-center">
+        <div className="hidden nav:flex items-center">
           <NavigationMenu>
             <NavigationMenuList className="flex gap-8 items-center">
               <NavigationMenuItem className="flex items-center">
@@ -319,7 +319,7 @@ export function Header({ isCompact = false }: HeaderProps) {
           }`}
         >
           <div className="container mx-auto px-4 py-6 pb-24">
-            <div className="flex justify-end lg:hidden mb-4">
+            <div className="flex justify-end nav:hidden mb-4">
               <button
                 className="text-white p-2"
                 onClick={() => setIsMenuOpen(false)}

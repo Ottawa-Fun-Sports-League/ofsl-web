@@ -106,15 +106,6 @@ export function LeagueStandingsPage() {
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomScrollRef = useRef<HTMLDivElement | null>(null);
   const tableRef = useRef<HTMLTableElement | null>(null);
-  const [scrollWidth, setScrollWidth] = useState<number>(0);
-  useEffect(() => {
-    const update = () => setScrollWidth(tableRef.current?.scrollWidth || 0);
-    update();
-    const ro = new ResizeObserver(update);
-    if (tableRef.current) ro.observe(tableRef.current);
-    window.addEventListener('resize', update);
-    return () => { try { ro.disconnect(); } catch {} window.removeEventListener('resize', update); };
-  }, [regularSeasonWeeks, weeklyRanks]);
   const syncScroll = (from: 'top' | 'bot') => {
     const a = from === 'top' ? topScrollRef.current : bottomScrollRef.current;
     const b = from === 'top' ? bottomScrollRef.current : topScrollRef.current;
@@ -1167,14 +1158,20 @@ export function LeagueStandingsPage() {
               return (
                 <>
                   {isEliteFormat && (
-                    <div
-                      ref={topScrollRef}
-                      className="overflow-x-auto border-b"
-                      style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' }}
-                      onScroll={() => syncScroll('top')}
-                    >
-                      <div style={{ width: scrollWidth, height: 1 }} />
-                    </div>
+                    <>
+                      {/* Static header row to mirror public elite standings */}
+                      <div className="bg-gray-50 border-b">
+                        <div
+                          className="grid items-center text-[#6F6F6F]"
+                          style={{ gridTemplateColumns: '64px 80px 256px 1fr' }}
+                        >
+                          <div className="px-4 py-3 text-left text-sm font-medium">Rank</div>
+                          <div className="px-4 py-3 text-left text-sm font-medium">Avg.</div>
+                          <div className="px-4 py-3 text-left text-sm font-medium">Team</div>
+                          <div className="px-2 py-3 text-left text-sm font-medium">Week</div>
+                        </div>
+                      </div>
+                    </>
                   )}
                   <div className="overflow-visible">
                     {isEliteFormat ? (
@@ -1186,49 +1183,43 @@ export function LeagueStandingsPage() {
                       >
                         <table ref={tableRef} className="w-full min-w-max table-auto">
                     <thead className="bg-gray-50 border-b">
-                      <tr>
-                      <th
-                        className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg sticky left-0 z-20 bg-gray-50 w-16"
-                        rowSpan={2}
-                        style={{ left: 0 }}
-                      >
-                        Rank
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] sticky z-20 bg-gray-50 w-20"
-                        rowSpan={2}
-                        style={{ left: 64 }}
-                      >
-                        Avg.
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] sticky z-20 bg-gray-50 w-64"
-                        rowSpan={2}
-                        style={{ left: 144 }}
-                      >
-                        Team
-                      </th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]" colSpan={weeklyColumns.length}>
-                          Week
-                        </th>
-                        
+                      <tr className="h-0">
+                        <th
+                          aria-hidden="true"
+                          className="text-transparent px-0 py-0 h-0 rounded-tl-lg sticky left-0 z-20 bg-gray-50"
+                          rowSpan={2}
+                          style={{ left: 0, width: 64, minWidth: 64, maxWidth: 64 }}
+                        />
+                        <th
+                          aria-hidden="true"
+                          className="text-transparent px-0 py-0 h-0 sticky z-20 bg-gray-50"
+                          rowSpan={2}
+                          style={{ left: 64, width: 80, minWidth: 80, maxWidth: 80 }}
+                        />
+                        <th
+                          aria-hidden="true"
+                          className="text-transparent px-0 py-0 h-0 sticky z-20 bg-gray-50"
+                          rowSpan={2}
+                          style={{ left: 144, width: 256, minWidth: 256, maxWidth: 256 }}
+                        />
+                        <th aria-hidden="true" className="text-transparent px-0 py-0 h-0" colSpan={weeklyColumns.length} />
                       </tr>
-              <tr>
-                {weeklyColumns.map(week => {
-                  const bg = playoffWeeks.has(week)
-                    ? 'bg-red-50'
-                    : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
-                  const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
-                  return (
-                    <th
-                      key={`week-${week}`}
-                      className={`px-2 py-2 text-center text-sm font-medium ${text} ${bg}`}
-                    >
-                      {week}
-                    </th>
-                  );
-                })}
-              </tr>
+                      <tr>
+                        {weeklyColumns.map(week => {
+                          const bg = playoffWeeks.has(week)
+                            ? 'bg-red-50'
+                            : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
+                          const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
+                          return (
+                            <th
+                              key={`week-${week}`}
+                              className={`px-2 py-2 text-center text-sm font-medium ${text} ${bg}`}
+                            >
+                              {week}
+                            </th>
+                          );
+                        })}
+                      </tr>
                     </thead>
                   <tbody className="divide-y divide-gray-200">
                       {[...standings]
@@ -1403,7 +1394,7 @@ export function LeagueStandingsPage() {
                               <span className="text-sm font-medium text-[#6F6F6F]">{totalLosses}</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className={`px-4 py-3 text-center ${!isEliteFormat ? 'bg-red-50' : ''}`}>
                             {isEditMode ? (
                               <Input
                                 type="number"

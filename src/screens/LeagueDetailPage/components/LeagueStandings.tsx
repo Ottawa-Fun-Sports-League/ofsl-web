@@ -1,9 +1,10 @@
-import { Card, CardContent } from "../../../components/ui/card";
+﻿import { Card, CardContent } from "../../../components/ui/card";
 import { useLeagueStandings } from "../hooks/useLeagueStandings";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { computeInitialSeedRankingMap, computePrevWeekNameRanksFromNextWeekSchedule } from "../../LeagueSchedulePage/utils/rankingUtils";
 import { useEliteStandings } from "../../../standings/useEliteStandings";
+import { useAuth } from "../../../contexts/AuthContext";
 
 interface LeagueStandingsProps {
   leagueId: string | undefined;
@@ -11,6 +12,8 @@ interface LeagueStandingsProps {
 
 export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const { teams, loading, error, hasSchedule, refetch } = useLeagueStandings(leagueId);
+  const { userProfile } = useAuth();
+  const isAdmin = userProfile?.is_admin === true;
   const [scheduleFormat, setScheduleFormat] = useState<string | null>(null);
   const [regularSeasonWeeks, setRegularSeasonWeeks] = useState<number>(0);
   const [weeklyRanks, setWeeklyRanks] = useState<Record<number, Record<number, number>>>({}); // teamId -> { week -> rank }
@@ -29,21 +32,103 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   const bottomScrollRef = useRef<HTMLDivElement | null>(null);
   const tableRef = useRef<HTMLTableElement | null>(null);
   const [scrollWidth, setScrollWidth] = useState<number>(0);
+  const [showScrollHint, setShowScrollHint] = useState<boolean>(false);
+  // Responsive sticky widths for elite table
+  const [rankW, setRankW] = useState<number>(64);
+  const [avgW, setAvgW] = useState<number>(80);
+  const [teamW, setTeamW] = useState<number>(256);
+  const leftAvg = rankW;
+  const leftTeam = rankW + avgW;
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isOverWeeks, setIsOverWeeks] = useState<boolean>(false);
+  const dragStartXRef = useRef<number>(0);
+  const dragScrollLeftRef = useRef<number>(0);
   useEffect(() => {
+    let raf1 = 0;
+    let raf2 = 0;
     const update = () => {
       const w = tableRef.current?.scrollWidth || 0;
-      setScrollWidth(w);
+      const containerW = bottomScrollRef.current?.clientWidth || 0;
+      const next = Math.max(w, containerW);
+      setScrollWidth(next);
+      // Show fade only when there is overflow and we are not already scrolled to the end
+      const left = bottomScrollRef.current?.scrollLeft || 0;
+      const max = Math.max(0, next - containerW);
+      setShowScrollHint(next > (containerW + 4) && left < (max - 1));
     };
-    update();
-    const ro = new ResizeObserver(update);
+    const schedule = () => {
+      raf1 = requestAnimationFrame(() => {
+        update();
+        raf2 = requestAnimationFrame(update);
+      });
+    };
+    schedule();
+    const ro = new ResizeObserver(schedule);
     if (tableRef.current) ro.observe(tableRef.current);
-    window.addEventListener('resize', update);
-    return () => { try { ro.disconnect(); } catch {} window.removeEventListener('resize', update); };
+    if (bottomScrollRef.current) ro.observe(bottomScrollRef.current as Element);
+    window.addEventListener('resize', schedule);
+    return () => { try { ro.disconnect(); } catch {} window.removeEventListener('resize', schedule); if (raf1) cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
   }, [regularSeasonWeeks, weeklyRanks]);
+  // Update widths on resize for mobile responsiveness (elite only)
+  useEffect(() => {
+    const updateWidths = () => {
+      const ww = window.innerWidth || 1024;
+      if (ww < 640) {
+        setRankW(36);
+        setAvgW(48);
+        setTeamW(112);
+      } else if (ww < 768) {
+        setRankW(40);
+        setAvgW(56);
+        setTeamW(180);
+      } else {
+        setRankW(64);
+        setAvgW(80);
+        setTeamW(256);
+      }
+    };
+    updateWidths();
+    window.addEventListener('resize', updateWidths);
+    return () => window.removeEventListener('resize', updateWidths);
+  }, []);
   const syncScroll = (from: 'top' | 'bot') => {
     const a = from === 'top' ? topScrollRef.current : bottomScrollRef.current;
     const b = from === 'top' ? bottomScrollRef.current : topScrollRef.current;
     if (a && b && Math.abs(b.scrollLeft - a.scrollLeft) > 1) b.scrollLeft = a.scrollLeft;
+  };
+  const handleDragMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // left click only
+    if (!bottomScrollRef.current) return;
+    // Only enable drag when clicking within the weeks area, not over sticky Rank/Avg/Team
+    const scroller = bottomScrollRef.current as HTMLDivElement;
+    const rect = scroller.getBoundingClientRect();
+    const stickyRight = leftTeam + teamW; // dynamic boundary
+    const xWithin = e.clientX - rect.left;
+    if (xWithin <= stickyRight) {
+      return; // clicked within sticky columns; do not start drag
+    }
+    setIsDragging(true);
+    dragStartXRef.current = e.clientX;
+    dragScrollLeftRef.current = bottomScrollRef.current.scrollLeft || 0;
+    e.preventDefault();
+  };
+  const handleDragMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const scroller = bottomScrollRef.current;
+    if (scroller) {
+      const rect = scroller.getBoundingClientRect();
+      const stickyRight = leftTeam + teamW;
+      const xWithin = e.clientX - rect.left;
+      const overflows = scrollWidth > (scroller.clientWidth + 4);
+      setIsOverWeeks(overflows && xWithin > stickyRight);
+    }
+    if (!isDragging || !scroller) return;
+    const dx = e.clientX - dragStartXRef.current;
+    scroller.scrollLeft = dragScrollLeftRef.current - dx;
+  };
+  const endDrag = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setIsOverWeeks(false);
   };
 
   // Shared elite standings (single source of truth for elite formats)
@@ -51,7 +136,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
   useEffect(() => {
     if (elite.isElite) {
       setScheduleFormat('elite');
-      // Do not copy weekly ranks from the hook here — public rebuilds from scratch below
+      // Do not copy weekly ranks from the hook here GÇö public rebuilds from scratch below
       if (elite.seedRanksByTeamId && Object.keys(elite.seedRanksByTeamId).length > 0) {
         setSeedRanks(elite.seedRanksByTeamId);
       }
@@ -108,6 +193,31 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     if (!leagueId) return;
     if (!elite.isElite) return;
   }, [leagueId, elite.isElite]);
+
+  // Public-safe elite variant detection: always compute from weekly_schedules for this league
+  useEffect(() => {
+    const detectVariant = async () => {
+      if (!leagueId) { setEliteVariantFormat(null); return; }
+      try {
+        setEliteVariantFormat(null); // clear stale value immediately on navigation
+        const lid = parseInt(leagueId);
+        const { data: weekRows } = await supabase
+          .from('weekly_schedules')
+          .select('format')
+          .eq('league_id', lid);
+        const fmt = ((weekRows || [])
+          .map((r: any) => String((r?.format ?? '')).toLowerCase())
+          .find((f: string) => f.includes('2-teams-elite') || f.includes('3-teams-elite-6-sets') || f.includes('3-teams-elite-9-sets')))
+          || null;
+        if (fmt !== eliteVariantFormat) setEliteVariantFormat(fmt);
+      } catch {
+        // leave as null on error
+        setEliteVariantFormat(null);
+      }
+    };
+    void detectVariant();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId]);
 
   // Load weeks marked as no-games, movement-week, and playoffs for elite formats (to style columns)
   useEffect(() => {
@@ -299,7 +409,52 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
 
-  const isEliteFormat = useMemo(() => (scheduleFormat ?? "").includes("elite"), [scheduleFormat]);
+  // Compute weekly column indices first so downstream hooks can reference safely
+  const weeklyColumns = useMemo(() => Array.from({ length: Math.max(regularSeasonWeeks, 0) }, (_, i) => i + 1), [regularSeasonWeeks]);
+  // Canonical elite flag for public: require explicit elite variant detected for this league
+  const isEliteFormat = useMemo(() => {
+    const varFmt = String(eliteVariantFormat || '').toLowerCase();
+    return (
+      varFmt.includes('2-teams-elite') ||
+      varFmt.includes('3-teams-elite-6-sets') ||
+      varFmt.includes('3-teams-elite-9-sets')
+    );
+  }, [eliteVariantFormat]);
+  const eliteRenderable = useMemo(() => {
+    const hasEliteCols = Number((elite as any)?.maxWeek || 0) > 0;
+    const hasWeeklyRanks = Object.keys(weeklyRanks || {}).length > 0;
+    const hasSeeds = Object.keys(seedRanks || {}).length > 0;
+    return isEliteFormat && (hasEliteCols || hasWeeklyRanks || hasSeeds);
+  }, [isEliteFormat, elite.maxWeek, weeklyRanks, seedRanks]);
+
+  // Final UI gate: on public (non-admin), only show elite UI if an explicit elite variant was detected for this league
+  const useEliteUI = useMemo(() => {
+    const explicitVariant = Boolean(eliteVariantFormat);
+    return isAdmin ? eliteRenderable : (explicitVariant && eliteRenderable);
+  }, [isAdmin, eliteRenderable, eliteVariantFormat]);
+
+  // Data-ready guard for non-elite public view: avoid momentary blank paint on Firefox.
+  const [nonEliteReady, setNonEliteReady] = useState(false);
+  useEffect(() => {
+    if (useEliteUI) { setNonEliteReady(false); return; }
+    if (teams.length > 0) {
+      const id = requestAnimationFrame(() => setNonEliteReady(true));
+      return () => { cancelAnimationFrame(id); setNonEliteReady(false); };
+    }
+    setNonEliteReady(false);
+    return () => {};
+  }, [useEliteUI, teams.length]);
+
+
+  // Reset elite-only state when switching to a non-elite league or navigating
+  useEffect(() => {
+    if (!isEliteFormat) {
+      setEliteVariantFormat(null);
+      setWeeklyRanks({});
+      setSeedRanks({});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId, isEliteFormat]);
   const hideStandingsNote = useMemo(() => {
     // Hide the blue note for specific elite variants only
     const fmt = String(eliteVariantFormat || '').toLowerCase();
@@ -319,7 +474,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       fmt === '6-teams-head-to-head'
     );
   }, [scheduleFormat]);
-  const weeklyColumns = useMemo(() => Array.from({ length: Math.max(regularSeasonWeeks, 0) }, (_, i) => i + 1), [regularSeasonWeeks]);
+  
   // Only display weeks that actually have any data to avoid stray numbers
   const weeksWithData = useMemo(() => {
     const set = new Set<number>();
@@ -336,7 +491,7 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
       if (!leagueId) return;
       // Skip legacy public computation when elite is enabled; rely on placement-first rebuild instead
       if (elite.isElite) return;
-      // Elite path is handled by the shared hook — skip local computations
+      // Elite path is handled by the shared hook GÇö skip local computations
       if (elite.isElite) return;
       try {
         const lid = parseInt(leagueId);
@@ -537,149 +692,126 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
           {(() => {
             return (
               <>
-                <div
-                  ref={topScrollRef}
-                  className="overflow-x-auto border-b"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' }}
-                  onScroll={() => syncScroll('top')}
-                >
-                  <div style={{ width: scrollWidth, height: 1 }} />
-                </div>
-                <div
-                  ref={bottomScrollRef}
-                  className="overflow-x-auto"
-                  style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' }}
-                  onScroll={() => syncScroll('bot')}
-                >
-                  {/* table rendered below with ref to measure width */}
-          
-            {isEliteFormat ? (
-              <table ref={tableRef} className="w-full min-w-max table-auto">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th
-                      className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg sticky left-0 z-20 bg-gray-50 w-16"
-                      rowSpan={2}
-                      style={{ left: 0 }}
-                    >
-                      Rank
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] sticky z-20 bg-gray-50 w-20"
-                      rowSpan={2}
-                      style={{ left: 64 }}
-                    >
-                      Avg.
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] sticky z-20 bg-gray-50 w-64"
-                      rowSpan={2}
-                      style={{ left: 144 }}
-                    >
-                      Team
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#6F6F6F]" colSpan={weeklyColumns.length}>
-                      Week
-                    </th>
-                    
-                  </tr>
-                  <tr>
-                    {weeklyColumns.map(week => {
-                      const bg = playoffWeeks.has(week)
-                        ? 'bg-red-50'
-                        : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
-                      const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
-                      return (
-                        <th key={`week-${week}`} className={`px-2 py-2 text-center text-sm font-medium ${text} ${bg}`}>
-                          {week}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {[...teams].sort((a, b) => {
-                    const aVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[a.id]?.[week]).filter((v): v is number => typeof v === 'number');
-                    const bVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[b.id]?.[week]).filter((v): v is number => typeof v === 'number');
-                    const useSeedFallback = standingsResetWeek <= 1;
-                    const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (useSeedFallback ? (seedRanks[a.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
-                    const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (useSeedFallback ? (seedRanks[b.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
-                    if (aAvg !== bAvg) return aAvg - bAvg;
-                    return (a.name || '').localeCompare(b.name || '');
-                  }).map((team, index) => {
-                    const played = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[team.id]?.[week]).filter((v): v is number => typeof v === 'number');
-                    const avg = played.length ? (played.reduce((a,b)=>a+b,0) / played.length) : null;
-                    const cols = 5 + (showDifferentialColumn ? 1 : 0);
-                    return (
-                      <>
-                      <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""} ${
-                        topTierLineEnabled && index === Number(topTierLineAfter) ? 'border-t-2 border-[#B20000]' : ''
-                      }`}>
-                        <td
-                          className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] sticky left-0 z-10 bg-inherit w-16 ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}
-                          style={{ left: 0 }}
-                        >
-                          {index + 1}
-                        </td>
-                        <td
-                          className="px-4 py-3 text-sm font-medium text-[#6F6F6F] sticky z-10 bg-inherit w-20"
-                          style={{ left: 64 }}
-                        >
-                          {typeof avg === 'number' ? avg.toFixed(2) : '-'}
-                        </td>
-                        <td
-                          className="px-4 py-3 text-sm font-semibold text-[#6F6F6F] sticky z-10 bg-inherit w-64"
-                          style={{ left: 144 }}
-                        >
-                          {team.name}
-                        </td>
-                        {weeklyColumns.map(week => {
-                           const val = weeklyRanks[team.id]?.[week];
-                           const show = weeksWithData.has(week);
-                           const bg = playoffWeeks.has(week)
-                             ? 'bg-red-50'
-                             : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
-                           const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
-                           return (
-                             <td key={`week-${team.id}-${week}`} className={`px-4 py-3 text-center text-sm ${text} ${bg}`}>
-                               {show ? (typeof val === 'number' ? val : '-') : '-'}
-                             </td>
-                           );
-                         })}
-                        
-                      </tr>
-                      {topTierLineEnabled && (index + 1) === Number(topTierLineAfter) && (
-                        <tr key={`divider-${team.id}`}>
-                          <td colSpan={cols} className="p-0">
-                            <div className="relative py-2 overflow-visible z-20">
-                              <img
-                                src="/elite-badge.svg"
-                                alt="Top tier"
-                                className="absolute z-30 top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5 pointer-events-none"
-                                  style={{ left: 'calc(5% + 16px)' }}
-                              />
-                              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#B20000] z-10"></div>
-                            </div>
-                          </td>
-                        </tr>
+                {useEliteUI && (
+                  <>
+                    {/* Static header row: Rank / Avg. / Team / Week (does not scroll) */}
+                    <div className="bg-gray-50 border-b">
+                      <div
+                        className="grid items-center text-[#6F6F6F]"
+                        style={{ gridTemplateColumns: `${rankW}px ${avgW}px ${teamW}px 1fr` }}
+                      >
+                        <div className="px-2 sm:px-4 py-3 text-left text-sm font-medium">Rank</div>
+                        <div className="px-2 sm:px-4 py-3 text-left text-sm font-medium">Avg.</div>
+                        <div className="px-2 sm:px-4 py-3 text-left text-sm font-medium">Team</div>
+                        <div className="px-2 py-3 text-left text-sm font-medium">Week</div>
+                      </div>
+                    </div>
+                    {/* Removed top horizontal scrollbar in favor of subtle hint */}
+                    <div className="relative">
+                      <div
+                        ref={bottomScrollRef}
+                        className={`overflow-x-auto ${isDragging ? 'cursor-grabbing select-none' : (isOverWeeks ? 'cursor-grab' : 'cursor-default')}`}
+                        style={{ WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' }}
+                        onScroll={() => {
+                          const el = bottomScrollRef.current;
+                          if (el) {
+                            const max = Math.max(0, scrollWidth - el.clientWidth);
+                            setShowScrollHint(max > 4 && el.scrollLeft < (max - 1));
+                          }
+                          syncScroll('bot');
+                        }}
+                        onMouseDown={handleDragMouseDown}
+                        onMouseMove={handleDragMouseMove}
+                        onMouseUp={endDrag}
+                        onMouseLeave={endDrag}
+                      >
+                        {/* Elite table rendered inside scroller */}
+                        {useEliteUI && (
+                          <table ref={tableRef} className="w-full min-w-max table-auto">
+                            <thead className="bg-gray-50 border-b">
+                              <tr className="h-0">
+                                <th aria-hidden="true" className="text-transparent px-0 py-0 h-0 rounded-tl-lg sticky left-0 z-20 bg-gray-50" rowSpan={2} style={{ left: 0, width: rankW, minWidth: rankW, maxWidth: rankW }} />
+                                <th aria-hidden="true" className="text-transparent px-0 py-0 h-0 sticky z-20 bg-gray-50" rowSpan={2} style={{ left: leftAvg, width: avgW, minWidth: avgW, maxWidth: avgW }} />
+                                <th aria-hidden="true" className="text-transparent px-0 py-0 h-0 sticky z-20 bg-gray-50" rowSpan={2} style={{ left: leftTeam, width: teamW, minWidth: teamW, maxWidth: teamW }} />
+                                <th aria-hidden="true" className="text-transparent px-0 py-0 h-0" colSpan={weeklyColumns.length} />
+                              </tr>
+                              <tr>
+                                {weeklyColumns.map(week => {
+                                  const bg = playoffWeeks.has(week)
+                                    ? 'bg-red-50'
+                                    : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
+                                  const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
+                                  return (
+                                    <th key={`week-${week}`} className={`px-2 py-2 text-center text-sm font-medium ${text} ${bg}`}>{week}</th>
+                                  );
+                                })}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {[...teams].sort((a, b) => {
+                                const aVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[a.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                                const bVals = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[b.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                                const useSeedFallback = standingsResetWeek <= 1;
+                                const aAvg = aVals.length ? (aVals.reduce((x,y)=>x+y,0) / aVals.length) : (useSeedFallback ? (seedRanks[a.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
+                                const bAvg = bVals.length ? (bVals.reduce((x,y)=>x+y,0) / bVals.length) : (useSeedFallback ? (seedRanks[b.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY);
+                                if (aAvg !== bAvg) return aAvg - bAvg;
+                                return (a.name || '').localeCompare(b.name || '');
+                              }).map((team, index) => {
+                                const played = weeklyColumns.filter(w => w >= standingsResetWeek).map(week => weeklyRanks[team.id]?.[week]).filter((v): v is number => typeof v === 'number');
+                                const avg = played.length ? (played.reduce((a,b)=>a+b,0) / played.length) : null;
+                                const cols = 5 + (showDifferentialColumn ? 1 : 0);
+                                return (
+                                  <>
+                                    <tr key={team.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${index === teams.length - 1 ? 'last-row' : ''} ${topTierLineEnabled && index === Number(topTierLineAfter) ? 'border-t-2 border-[#B20000]' : ''}`}>
+                                      <td className={`px-2 py-3 text-xs sm:text-sm font-medium text-[#6F6F6F] sticky left-0 z-10 bg-inherit ${index === teams.length - 1 ? 'rounded-bl-lg' : ''}`} style={{ left: 0, width: rankW, minWidth: rankW, maxWidth: rankW }}>{index + 1}</td>
+                                      <td className="px-2 py-3 text-xs sm:text-sm font-medium text-[#6F6F6F] sticky z-10 bg-inherit" style={{ left: leftAvg, width: avgW, minWidth: avgW, maxWidth: avgW }}>{typeof avg === 'number' ? avg.toFixed(2) : '-'}</td>
+                                      <td className="px-2 py-3 text-sm font-semibold text-[#6F6F6F] sticky z-10 bg-inherit whitespace-nowrap overflow-hidden text-ellipsis" style={{ left: leftTeam, width: teamW, minWidth: teamW, maxWidth: teamW }}>{team.name}</td>
+                                      {weeklyColumns.map(week => {
+                                        const val = weeklyRanks[team.id]?.[week];
+                                        const show = weeksWithData.has(week);
+                                        const bg = playoffWeeks.has(week)
+                                          ? 'bg-red-50'
+                                          : (movementWeeks.has(week) ? 'bg-yellow-50' : '');
+                                        const text = (week < standingsResetWeek || noGameWeeks.has(week)) ? 'text-gray-300' : 'text-[#6F6F6F]';
+                                        return (
+                                          <td key={`week-${team.id}-${week}`} className={`px-4 py-3 text-center text-sm ${text} ${bg}`}>{show ? (typeof val === 'number' ? val : '-') : '-'}</td>
+                                        );
+                                      })}
+                                    </tr>
+                                    {topTierLineEnabled && (index + 1) === Number(topTierLineAfter) && (
+                                      <tr key={`divider-${team.id}`}>
+                                        <td colSpan={cols} className="p-0">
+                                          <div className="relative py-2 overflow-visible z-20">
+                                            <img src="/elite-badge.svg" alt="Top tier" className="absolute z-30 top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5 pointer-events-none" style={{ left: 'calc(5% + 16px)' }} />
+                                            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#B20000] z-10" />
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                      {showScrollHint && (
+                        <div
+                          className="pointer-events-none absolute inset-y-0 right-0 w-10"
+                          style={{ background: 'linear-gradient(to left, rgba(249,250,251,1), rgba(249,250,251,0))' }}
+                        />
                       )}
-                      </>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full min-w-max table-fixed">
-                <colgroup>
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "40%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "13%" }} />
-                  {showDifferentialColumn && (
-                    <col style={{ width: "13%" }} />
-                  )}
-                </colgroup>
+                    </div>
+                  </>
+                )}
+          
+            {!useEliteUI && (
+              !nonEliteReady ? (
+                <div className="py-12 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#B20000]"></div>
+                </div>
+              ) : (
+              <table className="w-full table-auto" style={{ tableLayout: 'auto' }}>
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium text-[#6F6F6F] rounded-tl-lg">Rank</th>
@@ -696,8 +828,8 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                   {teams.map((team, index) => {
                     const cols = 5 + (showDifferentialColumn ? 1 : 0);
                     return (
-                      <>
-                        <tr key={team.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
+                      <React.Fragment key={`row-${team.id}`}>
+                        <tr className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${index === teams.length - 1 ? "last-row" : ""}`}>
                           <td className={`px-4 py-3 text-sm font-medium text-[#6F6F6F] ${index === teams.length - 1 ? "rounded-bl-lg" : ""}`}>{index + 1}</td>
                           <td className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">{team.name}</td>
                           <td className="px-4 py-3 text-sm text-[#6F6F6F] text-center">{team.wins}</td>
@@ -722,13 +854,13 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
               </table>
+              )
             )}
-          </div>
             </>
           );
         })()}
@@ -737,3 +869,5 @@ export function LeagueStandings({ leagueId }: LeagueStandingsProps) {
     </div>
   );
 }
+
+

@@ -97,7 +97,7 @@ export const DEFAULT_ABOUT_US_CONTENT: AboutUsPageContent = {
       "Founded in 2010 by a group of sports enthusiasts who wanted to create more accessible recreational opportunities in Ottawa, OFSL began with just two volleyball courts and 48 players.",
       "Today, we've grown to serve over 2,000 participants across multiple sports including volleyball, badminton, pickleball, and basketball. Our focus has always been on creating a balance of competitive play and inclusive fun that welcomes players of all backgrounds.",
     ],
-    image: "/group-2.png",
+    image: "/OFSL wed league winner 2025.png",
     imageAlt: "OFSL Community",
   },
   partners: {
@@ -375,7 +375,7 @@ export const AboutUsPage = (): React.ReactElement => {
             <img
               src={content.story.image}
               alt={content.story.imageAlt}
-              className="w-full h-[350px] object-cover rounded-lg"
+              className="w-full h-[350px] object-cover object-top rounded-lg"
             />
           </div>
           <div className="flex flex-col justify-center">

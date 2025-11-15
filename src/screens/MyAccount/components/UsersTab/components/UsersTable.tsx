@@ -88,7 +88,7 @@ export function UsersTable({
     <Card className="shadow-sm" data-testid="users-table">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1400px]">
+          <table className="w-full min-w-[1200px] xl:min-w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th 
@@ -128,19 +128,19 @@ export function UsersTable({
                   </div>
                 </th>
                 <th 
-                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[140px]"
+                  className="px-3 xl:px-4 py-3 text-right text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[110px]"
                   onClick={() => onSort('total_owed')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-end gap-1">
                     Owed
                     {getSortIcon('total_owed')}
                   </div>
                 </th>
                 <th 
-                  className="px-3 xl:px-4 py-3 text-left text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[140px]"
+                  className="px-3 xl:px-4 py-3 text-right text-xs font-medium text-[#6F6F6F] uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[110px]"
                   onClick={() => onSort('total_paid')}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-end gap-1">
                     Paid
                     {getSortIcon('total_paid')}
                   </div>
@@ -274,7 +274,7 @@ export function UsersTable({
                       );
                     })()}
                   </td>
-                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm">
+                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm text-right">
                     <div className="text-[#6F6F6F]">
                       ${((user.total_owed || 0)).toFixed(2)}
                       {(user.total_owed || 0) > (user.total_paid || 0) && (
@@ -284,7 +284,7 @@ export function UsersTable({
                       )}
                     </div>
                   </td>
-                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm">
+                  <td className="px-3 xl:px-4 py-4 whitespace-nowrap text-sm text-right">
                     <div className="text-[#6F6F6F]">
                       ${((user.total_paid || 0)).toFixed(2)}
                       {(user.total_paid || 0) >= (user.total_owed || 0) && (user.total_owed || 0) > 0 && (

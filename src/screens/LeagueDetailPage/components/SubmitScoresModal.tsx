@@ -18,6 +18,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../components/ui/toast';
 import { submitThreeTeamScoresAndMove, submitTwoTeamScoresAndMove, submitTwoTeamBestOf5ScoresAndMove, submitFourTeamHeadToHeadScoresAndMove, submitSixTeamHeadToHeadScoresAndMove, submitTwoTeamEliteBestOf5ScoresAndMove, submitThreeTeamEliteSixScoresAndMove, submitThreeTeamEliteNineScoresAndMove } from '../../LeagueSchedulePage/services/scoreSubmission';
 import { getTierDisplayLabel } from '../../LeagueSchedulePage/utils/formatUtils';
+import { getFormatLabel } from '../../LeagueSchedulePage/utils/formatUtils';
 
 interface SubmitScoresModalProps {
   isOpen: boolean;
@@ -131,7 +132,12 @@ export function SubmitScoresModal({ isOpen, onClose, weeklyTier, onSuccess }: Su
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="submit-scores-description">
         <DialogHeader>
-          <DialogTitle>Submit Scores - Tier {getTierDisplayLabel(weeklyTier.format, weeklyTier.tier_number ?? 0)}</DialogTitle>
+          <div className="flex items-start justify-between max-w-xl">
+            <DialogTitle className="pr-3">Submit Scores - Tier {getTierDisplayLabel(weeklyTier.format, weeklyTier.tier_number ?? 0)}</DialogTitle>
+            <span className="inline-flex items-center px-2 py-0.5 text-[10px] sm:text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300 whitespace-normal leading-tight max-w-[12rem]">
+              {getFormatLabel(String(weeklyTier.format || ''))}
+            </span>
+          </div>
         </DialogHeader>
 
         <div className="py-2">

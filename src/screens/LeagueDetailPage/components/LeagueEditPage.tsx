@@ -1,5 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import {
+  useSyncedDateRange,
+  type DateRangeUpdate,
+} from '../../../hooks/useSyncedDateRange';
 
 export function LeagueEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,6 +76,24 @@ export function LeagueEditPage() {
     { value: 'round_robin', label: 'Round Robin' },
     { value: 'swiss', label: 'Swiss System' }
   ];
+  const handleDatesChange = useCallback(
+    ({ startDate, endDate }: DateRangeUpdate) =>
+      setEditLeague((prev) => ({
+        ...prev,
+        start_date: startDate,
+        end_date: endDate,
+      })),
+    [],
+  );
+  const {
+    handleStartDateChange,
+    handleEndDateChange,
+    endDateMin,
+  } = useSyncedDateRange({
+    startDate: editLeague.start_date,
+    endDate: editLeague.end_date,
+    onDatesChange: handleDatesChange,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -326,7 +348,7 @@ export function LeagueEditPage() {
                 <input
                   type="date"
                   value={editLeague.start_date}
-                  onChange={(e) => setEditLeague({ ...editLeague, start_date: e.target.value })}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
                 />
               </div>
@@ -336,7 +358,8 @@ export function LeagueEditPage() {
                 <input
                   type="date"
                   value={editLeague.end_date}
-                  onChange={(e) => setEditLeague({ ...editLeague, end_date: e.target.value })}
+                  min={endDateMin}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-[#B20000] focus:ring-[#B20000]"
                 />
               </div>
